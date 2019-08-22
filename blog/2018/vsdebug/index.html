@@ -1,0 +1,348 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <meta http-equiv="X-UA-Compatible" content="IE=edge">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+
+  <title>Mac上用VS Code调试 Unity程序</title>
+  <meta name="description"
+    content="  相信很多人，在做Unity 游戏开发的时候，是喜欢用 visual studio 来写代码了。可惜的是，如果你在 mac 上开发就没有 Windows 那样便利了。别跟我说 mac 版的 visual studio，在我看来就像阉割版。">
+
+  <link rel="shortcut icon" href="/img/favicon.ico">
+  <link rel="stylesheet" href="/css/main.css">
+  <link rel="canonical" href="https://huailiang.github.io/blog/2018/vsdebug/">
+  <link rel="alternate" type="application/rss+xml" title="Huailiang Blog"
+    href="https://huailiang.github.io/feed.xml" />
+
+</head>
+
+<body>
+  <main>
+    <header class="site-header">
+  <div class="container">
+    <h1><a href="/">Hom<span>e</span></a></h1>
+
+    <button type="button" class="sliding-panel-button">
+      <span></span>
+      <span></span>
+      <span></span>
+    </button>
+
+    <nav class="navbar sliding-panel-content">
+      <ul>
+        
+        <li><a href="/about" title="About">About</a>
+        </li>
+        
+        <li><a href="/blog" title="Blog">Blog</a>
+        </li>
+        
+        <!-- <li><a href="/feed.xml" target="_blank"><i class="icon icon-feed"></i></a></li> -->
+        <li><a href="/category/" target="_blank"><i class="icon icon-feed"></i></a></li>
+      </ul>
+    </nav>
+  </div>
+</header>
+
+<div class="sliding-panel-fade-screen"></div>
+    <script type="text/javascript" src="/js/MathJax.js?config=TeX-AMS-MML_HTMLorMML"></script>
+
+<script type="text/x-mathjax-config">
+MathJax.Hub.Config({
+  tex2jax: {
+    inlineMath: [['$','$'], ['\\(','\\)']],
+    processEscapes: true
+  }
+});
+</script>
+
+<script type="text/x-mathjax-config">
+  MathJax.Hub.Config({
+    tex2jax: {
+      skipTags: ['script', 'noscript', 'style', 'textarea', 'pre', 'code']
+    }
+  });
+
+</script>
+    <div class="container">
+      <article role="article" class="post">
+
+  <div class="card">
+    <header class="post-header">
+      <h1 class="post-title">Mac上用VS Code调试 Unity程序</h1>
+      <p class="post-meta">Mar 6, 2018 •
+        Huailiang</p>
+    </header>
+
+    <div class="post-content">
+      <blockquote>
+  <p>相信很多人，在做Unity 游戏开发的时候，是喜欢用 visual studio 来写代码了。可惜的是，如果你在 mac 上开发就没有 Windows 那样便利了。别跟我说 mac 版的 visual studio，在我看来就像阉割版。</p>
+</blockquote>
+
+<p>vs code 像 sublime、notepad++、atom 等编辑器一样，轻量级，插件多。今天笔者就在开发的时候 monoDevelop 莫名的打不开，所以就决定用 vs code+插件的方式来开发调试程序。</p>
+
+<p>vs code 还有一个好处是，很多快捷键跟 windows 上的 visual studio一样，这样熟悉 windows 上开发的话，很快就能上手了。</p>
+
+<p>首先介绍一个网址:<a href="https://code.visualstudio.com/docs/other/unity">vs code官方介绍</a></p>
+
+<p>vs code 下载网址：<br />
+<a href="https://code.visualstudio.com/Download">https://code.visualstudio.com/Download</a></p>
+
+<p><img src="/img/post-vscode/vs1.jpg" alt="" /></p>
+
+<h2 id="net-本地安装">.NET 本地安装</h2>
+
+<p>首先的确保你的 mac 安装了 .net 的 sdk，如果没有的话，请先去下载，下载网址<a href="https://www.microsoft.com/net/learn/get-started/macos">https://www.microsoft.com/net/learn/get-started/macos</a></p>
+
+<p>如果安装成功的话，你在 terminal 上敲下面命令行：</p>
+
+<figure class="highlight"><pre><code class="language-bash" data-lang="bash">dotnet --version</code></pre></figure>
+
+<p>运行结果出现下面的提示，证明你的 dotnet 安装成功了。</p>
+
+<p><img src="/img/post-vscode/vs2.jpg" alt="" /></p>
+
+<h2 id="unity-设置">Unity 设置</h2>
+
+<p>打开你的 unity ,选择 Unity-&gt;Prefences-&gt;External Tools，做如下图的设置，使你的 unity 默认代码编辑器是 vs code。</p>
+
+<p><img src="/img/post-vscode/vs3.gif" alt="" /></p>
+
+<p>关联成功之后，你双击 unity 项目中的 代码默认就打开 vscode了。到这里就成功了一半。</p>
+
+<h2 id="断点调试">断点调试</h2>
+
+<p>打开 vs code 之后，点击 Debug-&gt;Install Additional Debuger..</p>
+
+<p>在出来的列表中，定位到 Debugger for Unity, 点击安装，等待安装完成。</p>
+
+<p><img src="/img/post-vscode/vs4.jpg" alt="" /></p>
+
+<p>如果你点击调试按钮，vs code 右下角出现如下图示的错误：</p>
+
+<p><img src="/img/post-vscode/vs7.jpg" alt="" /></p>
+
+<p>这是因为你电脑没有安装mac mono 所造成的，这里说所的mono 并不是unity安装自带的monoDeveloper, 你可以下载mac mono 在如下地址：<br />
+<a href="http://www.mono-project.com/download/">http://www.mono-project.com/download/</a></p>
+
+<p>点击左上角调试按钮，Attach 到 Unity。如果没有出现 Unity-Editor 的选择，先删除本地的 .vscode/Launch.json, 然后重启vscode.</p>
+
+<p><img src="/img/post-vscode/vs5.jpg" alt="" /></p>
+
+<p>我试了一下，按 F5快捷键 也可以直接开启调试的，这点跟 Windows 相同，还有 F12跳到函数定义，都是一样的。哈哈。。</p>
+
+<p><img src="/img/post-vscode/vs6.jpg" alt="" /></p>
+
+<h2 id="生成-dll">生成 DLL</h2>
+
+<p>有时候我们的代码不一定写在 unity一侧，而是一个 lib工程。作为类库，导入到 unity 项目中，而 vs code 如何编译生成 dll 呢。</p>
+
+<p>这里我们使用dotnet new 命令来生成一个空的 lib 工程，名字叫 helloworld.</p>
+
+<figure class="highlight"><pre><code class="language-bash" data-lang="bash">dotnet new classlib -n <span class="s2">"helloworld"</span></code></pre></figure>
+
+<p>然后编译生成 dll 。</p>
+
+<figure class="highlight"><pre><code class="language-bash" data-lang="bash">dotnet restore
+dotnet build</code></pre></figure>
+
+<p>运行结果如下所示：</p>
+
+<p><img src="/img/post-vscode/vs8.jpg" alt="" /></p>
+
+<p>生成的 dll 保存路径都有放在/bin/Debug/目录下。默认生成的 Debug 模式的，如果想生成Release 和更改生成的路径等可以用参数指定</p>
+
+<p><img src="/img/post-vscode/vs9.jpg" alt="" /></p>
+
+<p>除了使用dotnet命令， 我们还可以使用msbuild来编dll,  如果我们的sln里包含了多个.csproj 就非常适合使用MSBuild了。</p>
+
+<p>首先安装，可以去mono官网去下载最新版本， 下载地址：https://download.mono-project.com/archive/</p>
+
+<figure class="highlight"><pre><code class="language-bash" data-lang="bash">msbuild /vershion</code></pre></figure>
+
+<p>运行结果如下所示：</p>
+
+<p><img src="/img/post-vscode/vs12.jpg" alt="" /></p>
+
+<p>cd到sln所在的目录，清除历史编译生成的dll,可以使用：</p>
+
+<figure class="highlight"><pre><code class="language-bash" data-lang="bash">MSBuild CFClient.sln /t:Clean</code></pre></figure>
+
+<p>上面CFClient.sln 是sln的文件名</p>
+
+<p>重新生成新的dll可以使用如下命令：</p>
+
+<figure class="highlight"><pre><code class="language-bash" data-lang="bash">MSBuild CFClient.sln /t:Rebuild /p:TargetFrameworkVersion<span class="o">=</span>v4.0 /p:Configuration<span class="o">=</span>Debug /p:PostBuildEvent<span class="o">=</span><span class="s2">""</span> /p:TargetFrameworkProfile<span class="o">=</span><span class="s2">"Client"</span></code></pre></figure>
+
+<p><img src="/img/post-vscode/vs13.jpg" alt="" /></p>
+
+<p>更多的使用可以使用命令查看：</p>
+
+<figure class="highlight"><pre><code class="language-bash" data-lang="bash">MSBuild /?</code></pre></figure>
+
+<p><img src="/img/post-vscode/vs14.jpg" alt="" /></p>
+
+<h2 id="vs-code-插件">vs code 插件</h2>
+
+<p>Unity Shanderlab 代码高亮提示</p>
+
+<p><img src="/img/post-vscode/vs11.jpg" alt="" /></p>
+
+<p>注释功能，键入”///”或者”/**/” 自动帮你生成注释,风格跟 vs 一样的。</p>
+
+<p><img src="/img/post-vscode/vs10.jpg" alt="" /></p>
+
+<p>配置代码自动换行和保存格式化可以通过点击 Code-&gt;Prefences-&gt;Settings,<br />
+在右侧栏配置相关的选项，左边是所有可配置选项的说明，下面是我的配置选项。</p>
+
+<figure class="highlight"><pre><code class="language-json" data-lang="json"><span class="p">{</span><span class="w">
+    </span><span class="nt">"workbench.activityBar.visible"</span><span class="p">:</span><span class="w"> </span><span class="kc">false</span><span class="p">,</span><span class="w">
+    </span><span class="nt">"window.zoomLevel"</span><span class="p">:</span><span class="w"> </span><span class="mi">-1</span><span class="p">,</span><span class="w">
+    </span><span class="nt">"workbench.statusBar.visible"</span><span class="p">:</span><span class="w"> </span><span class="kc">true</span><span class="p">,</span><span class="w">
+    </span><span class="nt">"editor.minimap.enabled"</span><span class="p">:</span><span class="w"> </span><span class="kc">false</span><span class="p">,</span><span class="w">
+    </span><span class="nt">"editor.formatOnSave"</span><span class="p">:</span><span class="w"> </span><span class="kc">true</span><span class="p">,</span><span class="w">
+    </span><span class="nt">"csharpfixformat.style.braces.onSameLine"</span><span class="p">:</span><span class="w"> </span><span class="kc">false</span><span class="p">,</span><span class="w">
+    </span><span class="nt">"csharp.format.enable"</span><span class="p">:</span><span class="w"> </span><span class="kc">true</span><span class="w">
+</span><span class="p">}</span></code></pre></figure>
+
+<p>正所谓好刀不误砍柴功，有了更加强大的编辑器，我们写代码的效率也会相应的提升。</p>
+
+<p>好了，今天的文章就到这里了，祝大家工作顺利。</p>
+
+
+    </div>
+  </div>
+
+  <style>
+  .post-nav {
+    overflow: hidden;
+    /* margin-top: 60px; */
+    padding: 12px;
+    white-space: nowrap;
+    /* border-top: 1px solid #eee; */
+  }
+
+  .post-nav-item {
+    display: inline-block;
+    width: 50%;
+    white-space: normal;
+  }
+
+  .post-nav-item a {
+    position: relative;
+    display: inline-block;
+    line-height: 25px;
+    font-size: 14px;
+    color: #555;
+    border-bottom: none;
+  }
+
+  .post-nav-item a:hover {
+    color: #222;
+    font-weight: bold;
+    border-bottom: none;
+  }
+
+  .post-nav-item a:active {
+    top: 2px;
+  }
+
+  .post-nav-item a:before,
+  .post-nav-item a:after {
+    display: inline-block;
+    width: 16px;
+    height: 25px;
+    vertical-align: top;
+    opacity: 0.4;
+    background-size: 16px;
+  }
+
+  .post-nav-none a:none {
+    content: ' ';
+    background-size: 8px;
+  }
+
+  .post-nav-none a:hover:none {
+    opacity: 1;
+  }
+
+  .post-nav-prev a:before {
+    content: ' ';
+    background: url("data:image/svg+xml;base64,PD94bWwgdmVyc2lvbj0iMS4wIiA/PjxzdmcgaGVpZ2h0PSIxMnB4IiB2ZXJzaW9uPSIxLjEiIHZpZXdCb3g9IjAgMCA5IDEyIiB3aWR0aD0iOXB4IiB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHhtbG5zOnNrZXRjaD0iaHR0cDovL3d3dy5ib2hlbWlhbmNvZGluZy5jb20vc2tldGNoL25zIiB4bWxuczp4bGluaz0iaHR0cDovL3d3dy53My5vcmcvMTk5OS94bGluayI+PHRpdGxlLz48ZGVzYy8+PGRlZnMvPjxnIGZpbGw9Im5vbmUiIGZpbGwtcnVsZT0iZXZlbm9kZCIgaWQ9IlBhZ2UtMSIgc3Ryb2tlPSJub25lIiBzdHJva2Utd2lkdGg9IjEiPjxnIGZpbGw9IiMwMDAwMDAiIGlkPSJDb3JlIiB0cmFuc2Zvcm09InRyYW5zbGF0ZSgtMjE4LjAwMDAwMCwgLTkwLjAwMDAwMCkiPjxnIGlkPSJjaGV2cm9uLWxlZnQiIHRyYW5zZm9ybT0idHJhbnNsYXRlKDIxOC41MDAwMDAsIDkwLjAwMDAwMCkiPjxwYXRoIGQ9Ik03LjQsMS40IEw2LDAgTC04Ljg4MTc4NDJlLTE2LDYgTDYsMTIgTDcuNCwxMC42IEwyLjgsNiBMNy40LDEuNCBaIiBpZD0iU2hhcGUiLz48L2c+PC9nPjwvZz48L3N2Zz4=") no-repeat 0 50%;
+    background-size: 8px;
+  }
+
+  .post-nav-prev a:hover:before {
+    opacity: 1;
+  }
+
+  .post-nav-next {
+    text-align: right;
+  }
+
+  .post-nav-next a:after {
+    content: ' ';
+    background: url("data:image/svg+xml;base64,PD94bWwgdmVyc2lvbj0iMS4wIiA/PjxzdmcgaGVpZ2h0PSIxMnB4IiB2ZXJzaW9uPSIxLjEiIHZpZXdCb3g9IjAgMCA5IDEyIiB3aWR0aD0iOXB4IiB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHhtbG5zOnNrZXRjaD0iaHR0cDovL3d3dy5ib2hlbWlhbmNvZGluZy5jb20vc2tldGNoL25zIiB4bWxuczp4bGluaz0iaHR0cDovL3d3dy53My5vcmcvMTk5OS94bGluayI+PHRpdGxlLz48ZGVzYy8+PGRlZnMvPjxnIGZpbGw9Im5vbmUiIGZpbGwtcnVsZT0iZXZlbm9kZCIgaWQ9IlBhZ2UtMSIgc3Ryb2tlPSJub25lIiBzdHJva2Utd2lkdGg9IjEiPjxnIGZpbGw9IiMwMDAwMDAiIGlkPSJDb3JlIiB0cmFuc2Zvcm09InRyYW5zbGF0ZSgtMjYwLjAwMDAwMCwgLTkwLjAwMDAwMCkiPjxnIGlkPSJjaGV2cm9uLXJpZ2h0IiB0cmFuc2Zvcm09InRyYW5zbGF0ZSgyNjAuNTAwMDAwLCA5MC4wMDAwMDApIj48cGF0aCBkPSJNMSwwIEwtMC40LDEuNCBMNC4yLDYgTC0wLjQsMTAuNiBMMSwxMiBMNyw2IEwxLDAgWiIgaWQ9IlNoYXBlIi8+PC9nPjwvZz48L2c+PC9zdmc+") no-repeat 100% 50%;
+    background-size: 8px;
+  }
+
+  .post-nav-next a:hover:after {
+    opacity: 1;
+  }
+</style>
+
+
+
+<div class="post-nav">
+
+  
+  <div class="post-nav-prev post-nav-item">
+    
+    <a href="/blog/2018/pil/"> Python Pillow做一个强大的图形工具</a>
+  </div>
+  
+
+  
+  <div class="post-nav-next post-nav-item">
+    
+    <a href="/blog/2018/mlearn/"> 机器学习-Unity 3D平衡球[转载]</a>
+  </div>
+  
+
+</div>
+
+</article>
+    </div>
+
+    <footer class="site-footer">
+  <div class="container">
+    <ul class="social">
+  <li><a href="https://twitter.com/penghuailiang" target="_blank"><i class="icon icon-twitter"></i></a></li>
+  <li><a href="https://www.zhihu.com/people/huailiangpenguin" target="_blank"><i class="icon icon-zhihu"></i></a></li>
+  <li><a href="https://www.facebook.com/profile.php?id=100004290725320" target="_blank"><i class="icon icon-facebook"></i></a></li>
+  <li><a href="https://weibo.com/6212299692/profile?topnav=1&wvr=6" target="_blank"><i class="icon icon-sina"></i></a></li>
+  <li><a href="https://www.linkedin.com/in/penghuailiang/" target="_blank"><i class="icon icon-linkedin"></i></a></li>
+  <li><a href="https://github.com/huailiang" target="_blank"><i class="icon icon-github"></i></a></li>
+</ul>
+    <p class="txt-medium-gray">
+      <small>&copy;2019 All rights reserved. </small>
+    </p>
+  </div>
+</footer>
+    <a href="https://github.com/huailiang" target="_blank" class="github-corner"><svg width="80" height="80" viewBox="0 0 250 250" style="fill:#337ab7; color:#fff; position: absolute; top: 0; border: 0; right: 0;"><path d="M0,0 L115,115 L130,115 L142,142 L250,250 L250,0 Z"></path><path d="M128.3,109.0 C113.8,99.7 119.0,89.6 119.0,89.6 C122.0,82.7 120.5,78.6 120.5,78.6 C119.2,72.0 123.4,76.3 123.4,76.3 C127.3,80.9 125.5,87.3 125.5,87.3 C122.9,97.6 130.6,101.9 134.4,103.2" fill="currentColor" style="transform-origin: 130px 106px;" class="octo-arm"></path><path d="M115.0,115.0 C114.9,115.1 118.7,116.5 119.8,115.4 L133.7,101.6 C136.9,99.2 139.9,98.4 142.2,98.6 C133.8,88.0 127.5,74.4 143.8,58.0 C148.5,53.4 154.0,51.2 159.7,51.0 C160.3,49.4 163.2,43.6 171.4,40.1 C171.4,40.1 176.1,42.5 178.8,56.2 C183.1,58.6 187.2,61.8 190.9,65.4 C194.5,69.0 197.7,73.2 200.1,77.6 C213.8,80.2 216.3,84.9 216.3,84.9 C212.7,93.1 206.9,96.0 205.4,96.6 C205.1,102.4 203.0,107.8 198.3,112.5 C181.9,128.9 168.3,122.5 157.7,114.1 C157.9,116.9 156.7,120.9 152.7,124.9 L141.0,136.5 C139.8,137.7 141.6,141.9 141.8,141.8 Z" fill="currentColor" class="octo-body"></path></svg></a>
+
+
+    <script src="//code.jquery.com/jquery-1.11.3.min.js"></script>
+    <script>
+      $(document).ready(function () {
+        $('.sliding-panel-button,.sliding-panel-fade-screen,.sliding-panel-close').on('click touchstart', function (e) {
+          $('.sliding-panel-content,.sliding-panel-fade-screen').toggleClass('is-visible');
+          e.preventDefault();
+        });
+      });
+    </script>
+  </main>
+</body>
+
+</html>

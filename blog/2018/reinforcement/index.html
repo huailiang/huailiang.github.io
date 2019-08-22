@@ -1,0 +1,501 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <meta http-equiv="X-UA-Compatible" content="IE=edge">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+
+  <title>强化学习-游戏AI Trainning (一)</title>
+  <meta name="description"
+    content="  强化学习是一类算法, 是让计算机实现从一开始什么都不懂, 脑袋里没有一点想法, 通过不断地尝试, 从错误中学习, 最后找到规律, 学会了达到目的的方法. 这就是一个完整的强化学习过程. 实际中的强化学习例子有很多. 比如近期最有名的 Alpha go, 机器头一次在围棋场上战胜人类高手, 让计算机自己学着玩经...">
+
+  <link rel="shortcut icon" href="/img/favicon.ico">
+  <link rel="stylesheet" href="/css/main.css">
+  <link rel="canonical" href="https://huailiang.github.io/blog/2018/reinforcement/">
+  <link rel="alternate" type="application/rss+xml" title="Huailiang Blog"
+    href="https://huailiang.github.io/feed.xml" />
+
+</head>
+
+<body>
+  <main>
+    <header class="site-header">
+  <div class="container">
+    <h1><a href="/">Hom<span>e</span></a></h1>
+
+    <button type="button" class="sliding-panel-button">
+      <span></span>
+      <span></span>
+      <span></span>
+    </button>
+
+    <nav class="navbar sliding-panel-content">
+      <ul>
+        
+        <li><a href="/about" title="About">About</a>
+        </li>
+        
+        <li><a href="/blog" title="Blog">Blog</a>
+        </li>
+        
+        <!-- <li><a href="/feed.xml" target="_blank"><i class="icon icon-feed"></i></a></li> -->
+        <li><a href="/category/" target="_blank"><i class="icon icon-feed"></i></a></li>
+      </ul>
+    </nav>
+  </div>
+</header>
+
+<div class="sliding-panel-fade-screen"></div>
+    <script type="text/javascript" src="/js/MathJax.js?config=TeX-AMS-MML_HTMLorMML"></script>
+
+<script type="text/x-mathjax-config">
+MathJax.Hub.Config({
+  tex2jax: {
+    inlineMath: [['$','$'], ['\\(','\\)']],
+    processEscapes: true
+  }
+});
+</script>
+
+<script type="text/x-mathjax-config">
+  MathJax.Hub.Config({
+    tex2jax: {
+      skipTags: ['script', 'noscript', 'style', 'textarea', 'pre', 'code']
+    }
+  });
+
+</script>
+    <div class="container">
+      <article role="article" class="post">
+
+  <div class="card">
+    <header class="post-header">
+      <h1 class="post-title">强化学习-游戏AI Trainning (一)</h1>
+      <p class="post-meta">Mar 19, 2018 •
+        Huailiang</p>
+    </header>
+
+    <div class="post-content">
+      <blockquote>
+  <p>强化学习是一类算法, 是让计算机实现从一开始什么都不懂, 脑袋里没有一点想法, 通过不断地尝试, 从错误中学习, 最后找到规律, 学会了达到目的的方法. 这就是一个完整的强化学习过程. 实际中的强化学习例子有很多. 比如近期最有名的 Alpha go, 机器头一次在围棋场上战胜人类高手, 让计算机自己学着玩经典游戏 Atari, 这些都是让计算机在不断的尝试中更新自己的行为准则, 从而一步步学会如何下好围棋, 如何操控游戏得到高分. 既然要让计算机自己学, 那计算机通过什么来学习呢?</p>
+</blockquote>
+
+<p>记得之前转载过一篇 Unity 官方的<a href="https://huailiang.github.io/2018/03/02/mlearn/">文章</a>，就是关于在 Unity 中应用强化学习（Q-Q_Learning)学习的例子，不过那篇文章过多的讲述环境配置，而本节将重点讲述强化学习的实现原理。</p>
+
+<p>目前强化学习的算法很多，诸如说 Q_Learning, Sarsa, DQN, OpenAI gym。等。 今天我们主要讲述 q_learning的实现，并简要介绍其他算法的实现。本节用到的代码都上传到 <a href="https://github.com/huailiang/bird">github 网站</a>, 欢迎点击下载。</p>
+
+<h3 id="q_learing">Q_learing</h3>
+
+<p>q-learning的伪代码先看这部分，很重要</p>
+
+<p><img src="/img/post-reinforcement/re2.jpg" alt="" /></p>
+
+<p>简单的算法语言描述就是</p>
+
+<p>开始执行任务，随机选择一个初始动作,执行这些动作。若未达到目标状态，则执行一下几步:</p>
+
+<ul>
+  <li>在当前状态s所有可能的行为中选择一个a</li>
+  <li>利用a得到下一个状态s_</li>
+  <li>计算Q(s,a) (对当前的行为进行学习)</li>
+  <li>下一个状态等于当前状态</li>
+  <li>开始下一个循环</li>
+</ul>
+
+<p>公式描述：</p>
+
+<p><img src="/img/post-reinforcement/re1.jpg" alt="" /></p>
+
+<p>GAMMA(gamma 是对未来 reward（分数） 的衰减值)，ALPHA(学习率)，EPSILON(策略)</p>
+
+<p>GAMMA是什么意思呢，就是对获取过的奖励为了防止再次获取后得到的分数一样，于是对reward进行一个衰减，这样就会有长远的眼光，机器人就不只专注于眼前的奖励了</p>
+
+<p>EPSILON 是一种策略，0.8代表的意思就是我们有80%的概率来选择之前的经验剩下的20%的概率来进行新的探索。</p>
+
+<p>如果你还不很理解强化学习，下面通过一段小视频来学习下吧。</p>
+
+<video id="video" controls="" preload="none" poster="/img/post-reinforcement/re6.jpg" width="674" height="379">
+      <source id="mp4" src="/img/post-reinforcement/q_learn.mp4" type="video/mp4" />
+      <p>Your user agent does not support the HTML5 Video element.</p>
+</video>
+
+<h2 id="游戏应用">游戏应用</h2>
+
+<p>我们将第次增加难度，来增加难度。</p>
+
+<h3 id="难度一">难度一：</h3>
+
+<p>游戏过程是这样的，一只刚出生的雏鸟还不会飞。现在妈妈教它飞行。小鸟拍一下翅膀，它将可以向上飞行一段时间，但飞得过高，会消耗太多的能量，最终累死；如果没有拍翅膀，它将滑翔降落，最终跌到地上摔死。小鸟死亡，游戏结束。通过训练，小鸟掌握了拍翅膀的节奏，我们每15帧替小鸟做一次决策，看是否拍打翅膀，通过训练，我们将使小鸟能一直在天空中平衡地飞行。</p>
+
+<p><img src="/img/post-reinforcement/re3.gif" alt="" /></p>
+
+<p>本节中演示的内容代码你需要在unity做如下设置, GameManager中的istrainning需要勾上，mode选择internal。</p>
+
+<p><img src="/img/post-reinforcement/re11.jpg" alt="" /></p>
+
+<p>首先呢，我们在 Unity 实现 q_learning算法。在后面的章节中，我们将导出包，在 python 中训练，并且通过 Tensorboard，我们观察模型的学习率（alpha）,衰减（gamma）以及生存时间的变化。</p>
+
+<div class="language-csharp highlighter-rouge"><pre class="highlight"><code>
+<span class="c1">// greedy police
+</span> <span class="kt">float</span> <span class="n">epsilon</span> <span class="p">=</span> <span class="m">0.9f</span><span class="p">;</span>
+
+ <span class="c1">// learning rate
+</span> <span class="kt">float</span> <span class="n">alpha</span> <span class="p">=</span> <span class="m">0.1f</span><span class="p">;</span>
+
+ <span class="c1">//discount factor
+</span> <span class="kt">float</span> <span class="n">gamma</span> <span class="p">=</span> <span class="m">0.9f</span><span class="p">;</span>
+
+</code></pre>
+</div>
+
+<p>首先我们定义 q_learning里面的几个变量值，如上所示，接着我们定义 Q_Table:</p>
+
+<div class="language-csharp highlighter-rouge"><pre class="highlight"><code>
+<span class="c1">/// &lt;summary&gt;
+/// Dictionary做二维表，key 是代表的状态，
+/// Row 存储对应的 action 的 Q值
+/// &lt;/summary&gt;
+</span><span class="n">Dictionary</span><span class="p">&lt;</span><span class="kt">int</span><span class="p">,</span> <span class="n">Row</span><span class="p">&gt;</span> <span class="n">q_table</span><span class="p">;</span>
+
+<span class="k">public</span> <span class="k">class</span> <span class="nc">Row</span>
+<span class="p">{</span>
+    <span class="c1">/// &lt;summary&gt;
+</span>    <span class="c1">/// 拍翅膀
+</span>    <span class="c1">/// &lt;/summary&gt;
+</span>    <span class="k">public</span> <span class="kt">float</span> <span class="n">pad</span><span class="p">;</span>
+
+    <span class="c1">/// &lt;summary&gt;
+</span>    <span class="c1">/// 继续滑翔
+</span>    <span class="c1">/// &lt;/summary&gt;
+</span>    <span class="k">public</span> <span class="kt">float</span> <span class="n">stay</span><span class="p">;</span>
+<span class="p">}</span>
+</code></pre>
+</div>
+
+<p>首先呢，我们把鸟position 的 y 坐标取值范围是[-5,5]分为十种种状态，我们定义鸟的状态1-10，由鸟的坐标转换状态。</p>
+
+<figure class="highlight"><pre><code class="language-csharp" data-lang="csharp"><span class="kt">int</span> <span class="n">v</span> <span class="p">=</span> <span class="p">(</span><span class="kt">int</span><span class="p">)</span><span class="n">transform</span><span class="p">.</span><span class="n">position</span><span class="p">.</span><span class="n">y</span> <span class="p">+</span> <span class="m">5</span><span class="p">;</span>
+<span class="k">return</span> <span class="n">Mathf</span><span class="p">.</span><span class="nf">Clamp</span><span class="p">(</span><span class="n">v</span><span class="p">,</span> <span class="m">0</span><span class="p">,</span> <span class="m">10</span><span class="p">);</span></code></pre></figure>
+
+<p>我们更新 q表通过如下方法实现：</p>
+
+<figure class="highlight"><pre><code class="language-csharp" data-lang="csharp"><span class="cm">/**
+    更新 Q_TABLE
+ */</span>
+<span class="k">public</span> <span class="k">void</span> <span class="nf">UpdateState</span><span class="p">(</span><span class="kt">int</span> <span class="n">state</span><span class="p">,</span> <span class="kt">int</span> <span class="n">state_</span><span class="p">,</span> <span class="kt">int</span> <span class="n">rewd</span><span class="p">,</span> <span class="kt">bool</span> <span class="n">action</span><span class="p">)</span>
+<span class="p">{</span>
+    <span class="k">if</span> <span class="p">(</span><span class="n">q_table</span> <span class="p">!=</span> <span class="k">null</span><span class="p">)</span>
+    <span class="p">{</span>
+        <span class="n">Row</span> <span class="n">row</span> <span class="p">=</span> <span class="n">q_table</span><span class="p">[</span><span class="n">state_</span><span class="p">];</span>
+        <span class="kt">float</span> <span class="n">max</span> <span class="p">=</span> <span class="n">row</span><span class="p">.</span><span class="n">pad</span> <span class="p">&gt;</span> <span class="n">row</span><span class="p">.</span><span class="n">stay</span> <span class="p">?</span> <span class="n">row</span><span class="p">.</span><span class="n">pad</span> <span class="p">:</span> <span class="n">row</span><span class="p">.</span><span class="n">stay</span><span class="p">;</span>
+        <span class="kt">float</span> <span class="n">q_target</span> <span class="p">=</span> <span class="n">rewd</span> <span class="p">+</span> <span class="n">gamma</span> <span class="p">*</span> <span class="n">max</span><span class="p">;</span>
+        <span class="kt">float</span> <span class="n">q_predict</span> <span class="p">=</span> <span class="n">action</span> <span class="p">?</span> <span class="n">q_table</span><span class="p">[</span><span class="n">state</span><span class="p">].</span><span class="n">pad</span> <span class="p">:</span> <span class="n">q_table</span><span class="p">[</span><span class="n">state</span><span class="p">].</span><span class="n">stay</span><span class="p">;</span>
+        <span class="kt">float</span> <span class="k">add</span> <span class="p">=</span> <span class="n">alpha</span> <span class="p">*</span> <span class="p">(</span><span class="n">q_target</span> <span class="p">-</span> <span class="n">q_predict</span><span class="p">);</span>
+        <span class="k">if</span> <span class="p">(</span><span class="n">rewd</span> <span class="p">!=</span> <span class="m">0</span><span class="p">)</span> <span class="n">Debug</span><span class="p">.</span><span class="nf">Log</span><span class="p">(</span><span class="s">"state:"</span> <span class="p">+</span> <span class="n">state</span> <span class="p">+</span> <span class="s">" rewd:"</span> <span class="p">+</span> <span class="n">rewd</span> <span class="p">+</span> <span class="s">" add:"</span> <span class="p">+</span> <span class="k">add</span><span class="p">);</span>
+        <span class="k">if</span> <span class="p">(</span><span class="n">action</span><span class="p">)</span>
+        <span class="p">{</span>
+            <span class="n">q_table</span><span class="p">[</span><span class="n">state</span><span class="p">].</span><span class="n">pad</span> <span class="p">+=</span> <span class="k">add</span><span class="p">;</span>
+        <span class="p">}</span>
+        <span class="k">else</span>
+        <span class="p">{</span>
+            <span class="n">q_table</span><span class="p">[</span><span class="n">state</span><span class="p">].</span><span class="n">stay</span> <span class="p">+=</span> <span class="k">add</span><span class="p">;</span>
+        <span class="p">}</span>
+        <span class="n">Debug</span><span class="p">.</span><span class="nf">Log</span><span class="p">(</span><span class="s">"state:"</span> <span class="p">+</span> <span class="n">state</span> <span class="p">+</span> <span class="s">" rewd:"</span> <span class="p">+</span> <span class="n">rewd</span> <span class="p">+</span> <span class="s">" action:"</span> <span class="p">+</span> <span class="n">action</span><span class="p">);</span>
+    <span class="p">}</span>
+<span class="p">}</span></code></pre></figure>
+
+<p>我们以每15帧一个心跳(Tick), 根据 q_table 做出相应的动作，并且根据公式和 Reward 更新 q_table。</p>
+
+<div class="language-csharp highlighter-rouge"><pre class="highlight"><code>  <span class="cm">/*
+   comment: tick time is 15f
+    */</span>
+   <span class="k">public</span> <span class="k">void</span> <span class="nf">OnTick</span><span class="p">()</span>
+   <span class="p">{</span>
+       <span class="kt">int</span> <span class="n">state</span> <span class="p">=</span> <span class="nf">GetCurrentState</span><span class="p">();</span>
+       <span class="k">if</span> <span class="p">(</span><span class="n">last_state</span> <span class="p">!=</span> <span class="p">-</span><span class="m">1</span><span class="p">)</span>
+       <span class="p">{</span>
+           <span class="c1">//cul last loop
+</span>           <span class="nf">UpdateState</span><span class="p">(</span><span class="n">last_state</span><span class="p">,</span> <span class="n">state</span><span class="p">,</span> <span class="n">last_r</span><span class="p">,</span> <span class="n">last_action</span><span class="p">);</span>
+       <span class="p">}</span>
+
+       <span class="c1">//do next loop
+</span>       <span class="kt">bool</span> <span class="n">action</span> <span class="p">=</span> <span class="nf">choose_action</span><span class="p">(</span><span class="n">state</span><span class="p">);</span>
+       <span class="n">GameManager</span><span class="p">.</span><span class="n">S</span><span class="p">.</span><span class="nf">RespondByDecision</span><span class="p">(</span><span class="n">action</span><span class="p">);</span>
+       <span class="n">last_r</span> <span class="p">=</span> <span class="m">1</span><span class="p">;</span>
+       <span class="n">last_state</span> <span class="p">=</span> <span class="n">state</span><span class="p">;</span>
+       <span class="n">last_action</span> <span class="p">=</span> <span class="n">action</span><span class="p">;</span>
+   <span class="p">}</span>
+
+</code></pre>
+</div>
+
+<p>在训练完成后，我们导出 q_table,在下次加载的时候再导入，我们就可以迁移到别的设备上了。导出的时候，为了方便观察，现在我们到处 csv 结构的，可以直接在 Excel 里看每个状态的 q 值。 由于当前难度较低，我们的状态（state）比较有限, 所以我们存成 csv 这样的。后面随着状态的急速增加，我们考虑使用 protobuff （二进制）的格式来导出。</p>
+
+<div class="language-csharp highlighter-rouge"><pre class="highlight"><code><span class="c1">/// &lt;summary&gt;
+/// 导出q_table
+/// &lt;/summary&gt;
+</span><span class="k">public</span> <span class="k">void</span> <span class="nf">exportQTable</span><span class="p">()</span>
+<span class="p">{</span>
+    <span class="n">Debug</span><span class="p">.</span><span class="nf">Log</span><span class="p">(</span><span class="n">save_path</span><span class="p">);</span>
+    <span class="n">FileStream</span> <span class="n">fs</span> <span class="p">=</span> <span class="k">new</span> <span class="nf">FileStream</span><span class="p">(</span><span class="n">save_path</span><span class="p">,</span> <span class="n">FileMode</span><span class="p">.</span><span class="n">OpenOrCreate</span><span class="p">,</span> <span class="n">FileAccess</span><span class="p">.</span><span class="n">Write</span><span class="p">);</span>
+    <span class="n">StreamWriter</span> <span class="n">sw</span> <span class="p">=</span> <span class="k">new</span> <span class="nf">StreamWriter</span><span class="p">(</span><span class="n">fs</span><span class="p">);</span>
+    <span class="k">foreach</span> <span class="p">(</span><span class="kt">var</span> <span class="n">item</span> <span class="k">in</span> <span class="n">q_table</span><span class="p">)</span>
+    <span class="p">{</span>
+        <span class="kt">string</span> <span class="n">line</span> <span class="p">=</span> <span class="n">item</span><span class="p">.</span><span class="n">Key</span> <span class="p">+</span> <span class="s">","</span> <span class="p">+</span> <span class="n">item</span><span class="p">.</span><span class="n">Value</span><span class="p">.</span><span class="n">pad</span> <span class="p">+</span> <span class="s">","</span> <span class="p">+</span> <span class="n">item</span><span class="p">.</span><span class="n">Value</span><span class="p">.</span><span class="n">stay</span><span class="p">;</span>
+        <span class="n">sw</span><span class="p">.</span><span class="nf">WriteLine</span><span class="p">(</span><span class="n">line</span><span class="p">);</span>
+    <span class="p">}</span>
+    <span class="n">sw</span><span class="p">.</span><span class="nf">Close</span><span class="p">();</span>
+    <span class="n">fs</span><span class="p">.</span><span class="nf">Close</span><span class="p">();</span>
+<span class="p">}</span>
+
+<span class="c1">/// &lt;summary&gt;
+/// 游戏进入时 加载q_table
+/// &lt;/summary&gt;
+</span><span class="k">private</span> <span class="k">void</span> <span class="nf">loadQTable</span><span class="p">()</span>
+<span class="p">{</span>
+    <span class="k">if</span> <span class="p">(</span><span class="n">q_table</span> <span class="p">==</span> <span class="k">null</span><span class="p">)</span> <span class="n">q_table</span> <span class="p">=</span> <span class="k">new</span> <span class="n">Dictionary</span><span class="p">&lt;</span><span class="kt">int</span><span class="p">,</span> <span class="n">Row</span><span class="p">&gt;();</span>
+    <span class="k">if</span> <span class="p">(</span><span class="n">File</span><span class="p">.</span><span class="nf">Exists</span><span class="p">(</span><span class="n">save_path</span><span class="p">))</span>
+    <span class="p">{</span>
+        <span class="n">FileStream</span> <span class="n">fs</span> <span class="p">=</span> <span class="k">new</span> <span class="nf">FileStream</span><span class="p">(</span><span class="n">save_path</span><span class="p">,</span> <span class="n">FileMode</span><span class="p">.</span><span class="n">Open</span><span class="p">,</span> <span class="n">FileAccess</span><span class="p">.</span><span class="n">Read</span><span class="p">);</span>
+        <span class="n">StreamReader</span> <span class="n">sr</span> <span class="p">=</span> <span class="k">new</span> <span class="nf">StreamReader</span><span class="p">(</span><span class="n">fs</span><span class="p">);</span>
+        <span class="k">while</span> <span class="p">(</span><span class="k">true</span><span class="p">)</span>
+        <span class="p">{</span>
+            <span class="kt">string</span> <span class="n">line</span> <span class="p">=</span> <span class="n">sr</span><span class="p">.</span><span class="nf">ReadLine</span><span class="p">();</span>
+            <span class="k">if</span> <span class="p">(</span><span class="kt">string</span><span class="p">.</span><span class="nf">IsNullOrEmpty</span><span class="p">(</span><span class="n">line</span><span class="p">))</span> <span class="k">break</span><span class="p">;</span>
+            <span class="kt">string</span><span class="p">[]</span> <span class="n">ch</span> <span class="p">=</span> <span class="n">line</span><span class="p">.</span><span class="nf">Split</span><span class="p">(</span><span class="sc">':'</span><span class="p">);</span>
+            <span class="k">if</span> <span class="p">(</span><span class="n">ch</span><span class="p">.</span><span class="n">Length</span> <span class="p">&gt;=</span> <span class="m">3</span><span class="p">)</span>
+            <span class="p">{</span>
+                <span class="kt">int</span> <span class="n">key</span> <span class="p">=</span> <span class="kt">int</span><span class="p">.</span><span class="nf">Parse</span><span class="p">(</span><span class="n">ch</span><span class="p">[</span><span class="m">0</span><span class="p">]);</span>
+                <span class="kt">float</span> <span class="n">pad</span> <span class="p">=</span> <span class="kt">float</span><span class="p">.</span><span class="nf">Parse</span><span class="p">(</span><span class="n">ch</span><span class="p">[</span><span class="m">1</span><span class="p">]);</span>
+                <span class="kt">float</span> <span class="n">stay</span> <span class="p">=</span> <span class="kt">float</span><span class="p">.</span><span class="nf">Parse</span><span class="p">(</span><span class="n">ch</span><span class="p">[</span><span class="m">2</span><span class="p">]);</span>
+                <span class="n">Row</span> <span class="n">row</span> <span class="p">=</span> <span class="k">new</span> <span class="nf">Row</span><span class="p">()</span> <span class="p">{</span> <span class="n">stay</span> <span class="p">=</span> <span class="n">stay</span><span class="p">,</span> <span class="n">pad</span> <span class="p">=</span> <span class="n">pad</span> <span class="p">};</span>
+                <span class="k">if</span> <span class="p">(!</span><span class="n">q_table</span><span class="p">.</span><span class="nf">ContainsKey</span><span class="p">(</span><span class="n">key</span><span class="p">))</span> <span class="n">q_table</span><span class="p">.</span><span class="nf">Add</span><span class="p">(</span><span class="n">key</span><span class="p">,</span> <span class="n">row</span><span class="p">);</span>
+                <span class="k">else</span> <span class="n">q_table</span><span class="p">[</span><span class="n">key</span><span class="p">]</span> <span class="p">=</span> <span class="n">row</span><span class="p">;</span>
+            <span class="p">}</span>
+        <span class="p">}</span>
+        <span class="n">sr</span><span class="p">.</span><span class="nf">Dispose</span><span class="p">();</span>
+        <span class="n">fs</span><span class="p">.</span><span class="nf">Dispose</span><span class="p">();</span>
+    <span class="p">}</span>
+<span class="p">}</span>
+
+</code></pre>
+</div>
+
+<h3 id="难度二">难度二：</h3>
+
+<p>在难度一的基础上，我们增加一块柱子。 通过训练，使小鸟不但能够平衡飞行，而且可以穿越过柱子。使用github 工程展示的时候，你需要在设置中添加宏ENABLE_PILLAR，如下图所示：</p>
+
+<p><img src="/img/post-reinforcement/re4.jpg" alt="" /></p>
+
+<p>我们把 Pillar（柱子）的状态（state）也计算在内，Pillar 一共有五个状态，即我们根据和鸟的相对位置划分五个状态（state）,Bird 的 position x坐标始终为0，移动的是 Pillar, Bird和 Pillar 运动是相对的。如下代码：</p>
+
+<div class="language-csharp highlighter-rouge"><pre class="highlight"><code><span class="k">public</span> <span class="kt">int</span> <span class="nf">GetPillarMiniState</span><span class="p">()</span>
+<span class="p">{</span>
+    <span class="kt">int</span> <span class="n">ret</span> <span class="p">=</span> <span class="m">0</span><span class="p">;</span>
+    <span class="k">if</span> <span class="p">(</span><span class="n">pillars</span><span class="p">.</span><span class="n">Count</span> <span class="p">&gt;</span> <span class="m">0</span><span class="p">)</span>
+    <span class="p">{</span>
+        <span class="kt">float</span> <span class="n">_dis</span> <span class="p">=</span> <span class="n">pillars</span><span class="p">[</span><span class="m">0</span><span class="p">].</span><span class="n">transform</span><span class="p">.</span><span class="n">position</span><span class="p">.</span><span class="n">x</span><span class="p">;</span>
+        <span class="k">if</span> <span class="p">(</span><span class="n">_dis</span> <span class="p">&lt;</span> <span class="m">0</span><span class="p">)</span> <span class="n">ret</span> <span class="p">=</span> <span class="m">0</span><span class="p">;</span>
+        <span class="k">else</span> <span class="k">if</span> <span class="p">(</span><span class="n">_dis</span> <span class="p">&lt;=</span> <span class="m">2</span><span class="p">)</span> <span class="n">ret</span> <span class="p">=</span> <span class="m">1</span><span class="p">;</span>
+        <span class="k">else</span> <span class="k">if</span> <span class="p">(</span><span class="n">_dis</span> <span class="p">&lt;=</span> <span class="m">4</span><span class="p">)</span> <span class="n">ret</span> <span class="p">=</span> <span class="m">2</span><span class="p">;</span>
+        <span class="k">else</span> <span class="k">if</span> <span class="p">(</span><span class="n">_dis</span> <span class="p">&lt;=</span> <span class="m">6</span><span class="p">)</span> <span class="n">ret</span> <span class="p">=</span> <span class="m">3</span><span class="p">;</span>
+        <span class="k">else</span> <span class="n">ret</span> <span class="p">=</span> <span class="m">4</span><span class="p">;</span>
+    <span class="p">}</span>
+    <span class="k">return</span> <span class="n">ret</span> <span class="p">*</span> <span class="m">10</span><span class="p">;</span>
+<span class="p">}</span>
+
+</code></pre>
+</div>
+
+<p>Pillar 和Bird 一共组合了9X5=45种状态， 我们在构建 q_table的时候，代码如下：</p>
+
+<div class="language-csharp highlighter-rouge"><pre class="highlight"><code><span class="c1">/// &lt;summary&gt;
+/// Bird [0-9)一共九个状态
+/// Pillar [0-5) 一共5个状态
+/// 状态统计 9x5=45个状态
+/// &lt;/summary&gt;
+</span><span class="k">public</span> <span class="k">void</span> <span class="nf">Build_Q_Table</span><span class="p">()</span>
+<span class="p">{</span>
+    <span class="n">q_table</span> <span class="p">=</span> <span class="k">new</span> <span class="n">Dictionary</span><span class="p">&lt;</span><span class="kt">int</span><span class="p">,</span> <span class="n">Row</span><span class="p">&gt;();</span>
+    <span class="k">for</span> <span class="p">(</span><span class="kt">int</span> <span class="n">i</span> <span class="p">=</span> <span class="m">0</span><span class="p">;</span> <span class="n">i</span> <span class="p">&lt;</span> <span class="m">9</span><span class="p">;</span> <span class="n">i</span><span class="p">++)</span>
+    <span class="p">{</span>
+<span class="cp">#if ENABLE_PILLAR
+</span>        <span class="k">for</span> <span class="p">(</span><span class="kt">int</span> <span class="n">j</span> <span class="p">=</span> <span class="m">0</span><span class="p">;</span> <span class="n">j</span> <span class="p">&lt;</span> <span class="m">5</span><span class="p">;</span> <span class="n">j</span><span class="p">++)</span>
+        <span class="p">{</span>
+            <span class="n">Row</span> <span class="n">row</span> <span class="p">=</span> <span class="k">new</span> <span class="nf">Row</span><span class="p">()</span> <span class="p">{</span> <span class="n">pad</span> <span class="p">=</span> <span class="m">0f</span><span class="p">,</span> <span class="n">stay</span> <span class="p">=</span> <span class="m">0f</span> <span class="p">};</span>
+            <span class="n">Debug</span><span class="p">.</span><span class="nf">Log</span><span class="p">(</span><span class="s">"i:"</span> <span class="p">+</span> <span class="n">i</span> <span class="p">+</span> <span class="s">" j:"</span> <span class="p">+</span> <span class="n">j</span> <span class="p">+</span> <span class="s">" val:"</span> <span class="p">+</span> <span class="p">(</span><span class="n">i</span> <span class="p">+</span> <span class="m">10</span> <span class="p">*</span> <span class="n">j</span><span class="p">));</span>
+            <span class="n">q_table</span><span class="p">.</span><span class="nf">Add</span><span class="p">(</span><span class="n">i</span> <span class="p">+</span> <span class="m">10</span> <span class="p">*</span> <span class="n">j</span><span class="p">,</span> <span class="n">row</span><span class="p">);</span>
+        <span class="p">}</span>
+<span class="cp">#else
+</span>        <span class="n">Row</span> <span class="n">row</span> <span class="p">=</span> <span class="k">new</span> <span class="nf">Row</span><span class="p">()</span> <span class="p">{</span> <span class="n">pad</span> <span class="p">=</span> <span class="m">0f</span><span class="p">,</span> <span class="n">stay</span> <span class="p">=</span> <span class="m">0f</span> <span class="p">};</span>
+        <span class="n">q_table</span><span class="p">.</span><span class="nf">Add</span><span class="p">(</span><span class="n">i</span><span class="p">,</span> <span class="n">row</span><span class="p">);</span>
+<span class="cp">#endif
+</span>
+    <span class="p">}</span>
+<span class="p">}</span>
+
+
+    <span class="k">public</span> <span class="kt">int</span> <span class="nf">GetCurrentState</span><span class="p">()</span>
+    <span class="p">{</span>
+<span class="cp">#if ENABLE_PILLAR
+</span>        <span class="kt">int</span> <span class="n">p_st</span> <span class="p">=</span> <span class="n">PillarManager</span><span class="p">.</span><span class="n">S</span><span class="p">.</span><span class="nf">GetPillarMiniState</span><span class="p">();</span>
+        <span class="kt">int</span> <span class="n">b_st</span> <span class="p">=</span> <span class="n">GameManager</span><span class="p">.</span><span class="n">S</span><span class="p">.</span><span class="n">mainBird</span><span class="p">.</span><span class="nf">GetState</span><span class="p">();</span>
+        <span class="k">return</span> <span class="n">p_st</span> <span class="p">+</span> <span class="n">b_st</span><span class="p">;</span>
+<span class="cp">#else
+</span>        <span class="k">return</span> <span class="n">GameManager</span><span class="p">.</span><span class="n">S</span><span class="p">.</span><span class="n">mainBird</span><span class="p">.</span><span class="nf">GetState</span><span class="p">();</span>
+<span class="cp">#endif
+</span>    <span class="p">}</span>
+</code></pre>
+</div>
+
+<p>Reinforcement做选择还是和之前一样，由 epsilon概率来由 q_table 来决定，1-epsilon概率随机决定。</p>
+
+<p>通过训练我们发现，小鸟很大概率可以穿过 pillar。</p>
+
+<h3 id="难度三">难度三：</h3>
+
+<p>循环增加柱子，且缺口不固定。通过训练，使小鸟能够穿越所有的柱子。所下图 所示：</p>
+
+<p><img src="/img/post-reinforcement/re5.jpg" alt="" /></p>
+
+<p>这样柱子的状态就多了，还要考虑 pillar 缺口的情况，为了优化算法，我们只考虑小鸟前方的三个单元（1个单元的长度为2）所有柱子的情况，每一个 tick状态都会发生改变。</p>
+
+<p>一个柱子由4个状态（缺口位置3个状态和是否存在柱子），考虑三个单元一共4X3=12种 state, 再组合 bird 的状态12x9=108种状态，随着state 的增加，q_table的方式记忆库来存 state 已经显得不合适了，后期我们还会引入神经网络，使用 DQN 的方式来优化算法。<br />
+还有就是我们所有的代码目前都是在 Unity 中实现的，后面我们还会把Tranning 提取出来在 Python中，Unity 只负责表现的东西。期待作者后续的更新吧。</p>
+
+
+    </div>
+  </div>
+
+  <style>
+  .post-nav {
+    overflow: hidden;
+    /* margin-top: 60px; */
+    padding: 12px;
+    white-space: nowrap;
+    /* border-top: 1px solid #eee; */
+  }
+
+  .post-nav-item {
+    display: inline-block;
+    width: 50%;
+    white-space: normal;
+  }
+
+  .post-nav-item a {
+    position: relative;
+    display: inline-block;
+    line-height: 25px;
+    font-size: 14px;
+    color: #555;
+    border-bottom: none;
+  }
+
+  .post-nav-item a:hover {
+    color: #222;
+    font-weight: bold;
+    border-bottom: none;
+  }
+
+  .post-nav-item a:active {
+    top: 2px;
+  }
+
+  .post-nav-item a:before,
+  .post-nav-item a:after {
+    display: inline-block;
+    width: 16px;
+    height: 25px;
+    vertical-align: top;
+    opacity: 0.4;
+    background-size: 16px;
+  }
+
+  .post-nav-none a:none {
+    content: ' ';
+    background-size: 8px;
+  }
+
+  .post-nav-none a:hover:none {
+    opacity: 1;
+  }
+
+  .post-nav-prev a:before {
+    content: ' ';
+    background: url("data:image/svg+xml;base64,PD94bWwgdmVyc2lvbj0iMS4wIiA/PjxzdmcgaGVpZ2h0PSIxMnB4IiB2ZXJzaW9uPSIxLjEiIHZpZXdCb3g9IjAgMCA5IDEyIiB3aWR0aD0iOXB4IiB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHhtbG5zOnNrZXRjaD0iaHR0cDovL3d3dy5ib2hlbWlhbmNvZGluZy5jb20vc2tldGNoL25zIiB4bWxuczp4bGluaz0iaHR0cDovL3d3dy53My5vcmcvMTk5OS94bGluayI+PHRpdGxlLz48ZGVzYy8+PGRlZnMvPjxnIGZpbGw9Im5vbmUiIGZpbGwtcnVsZT0iZXZlbm9kZCIgaWQ9IlBhZ2UtMSIgc3Ryb2tlPSJub25lIiBzdHJva2Utd2lkdGg9IjEiPjxnIGZpbGw9IiMwMDAwMDAiIGlkPSJDb3JlIiB0cmFuc2Zvcm09InRyYW5zbGF0ZSgtMjE4LjAwMDAwMCwgLTkwLjAwMDAwMCkiPjxnIGlkPSJjaGV2cm9uLWxlZnQiIHRyYW5zZm9ybT0idHJhbnNsYXRlKDIxOC41MDAwMDAsIDkwLjAwMDAwMCkiPjxwYXRoIGQ9Ik03LjQsMS40IEw2LDAgTC04Ljg4MTc4NDJlLTE2LDYgTDYsMTIgTDcuNCwxMC42IEwyLjgsNiBMNy40LDEuNCBaIiBpZD0iU2hhcGUiLz48L2c+PC9nPjwvZz48L3N2Zz4=") no-repeat 0 50%;
+    background-size: 8px;
+  }
+
+  .post-nav-prev a:hover:before {
+    opacity: 1;
+  }
+
+  .post-nav-next {
+    text-align: right;
+  }
+
+  .post-nav-next a:after {
+    content: ' ';
+    background: url("data:image/svg+xml;base64,PD94bWwgdmVyc2lvbj0iMS4wIiA/PjxzdmcgaGVpZ2h0PSIxMnB4IiB2ZXJzaW9uPSIxLjEiIHZpZXdCb3g9IjAgMCA5IDEyIiB3aWR0aD0iOXB4IiB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHhtbG5zOnNrZXRjaD0iaHR0cDovL3d3dy5ib2hlbWlhbmNvZGluZy5jb20vc2tldGNoL25zIiB4bWxuczp4bGluaz0iaHR0cDovL3d3dy53My5vcmcvMTk5OS94bGluayI+PHRpdGxlLz48ZGVzYy8+PGRlZnMvPjxnIGZpbGw9Im5vbmUiIGZpbGwtcnVsZT0iZXZlbm9kZCIgaWQ9IlBhZ2UtMSIgc3Ryb2tlPSJub25lIiBzdHJva2Utd2lkdGg9IjEiPjxnIGZpbGw9IiMwMDAwMDAiIGlkPSJDb3JlIiB0cmFuc2Zvcm09InRyYW5zbGF0ZSgtMjYwLjAwMDAwMCwgLTkwLjAwMDAwMCkiPjxnIGlkPSJjaGV2cm9uLXJpZ2h0IiB0cmFuc2Zvcm09InRyYW5zbGF0ZSgyNjAuNTAwMDAwLCA5MC4wMDAwMDApIj48cGF0aCBkPSJNMSwwIEwtMC40LDEuNCBMNC4yLDYgTC0wLjQsMTAuNiBMMSwxMiBMNyw2IEwxLDAgWiIgaWQ9IlNoYXBlIi8+PC9nPjwvZz48L2c+PC9zdmc+") no-repeat 100% 50%;
+    background-size: 8px;
+  }
+
+  .post-nav-next a:hover:after {
+    opacity: 1;
+  }
+</style>
+
+
+
+<div class="post-nav">
+
+  
+  <div class="post-nav-prev post-nav-item">
+    
+    <a href="/blog/2018/reinforcement2/"> 强化学习-游戏AI Trainning (二)</a>
+  </div>
+  
+
+  
+  <div class="post-nav-next post-nav-item">
+    
+    <a href="/blog/2018/tfrecord/"> TensorFlow TFRecord图形处理工具</a>
+  </div>
+  
+
+</div>
+
+</article>
+    </div>
+
+    <footer class="site-footer">
+  <div class="container">
+    <ul class="social">
+  <li><a href="https://twitter.com/penghuailiang" target="_blank"><i class="icon icon-twitter"></i></a></li>
+  <li><a href="https://www.zhihu.com/people/huailiangpenguin" target="_blank"><i class="icon icon-zhihu"></i></a></li>
+  <li><a href="https://www.facebook.com/profile.php?id=100004290725320" target="_blank"><i class="icon icon-facebook"></i></a></li>
+  <li><a href="https://weibo.com/6212299692/profile?topnav=1&wvr=6" target="_blank"><i class="icon icon-sina"></i></a></li>
+  <li><a href="https://www.linkedin.com/in/penghuailiang/" target="_blank"><i class="icon icon-linkedin"></i></a></li>
+  <li><a href="https://github.com/huailiang" target="_blank"><i class="icon icon-github"></i></a></li>
+</ul>
+    <p class="txt-medium-gray">
+      <small>&copy;2019 All rights reserved. </small>
+    </p>
+  </div>
+</footer>
+    <a href="https://github.com/huailiang" target="_blank" class="github-corner"><svg width="80" height="80" viewBox="0 0 250 250" style="fill:#337ab7; color:#fff; position: absolute; top: 0; border: 0; right: 0;"><path d="M0,0 L115,115 L130,115 L142,142 L250,250 L250,0 Z"></path><path d="M128.3,109.0 C113.8,99.7 119.0,89.6 119.0,89.6 C122.0,82.7 120.5,78.6 120.5,78.6 C119.2,72.0 123.4,76.3 123.4,76.3 C127.3,80.9 125.5,87.3 125.5,87.3 C122.9,97.6 130.6,101.9 134.4,103.2" fill="currentColor" style="transform-origin: 130px 106px;" class="octo-arm"></path><path d="M115.0,115.0 C114.9,115.1 118.7,116.5 119.8,115.4 L133.7,101.6 C136.9,99.2 139.9,98.4 142.2,98.6 C133.8,88.0 127.5,74.4 143.8,58.0 C148.5,53.4 154.0,51.2 159.7,51.0 C160.3,49.4 163.2,43.6 171.4,40.1 C171.4,40.1 176.1,42.5 178.8,56.2 C183.1,58.6 187.2,61.8 190.9,65.4 C194.5,69.0 197.7,73.2 200.1,77.6 C213.8,80.2 216.3,84.9 216.3,84.9 C212.7,93.1 206.9,96.0 205.4,96.6 C205.1,102.4 203.0,107.8 198.3,112.5 C181.9,128.9 168.3,122.5 157.7,114.1 C157.9,116.9 156.7,120.9 152.7,124.9 L141.0,136.5 C139.8,137.7 141.6,141.9 141.8,141.8 Z" fill="currentColor" class="octo-body"></path></svg></a>
+
+
+    <script src="//code.jquery.com/jquery-1.11.3.min.js"></script>
+    <script>
+      $(document).ready(function () {
+        $('.sliding-panel-button,.sliding-panel-fade-screen,.sliding-panel-close').on('click touchstart', function (e) {
+          $('.sliding-panel-content,.sliding-panel-fade-screen').toggleClass('is-visible');
+          e.preventDefault();
+        });
+      });
+    </script>
+  </main>
+</body>
+
+</html>

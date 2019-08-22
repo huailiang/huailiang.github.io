@@ -1,0 +1,432 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <meta http-equiv="X-UA-Compatible" content="IE=edge">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+
+  <title>Timeline Signals - Marker标记</title>
+  <meta name="description"
+    content="  自从Unity 2017.1发布Timeline以来，受到了广大开发者的欢迎，创作出不少精彩作品。我们也收到很多反馈，其中一项就是Timeline事件功能的请求，它是Timeline缺少的功能，一些用户通过剪辑实现了事件功能，但剪辑有自身的缺点。此篇将为你介绍在Unity 2019.1中新推出的Timelin...">
+
+  <link rel="shortcut icon" href="/img/favicon.ico">
+  <link rel="stylesheet" href="/css/main.css">
+  <link rel="canonical" href="https://huailiang.github.io/blog/2019/timeline/">
+  <link rel="alternate" type="application/rss+xml" title="Huailiang Blog"
+    href="https://huailiang.github.io/feed.xml" />
+
+</head>
+
+<body>
+  <main>
+    <header class="site-header">
+  <div class="container">
+    <h1><a href="/">Hom<span>e</span></a></h1>
+
+    <button type="button" class="sliding-panel-button">
+      <span></span>
+      <span></span>
+      <span></span>
+    </button>
+
+    <nav class="navbar sliding-panel-content">
+      <ul>
+        
+        <li><a href="/about" title="About">About</a>
+        </li>
+        
+        <li><a href="/blog" title="Blog">Blog</a>
+        </li>
+        
+        <!-- <li><a href="/feed.xml" target="_blank"><i class="icon icon-feed"></i></a></li> -->
+        <li><a href="/category/" target="_blank"><i class="icon icon-feed"></i></a></li>
+      </ul>
+    </nav>
+  </div>
+</header>
+
+<div class="sliding-panel-fade-screen"></div>
+    <script type="text/javascript" src="/js/MathJax.js?config=TeX-AMS-MML_HTMLorMML"></script>
+
+<script type="text/x-mathjax-config">
+MathJax.Hub.Config({
+  tex2jax: {
+    inlineMath: [['$','$'], ['\\(','\\)']],
+    processEscapes: true
+  }
+});
+</script>
+
+<script type="text/x-mathjax-config">
+  MathJax.Hub.Config({
+    tex2jax: {
+      skipTags: ['script', 'noscript', 'style', 'textarea', 'pre', 'code']
+    }
+  });
+
+</script>
+    <div class="container">
+      <article role="article" class="post">
+
+  <div class="card">
+    <header class="post-header">
+      <h1 class="post-title">Timeline Signals - Marker标记</h1>
+      <p class="post-meta">Aug 21, 2019 •
+        Huailiang</p>
+    </header>
+
+    <div class="post-content">
+      <blockquote>
+  <p>自从Unity 2017.1发布Timeline以来，受到了广大开发者的欢迎，创作出不少精彩作品。我们也收到很多反馈，其中一项就是Timeline事件功能的请求，它是Timeline缺少的功能，一些用户通过剪辑实现了事件功能，但剪辑有自身的缺点。此篇将为你介绍在Unity 2019.1中新推出的Timeline Signals信号功能和扩展。</p>
+</blockquote>
+
+<p><img src="/img/post-unity/cs1.jpg" alt="" /></p>
+
+<h2 id="介绍">介绍</h2>
+
+<p>标记可以在Timeline上和剪辑一样添加和处理，能够使用选取，复制粘贴和编辑模式等功能。就像剪辑一样，标记也有具体类型，例如：剪辑分为动画剪辑、激活剪辑、控制剪辑等类型。</p>
+
+<p><img src="/img/post-unity/cs3.png" alt="" /></p>
+
+<p>工作原理</p>
+
+<p>　　为了在Timeline上正确设置信号，我们需要三个部分：</p>
+
+<p>　　Signal Asset信号资源：信号资源是发射器和接收器之间的联系。通常信号资源会用作标识符。</p>
+
+<p>　　Signal Emitter信号发射器： 信号发射器会放在Timeline上，它包含对信号资源的引用。运行信号发射器时，如果当前时间比发射器的时间大，发射器会被触发，发射器会把信号资源发送到信号接收器。</p>
+
+<p>　　Signal Receiver信号接收器：信号接收器是带有一组反应的组件，每个反应都关联到信号资源。当接收器知道信号已被触发时，它会激活关联到对应信号资源的反应。</p>
+
+<p>如下图所示，当关联到同一信号资源的发射器触发时，相应反应会被激活。</p>
+
+<p><img src="/img/post-unity/cs2.jpg" alt="" /></p>
+
+<p>关于基础的timeline signal的使用可以参考这篇<a href="http://dy.163.com/v2/article/detail/E9GLUIQS0526E124.html">文章</a>。</p>
+
+<h2 id="扩展">扩展</h2>
+
+<p>unity自带的signal是不可以参数参数的， 或者说自能在signal receiver的inspector传递一个固定的参数，参数超过一个就不能被识别了，如下图所示：</p>
+
+<p><img src="/img/post-unity/cs6.jpg" alt="" /></p>
+
+<p>这显然不能满足我们日常的开发需求，因为我们的参数常常来自于signal, 而不是reveiver。还好Unity给了我们自定义扩展的接口, 这样能实现一些比如参数传递、分支逻辑等功能了。</p>
+
+<h3 id="自定义信号发射器signal-emitter">自定义信号发射器signal emitter</h3>
+
+<p>定义一个发射器signal emitter, 它是实现 INotification, INotificationOptionProvider接口的类。我们可以使用id属性来识别唯一标识通知。对于本文的示例，我们并不需要该功能，因此将使用默认的实现。</p>
+
+<div class="language-cs highlighter-rouge"><pre class="highlight"><code><span class="k">public</span> <span class="k">class</span> <span class="nc">MyNotification</span> <span class="p">:</span> <span class="n">INotification</span>
+<span class="p">{</span>
+    <span class="k">public</span> <span class="n">PropertyName</span> <span class="n">id</span>
+    <span class="p">{</span>
+      <span class="k">get</span> <span class="p">{</span> <span class="k">return</span> <span class="k">new</span> <span class="nf">PropertyName</span><span class="p">(</span><span class="s">"MyNotification"</span><span class="p">);</span> <span class="p">}</span>
+    <span class="p">}</span>
+
+    <span class="n">NotificationFlags</span> <span class="n">INotificationOptionProvider</span><span class="p">.</span><span class="n">flags</span>
+    <span class="p">{</span>
+        <span class="k">get</span>
+        <span class="p">{</span>
+            <span class="k">return</span> <span class="p">(</span><span class="n">emitOnce</span> <span class="p">?</span> <span class="n">NotificationFlags</span><span class="p">.</span><span class="n">TriggerOnce</span> <span class="p">:</span> <span class="k">default</span><span class="p">(</span><span class="n">NotificationFlags</span><span class="p">))</span> 
+              <span class="p">|</span> <span class="n">NotificationFlags</span><span class="p">.</span><span class="n">TriggerInEditMode</span><span class="p">;</span>
+        <span class="p">}</span>
+    <span class="p">}</span>
+<span class="p">}</span>
+</code></pre>
+</div>
+
+<h3 id="自定义信号接收器-signal-receiver">自定义信号接收器 signal receiver</h3>
+
+<p>我们需要一个接收器，它是实现INotificationReceiver接口的类。示例中，接收器会记录接收到通知的时间。</p>
+
+<div class="language-cs highlighter-rouge"><pre class="highlight"><code><span class="k">class</span> <span class="nc">ReceiverExample</span> <span class="p">:</span> <span class="n">MonoBehaviour</span><span class="err">，</span><span class="n">INotificationReceiver</span>
+<span class="p">{</span>
+    <span class="k">public</span> <span class="k">void</span> <span class="nf">OnNotify</span><span class="p">(</span><span class="n">Playable</span> <span class="n">origin</span><span class="p">,</span> <span class="n">INotification</span> <span class="n">notification</span><span class="p">,</span> <span class="kt">object</span> <span class="n">context</span><span class="p">)</span>
+    <span class="p">{</span>
+        <span class="k">if</span> <span class="p">(</span><span class="n">notification</span> <span class="k">is</span> <span class="n">JumpSignalEmmiter</span><span class="p">)</span>
+        <span class="p">{</span>
+            <span class="n">JumpSignalEmmiter</span> <span class="n">signal</span> <span class="p">=</span> <span class="n">notification</span> <span class="k">as</span> <span class="n">JumpSignalEmmiter</span><span class="p">;</span>
+            <span class="n">director</span><span class="p">.</span><span class="n">time</span> <span class="p">=</span> <span class="n">signal</span><span class="p">.</span><span class="n">jumpTime</span><span class="p">;</span> <span class="c1">//跳转
+</span>        <span class="p">}</span>
+        <span class="k">else</span> <span class="k">if</span> <span class="p">(</span><span class="n">notification</span> <span class="k">is</span> <span class="n">SlowSignalEmitter</span><span class="p">)</span>
+        <span class="p">{</span>
+            <span class="n">SlowSignalEmitter</span> <span class="n">signal</span> <span class="p">=</span> <span class="n">notification</span> <span class="k">as</span> <span class="n">SlowSignalEmitter</span><span class="p">;</span>
+            <span class="n">director</span><span class="p">.</span><span class="n">playableGraph</span><span class="p">.</span><span class="nf">GetRootPlayable</span><span class="p">(</span><span class="m">0</span><span class="p">).</span><span class="nf">SetSpeed</span><span class="p">(</span><span class="n">signal</span><span class="p">.</span><span class="n">slowRate</span><span class="p">);</span> <span class="c1">//改变播放速率
+</span>        <span class="p">}</span>
+    <span class="p">}</span>
+<span class="p">}</span>
+</code></pre>
+</div>
+
+<p>这样你就可以接受到来自signnal的传递过来的参数了。 我们这里直接把INotificationReceiver挂载在MonoBehaviour的GameObject上，就直接可以收到信号了。运行效果如下：</p>
+
+<p><img src="/img/post-unity/cs5.gif" alt="" /></p>
+
+<p>另外我们也可以通过代码手动的派发signal, 而不是一定要通过time cursor来触发，通过使用AddNotificationReceiver方法，把ReceiverExample添加给可运行输出。m_Receiver实例现在可以接收发送到该输出的通知。</p>
+
+<div class="language-cs highlighter-rouge"><pre class="highlight"><code><span class="kt">var</span> <span class="n">output</span> <span class="p">=</span> <span class="n">ScriptPlayableOutput</span><span class="p">.</span><span class="nf">Create</span><span class="p">(</span><span class="n">director</span><span class="p">.</span><span class="n">playableGraph</span><span class="p">,</span> <span class="s">""</span><span class="p">);</span>
+<span class="n">output</span><span class="p">.</span><span class="nf">AddNotificationReceiver</span><span class="p">(</span><span class="k">this</span><span class="p">);</span> <span class="c1">//this 所在的类需要实现 INotificationReceiver
+</span><span class="n">JumpSignalEmmiter</span> <span class="n">signal</span> <span class="p">=</span> <span class="k">new</span> <span class="nf">JumpSignalEmmiter</span><span class="p">();</span> <span class="c1">//实现接口INotification
+</span><span class="n">sign</span><span class="p">.</span><span class="n">jumpTime</span> <span class="p">=</span> <span class="m">0</span><span class="p">;</span>
+<span class="n">output</span><span class="p">.</span><span class="nf">PushNotification</span><span class="p">(</span><span class="n">Playable</span><span class="p">.</span><span class="n">Null</span><span class="p">,</span> <span class="n">signal</span><span class="p">);</span>
+</code></pre>
+</div>
+
+<p>调用PushNotification后不会立即发送通知，它们仅会加入队列排队等候，这表示它们会进行积累，直到视图已经完全处理。</p>
+
+<p>在LateUpdate阶段前，所有队列中的通知都会发送到视图的输出部分。在所有通知都发送后，队列会在新一帧开始前清空。</p>
+
+<p>在视图播放的时候，将在m_Receiverinstance实例上调用OnNotify方法，并将通知作为参数发送。</p>
+
+<h5 id="timenotificationbehaviour指定时间点">TimeNotificationBehaviour指定时间点</h5>
+<p>使用内置类TimeNotificationBehaviour，该类是标准的PlayableBehaviour，所以它可以添加到任意视图，只要使用一些逻辑就可以在准确时间发送通知。</p>
+
+<p><img src="/img/post-unity/cs8.png" alt="" /></p>
+
+<div class="language-cs highlighter-rouge"><pre class="highlight"><code><span class="kt">var</span> <span class="n">timeNotificationPlayable</span> <span class="p">=</span> <span class="n">ScriptPlayable</span><span class="p">&lt;</span><span class="n">TimeNotificationBehaviour</span><span class="p">&gt;.</span><span class="nf">Create</span><span class="p">(</span><span class="n">m_Graph</span><span class="p">);</span>
+<span class="n">output</span><span class="p">.</span><span class="nf">SetSourcePlayable</span><span class="p">(</span><span class="n">timeNotificationPlayable</span><span class="p">);</span>
+
+<span class="c1">//在时间通知行为添加通知
+</span><span class="kt">var</span> <span class="n">notificationBehaviour</span> <span class="p">=</span> <span class="n">timeNotificationPlayable</span><span class="p">.</span><span class="nf">GetBehaviour</span><span class="p">();</span>
+<span class="n">notificationBehaviour</span><span class="p">.</span><span class="nf">AddNotification</span><span class="p">(</span><span class="m">2.0</span><span class="p">,</span> <span class="k">new</span> <span class="nf">MyNotification</span><span class="p">());</span>
+</code></pre>
+</div>
+<p>我们没有在可运行输出上直接调用PushNotification，而是给输出附加TimeNotificationBehaviour，然后给它添加一个通知。该行为会在正确时间自动把通知推送给输出，控制台会显示以下信息：</p>
+
+<p>上述代码并不是在准确的第二秒发送？这是因为AddNotification方法不会确保准确的时间。在Unity开始渲染新一帧时，Playable Graph可运行视图会进行更新。根据游戏的帧率，在通知添加到TimeNotificationBehaviour时，PlayableGraph的估算时间可能不会正好符合指定的时间。</p>
+
+<p>AddNotification方法会确保的是：通知将会在PlayableGraph的时间比通知触发时间大的时候发送。</p>
+
+<h3 id="自定义样式css">自定义样式CSS</h3>
+
+<p>我们的自定义标记会以常见的“图钉”表示，也可以把该图标改为自己选择的图像。第一步是创建样式表。</p>
+
+<p>样式表可以用来扩展编辑器的可视化外观，我们可以在编辑器文件夹的StyleSheets/Extensions目录下添加common.uss文件。</p>
+
+<p>USS即Unity样式表，使用类似CSS的语法来描述新样式，下面是样式的示例。</p>
+
+<div class="language-css highlighter-rouge"><pre class="highlight"><code><span class="nt">JumpSignalEmmiter</span>
+<span class="p">{</span>
+ <span class="nl">width</span><span class="p">:</span> <span class="m">18px</span><span class="p">;</span>
+ <span class="nl">height</span><span class="p">:</span> <span class="m">18px</span><span class="p">;</span>
+ <span class="nl">background-image</span><span class="p">:</span> <span class="n">resource</span><span class="p">(</span><span class="s1">"Assets/Editor/StyleSheets/ico_collapsed.png"</span><span class="p">);</span>
+<span class="p">}</span>
+
+<span class="nt">JumpSignalEmmiter</span><span class="nd">:checked</span>
+<span class="p">{</span>
+ <span class="nl">background-image</span><span class="p">:</span> <span class="n">resource</span><span class="p">(</span><span class="s1">"Assets/Editor/StyleSheets/ico_normal.png"</span><span class="p">);</span>
+<span class="p">}</span>
+
+<span class="nt">JumpSignalEmmiter</span><span class="nd">:focus:checked</span>
+<span class="p">{</span>
+ <span class="nl">background-image</span><span class="p">:</span> <span class="n">resource</span><span class="p">(</span><span class="s1">"Assets/Editor/StyleSheets/ico_selected.png"</span><span class="p">);</span>
+<span class="p">}</span>
+</code></pre>
+</div>
+
+<p>更多关于介绍Unity 使用uss创作更多的自定义样式， 可以参考<a href="https://docs.unity3d.com/Manual/UIE-USS.html">官方的API</a>。改完uss, Unity编辑器并不是立即发生样式改变，当点击运行按钮的时候，样式才发生改变。</p>
+
+<p>注意，这里必须是common.uss文件名， 且目录名必须是Editor下StyleSheets/Extensions的子目录。 对应的SignalEmitter需要指定CumstomStyle。</p>
+
+<div class="language-cs highlighter-rouge"><pre class="highlight"><code>  <span class="p">[</span><span class="nf">CustomStyle</span><span class="p">(</span><span class="s">"JumpSignalEmmiter"</span><span class="p">)]</span>
+  <span class="k">public</span> <span class="k">class</span> <span class="nc">JumpSignalEmmiter</span> <span class="p">:</span> <span class="n">Marker</span><span class="p">,</span> 
+    <span class="n">INotification</span><span class="p">,</span> 
+    <span class="n">INotificationOptionProvider</span>
+  <span class="p">{</span>
+    <span class="c1">//to implement INotification &amp; INotificationOptionProvider
+</span>  <span class="p">}</span>
+
+</code></pre>
+</div>
+<h2 id="tips">Tips</h2>
+
+<h5 id="1-signal-emitter参数说明">1. Signal Emitter参数说明</h5>
+
+<p><img src="/img/post-unity/cs4.jpg" alt="" /></p>
+
+<h6 id="retroactive">Retroactive</h6>
+
+<p>有时我们直接使用API( PlayableDirector.time = 1.4)或者游戏非常卡发生跳帧的时候， 导致标记没有在时序上经过， 是否还触发此signnal。如果勾上了，就算跳过timeline上的maker，只要当前时间在maker之后，就会触发。</p>
+
+<h6 id="emitonce">EmitOnce</h6>
+
+<p>有时我们会循环播放某一段动作，如果此时勾上此选项， 信号量自会触发一次， 否则的话，每一次都会触发。</p>
+
+<h5 id="2-context-不显示signnal">2. Context 不显示signnal</h5>
+
+<p><img src="/img/post-unity/cs7.png" alt="" /></p>
+
+<p>Unity默认显示Mark Context只在绑定gameobject或者component的track上， 比如说Control Track就不显示。</p>
+
+<p>有时候有些自定义的signal emitter并不想出现在某些track里， 比如说一些用来控制全局的signal并不想出现在Animation Track里。一种最直接的方法直接修改TypeUtility.cs的方法:</p>
+
+<div class="language-cs highlighter-rouge"><pre class="highlight"><code><span class="k">public</span> <span class="k">static</span> <span class="kt">bool</span> <span class="nf">DoesTrackSupportTrackType</span><span class="p">(</span><span class="n">TrackAsset</span> <span class="n">track</span><span class="p">,</span> <span class="n">Type</span> <span class="n">type</span><span class="p">)</span>
+<span class="p">{</span>
+    <span class="k">if</span> <span class="p">(</span><span class="n">track</span><span class="p">.</span><span class="n">supportsNotifications</span><span class="p">)</span>
+    <span class="p">{</span>
+        <span class="k">return</span> <span class="n">type</span> <span class="p">!=</span> <span class="k">typeof</span><span class="p">(</span><span class="n">JumpSignalEmmiter</span><span class="p">)</span> <span class="p">&amp;&amp;</span> <span class="n">type</span> <span class="p">!=</span> <span class="k">typeof</span><span class="p">(</span><span class="n">SlowSignalEmitter</span><span class="p">);</span>
+    <span class="p">}</span>
+    <span class="k">return</span> <span class="p">!</span><span class="k">typeof</span><span class="p">(</span><span class="n">INotification</span><span class="p">).</span><span class="nf">IsAssignableFrom</span><span class="p">(</span><span class="n">type</span><span class="p">);</span>
+<span class="p">}</span>
+</code></pre>
+</div>
+
+<p>然后再TimelineContextMenu.cs 调用的地方制定特定的track：</p>
+<div class="language-cs highlighter-rouge"><pre class="highlight"><code><span class="k">public</span> <span class="k">static</span> <span class="k">void</span> <span class="nf">AddMarkerMenuCommands</span><span class="p">(</span><span class="n">GenericMenu</span> <span class="n">menu</span><span class="p">,</span> <span class="n">TrackAsset</span> <span class="n">track</span><span class="p">,</span> <span class="n">Func</span><span class="p">&lt;</span><span class="n">Type</span><span class="p">,</span> <span class="n">IMarker</span><span class="p">&gt;</span> <span class="n">command</span><span class="p">,</span> <span class="kt">bool</span> <span class="n">enabled</span><span class="p">)</span>
+<span class="p">{</span>
+    <span class="kt">var</span> <span class="n">markerTypes</span> <span class="p">=</span> <span class="n">TypeUtility</span><span class="p">.</span><span class="nf">GetBuiltInMarkerTypes</span><span class="p">().</span><span class="nf">Union</span><span class="p">(</span><span class="n">TypeUtility</span><span class="p">.</span><span class="nf">GetUserMarkerTypes</span><span class="p">());</span>
+    <span class="k">if</span> <span class="p">(</span><span class="n">track</span> <span class="p">!=</span> <span class="k">null</span><span class="p">)</span>
+    <span class="p">{</span>
+        <span class="k">if</span> <span class="p">(</span><span class="n">track</span> <span class="k">is</span> <span class="n">MarkerTrack</span><span class="p">)</span>
+            <span class="n">markerTypes</span> <span class="p">=</span> <span class="n">markerTypes</span><span class="p">.</span><span class="nf">Where</span><span class="p">(</span><span class="n">x</span> <span class="p">=&gt;</span> <span class="n">TypeUtility</span><span class="p">.</span><span class="nf">DoesTrackSupportMarkerType</span><span class="p">(</span><span class="n">track</span><span class="p">,</span> <span class="n">x</span><span class="p">));</span>
+        <span class="k">else</span>
+            <span class="n">markerTypes</span> <span class="p">=</span> <span class="n">markerTypes</span><span class="p">.</span><span class="nf">Where</span><span class="p">(</span><span class="n">x</span> <span class="p">=&gt;</span> <span class="n">TypeUtility</span><span class="p">.</span><span class="nf">DoesTrackSupportTrackType</span><span class="p">(</span><span class="n">track</span><span class="p">,</span> <span class="n">x</span><span class="p">));</span>
+    <span class="p">}</span>
+    <span class="c1">//...
+</span><span class="p">}</span>
+</code></pre>
+</div>
+<p>比如上述代码，自定义的JumpSignalEmmiter和SlowSignalEmitter， 就只会marker track里显示了。</p>
+
+<p>参考:</p>
+
+<p>[1] <a href="http://dy.163.com/v2/article/detail/E9GLUIQS0526E124.html">介绍Unity2019的timeline信号量</a><br />
+[2] <a href="https://kuaibao.qq.com/s/20190630AZO3MI00?refer=spider">创建自定义Timeline 标记Marker</a><br />
+[3] <a href="https://github.com/Unity-Technologies/TimelineMarkerCustomization">Unity2019 uss自定义样式介绍</a></p>
+
+
+    </div>
+  </div>
+
+  <style>
+  .post-nav {
+    overflow: hidden;
+    /* margin-top: 60px; */
+    padding: 12px;
+    white-space: nowrap;
+    /* border-top: 1px solid #eee; */
+  }
+
+  .post-nav-item {
+    display: inline-block;
+    width: 50%;
+    white-space: normal;
+  }
+
+  .post-nav-item a {
+    position: relative;
+    display: inline-block;
+    line-height: 25px;
+    font-size: 14px;
+    color: #555;
+    border-bottom: none;
+  }
+
+  .post-nav-item a:hover {
+    color: #222;
+    font-weight: bold;
+    border-bottom: none;
+  }
+
+  .post-nav-item a:active {
+    top: 2px;
+  }
+
+  .post-nav-item a:before,
+  .post-nav-item a:after {
+    display: inline-block;
+    width: 16px;
+    height: 25px;
+    vertical-align: top;
+    opacity: 0.4;
+    background-size: 16px;
+  }
+
+  .post-nav-none a:none {
+    content: ' ';
+    background-size: 8px;
+  }
+
+  .post-nav-none a:hover:none {
+    opacity: 1;
+  }
+
+  .post-nav-prev a:before {
+    content: ' ';
+    background: url("data:image/svg+xml;base64,PD94bWwgdmVyc2lvbj0iMS4wIiA/PjxzdmcgaGVpZ2h0PSIxMnB4IiB2ZXJzaW9uPSIxLjEiIHZpZXdCb3g9IjAgMCA5IDEyIiB3aWR0aD0iOXB4IiB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHhtbG5zOnNrZXRjaD0iaHR0cDovL3d3dy5ib2hlbWlhbmNvZGluZy5jb20vc2tldGNoL25zIiB4bWxuczp4bGluaz0iaHR0cDovL3d3dy53My5vcmcvMTk5OS94bGluayI+PHRpdGxlLz48ZGVzYy8+PGRlZnMvPjxnIGZpbGw9Im5vbmUiIGZpbGwtcnVsZT0iZXZlbm9kZCIgaWQ9IlBhZ2UtMSIgc3Ryb2tlPSJub25lIiBzdHJva2Utd2lkdGg9IjEiPjxnIGZpbGw9IiMwMDAwMDAiIGlkPSJDb3JlIiB0cmFuc2Zvcm09InRyYW5zbGF0ZSgtMjE4LjAwMDAwMCwgLTkwLjAwMDAwMCkiPjxnIGlkPSJjaGV2cm9uLWxlZnQiIHRyYW5zZm9ybT0idHJhbnNsYXRlKDIxOC41MDAwMDAsIDkwLjAwMDAwMCkiPjxwYXRoIGQ9Ik03LjQsMS40IEw2LDAgTC04Ljg4MTc4NDJlLTE2LDYgTDYsMTIgTDcuNCwxMC42IEwyLjgsNiBMNy40LDEuNCBaIiBpZD0iU2hhcGUiLz48L2c+PC9nPjwvZz48L3N2Zz4=") no-repeat 0 50%;
+    background-size: 8px;
+  }
+
+  .post-nav-prev a:hover:before {
+    opacity: 1;
+  }
+
+  .post-nav-next {
+    text-align: right;
+  }
+
+  .post-nav-next a:after {
+    content: ' ';
+    background: url("data:image/svg+xml;base64,PD94bWwgdmVyc2lvbj0iMS4wIiA/PjxzdmcgaGVpZ2h0PSIxMnB4IiB2ZXJzaW9uPSIxLjEiIHZpZXdCb3g9IjAgMCA5IDEyIiB3aWR0aD0iOXB4IiB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHhtbG5zOnNrZXRjaD0iaHR0cDovL3d3dy5ib2hlbWlhbmNvZGluZy5jb20vc2tldGNoL25zIiB4bWxuczp4bGluaz0iaHR0cDovL3d3dy53My5vcmcvMTk5OS94bGluayI+PHRpdGxlLz48ZGVzYy8+PGRlZnMvPjxnIGZpbGw9Im5vbmUiIGZpbGwtcnVsZT0iZXZlbm9kZCIgaWQ9IlBhZ2UtMSIgc3Ryb2tlPSJub25lIiBzdHJva2Utd2lkdGg9IjEiPjxnIGZpbGw9IiMwMDAwMDAiIGlkPSJDb3JlIiB0cmFuc2Zvcm09InRyYW5zbGF0ZSgtMjYwLjAwMDAwMCwgLTkwLjAwMDAwMCkiPjxnIGlkPSJjaGV2cm9uLXJpZ2h0IiB0cmFuc2Zvcm09InRyYW5zbGF0ZSgyNjAuNTAwMDAwLCA5MC4wMDAwMDApIj48cGF0aCBkPSJNMSwwIEwtMC40LDEuNCBMNC4yLDYgTC0wLjQsMTAuNiBMMSwxMiBMNyw2IEwxLDAgWiIgaWQ9IlNoYXBlIi8+PC9nPjwvZz48L2c+PC9zdmc+") no-repeat 100% 50%;
+    background-size: 8px;
+  }
+
+  .post-nav-next a:hover:after {
+    opacity: 1;
+  }
+</style>
+
+
+
+<div class="post-nav">
+
+  
+  <div class="post-nav-prev post-nav-item">
+    
+    <a href="/blog/2019/assetbundle/"> Assetbundle 加密</a>
+  </div>
+  
+
+  
+  <div class="post-nav-next post-nav-item">
+    
+    <a href="/blog/2019/reverse/"> 破解《航海王-燃烧之血》</a>
+  </div>
+  
+
+</div>
+
+</article>
+    </div>
+
+    <footer class="site-footer">
+  <div class="container">
+    <ul class="social">
+  <li><a href="https://twitter.com/penghuailiang" target="_blank"><i class="icon icon-twitter"></i></a></li>
+  <li><a href="https://www.zhihu.com/people/huailiangpenguin" target="_blank"><i class="icon icon-zhihu"></i></a></li>
+  <li><a href="https://www.facebook.com/profile.php?id=100004290725320" target="_blank"><i class="icon icon-facebook"></i></a></li>
+  <li><a href="https://weibo.com/6212299692/profile?topnav=1&wvr=6" target="_blank"><i class="icon icon-sina"></i></a></li>
+  <li><a href="https://www.linkedin.com/in/penghuailiang/" target="_blank"><i class="icon icon-linkedin"></i></a></li>
+  <li><a href="https://github.com/huailiang" target="_blank"><i class="icon icon-github"></i></a></li>
+</ul>
+    <p class="txt-medium-gray">
+      <small>&copy;2019 All rights reserved. </small>
+    </p>
+  </div>
+</footer>
+    <a href="https://github.com/huailiang" target="_blank" class="github-corner"><svg width="80" height="80" viewBox="0 0 250 250" style="fill:#337ab7; color:#fff; position: absolute; top: 0; border: 0; right: 0;"><path d="M0,0 L115,115 L130,115 L142,142 L250,250 L250,0 Z"></path><path d="M128.3,109.0 C113.8,99.7 119.0,89.6 119.0,89.6 C122.0,82.7 120.5,78.6 120.5,78.6 C119.2,72.0 123.4,76.3 123.4,76.3 C127.3,80.9 125.5,87.3 125.5,87.3 C122.9,97.6 130.6,101.9 134.4,103.2" fill="currentColor" style="transform-origin: 130px 106px;" class="octo-arm"></path><path d="M115.0,115.0 C114.9,115.1 118.7,116.5 119.8,115.4 L133.7,101.6 C136.9,99.2 139.9,98.4 142.2,98.6 C133.8,88.0 127.5,74.4 143.8,58.0 C148.5,53.4 154.0,51.2 159.7,51.0 C160.3,49.4 163.2,43.6 171.4,40.1 C171.4,40.1 176.1,42.5 178.8,56.2 C183.1,58.6 187.2,61.8 190.9,65.4 C194.5,69.0 197.7,73.2 200.1,77.6 C213.8,80.2 216.3,84.9 216.3,84.9 C212.7,93.1 206.9,96.0 205.4,96.6 C205.1,102.4 203.0,107.8 198.3,112.5 C181.9,128.9 168.3,122.5 157.7,114.1 C157.9,116.9 156.7,120.9 152.7,124.9 L141.0,136.5 C139.8,137.7 141.6,141.9 141.8,141.8 Z" fill="currentColor" class="octo-body"></path></svg></a>
+
+
+    <script src="//code.jquery.com/jquery-1.11.3.min.js"></script>
+    <script>
+      $(document).ready(function () {
+        $('.sliding-panel-button,.sliding-panel-fade-screen,.sliding-panel-close').on('click touchstart', function (e) {
+          $('.sliding-panel-content,.sliding-panel-fade-screen').toggleClass('is-visible');
+          e.preventDefault();
+        });
+      });
+    </script>
+  </main>
+</body>
+
+</html>

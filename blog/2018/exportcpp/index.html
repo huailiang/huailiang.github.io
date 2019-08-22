@@ -1,0 +1,526 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <meta http-equiv="X-UA-Compatible" content="IE=edge">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+
+  <title>自动化导出c++各个平台库</title>
+  <meta name="description"
+    content="  在上面一节，我们学习了c++和c#混合编程，主要是针对windows平台。接下来我们会讲下在其他平台c++库在Unity中使用的方法。unity可以使用的ios静态库（.a） android 静态库（.so） mac下的bundle库。上面的库导出以后，放在Unity Plugins目录下，Unity在编译包...">
+
+  <link rel="shortcut icon" href="/img/favicon.ico">
+  <link rel="stylesheet" href="/css/main.css">
+  <link rel="canonical" href="https://huailiang.github.io/blog/2018/exportcpp/">
+  <link rel="alternate" type="application/rss+xml" title="Huailiang Blog"
+    href="https://huailiang.github.io/feed.xml" />
+
+</head>
+
+<body>
+  <main>
+    <header class="site-header">
+  <div class="container">
+    <h1><a href="/">Hom<span>e</span></a></h1>
+
+    <button type="button" class="sliding-panel-button">
+      <span></span>
+      <span></span>
+      <span></span>
+    </button>
+
+    <nav class="navbar sliding-panel-content">
+      <ul>
+        
+        <li><a href="/about" title="About">About</a>
+        </li>
+        
+        <li><a href="/blog" title="Blog">Blog</a>
+        </li>
+        
+        <!-- <li><a href="/feed.xml" target="_blank"><i class="icon icon-feed"></i></a></li> -->
+        <li><a href="/category/" target="_blank"><i class="icon icon-feed"></i></a></li>
+      </ul>
+    </nav>
+  </div>
+</header>
+
+<div class="sliding-panel-fade-screen"></div>
+    <script type="text/javascript" src="/js/MathJax.js?config=TeX-AMS-MML_HTMLorMML"></script>
+
+<script type="text/x-mathjax-config">
+MathJax.Hub.Config({
+  tex2jax: {
+    inlineMath: [['$','$'], ['\\(','\\)']],
+    processEscapes: true
+  }
+});
+</script>
+
+<script type="text/x-mathjax-config">
+  MathJax.Hub.Config({
+    tex2jax: {
+      skipTags: ['script', 'noscript', 'style', 'textarea', 'pre', 'code']
+    }
+  });
+
+</script>
+    <div class="container">
+      <article role="article" class="post">
+
+  <div class="card">
+    <header class="post-header">
+      <h1 class="post-title">自动化导出c++各个平台库</h1>
+      <p class="post-meta">Mar 1, 2018 •
+        Huailiang</p>
+    </header>
+
+    <div class="post-content">
+      <blockquote>
+  <p>在上面一节，我们学习了c++和c#混合编程，主要是针对windows平台。接下来我们会讲下在其他平台c++库在Unity中使用的方法。unity可以使用的ios静态库（.a） android 静态库（.so） mac下的bundle库。上面的库导出以后，放在Unity Plugins目录下，Unity在编译包或者在编辑器里运行的时候会自动对应相应的库。</p>
+</blockquote>
+
+<p>unity 使用 在 Plugins 目录最终层级结构如下图所示：</p>
+
+<p><img src="/img/post-cpp/cpp14.png" alt="" /></p>
+
+<h2 id="android-生成so">Android 生成so</h2>
+
+<p>Android平台下，c++代码生成.so库，我们这里主要是使用ndk的方法。 NDK 是在SDK前面又加上了“原生”二字，即Native Development Kit，因此又被Google称为NDK。  随着Android的蓬勃发展, CPU的架构也越来越多. 早期只支持ARMv5, 截至目前, 支持的架构已达三类七种: ARM(ARMv5，ARMv7 (从2010年起)，ARMv8), x86(x86 (从2011年起),x86_64 (从2014年起)) ,MIPS(MIPS (从2012年起),MIPS64). 众多架构使用的指令集不尽相同, 与相应的ABI关联: armeabi, armeabi-v7a, arm64-v8a, x86, x86_64, mips, mips64. 所以, NDK编译不同架构的库要选择不同的ABI。 不过Unity5之后，导出的包只会有ARMv7和x86两种架构了，我们在配置的时候，也就只需考虑这两种结构就可以了。 而大红大紫的《王者荣耀》就更过分了，我们解开他们的apk之后，发现他们只有arm-v7这一种so,说明不常用的x86手机已经被他们无情的抛弃了。</p>
+
+<p><img src="/img/post-cpp/cpp13.jpg" alt="" /></p>
+
+<p>你可以到<a href="https://developer.android.com/ndk/downloads/index.html">官网下载NDK</a>, 下载完成之后需要设置一些环境变量：</p>
+
+<figure class="highlight"><pre><code class="language-bash" data-lang="bash"><span class="nb">export </span><span class="nv">NDK_HOME</span><span class="o">=</span>/home/echosea/Desktop/Android/android-ndk-r12
+<span class="nb">export </span><span class="nv">PATH</span><span class="o">=</span><span class="nv">$NDK_HOME</span>:<span class="nv">$PATH</span></code></pre></figure>
+
+<p>创建Application.mk和Android.mk文件<br />
+Application.mk文件，可以用来配置编译平台相关内容，它用来指定我们需要基于哪些CPU架构的.so文件，当然你可以配置多个平台：</p>
+
+<figure class="highlight"><pre><code class="language-bash" data-lang="bash">APP_ABI          :<span class="o">=</span> armeabi armeabi-v7a x86
+APP_OPTIM         :<span class="o">=</span> release
+APP_PLATFORM      :<span class="o">=</span> android-8
+
+<span class="c"># GNU STL implements most C++11 features. Use either gnustl_static or gnustl_shared</span>
+<span class="c"># Without this your C++ code will not be able to access headers like &lt;thread&gt;, &lt;mutex&gt;</span>
+<span class="c">#APP_STL      := stlport_static</span>
+<span class="c">#APP_CPPFLAGS := -std=c++11 -frtti -fexceptions</span>
+APP_STL       :<span class="o">=</span> gnustl_static
+APP_CPPFLAGS  :<span class="o">=</span> -std<span class="o">=</span>gnu++11 -pthread -frtti -fexceptions
+<span class="c">#-NDEBUG -mfpu=neon -fomit-frame-pointer</span>
+ -DNDEBUG  </code></pre></figure>
+
+<p>配置Android.mk文件，用来指定源码编译的配置信息，例如工作目录，编译模块的名称，参与编译的文件等，大致内容如下：</p>
+
+<figure class="highlight"><pre><code class="language-bash" data-lang="bash"><span class="c"># Copyright (C)</span>
+<span class="c"># Author: huailiang.peng</span>
+<span class="c"># Date:	  2017-11-25</span>
+<span class="c"># Function:	make c++ code to so</span>
+<span class="c">#</span>
+
+LOCAL_PATH :<span class="o">=</span> <span class="k">$(</span>call my-dir<span class="k">)</span>
+include <span class="k">$(</span>CLEAR_VARS<span class="k">)</span>
+
+<span class="c">#so 文件名</span>
+LOCAL_MODULE   :<span class="o">=</span> GameCore
+
+<span class="c">#  c++目录的相对路径</span>
+MY_FILES_PATH  :<span class="o">=</span>  <span class="k">$(</span>LOCAL_PATH<span class="k">)</span>/../../XCPP/GameCore
+
+<span class="c">#$(warning $(MY_FILES_PATH))</span>
+
+<span class="c"># c++后缀</span>
+MY_FILES_SUFFIX :<span class="o">=</span> %.cpp %.c
+
+<span class="c"># 递归遍历目录下的所有的文件</span>
+<span class="nv">rwildcard</span><span class="o">=</span><span class="k">$(</span>wildcard <span class="nv">$1$2</span><span class="k">)</span> <span class="k">$(</span>foreach d,<span class="k">$(</span>wildcard <span class="nv">$1</span><span class="k">*)</span>,<span class="k">$(</span>call rwildcard,<span class="nv">$d</span>/,<span class="nv">$2</span><span class="k">))</span>
+
+<span class="c"># 获取相应的源文件</span>
+MY_ALL_FILES :<span class="o">=</span> <span class="k">$(</span>foreach src_path,<span class="k">$(</span>MY_FILES_PATH<span class="k">)</span>, <span class="k">$(</span>call rwildcard,<span class="k">$(</span>src_path<span class="k">)</span>,<span class="k">*</span>.<span class="k">*)</span> <span class="k">)</span>
+MY_ALL_FILES :<span class="o">=</span> <span class="k">$(</span>MY_ALL_FILES:<span class="k">$(</span>MY_CPP_PATH<span class="k">)</span>/./%<span class="o">=</span><span class="k">$(</span>MY_CPP_PATH<span class="k">)</span>%<span class="k">)</span>
+MY_SRC_LIST  :<span class="o">=</span> <span class="k">$(</span>filter <span class="k">$(</span>MY_FILES_SUFFIX<span class="k">)</span>,<span class="k">$(</span>MY_ALL_FILES<span class="k">))</span>
+MY_SRC_LIST  :<span class="o">=</span> <span class="k">$(</span>MY_SRC_LIST:<span class="k">$(</span>LOCAL_PATH<span class="k">)</span>/%<span class="o">=</span>%<span class="k">)</span>
+
+<span class="c"># 去除字串的重复单词</span>
+define uniq <span class="o">=</span>
+  <span class="k">$(</span><span class="nb">eval </span>seen :<span class="o">=</span><span class="k">)</span>
+  <span class="k">$(</span>foreach _,<span class="nv">$1</span>,<span class="k">$(if</span> <span class="k">$(</span>filter <span class="nv">$_</span>,<span class="k">${</span><span class="nv">seen</span><span class="k">})</span>,,<span class="k">$(</span><span class="nb">eval </span>seen +<span class="o">=</span> <span class="nv">$_</span><span class="k">)))</span>
+  <span class="k">${</span><span class="nv">seen</span><span class="k">}</span>
+endef
+
+<span class="c"># 递归遍历获取所有目录</span>
+MY_ALL_DIRS :<span class="o">=</span> <span class="k">$(</span>dir <span class="k">$(</span>foreach src_path,<span class="k">$(</span>MY_FILES_PATH<span class="k">)</span>, <span class="k">$(</span>call rwildcard,<span class="k">$(</span>src_path<span class="k">)</span>,<span class="k">*</span>/<span class="k">)</span> <span class="k">)</span> <span class="k">)</span>
+MY_ALL_DIRS :<span class="o">=</span> <span class="k">$(</span>call uniq,<span class="k">$(</span>MY_ALL_DIRS<span class="k">))</span>
+
+<span class="c"># 赋值给NDK编译系统</span>
+LOCAL_SRC_FILES  :<span class="o">=</span> <span class="k">$(</span>MY_SRC_LIST<span class="k">)</span>
+LOCAL_C_INCLUDES :<span class="o">=</span> <span class="k">$(</span>MY_ALL_DIRS<span class="k">)</span>
+
+<span class="c">#在这里设置宏</span>
+LOCAL_CFLAGS :<span class="o">=</span> -D__ANDROID__
+
+<span class="c"># Add additional include directories</span>
+LOCAL_C_INCLUDES +<span class="o">=</span> <span class="k">$(</span>LOCAL_PATH<span class="k">)</span>/../../
+<span class="c">#LOCAL_C_INCLUDES += $(LOCAL_PATH)/../../../Eigen-3.2.2   </span>
+<span class="c">#必须从Android.mk配置文件中拿掉对Eigen的直接包含，放到程序代码中用相对路径包含：</span>
+<span class="c"># #include "../../Eigen-3.2.2/Eigen"</span>
+<span class="c"># using namespace Eigen;</span>
+
+<span class="c">#$(warning $(LOCAL_SRC_FILES))</span>
+<span class="c">#$(warning $(LOCAL_C_INCLUDES))</span>
+
+<span class="c"># use log system in NDK</span>
+LOCAL_LDLIBS +<span class="o">=</span> -llog
+
+include <span class="k">$(</span>BUILD_SHARED_LIBRARY<span class="k">)</span></code></pre></figure>
+
+<p>其中<br />
+LOCAL_MODULE表示模块名称<br />
+LOCAL_SRC_FILES表示需要参与编译的源文件<br />
+除了这两个，其他照搬即可</p>
+
+<h4 id="ndk-build">NDK-build</h4>
+<p>android ndk构建系统依赖于GUN make工具对模块进行构建，默认情况下，GUN make工具一次执行一条构建命令，等这一句执行完了以后再执行下一句，如果我们使用-j参数，GUN make就可以并行执行构建命令。<br />
+cd 到jni的上一级目录，使用命令ndk-build, 自动生成了，libs目录<br />
+<img src="/img/post-cpp/cpp18.png" alt="" /></p>
+
+<p>不过 build 之前，最好 clean一下，保证环境的纯净。</p>
+
+<figure class="highlight"><pre><code class="language-bash" data-lang="bash"><span class="gp">$ </span>ndk-build clean
+<span class="gp">$ </span>ndk-build</code></pre></figure>
+
+<h3 id="mac下生成bundle">Mac下生成Bundle</h3>
+
+<p>创建 mac支持的 c++库，我们新建一个 xcode 工程，选择 macOS一栏，选择 Bunlde 一侧. 如下图所示：<br />
+<img src="/img/post-cpp/cpp15.png" alt="" /></p>
+
+<p>创建好之后，我们把 windows 中vs 里使用的 c++代码拖到 xcode 工程中,这里使用引用就可以了，没有必要 copy 一份新的到 xcode</p>
+
+<p><img src="/img/post-cpp/cpp19.png" alt="" /></p>
+
+<p>设置好自己使用的Architecture,如果顺利的话，你就可以编译到bundle 库了</p>
+
+<p><img src="/img/post-cpp/cpp16.png" alt="" /></p>
+
+<p>在 products 目录下右键*.bundle 在 Show in Finder ,将生成的 bundle 复制到 unity 项目 plugins 目录下，就大工告成了。</p>
+
+<h3 id="生成ios-a静态库">生成IOS .a静态库</h3>
+
+<p>创建 ios支持的 c++库，我们新建一个 xcode 工程，选择 iOS一栏，选择 .a 一侧. 注意，ios 我们这里使用的是静态库，而非像其他平台是动态链接库。如下图所示：<br />
+<img src="/img/post-cpp/cpp20.png" alt="" /><br />
+其他的操作跟 macos 相同。编译成功之后我们可以看到 products 目录多出了 gamecore.a<br />
+<img src="/img/post-cpp/cpp22.png" alt="" /></p>
+
+<p>下面借助一段Shell脚本就可以导出和合并生成.a 并且 copy 到 Plugins目录下：</p>
+
+<figure class="highlight"><pre><code class="language-bash" data-lang="bash"><span class="c">#</span>
+<span class="c">#	i386｜x86_64 是Mac处理器的指令集，i386是针对intel通用微处理器32架构的。x86_64是针对x86架构的64位处理器 这两个是ios模拟器使用</span>
+<span class="c">#	standard architectures (including 64-bit)(armv7,arm64)</span>
+<span class="c">#	Build Active Architecture Only  指定是否只对当前连接设备所支持的指令集编译. 当其值设置为YES，这个属性设置为yes，是为了debug的时候编译速度更快，它只编译当前的architecture版本，而设置为no时，会编译所有的版本</span>
+<span class="c">#	编译出的版本是向下兼容的，连接的设备的指令集匹配是由高到低（arm64 &gt; armv7s &gt; armv7）依次匹配的</span>
+<span class="c">#</span>
+
+<span class="c"># !/bin/sh</span>
+
+<span class="nv">path</span><span class="o">=</span>/Users/huailiang.peng/Documents/unity/dn_asset
+
+<span class="nb">cd</span> <span class="k">${</span><span class="nv">path</span><span class="k">}</span>
+
+<span class="nb">cd </span>tools_proj/IOS/GameCore
+
+<span class="nb">echo</span> <span class="s2">"xcode clean "</span>
+
+rm -r libGameCore.a
+
+xcodebuild clean
+
+<span class="nb">echo</span> <span class="s2">"xcode build"</span>
+
+<span class="nb">echo</span> <span class="s2">"start build for iphoneos"</span>
+
+<span class="c">#编译 release 版本的.a</span>
+xcodebuild -configuration <span class="s2">"Release"</span> -target GameCore -sdk iphoneos clean build
+
+eho <span class="s2">"start build for simulator"</span>
+
+<span class="c">#编译 release 版本的.a</span>
+xcodebuild -configuration <span class="s2">"Release"</span> -target GameCore -sdk iphonesimulator clean build
+
+<span class="nb">echo</span> <span class="s2">"build success"</span>
+
+<span class="nb">echo</span> <span class="s2">"merge diff start library"</span>
+
+lipo -create build/Release-iphoneos/libGameCore.a build/Release-iphonesimulator/libGameCore.a -output libGameCore.a
+
+lipo -info libGameCore.a
+
+<span class="nb">echo</span> <span class="s2">"make libGameCore.a success"</span>
+
+<span class="nb">echo</span> <span class="s2">"start mv to unity Plugins dir"</span>
+
+mv -f libGameCore.a <span class="k">${</span><span class="nv">path</span><span class="k">}</span>/Assets/Plugins/iOS/libGameCore.a
+
+<span class="nb">echo</span> <span class="s2">"done, bye!"</span></code></pre></figure>
+
+<p>macos 和 ios 的库都是在xcode 中手动生成的，不符合我们自动化的流程，我们生成版本时，如果中间每次都是手动操作的话，也很容易出错。那有没有一套自动化的流程，既省时，又能保证版本质量呢，答案是肯定的。</p>
+
+<h3 id="cmake交差编译">cmake交差编译</h3>
+<p>CMake是一个跨平台的安装（编译）工具，可以用简单的语句来描述所有平台的安装(编译过程)。他能够输出各种各样的makefile或者project文件，能测试编译器所支持的C++特性,类似UNIX下的automake。只是 CMake 的组态档取名为 CMakeLists.txt。这里使用的是CMake，官网地址为：<a href="https://cmake.org/">https://cmake.org/</a></p>
+
+<p>MAC默认是没有cmake指令的。要测试你的MAC是否已经装过cmake，可以这样做：打开Terminal，输入cmake –version，如果已经安装，则会显示具体的版本号；否则就是没安装或者没配置成功。</p>
+
+<p>以 OSX平台为例，下面展示:</p>
+
+<p>CMakeLists.txt：</p>
+
+<figure class="highlight"><pre><code class="language-cpp" data-lang="cpp"><span class="n">cmake_minimum_required</span><span class="p">(</span><span class="n">VERSION</span> <span class="mf">3.0.2</span><span class="p">)</span>
+<span class="cp">#project(GameCore)
+</span>
+<span class="n">include_directories</span><span class="p">(</span><span class="err">$</span><span class="p">{</span><span class="n">CMAKE_CURRENT_SOURCE_DIR</span><span class="p">})</span>
+
+<span class="n">file</span><span class="p">(</span><span class="n">GLOB_RECURSE</span> <span class="n">source_cpp_files</span> <span class="s">"${CMAKE_CURRENT_SOURCE_DIR}/../XCPP/GameCore/*.cpp"</span><span class="p">)</span>
+<span class="n">file</span><span class="p">(</span><span class="n">GLOB_RECURSE</span> <span class="n">source_c_files</span> <span class="s">"${CMAKE_CURRENT_SOURCE_DIR}/../XCPP/GameCore/*.c"</span><span class="p">)</span>
+
+<span class="cp"># 设置使用 C++11 标准
+</span><span class="n">set</span><span class="p">(</span><span class="n">CMAKE_CXX_STANDARD</span> <span class="mi">11</span><span class="p">)</span>
+<span class="n">set</span><span class="p">(</span><span class="n">CMAKE_CXX_STANDARD_REQUIRED</span> <span class="n">ON</span><span class="p">)</span>
+
+
+<span class="cp"># 编译 Debug 模式还是 Release 模式
+</span><span class="n">set</span><span class="p">(</span><span class="n">CMAKE_BUILD_TYPE</span> <span class="n">Release</span><span class="p">)</span>
+
+<span class="cp"># 根据 OSX、Android、iOS 等不同平台，分别设置不同的配置
+</span><span class="k">if</span> <span class="p">(</span><span class="n">OSX</span><span class="p">)</span>
+    <span class="n">message</span><span class="p">(</span><span class="s">"is building osx platform"</span><span class="p">)</span>
+
+    <span class="n">include</span><span class="p">(</span><span class="n">CheckCXXCompilerFlag</span><span class="p">)</span>  
+    <span class="n">CHECK_CXX_COMPILER_FLAG</span><span class="p">(</span><span class="s">"-std=c++11"</span> <span class="n">COMPILER_SUPPORTS_CXX11</span><span class="p">)</span>  
+    <span class="n">CHECK_CXX_COMPILER_FLAG</span><span class="p">(</span><span class="s">"-std=c++0x"</span> <span class="n">COMPILER_SUPPORTS_CXX0X</span><span class="p">)</span>  
+    <span class="k">if</span><span class="p">(</span><span class="n">COMPILER_SUPPORTS_CXX11</span><span class="p">)</span>  
+            <span class="n">set</span><span class="p">(</span><span class="n">CMAKE_CXX_FLAGS</span> <span class="s">"${CMAKE_CXX_FLAGS} -std=c++11"</span><span class="p">)</span>  
+    <span class="n">elseif</span><span class="p">(</span><span class="n">COMPILER_SUPPORTS_CXX0X</span><span class="p">)</span>  
+            <span class="n">set</span><span class="p">(</span><span class="n">CMAKE_CXX_FLAGS</span> <span class="s">"${CMAKE_CXX_FLAGS} -std=c++0x"</span><span class="p">)</span>  
+    <span class="k">else</span><span class="p">()</span>  
+         <span class="n">message</span><span class="p">(</span><span class="n">STATUS</span> <span class="s">"The compiler ${CMAKE_CXX_COMPILER} has no C++11 support. Please use a different C++ compiler."</span><span class="p">)</span>  
+    <span class="n">endif</span><span class="p">()</span>  
+
+    <span class="n">add_library</span><span class="p">(</span><span class="n">GameCore</span> <span class="n">MODULE</span> <span class="err">$</span><span class="p">{</span><span class="n">source_cpp_files</span><span class="p">}</span> <span class="err">$</span><span class="p">{</span><span class="n">source_c_files</span><span class="p">})</span>
+
+    <span class="cp"># OSX 下面的 Unity 插件要是 GameCore.bundle 格式的
+</span>    <span class="n">set_target_properties</span><span class="p">(</span><span class="n">GameCore</span> <span class="n">PROPERTIES</span> <span class="n">BUNDLE</span> <span class="n">TRUE</span><span class="p">)</span>
+
+    <span class="cp"># 设置代码库的输出路径
+</span>    <span class="n">set</span><span class="p">(</span><span class="n">OUT_PATH</span> <span class="err">$</span><span class="p">{</span><span class="n">CMAKE_CURRENT_SOURCE_DIR</span><span class="p">}</span><span class="o">/</span><span class="n">out</span><span class="o">/</span><span class="n">OSX</span><span class="o">/</span><span class="p">)</span>
+
+    <span class="cp"># 添加编译使用的宏
+</span>    <span class="n">ADD_DEFINITIONS</span><span class="p">(</span><span class="o">-</span><span class="n">D__MACH__</span><span class="p">)</span>
+
+<span class="n">elseif</span><span class="p">(</span><span class="n">IOS</span><span class="p">)</span>
+    <span class="n">message</span><span class="p">(</span><span class="s">"is building ios platform"</span><span class="p">)</span>
+
+	<span class="n">add_library</span><span class="p">(</span><span class="n">GameCore</span> <span class="n">STATIC</span> <span class="err">$</span><span class="p">{</span><span class="n">source_cpp_files</span><span class="p">}</span> <span class="err">$</span><span class="p">{</span><span class="n">source_c_files</span><span class="p">})</span>
+
+    <span class="cp"># 设置编译器, 由于 iOS 和 OSX 使用的是相同的编译器，所以此处设置为 Mac 上的Clang 的路径
+</span>    <span class="cp"># 但是对于 Android 来讲，交叉编译的环境为 NDK 的编译器环境，所以需要对 Android 设置为 NDK 下面的编译器路径。
+</span>    <span class="n">set</span><span class="p">(</span><span class="n">CMAKE_C_COMPILER</span> <span class="n">clang</span><span class="p">)</span>
+    <span class="n">set</span><span class="p">(</span><span class="n">CMAKE_CXX_COMPILER</span> <span class="n">clang</span><span class="o">++</span><span class="p">)</span>
+    <span class="cp"># bitcode 设置为 NO
+</span>    <span class="n">set</span><span class="p">(</span><span class="n">CMAKE_CXX_FLAGS</span> <span class="s">"${CMAKE_CXX_FLAGS} -fembed-bitcode"</span><span class="p">)</span>
+    <span class="n">set</span><span class="p">(</span><span class="n">CMAKE_C_FLAGS</span> <span class="s">"${CMAKE_C_FLAGS} -fembed-bitcode"</span><span class="p">)</span>
+
+    <span class="cp"># 最低支持的 iOS 版本
+</span>    <span class="n">set</span><span class="p">(</span><span class="n">CMAKE_XCODE_ATTRIBUTE_IPHONEOS_DEPLOYMENT_TARGET</span> <span class="s">"7.1"</span><span class="p">)</span>
+
+    <span class="cp"># 支持的指令架构
+</span>    <span class="n">set</span><span class="p">(</span><span class="n">CMAKE_OSX_ARCHITECTURES</span> <span class="s">"armv7 armv7s arm64"</span><span class="p">)</span>
+
+    <span class="cp"># 使用哪个 iOS SDK 进行打包，这里需要注意是对 iPhone 真机打包还是 iPhone 模拟器打包，二者的 SDK 是不同的。
+</span>    <span class="cp"># 我们这里使用的是 iPhone 真机的 SDK。
+</span>    <span class="n">set</span><span class="p">(</span><span class="n">CMAKE_OSX_SYSROOT</span> <span class="o">/</span><span class="n">Applications</span><span class="o">/</span><span class="n">Xcode</span><span class="p">.</span><span class="n">app</span><span class="o">/</span><span class="n">Contents</span><span class="o">/</span><span class="n">Developer</span><span class="o">/</span><span class="n">Platforms</span><span class="o">/</span><span class="n">iPhoneOS</span><span class="p">.</span><span class="n">platform</span><span class="o">/</span><span class="n">Developer</span><span class="o">/</span><span class="n">SDKs</span><span class="o">/</span><span class="n">iPhoneOS</span><span class="p">.</span><span class="n">sdk</span><span class="p">)</span>
+
+    <span class="cp"># 设置代码库的输出路径
+</span>    <span class="n">set</span><span class="p">(</span><span class="n">OUT_PATH</span> <span class="err">$</span><span class="p">{</span><span class="n">CMAKE_CURRENT_SOURCE_DIR</span><span class="p">}</span><span class="o">/</span><span class="n">out</span><span class="o">/</span><span class="n">iOS</span><span class="o">/</span><span class="p">)</span>
+
+    <span class="cp"># 添加编译使用的宏
+</span>    <span class="n">ADD_DEFINITIONS</span><span class="p">(</span><span class="o">-</span><span class="n">D__iOS__</span><span class="p">)</span>
+
+<span class="n">elseif</span><span class="p">(</span><span class="n">ANDROID</span><span class="p">)</span>
+    <span class="n">message</span><span class="p">(</span><span class="s">"is building android platform"</span><span class="p">)</span>
+
+    <span class="n">add_library</span><span class="p">(</span><span class="n">GameCore</span> <span class="n">SHARED</span> <span class="err">$</span><span class="p">{</span><span class="n">source_cpp_files</span><span class="p">}</span> <span class="err">$</span><span class="p">{</span><span class="n">source_c_files</span><span class="p">})</span>
+
+    <span class="cp"># 由于 Unity 在 Android 下面对 C++ 只支持 .so 的动态库格式，
+</span>    <span class="cp"># 而如果你用 Mac 机编译时，默认的动态库格式为 .dylib,
+</span>    <span class="cp"># 所以我们需要显示的使用 .so 后缀。
+</span>    <span class="n">set_target_properties</span><span class="p">(</span><span class="n">GameCore</span> <span class="n">PROPERTIES</span> <span class="n">SUFFIX</span> <span class="s">".so"</span><span class="p">)</span>
+
+    <span class="cp"># 设置代码库的输出路径
+</span>    <span class="n">set</span><span class="p">(</span><span class="n">OUT_PATH</span> <span class="err">$</span><span class="p">{</span><span class="n">CMAKE_CURRENT_SOURCE_DIR</span><span class="p">}</span><span class="o">/</span><span class="n">out</span><span class="o">/</span><span class="n">Android</span><span class="o">/</span><span class="err">$</span><span class="p">{</span><span class="n">ANDROID_ABI</span><span class="p">}</span><span class="o">/</span><span class="p">)</span>
+
+    <span class="cp"># 添加编译使用的宏
+</span>    <span class="n">ADD_DEFINITIONS</span><span class="p">(</span><span class="o">-</span><span class="n">D__ANDROID__</span><span class="p">)</span>
+
+<span class="k">else</span><span class="p">()</span>
+    <span class="n">message</span><span class="p">(</span><span class="s">"warn: unknown platform"</span><span class="p">)</span>
+    <span class="n">message</span><span class="p">(</span><span class="err">$</span><span class="p">{</span><span class="n">CMAKE_SYSTEM</span><span class="p">})</span>
+    <span class="n">add_library</span><span class="p">(</span><span class="n">GameCore</span> <span class="n">STATIC</span> <span class="err">$</span><span class="p">{</span><span class="n">source_cpp_files</span><span class="p">}</span> <span class="err">$</span><span class="p">{</span><span class="n">source_c_files</span><span class="p">})</span>
+    <span class="n">set</span><span class="p">(</span><span class="n">OUT_PATH</span> <span class="err">$</span><span class="p">{</span><span class="n">CMAKE_CURRENT_SOURCE_DIR</span><span class="p">}</span><span class="o">/</span><span class="n">out</span><span class="o">/</span><span class="k">else</span><span class="o">/</span><span class="p">)</span>
+<span class="n">endif</span><span class="p">()</span>
+
+
+<span class="cp"># 设置代码库的输出路径, 对 Debug 和 Release 模式都设置成同一个路径
+</span><span class="n">set_target_properties</span><span class="p">(</span><span class="n">GameCore</span> <span class="n">PROPERTIES</span>
+        <span class="n">LIBRARY_OUTPUT_DIRECTORY</span> <span class="err">$</span><span class="p">{</span><span class="n">OUT_PATH</span><span class="p">}</span>
+        <span class="n">ARCHIVE_OUTPUT_DIRECTORY</span> <span class="err">$</span><span class="p">{</span><span class="n">OUT_PATH</span><span class="p">}</span>
+        <span class="n">LIBRARY_OUTPUT_DIRECTORY_RELEASE</span> <span class="err">$</span><span class="p">{</span><span class="n">OUT_PATH</span><span class="p">}</span>
+        <span class="n">ARCHIVE_OUTPUT_DIRECTORY_RELEASE</span> <span class="err">$</span><span class="p">{</span><span class="n">OUT_PATH</span><span class="p">}</span>
+        <span class="n">LIBRARY_OUTPUT_DIRECTORY_DEBUG</span> <span class="err">$</span><span class="p">{</span><span class="n">OUT_PATH</span><span class="p">}</span>
+        <span class="n">ARCHIVE_OUTPUT_DIRECTORY_DEBUG</span> <span class="err">$</span><span class="p">{</span><span class="n">OUT_PATH</span><span class="p">}</span>
+        <span class="n">LIBRARY_OUTPUT_DIRECTORY_RELEASE</span> <span class="err">$</span><span class="p">{</span><span class="n">OUT_PATH</span><span class="p">}</span>
+        <span class="n">ARCHIVE_OUTPUT_DIRECTORY_RELEASE</span> <span class="err">$</span><span class="p">{</span><span class="n">OUT_PATH</span><span class="p">}</span>
+        <span class="p">)</span></code></pre></figure>
+
+<p>生成 ios 静态库，还需要配置一个 toolchain文件,你可以在这里<a href="https://github.com/zilongshanren/Box2D-cocos2d-x/blob/master/Box2D/toolchain/">点击下载</a>。然后使用如下命令，生成 ios 工程：</p>
+
+<figure class="highlight"><pre><code class="language-bash" data-lang="bash"><span class="c">#generate ios project</span>
+cmake -DCMAKE_TOOLCHAIN_FILE<span class="o">=</span>toolchains/ios.toolchain.cmake -DIOS_PLATFORM<span class="o">=</span>iPhoneOS -DCMAKE_OSX_ARCHITECTURES<span class="o">=</span><span class="s1">'armv7 armv7s arm64'</span> -GXcode</code></pre></figure>
+
+<p>好了，到这里就结束了，拿到 xcode 工程，之后使用xcodebuild编译出库，所有的流程都是Shell 在后台帮我们完成了，我们需要做的就是喝咖啡等待最终的结果了。</p>
+
+
+    </div>
+  </div>
+
+  <style>
+  .post-nav {
+    overflow: hidden;
+    /* margin-top: 60px; */
+    padding: 12px;
+    white-space: nowrap;
+    /* border-top: 1px solid #eee; */
+  }
+
+  .post-nav-item {
+    display: inline-block;
+    width: 50%;
+    white-space: normal;
+  }
+
+  .post-nav-item a {
+    position: relative;
+    display: inline-block;
+    line-height: 25px;
+    font-size: 14px;
+    color: #555;
+    border-bottom: none;
+  }
+
+  .post-nav-item a:hover {
+    color: #222;
+    font-weight: bold;
+    border-bottom: none;
+  }
+
+  .post-nav-item a:active {
+    top: 2px;
+  }
+
+  .post-nav-item a:before,
+  .post-nav-item a:after {
+    display: inline-block;
+    width: 16px;
+    height: 25px;
+    vertical-align: top;
+    opacity: 0.4;
+    background-size: 16px;
+  }
+
+  .post-nav-none a:none {
+    content: ' ';
+    background-size: 8px;
+  }
+
+  .post-nav-none a:hover:none {
+    opacity: 1;
+  }
+
+  .post-nav-prev a:before {
+    content: ' ';
+    background: url("data:image/svg+xml;base64,PD94bWwgdmVyc2lvbj0iMS4wIiA/PjxzdmcgaGVpZ2h0PSIxMnB4IiB2ZXJzaW9uPSIxLjEiIHZpZXdCb3g9IjAgMCA5IDEyIiB3aWR0aD0iOXB4IiB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHhtbG5zOnNrZXRjaD0iaHR0cDovL3d3dy5ib2hlbWlhbmNvZGluZy5jb20vc2tldGNoL25zIiB4bWxuczp4bGluaz0iaHR0cDovL3d3dy53My5vcmcvMTk5OS94bGluayI+PHRpdGxlLz48ZGVzYy8+PGRlZnMvPjxnIGZpbGw9Im5vbmUiIGZpbGwtcnVsZT0iZXZlbm9kZCIgaWQ9IlBhZ2UtMSIgc3Ryb2tlPSJub25lIiBzdHJva2Utd2lkdGg9IjEiPjxnIGZpbGw9IiMwMDAwMDAiIGlkPSJDb3JlIiB0cmFuc2Zvcm09InRyYW5zbGF0ZSgtMjE4LjAwMDAwMCwgLTkwLjAwMDAwMCkiPjxnIGlkPSJjaGV2cm9uLWxlZnQiIHRyYW5zZm9ybT0idHJhbnNsYXRlKDIxOC41MDAwMDAsIDkwLjAwMDAwMCkiPjxwYXRoIGQ9Ik03LjQsMS40IEw2LDAgTC04Ljg4MTc4NDJlLTE2LDYgTDYsMTIgTDcuNCwxMC42IEwyLjgsNiBMNy40LDEuNCBaIiBpZD0iU2hhcGUiLz48L2c+PC9nPjwvZz48L3N2Zz4=") no-repeat 0 50%;
+    background-size: 8px;
+  }
+
+  .post-nav-prev a:hover:before {
+    opacity: 1;
+  }
+
+  .post-nav-next {
+    text-align: right;
+  }
+
+  .post-nav-next a:after {
+    content: ' ';
+    background: url("data:image/svg+xml;base64,PD94bWwgdmVyc2lvbj0iMS4wIiA/PjxzdmcgaGVpZ2h0PSIxMnB4IiB2ZXJzaW9uPSIxLjEiIHZpZXdCb3g9IjAgMCA5IDEyIiB3aWR0aD0iOXB4IiB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHhtbG5zOnNrZXRjaD0iaHR0cDovL3d3dy5ib2hlbWlhbmNvZGluZy5jb20vc2tldGNoL25zIiB4bWxuczp4bGluaz0iaHR0cDovL3d3dy53My5vcmcvMTk5OS94bGluayI+PHRpdGxlLz48ZGVzYy8+PGRlZnMvPjxnIGZpbGw9Im5vbmUiIGZpbGwtcnVsZT0iZXZlbm9kZCIgaWQ9IlBhZ2UtMSIgc3Ryb2tlPSJub25lIiBzdHJva2Utd2lkdGg9IjEiPjxnIGZpbGw9IiMwMDAwMDAiIGlkPSJDb3JlIiB0cmFuc2Zvcm09InRyYW5zbGF0ZSgtMjYwLjAwMDAwMCwgLTkwLjAwMDAwMCkiPjxnIGlkPSJjaGV2cm9uLXJpZ2h0IiB0cmFuc2Zvcm09InRyYW5zbGF0ZSgyNjAuNTAwMDAwLCA5MC4wMDAwMDApIj48cGF0aCBkPSJNMSwwIEwtMC40LDEuNCBMNC4yLDYgTC0wLjQsMTAuNiBMMSwxMiBMNyw2IEwxLDAgWiIgaWQ9IlNoYXBlIi8+PC9nPjwvZz48L2c+PC9zdmc+") no-repeat 100% 50%;
+    background-size: 8px;
+  }
+
+  .post-nav-next a:hover:after {
+    opacity: 1;
+  }
+</style>
+
+
+
+<div class="post-nav">
+
+  
+  <div class="post-nav-prev post-nav-item">
+    
+    <a href="/blog/2018/mlearn/"> 机器学习-Unity 3D平衡球[转载]</a>
+  </div>
+  
+
+  
+  <div class="post-nav-next post-nav-item">
+    
+    <a href="/blog/2018/combinecoding/"> Unity c#与c++混合编程</a>
+  </div>
+  
+
+</div>
+
+</article>
+    </div>
+
+    <footer class="site-footer">
+  <div class="container">
+    <ul class="social">
+  <li><a href="https://twitter.com/penghuailiang" target="_blank"><i class="icon icon-twitter"></i></a></li>
+  <li><a href="https://www.zhihu.com/people/huailiangpenguin" target="_blank"><i class="icon icon-zhihu"></i></a></li>
+  <li><a href="https://www.facebook.com/profile.php?id=100004290725320" target="_blank"><i class="icon icon-facebook"></i></a></li>
+  <li><a href="https://weibo.com/6212299692/profile?topnav=1&wvr=6" target="_blank"><i class="icon icon-sina"></i></a></li>
+  <li><a href="https://www.linkedin.com/in/penghuailiang/" target="_blank"><i class="icon icon-linkedin"></i></a></li>
+  <li><a href="https://github.com/huailiang" target="_blank"><i class="icon icon-github"></i></a></li>
+</ul>
+    <p class="txt-medium-gray">
+      <small>&copy;2019 All rights reserved. </small>
+    </p>
+  </div>
+</footer>
+    <a href="https://github.com/huailiang" target="_blank" class="github-corner"><svg width="80" height="80" viewBox="0 0 250 250" style="fill:#337ab7; color:#fff; position: absolute; top: 0; border: 0; right: 0;"><path d="M0,0 L115,115 L130,115 L142,142 L250,250 L250,0 Z"></path><path d="M128.3,109.0 C113.8,99.7 119.0,89.6 119.0,89.6 C122.0,82.7 120.5,78.6 120.5,78.6 C119.2,72.0 123.4,76.3 123.4,76.3 C127.3,80.9 125.5,87.3 125.5,87.3 C122.9,97.6 130.6,101.9 134.4,103.2" fill="currentColor" style="transform-origin: 130px 106px;" class="octo-arm"></path><path d="M115.0,115.0 C114.9,115.1 118.7,116.5 119.8,115.4 L133.7,101.6 C136.9,99.2 139.9,98.4 142.2,98.6 C133.8,88.0 127.5,74.4 143.8,58.0 C148.5,53.4 154.0,51.2 159.7,51.0 C160.3,49.4 163.2,43.6 171.4,40.1 C171.4,40.1 176.1,42.5 178.8,56.2 C183.1,58.6 187.2,61.8 190.9,65.4 C194.5,69.0 197.7,73.2 200.1,77.6 C213.8,80.2 216.3,84.9 216.3,84.9 C212.7,93.1 206.9,96.0 205.4,96.6 C205.1,102.4 203.0,107.8 198.3,112.5 C181.9,128.9 168.3,122.5 157.7,114.1 C157.9,116.9 156.7,120.9 152.7,124.9 L141.0,136.5 C139.8,137.7 141.6,141.9 141.8,141.8 Z" fill="currentColor" class="octo-body"></path></svg></a>
+
+
+    <script src="//code.jquery.com/jquery-1.11.3.min.js"></script>
+    <script>
+      $(document).ready(function () {
+        $('.sliding-panel-button,.sliding-panel-fade-screen,.sliding-panel-close').on('click touchstart', function (e) {
+          $('.sliding-panel-content,.sliding-panel-fade-screen').toggleClass('is-visible');
+          e.preventDefault();
+        });
+      });
+    </script>
+  </main>
+</body>
+
+</html>

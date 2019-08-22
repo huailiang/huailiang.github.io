@@ -1,0 +1,300 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <meta http-equiv="X-UA-Compatible" content="IE=edge">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+
+  <title>Huailiang Blog</title>
+  <meta name="description"
+    content="关于前端与设计、黑客与画家 | 怀亮，Web & Mobile Lover，Software Engineer，Game Designer | 这里是 @Huailiang怀亮 的个人博客，与你一起发现更大的世界。">
+
+  <link rel="shortcut icon" href="/img/favicon.ico">
+  <link rel="stylesheet" href="/css/main.css">
+  <link rel="canonical" href="https://huailiang.github.io/blog/page/5/">
+  <link rel="alternate" type="application/rss+xml" title="Huailiang Blog"
+    href="https://huailiang.github.io/feed.xml" />
+
+</head>
+
+<body>
+  <main>
+    <header class="site-header">
+  <div class="container">
+    <h1><a href="/">Hom<span>e</span></a></h1>
+
+    <button type="button" class="sliding-panel-button">
+      <span></span>
+      <span></span>
+      <span></span>
+    </button>
+
+    <nav class="navbar sliding-panel-content">
+      <ul>
+        
+        <li><a href="/about" title="About">About</a>
+        </li>
+        
+        <li><a href="/blog" title="Blog">Blog</a>
+        </li>
+        
+        <!-- <li><a href="/feed.xml" target="_blank"><i class="icon icon-feed"></i></a></li> -->
+        <li><a href="/category/" target="_blank"><i class="icon icon-feed"></i></a></li>
+      </ul>
+    </nav>
+  </div>
+</header>
+
+<div class="sliding-panel-fade-screen"></div>
+    <script type="text/javascript" src="/js/MathJax.js?config=TeX-AMS-MML_HTMLorMML"></script>
+
+<script type="text/x-mathjax-config">
+MathJax.Hub.Config({
+  tex2jax: {
+    inlineMath: [['$','$'], ['\\(','\\)']],
+    processEscapes: true
+  }
+});
+</script>
+
+<script type="text/x-mathjax-config">
+  MathJax.Hub.Config({
+    tex2jax: {
+      skipTags: ['script', 'noscript', 'style', 'textarea', 'pre', 'code']
+    }
+  });
+
+</script>
+    <div class="container">
+      <section class="post-list">
+  
+    <article class="post">
+  <header class="post-header">
+    <h1 class="post-title2">
+      <a class="post-link" href="/blog/2018/mlearn/">机器学习-Unity 3D平衡球[转载]</a>
+    </h1>
+    <div class="post-meta">
+      <time>Mar 3, 2018</time>
+    </div>
+  </header>
+
+  <p><a href="/blog/2018/mlearn/" title="Permalink to: 机器学习-Unity 3D平衡球[转载]"
+      class="read-more">
+  最近，Unity宣布推出Unity Machine Learning Agent（ML-Agent），将游戏引擎连接到谷歌TensorFlow等机器学习框架中。通过深度强化学习算法，让非玩家角色（NPC）通过不断尝试和犯错，变得更有创造性和策略性。
+
+
+在游戏开发的过程中，既不能让玩家因过于简单而无聊，也不能因难度太高丧失玩家兴趣。Unity开发者Arthur Juliani表示，Un...</a></p>
+</article>
+  
+    <article class="post">
+  <header class="post-header">
+    <h1 class="post-title2">
+      <a class="post-link" href="/blog/2018/exportcpp/">自动化导出c++各个平台库</a>
+    </h1>
+    <div class="post-meta">
+      <time>Mar 1, 2018</time>
+    </div>
+  </header>
+
+  <p><a href="/blog/2018/exportcpp/" title="Permalink to: 自动化导出c++各个平台库"
+      class="read-more">
+  在上面一节，我们学习了c++和c#混合编程，主要是针对windows平台。接下来我们会讲下在其他平台c++库在Unity中使用的方法。unity可以使用的ios静态库（.a） android 静态库（.so） mac下的bundle库。上面的库导出以后，放在Unity Plugins目录下，Unity在编译包或者在编辑器里运行的时候会自动对应相应的库。
+
+
+unity 使用 在 Plu...</a></p>
+</article>
+  
+    <article class="post">
+  <header class="post-header">
+    <h1 class="post-title2">
+      <a class="post-link" href="/blog/2018/combinecoding/">Unity c#与c++混合编程</a>
+    </h1>
+    <div class="post-meta">
+      <time>Feb 28, 2018</time>
+    </div>
+  </header>
+
+  <p><a href="/blog/2018/combinecoding/" title="Permalink to: Unity c#与c++混合编程"
+      class="read-more">
+  首先，Unity是基于Mono也就是.Net的运行环境的，所以它肯定支持C#；然后，Unity团队自行开发了一种Boo的语言；后面可能考虑到用户的接受程度的问题，又开发了类似JS的一种语言，但那绝对不是JS，勉强可以称之为UnityScript。这三种语言的代码最后都会被编译执行，而且可以互相访问。
+
+
+在Unity游戏的开发当中，我们的游戏项目变得越来越复杂，以至于有些项目功能必须通...</a></p>
+</article>
+  
+    <article class="post">
+  <header class="post-header">
+    <h1 class="post-title2">
+      <a class="post-link" href="/blog/2018/autopublish/">项目之自动化部署 CI</a>
+    </h1>
+    <div class="post-meta">
+      <time>Feb 27, 2018</time>
+    </div>
+  </header>
+
+  <p><a href="/blog/2018/autopublish/" title="Permalink to: 项目之自动化部署 CI"
+      class="read-more">
+  大家如何是如何管理自己项目的打包、打补丁流程了。还需要手动给 QA、策划或者运营出包吗？出包还需要使用 Unity 吗？你的项目是如何持续集成的，下面我们来一步步从头说起。
+
+
+使用 Jenkins 出包
+
+Jenkins是一个开源软件项目，是基于Java开发的一种持续集成工具，用于监控持续重复的工作，旨在提供一个开放易用的软件平台，使软件的持续集成变成可能。
+
+Jenkins功能包括...</a></p>
+</article>
+  
+    <article class="post">
+  <header class="post-header">
+    <h1 class="post-title2">
+      <a class="post-link" href="/blog/2018/homebew/">Mac 下使用 Homebrew</a>
+    </h1>
+    <div class="post-meta">
+      <time>Feb 26, 2018</time>
+    </div>
+  </header>
+
+  <p><a href="/blog/2018/homebew/" title="Permalink to: Mac 下使用 Homebrew"
+      class="read-more">
+  大家如何管理自己在 mac 下的软件，相信很多小白玩家都是使用 AppStore 吧。包管理工具可以让你安装和更新程序变得更方便，目前在 OS X 系统中最受欢迎的包管理工具是 Homebrew.
+
+
+Homebrew是一款Mac OS平台下的软件包管理工具，拥有安装、卸载、更新、查看、搜索等很多实用的功能。简单的一条指令，就可以实现包管理，而不用你关心各种依赖和文件路径的情况，十分方...</a></p>
+</article>
+  
+    <article class="post">
+  <header class="post-header">
+    <h1 class="post-title2">
+      <a class="post-link" href="/blog/2018/skill/">龙之谷技能编辑器是如何实现的</a>
+    </h1>
+    <div class="post-meta">
+      <time>Feb 25, 2018</time>
+    </div>
+  </header>
+
+  <p><a href="/blog/2018/skill/" title="Permalink to: 龙之谷技能编辑器是如何实现的"
+      class="read-more">
+  不知道大家游戏的技能编辑器是怎么实现的呢，可能不同类型的游戏，技能编辑会有很大的不同吧。下面就介绍一个《龙之谷》手游作为一款经典的 ARPG 游戏，技能编辑器是如何实现的。
+
+
+技能编辑器界面预览
+
+
+图片来源: huailiang.github.io
+
+在unity对应的编辑器
+
+
+
+图片来源: huailiang.github.io
+
+数据保存格式-xml
+龙之谷的技能编辑生成的中...</a></p>
+</article>
+  
+    <article class="post">
+  <header class="post-header">
+    <h1 class="post-title2">
+      <a class="post-link" href="/blog/2018/fashion/">Unity 实现Avatar换装</a>
+    </h1>
+    <div class="post-meta">
+      <time>Feb 23, 2018</time>
+    </div>
+  </header>
+
+  <p><a href="/blog/2018/fashion/" title="Permalink to: Unity 实现Avatar换装"
+      class="read-more">
+  Avatar换装是MMO/ARPG游戏不可缺少的一部分，一个人物模型通常可拆分为头、身体、手臂、腿、武器等部分，如何将这些部分组合到一起呢？本文将阐述如何将在Unity中实现人物模型的换装功能。
+
+
+在本节开始之前，我们先看下最终实现的效果：
+
+
+
+提取资源-预处理
+
+第一步： 从fbx中提取部件mesh, 并给mesh赋值一些必要的属性
+
+string saveRootPath = ...</a></p>
+</article>
+  
+    <article class="post">
+  <header class="post-header">
+    <h1 class="post-title2">
+      <a class="post-link" href="/blog/2018/luafix/">龙之谷如何使用lua做热更新的</a>
+    </h1>
+    <div class="post-meta">
+      <time>Feb 22, 2018</time>
+    </div>
+  </header>
+
+  <p><a href="/blog/2018/luafix/" title="Permalink to: 龙之谷如何使用lua做热更新的"
+      class="read-more">
+  Unity引擎如何热更新了，现在可以选择的方案可是越来越多了。笔者收集到一下几个解决solution:
+
+
+
+  ILRuntime
+  ULua
+  SLua
+  ToLua
+  XLua
+
+
+ILRuntime项目为基于C#的平台（例如Unity）提供了一个纯C#实现的，快速、方便并且可靠的IL运行时，使得能够在不支持JIT的硬件环境（如iOS）能够实现代码的热更新。
+
+tolua...</a></p>
+</article>
+  
+
+  
+<nav class="pagination" role="pagination">
+  <ul>
+    
+    
+    
+    <li><a class="prev btn btn-ghost" href="/blog/page/4" title="Articles new">&laquo; Prev</a></li>
+    
+    <li><span class="page-number">Page 5 of 6</span></li>
+    
+    <li><a class="next btn btn-ghost" href="/blog/page/6"
+        title="Articles old">Next &raquo;</a></li>
+    
+  </ul>
+</nav>
+
+</section>
+
+    </div>
+
+    <footer class="site-footer">
+  <div class="container">
+    <ul class="social">
+  <li><a href="https://twitter.com/penghuailiang" target="_blank"><i class="icon icon-twitter"></i></a></li>
+  <li><a href="https://www.zhihu.com/people/huailiangpenguin" target="_blank"><i class="icon icon-zhihu"></i></a></li>
+  <li><a href="https://www.facebook.com/profile.php?id=100004290725320" target="_blank"><i class="icon icon-facebook"></i></a></li>
+  <li><a href="https://weibo.com/6212299692/profile?topnav=1&wvr=6" target="_blank"><i class="icon icon-sina"></i></a></li>
+  <li><a href="https://www.linkedin.com/in/penghuailiang/" target="_blank"><i class="icon icon-linkedin"></i></a></li>
+  <li><a href="https://github.com/huailiang" target="_blank"><i class="icon icon-github"></i></a></li>
+</ul>
+    <p class="txt-medium-gray">
+      <small>&copy;2019 All rights reserved. </small>
+    </p>
+  </div>
+</footer>
+    <a href="https://github.com/huailiang" target="_blank" class="github-corner"><svg width="80" height="80" viewBox="0 0 250 250" style="fill:#337ab7; color:#fff; position: absolute; top: 0; border: 0; right: 0;"><path d="M0,0 L115,115 L130,115 L142,142 L250,250 L250,0 Z"></path><path d="M128.3,109.0 C113.8,99.7 119.0,89.6 119.0,89.6 C122.0,82.7 120.5,78.6 120.5,78.6 C119.2,72.0 123.4,76.3 123.4,76.3 C127.3,80.9 125.5,87.3 125.5,87.3 C122.9,97.6 130.6,101.9 134.4,103.2" fill="currentColor" style="transform-origin: 130px 106px;" class="octo-arm"></path><path d="M115.0,115.0 C114.9,115.1 118.7,116.5 119.8,115.4 L133.7,101.6 C136.9,99.2 139.9,98.4 142.2,98.6 C133.8,88.0 127.5,74.4 143.8,58.0 C148.5,53.4 154.0,51.2 159.7,51.0 C160.3,49.4 163.2,43.6 171.4,40.1 C171.4,40.1 176.1,42.5 178.8,56.2 C183.1,58.6 187.2,61.8 190.9,65.4 C194.5,69.0 197.7,73.2 200.1,77.6 C213.8,80.2 216.3,84.9 216.3,84.9 C212.7,93.1 206.9,96.0 205.4,96.6 C205.1,102.4 203.0,107.8 198.3,112.5 C181.9,128.9 168.3,122.5 157.7,114.1 C157.9,116.9 156.7,120.9 152.7,124.9 L141.0,136.5 C139.8,137.7 141.6,141.9 141.8,141.8 Z" fill="currentColor" class="octo-body"></path></svg></a>
+
+
+    <script src="//code.jquery.com/jquery-1.11.3.min.js"></script>
+    <script>
+      $(document).ready(function () {
+        $('.sliding-panel-button,.sliding-panel-fade-screen,.sliding-panel-close').on('click touchstart', function (e) {
+          $('.sliding-panel-content,.sliding-panel-fade-screen').toggleClass('is-visible');
+          e.preventDefault();
+        });
+      });
+    </script>
+  </main>
+</body>
+
+</html>

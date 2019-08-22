@@ -1,0 +1,460 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <meta http-equiv="X-UA-Compatible" content="IE=edge">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+
+  <title>CG/hlsl 内置函数</title>
+  <meta name="description"
+    content="数学函数">
+
+  <link rel="shortcut icon" href="/img/favicon.ico">
+  <link rel="stylesheet" href="/css/main.css">
+  <link rel="canonical" href="https://huailiang.github.io/blog/2019/cg/">
+  <link rel="alternate" type="application/rss+xml" title="Huailiang Blog"
+    href="https://huailiang.github.io/feed.xml" />
+
+</head>
+
+<body>
+  <main>
+    <header class="site-header">
+  <div class="container">
+    <h1><a href="/">Hom<span>e</span></a></h1>
+
+    <button type="button" class="sliding-panel-button">
+      <span></span>
+      <span></span>
+      <span></span>
+    </button>
+
+    <nav class="navbar sliding-panel-content">
+      <ul>
+        
+        <li><a href="/about" title="About">About</a>
+        </li>
+        
+        <li><a href="/blog" title="Blog">Blog</a>
+        </li>
+        
+        <!-- <li><a href="/feed.xml" target="_blank"><i class="icon icon-feed"></i></a></li> -->
+        <li><a href="/category/" target="_blank"><i class="icon icon-feed"></i></a></li>
+      </ul>
+    </nav>
+  </div>
+</header>
+
+<div class="sliding-panel-fade-screen"></div>
+    <script type="text/javascript" src="/js/MathJax.js?config=TeX-AMS-MML_HTMLorMML"></script>
+
+<script type="text/x-mathjax-config">
+MathJax.Hub.Config({
+  tex2jax: {
+    inlineMath: [['$','$'], ['\\(','\\)']],
+    processEscapes: true
+  }
+});
+</script>
+
+<script type="text/x-mathjax-config">
+  MathJax.Hub.Config({
+    tex2jax: {
+      skipTags: ['script', 'noscript', 'style', 'textarea', 'pre', 'code']
+    }
+  });
+
+</script>
+    <div class="container">
+      <article role="article" class="post">
+
+  <div class="card">
+    <header class="post-header">
+      <h1 class="post-title">CG/hlsl 内置函数</h1>
+      <p class="post-meta">May 25, 2019 •
+        Huailiang</p>
+    </header>
+
+    <div class="post-content">
+      <h3 id="数学函数">数学函数</h3>
+
+<p>abs(x)       返回输入参数的绝对值</p>
+
+<p>acos(x)      反余切函数，输入参数范围为[-1,1]， 返回[0,π]区间的角度值</p>
+
+<p>all(x)       如果输入参数均不为0，则返回ture； 否则返回flase。&amp;&amp;运算</p>
+
+<p>any(x)       输入参数只要有其中一个不为0，则返回true。</p>
+
+<p>asin(x)      反正弦函数,输入参数取值区间为[−1,1]，返回角度值范围为, [−π/2,π/2]</p>
+
+<p>atan(x)      反正切函数，返回角度值范围为[−π/2,π/2]</p>
+
+<p>atan2(y,x)   计算y/x的反正切值。实际上和atan(x)函数功能完全一样，至少输入参数不同。</p>
+
+<p>atan(x)       atan2(x, float(1))。</p>
+
+<p>ceil(x)      对输入参数向上取整。例如： ceil(float(1.3)) ，其返回值为2.0</p>
+
+<p>clamp(x,a,b)    如果x值小于a，则返回a；如果x值大于b，返回b；否则，返回x。</p>
+
+<p>cos(x)       返回弧度x的余弦值。返回值范围为[−1,1]</p>
+
+<p>cosh(x)      双曲余弦（hyperbolic cosine）函数，计算x的双曲余弦值。</p>
+
+<p>cross(A,B)   返回两个三元向量的叉积(cross product)。注意，输入参数必须是三元向量！</p>
+
+<p>degrees(x)   输入参数为弧度值(radians)，函数将其转换为角度值(degrees)</p>
+
+<p>determinant(m)   计算矩阵的行列式因子。</p>
+
+<p>dot(A,B)     返回A和B的点积(dot product)。参数A和B可以是标量，也可以是向量</p>
+
+<p>exp(x)       计算 <script type="math/tex">e^x</script>的值，e=2.71828182845904523536</p>
+
+<p>exp2(x)      计算 <script type="math/tex">2^x</script> 的值</p>
+
+<p>floor(x)     对输入参数向下取整。例如floor(float(1.3))返回的值为1.0；但是floor(float(-1.3))返回的值为-2.0。该函数与ceil(x)函数相对应。</p>
+
+<p>fmod(x,y)    返回x/y的余数。如果y为0，结果不可预料。</p>
+
+<p>frac(x)      返回标量或矢量的小数</p>
+
+<p>frexp(x, out i)  将浮点数x分解为尾数和指数，即x=m∗2i， 返回m，并将指数存入i中；如果x为0，则尾数和指数都返回0</p>
+
+<p>isfinite(x)  判断标量或者向量中的每个数据是否是有限数，如果是返回true；否则返回false;</p>
+
+<p>isinf(x)     判断标量或者向量中的每个数据是否是无限，如果是返回true；否则返回false;</p>
+
+<p>isnan(x)     判断标量或者向量中的每个数据是否是非数据(not-a-number NaN)，如果是返回true；否则返回false;</p>
+
+<p>ldexp(x, n)  计算 <script type="math/tex">x∗2^n</script>的值</p>
+
+<p>lerp(a, b, f)    计算(1−f)∗a+b∗f或者a+f∗(b−a)的值。即在下限a和上限b之间进行插值，f表示权值。注意，如果a和b是向量，则权值f必须是标量或者等长的向量。</p>
+
+<p>lit(NdotL, NdotH, m)     N表示法向量；L表示入射光向量；H表示半角向量；m表示高光系数。 函数计算环境光、散射光、镜面光的贡献，返回的4元向量。 X位表示环境光的贡献，总是1.0; Y位代表散射光的贡献，如果 N∙L&lt;0，则为0；否则为N∙L Z位代表镜面光的贡献，如果N∙L&lt;0 或者N∙H&lt;0，则位0；否则为(N∙L)m;W位始终位1.0</p>
+
+<p>log(x)       计算 <script type="math/tex">\ln{(x)}</script>的值，x必须大于0</p>
+
+<p>log2(x)      计算 <script type="math/tex">\log_2{(x)}</script> 的值，x必须大于0</p>
+
+<p>log10(x)     计算 <script type="math/tex">log_{10}{(x)}</script> 的值，x必须大于0</p>
+
+<p>max(a, b)    比较两个标量或等长向量元素，返回最大值。</p>
+
+<p>min(a, b)     比较两个标量或等长向量元素，返回最小值。</p>
+
+<p>modf(x, out ip)  把x分解成整数和分数两部分，每部分都和x有着相同的符号，整数部分被保存在ip中，分数部分由函数返回</p>
+
+<p>mul(M, N)    矩阵M和矩阵N的积</p>
+
+<p>mul(M, v)    矩阵M和列向量v的积</p>
+
+<p>mul(v, M)    行向量v和矩阵M的积</p>
+
+<p>noise(x)     根据它的参数类型，这个函数可以是一元、二元或三元噪音函数。返回的值在0和1之间，并且通常与给定的输入值一样</p>
+
+<p>pow(x, y)     x的y次方，即<script type="math/tex">x^y</script></p>
+
+<p>radians(x)   函数将角度值转换为弧度值round(x)返回四舍五入值。</p>
+
+<p>rsqrt(x)     x的平方根的倒数，即 <script type="math/tex">\frac{1}{\sqrt{x}}</script>。  x必须大于0</p>
+
+<p>saturate(x)  把x限制到[0,1]之间sign(x)如果x&gt;0则返回1；否则返回0</p>
+
+<p>sin(x)       输入参数为弧度，计算正弦值，返回值范围 为[-1,1]</p>
+
+<p>sincos(float x, out s, out c)    该函数是同时计算x的sin值和cos值，其中s=sin(x)，c=cos(x)。该函数用于同时需要计算sin值和cos值，比分别运算要快很多!</p>
+
+<p>sinh(x)      计算x的双曲正弦</p>
+
+<p>smoothstep(min, max, x)  值x位于min、max区间中。如果x=min，返回0；如果x=max，返回1；如果x在两者之间返回x</p>
+
+<p>step(a, x)   如果x&lt;a, 返回0；否则返回1</p>
+
+<p>sqrt(x)      求x的平方根，<script type="math/tex">\sqrt{x}</script> ，x必须大于0</p>
+
+<p>tan(x)       计算x正切值tanh(x)计算x的双曲线切线</p>
+
+<p>transpose(M)   矩阵M的转置矩阵如果M是一个AxB矩阵，M的转置是一个BxA矩阵，它的第一列是M的第一行，第二列是M的第二行，第三列是M的第三行，等等</p>
+
+<h3 id="几何函数">几何函数</h3>
+
+<p>distance(pt1, pt2)   两点之间的欧几里德距离（Euclidean distance）</p>
+
+<p>faceforward(N,I,Ng)  如果Ng∙I&lt;0，返回N；否则返回-N。</p>
+
+<p>length(v)            返回一个向量的模，即sqrt(dot(v,v))</p>
+
+<p>normalize(v)         返回v向量的单位向量</p>
+
+<p>reflect(I, N)        根据入射光纤方向I和表面法向量N计算反射向量，仅对三元向量有效</p>
+
+<p>refract(I,N,eta)     根据入射光线方向I，表面法向量N和折射相对系数eta,计算折射向量。如果对给定的eta,I和N之间的角度太大，返回(0,0,0)。只对三元向量有效</p>
+
+<h3 id="纹理映射函数">纹理映射函数</h3>
+
+<p>tex1D(sampler1D tex, float s)    一维纹理查询</p>
+
+<p>tex1D(sampler1D tex, float s, float dsdx, float dsdy)  使用导数值（derivatives）查询一维纹理</p>
+
+<p>Tex1D(sampler1D tex, float2 sz)  一维纹理查询，并进行深度值比较</p>
+
+<p>Tex1D(sampler1D tex, float2 sz, float dsdx,float dsdy)  使用导数值（derivatives）查询一维纹理， 并进行深度值比较</p>
+
+<p>Tex1Dproj(sampler1D tex, float2 sq)  一维投影纹理查询</p>
+
+<p>Tex1Dproj(sampler1D tex, float3 szq)  一维投影纹理查询，并比较深度值</p>
+
+<p>Tex2D(sampler2D tex, float2 s)  二维纹理查询</p>
+
+<p>Tex2D(sampler2D tex, float2 s, float2 dsdx, float2 dsdy)  使用导数值（derivatives）查询二维纹理</p>
+
+<p>Tex2D(sampler2D tex, float3 sz)  二维纹理查询，并进行深度值比较</p>
+
+<p>Tex2D(sampler2D tex, float3 sz, float2 dsdx,float2 dsdy)  使用导数值（derivatives）查询二维纹理，并进行深度值比较</p>
+
+<p>Tex2Dproj(sampler2D tex, float3 sq)  二维投影纹理查询</p>
+
+<p>Tex2Dproj(sampler2D tex, float4 szq)  二维投影纹理查询，并进行深度值比较</p>
+
+<p>texRECT(samplerRECT tex, float2 s)  二维非投影矩形纹理查询（OpenGL独有）</p>
+
+<p>texRECT (samplerRECT tex, float3 sz, float2 dsdx,float2 dsdy)  二维非投影使用导数的矩形纹理查询（OpenGL独有）</p>
+
+<p>texRECT (samplerRECT tex, float3 sz)  二维非投影深度比较矩形纹理查询（OpenGL独有）</p>
+
+<p>texRECT (samplerRECT tex, float3 sz, float2 dsdx,float2 dsdy)  二维非投影深度比较并使用导数的矩形纹理查询（OpenGL独有）</p>
+
+<p>texRECT proj(samplerRECT tex, float3 sq)  二维投影矩形纹理查询（OpenGL独有）</p>
+
+<p>texRECT proj(samplerRECT tex, float3 szq)  二维投影矩形纹理深度比较查询（OpenGL独有）</p>
+
+<p>Tex3D(sampler3D tex, float s ) 三维纹理查询</p>
+
+<p>Tex3D(sampler3D tex, float3 s, float3 dsdx, float3 dsdy)  结合导数值（derivatives）查询三维纹理</p>
+
+<p>Tex3Dproj(sampler3D tex, float4 szq)  查询三维投影纹理，并进行深度值比较</p>
+
+<p>texCUBE(samplerCUBE tex, float3 s)  查询立方体纹理</p>
+
+<p>texCUBE (samplerCUBE tex, float3 s, float3 dsdx, float3 dsdy)  结合导数值（derivatives）查询立方体纹理</p>
+
+<p>texCUBEproj (samplerCUBE tex, float4 sq)  查询投影立方体纹理</p>
+
+<p>在这个表中，每个函数第二个参数的名字指明了在执行纹理查询的时候，它的值是如果被使用的:<br />
+s表示这是一个一元、二元或三元纹理坐标。<br />
+z表示这是一个用来进行阴影贴图查找的深度比较值。<br />
+q表示这是一个透视值，在进行纹理查找之前，它被用来除以纹理坐标（s）。<br />
+当你使用的纹理函数允许你指定一个深度比较值的时候，与之相关联的纹理单元必须被设置成深度比较纹理。否则，深度比较实际上不会被执行。</p>
+
+<h3 id="偏导函数">偏导函数</h3>
+
+<p>ddx(a)  近似a关于屏幕空间x轴的偏导数ddy(a)近似a关于屏幕空间y轴的偏导数</p>
+
+<h3 id="调试函数">调试函数</h3>
+
+<p>void debug(float4 x)  如果在编译时设置了DEBUG，片段着 色程序中调用该函数可以将值x作为COLOR语义的最终输出；否则该函数什么也不做。</p>
+
+<p><br /></p>
+
+<h3 id="hlsl函数和glsl映射">HLSL函数和glsl映射</h3>
+
+<table border="1">
+ <tr>
+    <th>HLSL</th>
+    <th>GLSL</th>
+</tr>
+<tr>
+    <td>ddx  </td>
+    <td>dFdx</td>
+</tr>            
+<tr>
+    <td>atan2(y,x) </td>
+    <td>atan(x,y)</td>
+</tr>            
+<tr>
+    <td>ddx_coarse</td>
+    <td>dFdxCoarse</td>
+</tr>            
+<tr>
+    <td>ddx_fine </td>
+    <td>dFdxFine</td>
+</tr>            
+<tr>
+    <td>ddy </td>
+    <td>dFdy</td>
+</tr>            
+<tr>
+    <td>ddy_coarse</td>
+    <td>dFdyCoarse</td>
+</tr>            
+<tr>
+    <td>ddy_fine </td>
+    <td>dFdyFine</td>
+</tr>            
+<tr>
+    <td>EvaluateAttributeAtCentroid </td>
+    <td>interpolateAtCentroid</td>
+</tr>              
+<tr>
+    <td>EvaluateAttributeAtSample </td>
+    <td>interpolateAtSample</td>
+</tr>            
+ <tr>
+    <td>EvaluateAttributeSnapped </td>
+    <td>interpolateAtOffset</td>
+</tr>                
+  <tr>
+    <td>frac </td>
+    <td>fract</td>
+</tr>    
+  <tr>
+    <td>lerp </td>
+    <td>mix</td>
+</tr> 
+ <tr>
+    <td>mad  </td>
+    <td>fma</td>
+</tr>    
+ <tr>
+    <td>saturate </td>
+    <td>clamp(x, 0.0, 1.0)</td>
+</tr>     
+</table>
+
+    </div>
+  </div>
+
+  <style>
+  .post-nav {
+    overflow: hidden;
+    /* margin-top: 60px; */
+    padding: 12px;
+    white-space: nowrap;
+    /* border-top: 1px solid #eee; */
+  }
+
+  .post-nav-item {
+    display: inline-block;
+    width: 50%;
+    white-space: normal;
+  }
+
+  .post-nav-item a {
+    position: relative;
+    display: inline-block;
+    line-height: 25px;
+    font-size: 14px;
+    color: #555;
+    border-bottom: none;
+  }
+
+  .post-nav-item a:hover {
+    color: #222;
+    font-weight: bold;
+    border-bottom: none;
+  }
+
+  .post-nav-item a:active {
+    top: 2px;
+  }
+
+  .post-nav-item a:before,
+  .post-nav-item a:after {
+    display: inline-block;
+    width: 16px;
+    height: 25px;
+    vertical-align: top;
+    opacity: 0.4;
+    background-size: 16px;
+  }
+
+  .post-nav-none a:none {
+    content: ' ';
+    background-size: 8px;
+  }
+
+  .post-nav-none a:hover:none {
+    opacity: 1;
+  }
+
+  .post-nav-prev a:before {
+    content: ' ';
+    background: url("data:image/svg+xml;base64,PD94bWwgdmVyc2lvbj0iMS4wIiA/PjxzdmcgaGVpZ2h0PSIxMnB4IiB2ZXJzaW9uPSIxLjEiIHZpZXdCb3g9IjAgMCA5IDEyIiB3aWR0aD0iOXB4IiB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHhtbG5zOnNrZXRjaD0iaHR0cDovL3d3dy5ib2hlbWlhbmNvZGluZy5jb20vc2tldGNoL25zIiB4bWxuczp4bGluaz0iaHR0cDovL3d3dy53My5vcmcvMTk5OS94bGluayI+PHRpdGxlLz48ZGVzYy8+PGRlZnMvPjxnIGZpbGw9Im5vbmUiIGZpbGwtcnVsZT0iZXZlbm9kZCIgaWQ9IlBhZ2UtMSIgc3Ryb2tlPSJub25lIiBzdHJva2Utd2lkdGg9IjEiPjxnIGZpbGw9IiMwMDAwMDAiIGlkPSJDb3JlIiB0cmFuc2Zvcm09InRyYW5zbGF0ZSgtMjE4LjAwMDAwMCwgLTkwLjAwMDAwMCkiPjxnIGlkPSJjaGV2cm9uLWxlZnQiIHRyYW5zZm9ybT0idHJhbnNsYXRlKDIxOC41MDAwMDAsIDkwLjAwMDAwMCkiPjxwYXRoIGQ9Ik03LjQsMS40IEw2LDAgTC04Ljg4MTc4NDJlLTE2LDYgTDYsMTIgTDcuNCwxMC42IEwyLjgsNiBMNy40LDEuNCBaIiBpZD0iU2hhcGUiLz48L2c+PC9nPjwvZz48L3N2Zz4=") no-repeat 0 50%;
+    background-size: 8px;
+  }
+
+  .post-nav-prev a:hover:before {
+    opacity: 1;
+  }
+
+  .post-nav-next {
+    text-align: right;
+  }
+
+  .post-nav-next a:after {
+    content: ' ';
+    background: url("data:image/svg+xml;base64,PD94bWwgdmVyc2lvbj0iMS4wIiA/PjxzdmcgaGVpZ2h0PSIxMnB4IiB2ZXJzaW9uPSIxLjEiIHZpZXdCb3g9IjAgMCA5IDEyIiB3aWR0aD0iOXB4IiB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHhtbG5zOnNrZXRjaD0iaHR0cDovL3d3dy5ib2hlbWlhbmNvZGluZy5jb20vc2tldGNoL25zIiB4bWxuczp4bGluaz0iaHR0cDovL3d3dy53My5vcmcvMTk5OS94bGluayI+PHRpdGxlLz48ZGVzYy8+PGRlZnMvPjxnIGZpbGw9Im5vbmUiIGZpbGwtcnVsZT0iZXZlbm9kZCIgaWQ9IlBhZ2UtMSIgc3Ryb2tlPSJub25lIiBzdHJva2Utd2lkdGg9IjEiPjxnIGZpbGw9IiMwMDAwMDAiIGlkPSJDb3JlIiB0cmFuc2Zvcm09InRyYW5zbGF0ZSgtMjYwLjAwMDAwMCwgLTkwLjAwMDAwMCkiPjxnIGlkPSJjaGV2cm9uLXJpZ2h0IiB0cmFuc2Zvcm09InRyYW5zbGF0ZSgyNjAuNTAwMDAwLCA5MC4wMDAwMDApIj48cGF0aCBkPSJNMSwwIEwtMC40LDEuNCBMNC4yLDYgTC0wLjQsMTAuNiBMMSwxMiBMNyw2IEwxLDAgWiIgaWQ9IlNoYXBlIi8+PC9nPjwvZz48L2c+PC9zdmc+") no-repeat 100% 50%;
+    background-size: 8px;
+  }
+
+  .post-nav-next a:hover:after {
+    opacity: 1;
+  }
+</style>
+
+
+
+<div class="post-nav">
+
+  
+  <div class="post-nav-prev post-nav-item">
+    
+    <a href="/blog/2019/engine/"> 矢量字是如何画出来的</a>
+  </div>
+  
+
+  
+  <div class="post-nav-next post-nav-item">
+    
+    <a href="/blog/2019/nnstyle/"> 游戏风格转换</a>
+  </div>
+  
+
+</div>
+
+</article>
+    </div>
+
+    <footer class="site-footer">
+  <div class="container">
+    <ul class="social">
+  <li><a href="https://twitter.com/penghuailiang" target="_blank"><i class="icon icon-twitter"></i></a></li>
+  <li><a href="https://www.zhihu.com/people/huailiangpenguin" target="_blank"><i class="icon icon-zhihu"></i></a></li>
+  <li><a href="https://www.facebook.com/profile.php?id=100004290725320" target="_blank"><i class="icon icon-facebook"></i></a></li>
+  <li><a href="https://weibo.com/6212299692/profile?topnav=1&wvr=6" target="_blank"><i class="icon icon-sina"></i></a></li>
+  <li><a href="https://www.linkedin.com/in/penghuailiang/" target="_blank"><i class="icon icon-linkedin"></i></a></li>
+  <li><a href="https://github.com/huailiang" target="_blank"><i class="icon icon-github"></i></a></li>
+</ul>
+    <p class="txt-medium-gray">
+      <small>&copy;2019 All rights reserved. </small>
+    </p>
+  </div>
+</footer>
+    <a href="https://github.com/huailiang" target="_blank" class="github-corner"><svg width="80" height="80" viewBox="0 0 250 250" style="fill:#337ab7; color:#fff; position: absolute; top: 0; border: 0; right: 0;"><path d="M0,0 L115,115 L130,115 L142,142 L250,250 L250,0 Z"></path><path d="M128.3,109.0 C113.8,99.7 119.0,89.6 119.0,89.6 C122.0,82.7 120.5,78.6 120.5,78.6 C119.2,72.0 123.4,76.3 123.4,76.3 C127.3,80.9 125.5,87.3 125.5,87.3 C122.9,97.6 130.6,101.9 134.4,103.2" fill="currentColor" style="transform-origin: 130px 106px;" class="octo-arm"></path><path d="M115.0,115.0 C114.9,115.1 118.7,116.5 119.8,115.4 L133.7,101.6 C136.9,99.2 139.9,98.4 142.2,98.6 C133.8,88.0 127.5,74.4 143.8,58.0 C148.5,53.4 154.0,51.2 159.7,51.0 C160.3,49.4 163.2,43.6 171.4,40.1 C171.4,40.1 176.1,42.5 178.8,56.2 C183.1,58.6 187.2,61.8 190.9,65.4 C194.5,69.0 197.7,73.2 200.1,77.6 C213.8,80.2 216.3,84.9 216.3,84.9 C212.7,93.1 206.9,96.0 205.4,96.6 C205.1,102.4 203.0,107.8 198.3,112.5 C181.9,128.9 168.3,122.5 157.7,114.1 C157.9,116.9 156.7,120.9 152.7,124.9 L141.0,136.5 C139.8,137.7 141.6,141.9 141.8,141.8 Z" fill="currentColor" class="octo-body"></path></svg></a>
+
+
+    <script src="//code.jquery.com/jquery-1.11.3.min.js"></script>
+    <script>
+      $(document).ready(function () {
+        $('.sliding-panel-button,.sliding-panel-fade-screen,.sliding-panel-close').on('click touchstart', function (e) {
+          $('.sliding-panel-content,.sliding-panel-fade-screen').toggleClass('is-visible');
+          e.preventDefault();
+        });
+      });
+    </script>
+  </main>
+</body>
+
+</html>

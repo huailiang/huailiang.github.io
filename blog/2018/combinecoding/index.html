@@ -1,0 +1,532 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <meta http-equiv="X-UA-Compatible" content="IE=edge">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+
+  <title>Unity c#与c++混合编程</title>
+  <meta name="description"
+    content="  首先，Unity是基于Mono也就是.Net的运行环境的，所以它肯定支持C#；然后，Unity团队自行开发了一种Boo的语言；后面可能考虑到用户的接受程度的问题，又开发了类似JS的一种语言，但那绝对不是JS，勉强可以称之为UnityScript。这三种语言的代码最后都会被编译执行，而且可以互相访问。">
+
+  <link rel="shortcut icon" href="/img/favicon.ico">
+  <link rel="stylesheet" href="/css/main.css">
+  <link rel="canonical" href="https://huailiang.github.io/blog/2018/combinecoding/">
+  <link rel="alternate" type="application/rss+xml" title="Huailiang Blog"
+    href="https://huailiang.github.io/feed.xml" />
+
+</head>
+
+<body>
+  <main>
+    <header class="site-header">
+  <div class="container">
+    <h1><a href="/">Hom<span>e</span></a></h1>
+
+    <button type="button" class="sliding-panel-button">
+      <span></span>
+      <span></span>
+      <span></span>
+    </button>
+
+    <nav class="navbar sliding-panel-content">
+      <ul>
+        
+        <li><a href="/about" title="About">About</a>
+        </li>
+        
+        <li><a href="/blog" title="Blog">Blog</a>
+        </li>
+        
+        <!-- <li><a href="/feed.xml" target="_blank"><i class="icon icon-feed"></i></a></li> -->
+        <li><a href="/category/" target="_blank"><i class="icon icon-feed"></i></a></li>
+      </ul>
+    </nav>
+  </div>
+</header>
+
+<div class="sliding-panel-fade-screen"></div>
+    <script type="text/javascript" src="/js/MathJax.js?config=TeX-AMS-MML_HTMLorMML"></script>
+
+<script type="text/x-mathjax-config">
+MathJax.Hub.Config({
+  tex2jax: {
+    inlineMath: [['$','$'], ['\\(','\\)']],
+    processEscapes: true
+  }
+});
+</script>
+
+<script type="text/x-mathjax-config">
+  MathJax.Hub.Config({
+    tex2jax: {
+      skipTags: ['script', 'noscript', 'style', 'textarea', 'pre', 'code']
+    }
+  });
+
+</script>
+    <div class="container">
+      <article role="article" class="post">
+
+  <div class="card">
+    <header class="post-header">
+      <h1 class="post-title">Unity c#与c++混合编程</h1>
+      <p class="post-meta">Feb 28, 2018 •
+        Huailiang</p>
+    </header>
+
+    <div class="post-content">
+      <blockquote>
+  <p>首先，Unity是基于Mono也就是.Net的运行环境的，所以它肯定支持C#；然后，Unity团队自行开发了一种Boo的语言；后面可能考虑到用户的接受程度的问题，又开发了类似JS的一种语言，但那绝对不是JS，勉强可以称之为UnityScript。这三种语言的代码最后都会被编译执行，而且可以互相访问。</p>
+</blockquote>
+
+<p>在Unity游戏的开发当中，我们的游戏项目变得越来越复杂，以至于有些项目功能必须通过依赖库来进行实现。</p>
+
+<p>比如，我们在手游开发中用到的GVoice、FMOD或者是其他的插件，都是通过调用Native dll（C/C++）来实现一些复杂的功能。《王者荣耀》核心代码libGameCore.so 也是用c++完成的。</p>
+
+<p>那么我们应该如何使用C#来对C++进行调用呢。</p>
+
+<p>了解C#的人都知道，C#是运行在CLR之上被托管的，而C++则并没有被托管。</p>
+
+<p>目前.Net平台中托管环境调用非托管环境有三种方法：</p>
+
+<ul>
+  <li>P/Invoke</li>
+  <li>C++ Interop</li>
+  <li>COM Interop</li>
+</ul>
+
+<p>这三种方法当中，C++ Interop是针对托管C++使用的方法（说实话C++/CLI感觉没啥前途），COM Interop则是针对Window软件开发而采用的方式。所以我们只剩下一种解决方案：也就是PInvoke来进行托管环境与非托管环境的互操作。不过由于PInvoke本身内容也并不少，所以在这里我也就简单介绍一下其使用的方式，更详细的内容可以去查看官方文档，或者是下一个《精通.Net互操作》的pdf来阅读就可以了。</p>
+
+<h3 id="新手入门">新手入门</h3>
+<p>如何做到c# 能调用到c++代码呢，下面我们通过一个小的Demo展示。</p>
+
+<ul>
+  <li>在Unity 新建一个c# 代码，里面内容如下：</li>
+</ul>
+
+<div class="language-csharp highlighter-rouge"><pre class="highlight"><code><span class="k">public</span> <span class="k">class</span> <span class="nc">TestCPP</span> <span class="p">:</span> <span class="n">MonoBehaviour</span> <span class="p">{</span>
+
+<span class="cp">#if UNITY_IPHONE || UNITY_XBOX360
+</span>    <span class="p">[</span><span class="nf">DllImport</span><span class="p">(</span><span class="s">"__Internal"</span><span class="p">)]</span>
+<span class="cp">#else
+</span>    <span class="p">[</span><span class="nf">DllImport</span><span class="p">(</span><span class="s">"GameCore"</span><span class="p">)]</span>
+<span class="cp">#endif
+</span>    <span class="k">public</span> <span class="k">static</span> <span class="k">extern</span> <span class="kt">int</span> <span class="nf">iAdd</span><span class="p">(</span><span class="kt">int</span> <span class="n">x</span><span class="p">,</span> <span class="kt">int</span> <span class="n">y</span><span class="p">);</span>
+
+    <span class="k">public</span> <span class="k">void</span> <span class="nf">OnGUI</span><span class="p">()</span>
+    <span class="p">{</span>
+        <span class="n">GUILayout</span><span class="p">.</span><span class="nf">BeginVertical</span><span class="p">();</span>
+        <span class="k">if</span> <span class="p">(</span><span class="n">GUILayout</span><span class="p">.</span><span class="nf">Button</span><span class="p">(</span><span class="s">"Cal-Add"</span><span class="p">))</span>
+        <span class="p">{</span>
+            <span class="kt">int</span> <span class="n">i</span> <span class="p">=</span> <span class="nf">iAdd</span><span class="p">(</span><span class="m">8</span><span class="p">,</span> <span class="m">7</span><span class="p">);</span>
+            <span class="n">Debug</span><span class="p">.</span><span class="nf">Log</span><span class="p">(</span><span class="s">"8+7="</span> <span class="p">+</span> <span class="n">i</span><span class="p">);</span>
+        <span class="p">}</span>
+        <span class="n">GUILayout</span><span class="p">.</span><span class="nf">EndVertical</span><span class="p">();</span>
+    <span class="p">}</span>
+<span class="p">}</span>
+</code></pre>
+</div>
+
+<p>Testcpp.cs挂在当前场景随意一个gameobject下，然后在vs中设置新建一个c++ 空项目，属性设置如下图：</p>
+
+<p><img src="/img/post-cpp/cpp1.jpg" alt="" /></p>
+
+<p>配置类型：动态库（.dll）,平台设置为x64</p>
+
+<p>c++代码的实现如下：</p>
+
+<div class="language-cpp highlighter-rouge"><pre class="highlight"><code><span class="cp">#ifndef __Test__
+#define __Test__
+</span>
+<span class="k">extern</span> <span class="s">"C"</span>
+<span class="p">{</span>
+    <span class="kr">__declspec</span><span class="p">(</span><span class="n">dllexport</span><span class="p">)</span> <span class="kt">int</span> <span class="n">iAdd</span><span class="p">(</span><span class="kt">int</span> <span class="n">a</span><span class="p">,</span><span class="kt">int</span> <span class="n">b</span><span class="p">)</span>
+    <span class="p">{</span>
+	    <span class="k">return</span> <span class="n">a</span><span class="o">+</span><span class="n">b</span><span class="p">;</span>
+    <span class="p">}</span>
+<span class="p">};</span>
+<span class="cp">#endif
+</span></code></pre>
+</div>
+
+<p>导出dll,然后copy到unity项目Plugins/x86_x64目录下，点击unity运行按钮，点击GUI Add按钮，这时你可以看到一行log在console串口中，就证明你的c++调用成功了。类似下图：</p>
+
+<p><img src="/img/post-cpp/cpp2.jpg" alt="" /></p>
+
+<h3 id="断点调试">断点调试</h3>
+<p>在你的c++ 调试（D）-&gt;附加到进程（P)… ,在弹出的窗口作如下选择：</p>
+
+<p><img src="/img/post-cpp/cpp3.jpg" alt="" /></p>
+
+<p>点击附加，你就可以设置断点了。</p>
+
+<p><img src="/img/post-cpp/cpp4.jpg" alt="" /></p>
+
+<h3 id="复杂的数据封送">复杂的数据封送</h3>
+
+<h4 id="指针传递">指针传递</h4>
+
+<div class="language-cpp highlighter-rouge"><pre class="highlight"><code><span class="k">extern</span> <span class="s">"C"</span>
+<span class="p">{</span>
+    <span class="kr">__declspec</span><span class="p">(</span><span class="n">dllexport</span><span class="p">)</span> <span class="kt">int</span> <span class="n">iSub</span><span class="p">(</span><span class="kt">int</span><span class="o">*</span> <span class="n">a</span><span class="p">,</span> <span class="kt">int</span><span class="o">*</span> <span class="n">b</span><span class="p">)</span>
+    <span class="p">{</span>
+        <span class="k">return</span> <span class="o">*</span><span class="n">a</span> <span class="o">-</span> <span class="o">*</span><span class="n">b</span><span class="p">;</span>
+    <span class="p">}</span>
+<span class="p">}</span>
+</code></pre>
+</div>
+
+<p>c#主要通过IntPtr去处理的</p>
+
+<div class="language-csharp highlighter-rouge"><pre class="highlight"><code><span class="cp">#if UNITY_IPHONE || UNITY_XBOX360
+</span>    <span class="p">[</span><span class="nf">DllImport</span><span class="p">(</span><span class="s">"__Internal"</span><span class="p">)]</span>
+<span class="cp">#else
+</span>    <span class="p">[</span><span class="nf">DllImport</span><span class="p">(</span><span class="s">"Core"</span><span class="p">)]</span>
+<span class="cp">#endif
+</span>    <span class="k">public</span> <span class="k">static</span> <span class="k">extern</span> <span class="kt">int</span> <span class="nf">iSub</span><span class="p">(</span><span class="n">IntPtr</span> <span class="n">x</span><span class="p">,</span> <span class="n">IntPtr</span> <span class="n">y</span><span class="p">);</span>
+
+<span class="k">public</span> <span class="k">void</span> <span class="n">OnGUI</span>
+<span class="p">{</span>
+    <span class="k">if</span> <span class="p">(</span><span class="n">GUI</span><span class="p">.</span><span class="nf">Button</span><span class="p">(</span><span class="k">new</span> <span class="nf">Rect</span><span class="p">(</span><span class="m">20</span><span class="p">,</span> <span class="m">120</span><span class="p">,</span> <span class="m">100</span><span class="p">,</span> <span class="m">60</span><span class="p">),</span> <span class="s">"Sub"</span><span class="p">))</span>
+     <span class="p">{</span>
+         <span class="kt">int</span> <span class="n">a</span> <span class="p">=</span> <span class="m">8</span><span class="p">,</span> <span class="n">b</span> <span class="p">=</span> <span class="m">2</span><span class="p">;</span>
+         <span class="n">IntPtr</span> <span class="n">p1</span> <span class="p">=</span> <span class="n">Marshal</span><span class="p">.</span><span class="nf">AllocCoTaskMem</span><span class="p">(</span><span class="n">Marshal</span><span class="p">.</span><span class="nf">SizeOf</span><span class="p">(</span><span class="n">a</span><span class="p">));</span>
+         <span class="n">Marshal</span><span class="p">.</span><span class="nf">StructureToPtr</span><span class="p">(</span><span class="n">a</span><span class="p">,</span> <span class="n">p1</span><span class="p">,</span> <span class="k">false</span><span class="p">);</span>
+         <span class="n">IntPtr</span> <span class="n">p2</span> <span class="p">=</span> <span class="n">Marshal</span><span class="p">.</span><span class="nf">AllocCoTaskMem</span><span class="p">(</span><span class="n">Marshal</span><span class="p">.</span><span class="nf">SizeOf</span><span class="p">(</span><span class="n">b</span><span class="p">));</span>
+         <span class="n">Marshal</span><span class="p">.</span><span class="nf">StructureToPtr</span><span class="p">(</span><span class="n">b</span><span class="p">,</span> <span class="n">p2</span><span class="p">,</span> <span class="k">false</span><span class="p">);</span>
+         <span class="kt">int</span> <span class="n">rst</span> <span class="p">=</span> <span class="nf">iSub</span><span class="p">(</span><span class="n">p1</span><span class="p">,</span> <span class="n">p2</span><span class="p">);</span>
+         <span class="n">Debug</span><span class="p">.</span><span class="nf">Log</span><span class="p">(</span><span class="n">a</span> <span class="p">+</span> <span class="s">"-"</span> <span class="p">+</span> <span class="n">b</span> <span class="p">+</span> <span class="s">"="</span> <span class="p">+</span> <span class="n">rst</span><span class="p">);</span>
+     <span class="p">}</span>
+<span class="p">}</span>
+</code></pre>
+</div>
+
+<h4 id="c反调用c-使用指针函数c">c++反调用c# 使用指针函数（c++）</h4>
+
+<div class="language-cpp highlighter-rouge"><pre class="highlight"><code><span class="k">typedef</span> <span class="kt">bool</span><span class="p">(</span><span class="o">*</span><span class="n">SharpCALLBACK</span><span class="p">)(</span><span class="kt">unsigned</span> <span class="kt">char</span><span class="p">,</span><span class="k">const</span> <span class="kt">char</span><span class="o">*</span><span class="p">);</span>
+
+<span class="kr">__declspec</span><span class="p">(</span><span class="n">dllexport</span><span class="p">)</span> <span class="kt">void</span> <span class="n">iInitCallbackCommand</span><span class="p">(</span><span class="n">SharpCALLBACK</span> <span class="n">cb</span><span class="p">)</span>
+<span class="p">{</span>
+	<span class="n">callback</span> <span class="o">=</span> <span class="n">cb</span><span class="p">;</span>
+<span class="p">}</span>
+</code></pre>
+</div>
+
+<div class="language-csharp highlighter-rouge"><pre class="highlight"><code><span class="k">public</span> <span class="k">delegate</span> <span class="k">void</span> <span class="nf">CppDelegate</span><span class="p">(</span><span class="kt">byte</span> <span class="n">type</span><span class="p">,</span> <span class="n">IntPtr</span> <span class="n">p</span><span class="p">);</span>
+
+<span class="cp">#if UNITY_IPHONE || UNITY_XBOX360
+</span>    <span class="p">[</span><span class="nf">DllImport</span><span class="p">(</span><span class="s">"__Internal"</span><span class="p">)]</span>
+<span class="cp">#else
+</span>    <span class="p">[</span><span class="nf">DllImport</span><span class="p">(</span><span class="s">"GameCore"</span><span class="p">)]</span>
+<span class="cp">#endif
+</span>    <span class="k">public</span> <span class="k">static</span> <span class="k">extern</span> <span class="k">void</span> <span class="nf">iInitCallbackCommand</span><span class="p">(</span><span class="n">CppDelegate</span> <span class="n">cb</span><span class="p">);</span>
+
+    <span class="k">public</span> <span class="k">static</span> <span class="k">void</span> <span class="nf">Init</span><span class="p">()</span>
+    <span class="p">{</span>
+        <span class="nf">iInitCallbackCommand</span><span class="p">(</span><span class="n">OnInitCallback</span><span class="p">);</span>
+    <span class="p">}</span>
+
+    <span class="p">[</span><span class="nf">MonoPInvokeCallback</span><span class="p">(</span><span class="k">typeof</span><span class="p">(</span><span class="n">CppDelegate</span><span class="p">))]</span>
+    <span class="k">static</span> <span class="k">void</span> <span class="nf">OnInitCallback</span><span class="p">(</span><span class="kt">byte</span> <span class="n">t</span><span class="p">,</span> <span class="n">IntPtr</span> <span class="n">ptr</span><span class="p">)</span>
+    <span class="p">{</span>
+        <span class="kt">string</span> <span class="n">command</span> <span class="p">=</span> <span class="n">Marshal</span><span class="p">.</span><span class="nf">PtrToStringAnsi</span><span class="p">(</span><span class="n">ptr</span><span class="p">);</span>
+        <span class="n">XDebug</span><span class="p">.</span><span class="nf">CLog</span><span class="p">(</span><span class="n">command</span><span class="p">);</span>
+    <span class="p">}</span>
+</code></pre>
+</div>
+
+<h4 id="传送结构体">传送结构体</h4>
+
+<div class="language-cpp highlighter-rouge"><pre class="highlight"><code><span class="k">struct</span> <span class="n">Row</span>
+<span class="p">{</span>
+    <span class="n">uint</span> <span class="n">itemid</span><span class="p">;</span>
+    <span class="kt">char</span> <span class="n">itemname</span><span class="p">[</span><span class="n">MaxStringSize</span><span class="p">];</span>
+    <span class="kt">int</span> <span class="n">equippos</span><span class="p">;</span>
+    <span class="kt">int</span> <span class="n">profession</span><span class="p">;</span>
+<span class="p">};</span>
+
+<span class="k">extern</span> <span class="s">"C"</span>
+<span class="p">{</span>
+    <span class="kr">__declspec</span><span class="p">(</span><span class="n">dllexport</span><span class="p">)</span> <span class="kt">void</span> <span class="n">iGetFashionListRow</span><span class="p">(</span><span class="n">Row</span><span class="o">*</span> <span class="n">row</span><span class="p">);</span>
+<span class="p">}</span>
+</code></pre>
+</div>
+
+<div class="language-csharp highlighter-rouge"><pre class="highlight"><code><span class="na">[StructLayout(LayoutKind.Sequential, CharSet = CharSet.Ansi)]</span>
+<span class="k">public</span> <span class="k">struct</span> <span class="nc">RowData</span> <span class="p">{</span>
+    <span class="kt">uint</span> <span class="n">itemid</span><span class="p">;</span>
+    <span class="p">[</span><span class="nf">MarshalAs</span><span class="p">(</span><span class="n">UnmanagedType</span><span class="p">.</span><span class="n">ByValTStr</span><span class="p">,</span> <span class="n">SizeConst</span> <span class="p">=</span> <span class="m">64</span><span class="p">)]</span>
+    <span class="kt">string</span> <span class="n">itemname</span><span class="p">;</span>
+    <span class="kt">int</span> <span class="n">equippos</span><span class="p">;</span>
+    <span class="kt">int</span> <span class="n">profession</span><span class="p">;</span>
+<span class="p">}</span>
+
+<span class="cp">#if UNITY_IPHONE || UNITY_XBOX360
+</span><span class="na">[DllImport("__Internal")]</span>
+<span class="cp">#else
+</span><span class="na">[DllImport("GameCore")]</span>
+<span class="cp">#endif
+</span><span class="k">static</span> <span class="k">extern</span> <span class="k">void</span> <span class="nf">iGetFashionListRowByID</span><span class="p">(</span><span class="kt">int</span> <span class="n">idx</span><span class="p">,</span> <span class="k">ref</span> <span class="n">RowData</span> <span class="n">row</span><span class="p">);</span>
+</code></pre>
+</div>
+
+<h3 id="面向对象">面向对象</h3>
+
+<p>通过上面测试我们可以看到出c#里都是静态函数，c++都写在extern c中，需要自己去获取对应的实例，这些都是面向过程的。而c++天然是面对对象的OO,那我们如何实现c#里去new一个c++对象，c# new的对象又是如何析构的呢？</p>
+
+<p>C++互操作也有自动生成接口代码工具，这就是Swig。Swig可以根据不同的语言生成各个语言与C++交互的接口，包括C#、Java、Python、Ruby等等，你可以在<a href="http://www.swig.org/translations/chinese/index.html">swig官网</a>下载最新版本的swig.</p>
+
+<p><img src="/img/post-cpp/cpp5.jpg" alt="" /></p>
+
+<p>在c++项目里添加swig文件夹，添加Core.i ，类似图中所示：</p>
+
+<p><img src="/img/post-cpp/cpp7.jpg" alt="" /></p>
+
+<p>右击Core.i, 设置项类型为自定义生成工具</p>
+
+<p><img src="/img/post-cpp/cpp6.jpg" alt="" /></p>
+
+<p>点击右下角应用，刷新之后，在自定义工具设置命令行和输出，如图：</p>
+
+<p><img src="/img/post-cpp/cpp8.jpg" alt="" /></p>
+
+<p>命令行配置如下：</p>
+
+<figure class="highlight"><pre><code class="language-bash" data-lang="bash"><span class="nb">echo </span>on
+C:<span class="se">\s</span>wigwin-3.0.12<span class="se">\s</span>wig.exe -c++ -csharp -outdir <span class="k">$(</span>SolutionDir<span class="k">)</span>..<span class="se">\A</span>ssets/SwigTools %<span class="o">(</span>FullPath<span class="o">)</span>
+<span class="nb">echo </span>off</code></pre></figure>
+
+<p>这段代码的意思就是调用swig，-c++设置源语言为c++ -csharp代表输出语言为C#，最终的-outdir代表的是C#接口的输出目录，而最后的参数代表的是.cxx文件的输出目录。</p>
+
+<p>然后我们对工程进行编译：</p>
+
+<p>发现会生成C#文件以及.cxx文件，这个时候，我们将.cxx文件包含到工程当中, 如果没有包含到工程中，c#调用c++时候将会找不到方法，切记。</p>
+
+<p>我们新建一个c++的类，其中实现代码如下：</p>
+
+<div class="language-cpp highlighter-rouge"><pre class="highlight"><code><span class="cp">#include "Invork.h"
+</span>
+<span class="kt">int</span> <span class="n">Invork</span><span class="o">::</span> <span class="n">Mul</span><span class="p">(</span><span class="kt">int</span> <span class="n">a</span><span class="p">,</span><span class="kt">int</span> <span class="n">b</span><span class="p">)</span>
+<span class="p">{</span>
+    <span class="k">return</span> <span class="n">a</span> <span class="o">*</span> <span class="n">b</span><span class="p">;</span>
+<span class="p">}</span>
+
+<span class="kt">int</span> <span class="n">Invork</span><span class="o">::</span><span class="n">Div</span><span class="p">(</span><span class="kt">int</span> <span class="n">a</span><span class="p">,</span><span class="kt">int</span> <span class="n">b</span><span class="p">)</span>
+<span class="p">{</span>
+    <span class="k">if</span><span class="p">(</span> <span class="n">b</span> <span class="o">==</span> <span class="mi">0</span> <span class="p">)</span>
+    <span class="p">{</span>
+        <span class="k">return</span> <span class="mi">0</span><span class="p">;</span>
+    <span class="p">}</span>
+    <span class="k">else</span>
+    <span class="p">{</span>
+        <span class="k">return</span> <span class="n">a</span><span class="o">/</span><span class="n">b</span><span class="p">;</span>
+    <span class="p">}</span>
+<span class="p">}</span>
+</code></pre>
+</div>
+
+<p>编译生成之后会发现我们的c#目录会多出三个文件，如下图所示：</p>
+
+<p><img src="/img/post-cpp/cpp9.jpg" alt="" /></p>
+
+<p>在c#里我们这可这样调用c++的东西：</p>
+
+<figure class="highlight"><pre><code class="language-csharp" data-lang="csharp"><span class="k">if</span> <span class="p">(</span><span class="n">GUI</span><span class="p">.</span><span class="nf">Button</span><span class="p">(</span><span class="k">new</span> <span class="nf">Rect</span><span class="p">(</span><span class="m">20</span><span class="p">,</span> <span class="m">220</span><span class="p">,</span> <span class="m">100</span><span class="p">,</span> <span class="m">60</span><span class="p">),</span> <span class="s">"Swig"</span><span class="p">))</span>
+<span class="p">{</span>
+    <span class="kt">int</span> <span class="n">c</span> <span class="p">=</span> <span class="n">Invork</span><span class="p">.</span><span class="nf">Div</span><span class="p">(</span><span class="m">4</span><span class="p">,</span> <span class="m">2</span><span class="p">);</span>
+    <span class="n">Debug</span><span class="p">.</span><span class="nf">Log</span><span class="p">(</span><span class="s">"div val:"</span> <span class="p">+</span> <span class="n">c</span><span class="p">);</span>
+    <span class="n">Invork</span> <span class="n">ins</span> <span class="p">=</span> <span class="k">new</span> <span class="nf">Invork</span><span class="p">();</span>
+    <span class="n">c</span> <span class="p">=</span> <span class="n">ins</span><span class="p">.</span><span class="nf">Mul</span><span class="p">(</span><span class="m">3</span><span class="p">,</span> <span class="m">5</span><span class="p">);</span>
+    <span class="n">Debug</span><span class="p">.</span><span class="nf">Log</span><span class="p">(</span><span class="s">"mul val:"</span> <span class="p">+</span> <span class="n">c</span><span class="p">);</span>
+    <span class="n">ins</span><span class="p">.</span><span class="nf">Dispose</span><span class="p">();</span>
+<span class="p">}</span></code></pre></figure>
+
+<p>如果最终你得到如图所示的日志，恭喜你，所有的流程都跑通了。<br />
+<img src="/img/post-cpp/cpp10.jpg" alt="" /></p>
+
+<p>在c#里new c++里的对象，记得一定要Dispose(),否则的话，会造成内存泄漏，带来不必要的麻烦。上面的代码如果没有显示调用ins.Dispose() 可是可以的，ins在托管销毁的时候，swig已帮助我们在析构函数中调用Dispose(),但这样释放的不及时，并不是函数退出的时候就会释放。在生成的Invoik类的析构函数自动调用了Disposse()。最后说说swig的缺点，swig并不会帮助我们生成UNITY_IPHONE ios平台下外链调用，即DllImport 因为ios平台我们平常使用的都是静态库， 而不像Windows和Android平台一样是动态库。<br />
+<img src="/img/post-cpp/cpp11.jpg" alt="" /></p>
+
+<h3 id="swig常用语法">Swig常用语法</h3>
+<p>详细的文档请参考官方文档，这里只做简单的一些介绍。</p>
+
+<p>我在项目中写了一个简单的模板，用到了一些Swig的常用功能：</p>
+
+<p><img src="/img/post-cpp/cpp12.jpg" alt="" /></p>
+
+<p>module<br />
+module代表的是当前.i模板所在的模块，相对应的，该.i文件也会生成相应的接口文件，命名就与%module声明的一样。所以该语法一般用在模板的开头。</p>
+
+<p>include<br />
+就像C/C++一样，include会将需要生成接口的文件进行生成。是必不可少的语法。</p>
+
+<p>大括号帮助我们在.cxx中加入一些代码，例如我们最常用的#include，这样我们才可以让.cxx调用到相应的代码。</p>
+
+<p>使用C++/STL<br />
+我们可以通过包含各种swig所包含的.i文件来帮助我们实现STL库。</p>
+
+<p>例如%incude “std_string.i”、%include “std_vector.i”</p>
+
+<figure class="highlight"><pre><code class="language-cpp" data-lang="cpp"><span class="k">namespace</span> <span class="n">std</span> <span class="p">{</span>
+
+<span class="o">%</span><span class="k">template</span><span class="p">(</span><span class="n">BoolVector</span><span class="p">)</span> <span class="n">vector</span><span class="o">&lt;</span><span class="kt">bool</span><span class="o">&gt;</span><span class="p">;</span>
+
+<span class="p">}</span></code></pre></figure>
+
+<p>使用这样的定义方式，Swig会为我们生成一个名为BoolVector的类型而不是未知类型。我们可以在目标语言中创建C++中的STL并且与C++中的Vector进行互操作。</p>
+
+<p>需要注意的是，如果我们使用自定义类型而非基本类型或者使用指针作为模板类型，我们则需要事先导出自定义类型的定义，否则就会得到SWIGTYPE_p_类型名这样定义作为类型模板的Vector定义，这往往不是我们想要的。</p>
+
+<p>使用指针<br />
+定义指针的方法如下：</p>
+
+<figure class="highlight"><pre><code class="language-cpp" data-lang="cpp"><span class="o">%</span><span class="n">pointer_class</span><span class="p">(</span><span class="kt">bool</span><span class="p">,</span> <span class="n">BoolPointer</span><span class="p">);</span></code></pre></figure>
+
+<p>通过这个定义我们Swig会为我们生成指针相对应的类，Swig再会生成类似于SWIGTYPE_p_bool这样的未定义类型，而是直接使用BoolPointer，并且我们能够自己在目标语言中申请内存，并且自己对内存进行管理。</p>
+
+<p>使用数组<br />
+定义数组的方法如下。</p>
+
+<figure class="highlight"><pre><code class="language-cpp" data-lang="cpp"><span class="o">%</span><span class="n">array_class</span><span class="p">(</span><span class="kt">unsigned</span> <span class="kt">char</span><span class="p">,</span> <span class="n">UnsignedCharArray</span><span class="p">);</span></code></pre></figure>
+
+<p>通过这种方式我们可以导出相应的数组类型。我们可以在目标语言中创建C++中的数组，并且与C++中的数组进行互操作。</p>
+
+<p>关于本节使用的代码都已上传到github，<a href="https://github.com/huailiang/swig">欢迎下载</a></p>
+
+
+    </div>
+  </div>
+
+  <style>
+  .post-nav {
+    overflow: hidden;
+    /* margin-top: 60px; */
+    padding: 12px;
+    white-space: nowrap;
+    /* border-top: 1px solid #eee; */
+  }
+
+  .post-nav-item {
+    display: inline-block;
+    width: 50%;
+    white-space: normal;
+  }
+
+  .post-nav-item a {
+    position: relative;
+    display: inline-block;
+    line-height: 25px;
+    font-size: 14px;
+    color: #555;
+    border-bottom: none;
+  }
+
+  .post-nav-item a:hover {
+    color: #222;
+    font-weight: bold;
+    border-bottom: none;
+  }
+
+  .post-nav-item a:active {
+    top: 2px;
+  }
+
+  .post-nav-item a:before,
+  .post-nav-item a:after {
+    display: inline-block;
+    width: 16px;
+    height: 25px;
+    vertical-align: top;
+    opacity: 0.4;
+    background-size: 16px;
+  }
+
+  .post-nav-none a:none {
+    content: ' ';
+    background-size: 8px;
+  }
+
+  .post-nav-none a:hover:none {
+    opacity: 1;
+  }
+
+  .post-nav-prev a:before {
+    content: ' ';
+    background: url("data:image/svg+xml;base64,PD94bWwgdmVyc2lvbj0iMS4wIiA/PjxzdmcgaGVpZ2h0PSIxMnB4IiB2ZXJzaW9uPSIxLjEiIHZpZXdCb3g9IjAgMCA5IDEyIiB3aWR0aD0iOXB4IiB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHhtbG5zOnNrZXRjaD0iaHR0cDovL3d3dy5ib2hlbWlhbmNvZGluZy5jb20vc2tldGNoL25zIiB4bWxuczp4bGluaz0iaHR0cDovL3d3dy53My5vcmcvMTk5OS94bGluayI+PHRpdGxlLz48ZGVzYy8+PGRlZnMvPjxnIGZpbGw9Im5vbmUiIGZpbGwtcnVsZT0iZXZlbm9kZCIgaWQ9IlBhZ2UtMSIgc3Ryb2tlPSJub25lIiBzdHJva2Utd2lkdGg9IjEiPjxnIGZpbGw9IiMwMDAwMDAiIGlkPSJDb3JlIiB0cmFuc2Zvcm09InRyYW5zbGF0ZSgtMjE4LjAwMDAwMCwgLTkwLjAwMDAwMCkiPjxnIGlkPSJjaGV2cm9uLWxlZnQiIHRyYW5zZm9ybT0idHJhbnNsYXRlKDIxOC41MDAwMDAsIDkwLjAwMDAwMCkiPjxwYXRoIGQ9Ik03LjQsMS40IEw2LDAgTC04Ljg4MTc4NDJlLTE2LDYgTDYsMTIgTDcuNCwxMC42IEwyLjgsNiBMNy40LDEuNCBaIiBpZD0iU2hhcGUiLz48L2c+PC9nPjwvZz48L3N2Zz4=") no-repeat 0 50%;
+    background-size: 8px;
+  }
+
+  .post-nav-prev a:hover:before {
+    opacity: 1;
+  }
+
+  .post-nav-next {
+    text-align: right;
+  }
+
+  .post-nav-next a:after {
+    content: ' ';
+    background: url("data:image/svg+xml;base64,PD94bWwgdmVyc2lvbj0iMS4wIiA/PjxzdmcgaGVpZ2h0PSIxMnB4IiB2ZXJzaW9uPSIxLjEiIHZpZXdCb3g9IjAgMCA5IDEyIiB3aWR0aD0iOXB4IiB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHhtbG5zOnNrZXRjaD0iaHR0cDovL3d3dy5ib2hlbWlhbmNvZGluZy5jb20vc2tldGNoL25zIiB4bWxuczp4bGluaz0iaHR0cDovL3d3dy53My5vcmcvMTk5OS94bGluayI+PHRpdGxlLz48ZGVzYy8+PGRlZnMvPjxnIGZpbGw9Im5vbmUiIGZpbGwtcnVsZT0iZXZlbm9kZCIgaWQ9IlBhZ2UtMSIgc3Ryb2tlPSJub25lIiBzdHJva2Utd2lkdGg9IjEiPjxnIGZpbGw9IiMwMDAwMDAiIGlkPSJDb3JlIiB0cmFuc2Zvcm09InRyYW5zbGF0ZSgtMjYwLjAwMDAwMCwgLTkwLjAwMDAwMCkiPjxnIGlkPSJjaGV2cm9uLXJpZ2h0IiB0cmFuc2Zvcm09InRyYW5zbGF0ZSgyNjAuNTAwMDAwLCA5MC4wMDAwMDApIj48cGF0aCBkPSJNMSwwIEwtMC40LDEuNCBMNC4yLDYgTC0wLjQsMTAuNiBMMSwxMiBMNyw2IEwxLDAgWiIgaWQ9IlNoYXBlIi8+PC9nPjwvZz48L2c+PC9zdmc+") no-repeat 100% 50%;
+    background-size: 8px;
+  }
+
+  .post-nav-next a:hover:after {
+    opacity: 1;
+  }
+</style>
+
+
+
+<div class="post-nav">
+
+  
+  <div class="post-nav-prev post-nav-item">
+    
+    <a href="/blog/2018/exportcpp/"> 自动化导出c++各个平台库</a>
+  </div>
+  
+
+  
+  <div class="post-nav-next post-nav-item">
+    
+    <a href="/blog/2018/autopublish/"> 项目之自动化部署 CI</a>
+  </div>
+  
+
+</div>
+
+</article>
+    </div>
+
+    <footer class="site-footer">
+  <div class="container">
+    <ul class="social">
+  <li><a href="https://twitter.com/penghuailiang" target="_blank"><i class="icon icon-twitter"></i></a></li>
+  <li><a href="https://www.zhihu.com/people/huailiangpenguin" target="_blank"><i class="icon icon-zhihu"></i></a></li>
+  <li><a href="https://www.facebook.com/profile.php?id=100004290725320" target="_blank"><i class="icon icon-facebook"></i></a></li>
+  <li><a href="https://weibo.com/6212299692/profile?topnav=1&wvr=6" target="_blank"><i class="icon icon-sina"></i></a></li>
+  <li><a href="https://www.linkedin.com/in/penghuailiang/" target="_blank"><i class="icon icon-linkedin"></i></a></li>
+  <li><a href="https://github.com/huailiang" target="_blank"><i class="icon icon-github"></i></a></li>
+</ul>
+    <p class="txt-medium-gray">
+      <small>&copy;2019 All rights reserved. </small>
+    </p>
+  </div>
+</footer>
+    <a href="https://github.com/huailiang" target="_blank" class="github-corner"><svg width="80" height="80" viewBox="0 0 250 250" style="fill:#337ab7; color:#fff; position: absolute; top: 0; border: 0; right: 0;"><path d="M0,0 L115,115 L130,115 L142,142 L250,250 L250,0 Z"></path><path d="M128.3,109.0 C113.8,99.7 119.0,89.6 119.0,89.6 C122.0,82.7 120.5,78.6 120.5,78.6 C119.2,72.0 123.4,76.3 123.4,76.3 C127.3,80.9 125.5,87.3 125.5,87.3 C122.9,97.6 130.6,101.9 134.4,103.2" fill="currentColor" style="transform-origin: 130px 106px;" class="octo-arm"></path><path d="M115.0,115.0 C114.9,115.1 118.7,116.5 119.8,115.4 L133.7,101.6 C136.9,99.2 139.9,98.4 142.2,98.6 C133.8,88.0 127.5,74.4 143.8,58.0 C148.5,53.4 154.0,51.2 159.7,51.0 C160.3,49.4 163.2,43.6 171.4,40.1 C171.4,40.1 176.1,42.5 178.8,56.2 C183.1,58.6 187.2,61.8 190.9,65.4 C194.5,69.0 197.7,73.2 200.1,77.6 C213.8,80.2 216.3,84.9 216.3,84.9 C212.7,93.1 206.9,96.0 205.4,96.6 C205.1,102.4 203.0,107.8 198.3,112.5 C181.9,128.9 168.3,122.5 157.7,114.1 C157.9,116.9 156.7,120.9 152.7,124.9 L141.0,136.5 C139.8,137.7 141.6,141.9 141.8,141.8 Z" fill="currentColor" class="octo-body"></path></svg></a>
+
+
+    <script src="//code.jquery.com/jquery-1.11.3.min.js"></script>
+    <script>
+      $(document).ready(function () {
+        $('.sliding-panel-button,.sliding-panel-fade-screen,.sliding-panel-close').on('click touchstart', function (e) {
+          $('.sliding-panel-content,.sliding-panel-fade-screen').toggleClass('is-visible');
+          e.preventDefault();
+        });
+      });
+    </script>
+  </main>
+</body>
+
+</html>

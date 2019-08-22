@@ -1,0 +1,389 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <meta http-equiv="X-UA-Compatible" content="IE=edge">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+
+  <title>Assetbundle 加密</title>
+  <meta name="description"
+    content="  AssetBundle加密的主要目的是防止如AssetStudio(UnityStudio)，DevXUnityUnpacker，AssetBundleExtractor等等常用的Unity资源破解工具直接对天鹅座的资源进行破解和提取主要方法是通过修改源代码对AB的文件头的读写进行修改，让工具无法得到有效信息">
+
+  <link rel="shortcut icon" href="/img/favicon.ico">
+  <link rel="stylesheet" href="/css/main.css">
+  <link rel="canonical" href="https://huailiang.github.io/blog/2019/assetbundle/">
+  <link rel="alternate" type="application/rss+xml" title="Huailiang Blog"
+    href="https://huailiang.github.io/feed.xml" />
+
+</head>
+
+<body>
+  <main>
+    <header class="site-header">
+  <div class="container">
+    <h1><a href="/">Hom<span>e</span></a></h1>
+
+    <button type="button" class="sliding-panel-button">
+      <span></span>
+      <span></span>
+      <span></span>
+    </button>
+
+    <nav class="navbar sliding-panel-content">
+      <ul>
+        
+        <li><a href="/about" title="About">About</a>
+        </li>
+        
+        <li><a href="/blog" title="Blog">Blog</a>
+        </li>
+        
+        <!-- <li><a href="/feed.xml" target="_blank"><i class="icon icon-feed"></i></a></li> -->
+        <li><a href="/category/" target="_blank"><i class="icon icon-feed"></i></a></li>
+      </ul>
+    </nav>
+  </div>
+</header>
+
+<div class="sliding-panel-fade-screen"></div>
+    <script type="text/javascript" src="/js/MathJax.js?config=TeX-AMS-MML_HTMLorMML"></script>
+
+<script type="text/x-mathjax-config">
+MathJax.Hub.Config({
+  tex2jax: {
+    inlineMath: [['$','$'], ['\\(','\\)']],
+    processEscapes: true
+  }
+});
+</script>
+
+<script type="text/x-mathjax-config">
+  MathJax.Hub.Config({
+    tex2jax: {
+      skipTags: ['script', 'noscript', 'style', 'textarea', 'pre', 'code']
+    }
+  });
+
+</script>
+    <div class="container">
+      <article role="article" class="post">
+
+  <div class="card">
+    <header class="post-header">
+      <h1 class="post-title">Assetbundle 加密</h1>
+      <p class="post-meta">Aug 22, 2019 •
+        Huailiang</p>
+    </header>
+
+    <div class="post-content">
+      <blockquote>
+  <p>AssetBundle加密的主要目的是防止如AssetStudio(UnityStudio)，DevXUnityUnpacker，AssetBundleExtractor等等常用的Unity资源破解工具直接对天鹅座的资源进行破解和提取<br />
+主要方法是通过修改源代码对AB的文件头的读写进行修改，让工具无法得到有效信息</p>
+</blockquote>
+
+<h2 id="assetbundle格式">AssetBundle格式</h2>
+
+<p>AssetBundle文件的layout为：header [ blocks directory ] [ data ]<br />
+其中Header格式为：（每个Unity版本格式可能不同）</p>
+
+<p><img src="/img/post-unity/ab1.png" alt="" /></p>
+
+<p>二进制解析下来，如下表所示:</p>
+
+<table border="1" style="font-size:12px">
+ <tr>
+    <th width="62">类型</th>
+    <th>标记</th>
+    <th>HEAD</th>
+    <th width="184">二进制</th>
+    <th width="84">字符串</th>
+</tr>
+<tr>
+    <td>string</td>
+    <td>signature</td>
+    <td>AB文件头标识</td>
+    <td>556e 6974 7946 5300</td>
+    <td>UnityFS</td>
+</tr>            
+<tr>
+    <td>unt32</td>
+    <td>version</td>
+    <td>Archive version</td>
+    <td>0000 0006</td>
+    <td>6</td>
+</tr>   
+<tr>
+    <td>string</td>
+    <td>bundleVersion</td>
+    <td>bundleVersion</td>
+    <td>352e 782e 7800</td>
+    <td>5.x.x</td>
+</tr>   
+<tr>
+    <td>string</td>
+    <td>minimumRevision</td>
+    <td>AB所需最低版本</td>
+    <td>352e 362e 3570 3400</td>
+    <td>5.6.5p4</td>
+</tr>   
+<tr>
+    <td>uint64</td>
+    <td>size</td>
+    <td>整个AB的大小</td>
+    <td>0000 0000 0000 0790</td>
+    <td>1936</td>
+</tr>   
+<tr>
+    <td>uint32</td>
+    <td>compressedBlocksInfoSize</td>
+    <td>压缩后的BlockInfo大小</td>
+    <td>0000 0041</td>
+    <td>65</td>
+</tr>   
+<tr>
+    <td>uint32</td>
+    <td>uncompressedBlocksInfoSize</td>
+    <td>压缩前的BlockInfo大小 </td>
+    <td>0000 005B</td>
+    <td>91</td>
+</tr>   
+<tr>
+    <td>uint32 </td>
+    <td>flag</td>
+    <td>AB生成的一些标记</td>
+    <td>00000043</td>
+    <td></td>
+</tr>   
+</table>
+
+<p>后面则是compressedBlockInfoSize大小的Block和DirectoryInfo，</p>
+
+<p>其中BlockInfo为Archive中数据块的信息列表，包括每个数据块的大小、压缩方式、压缩后的大小等，</p>
+
+<p>DirectoryInfo则是文件系统相关的信息，如文件名、在整个Archive中的offset等信息，</p>
+
+<p>这两个部分在Build时会放在一起，做一次Lz4HC压缩后放到header的后面。</p>
+
+<p>针对这个格式，在做加密时，考虑在不影响AB读取效率的情况下只对header和Block&amp;DirectoryInfo做了简单的混淆，包括：</p>
+
+<p>· 修改header中的标识<br />
+· 修改header中字段的顺序<br />
+· 对size等字段做位操作，交换不同位的数据<br />
+· 对压缩过的Block和DirectoryInfo数据块做一些异或操作等<br />
+· 其他破坏可读性的方法自由发挥</p>
+
+<p>通过这些方法，基本上可以让破解工具没办法读取破解所需要的信息，达到简单加密的效果。</p>
+
+<h3 id="运行加载">运行加载</h3>
+
+<p>Unity5.3之后， 大致了提供2种方式读取AB的方式， 即LoadFromMemory和LoadFromFile， 区分同步和异步两种方式。</p>
+
+<p>针对上述处理方式， 可以使用IO读取bytes到内存中， 解密之后然后使用AssetBundle.LoadFromMemory(bytes)即可拿到Bundle文件了。</p>
+
+<p>从官方的解释中，我们可以看到AssetBundle.LoadFromMemory(Async)的使用成本非常高昂，不被推荐是自然而然的事情。但是，有没有更高效便捷的方式去对AssetBundle进行加密处理，防止被小白用户利用AssetStudio之类的工具轻易地提取到AssetBundle的资源呢？</p>
+
+<p>在查看Unity API的时候发现LoadFromFile末尾有一个offset参数，那么这个参数有什么用呢？是否可以起到防止AssetBundle资源直接被AssetStudio提取呢？先看官方文档的接口说明：</p>
+
+<div class="language-cs highlighter-rouge"><pre class="highlight"><code><span class="k">public</span> <span class="k">static</span><span class="err"> </span><span class="n">AssetBundle</span><span class="err"> </span><span class="nf">LoadFromFile</span><span class="p">(</span><span class="kt">string</span><span class="err"> </span><span class="n">path</span><span class="p">,</span> <span class="kt">uint</span><span class="err"> </span><span class="n">crc</span><span class="p">,</span> <span class="n">along</span><span class="err"> </span><span class="n">offset</span><span class="p">);</span>
+
+<span class="n">Parameters</span>
+
+<span class="n">path</span><span class="p">:</span> <span class="n">Path</span> <span class="n">of</span> <span class="n">the</span> <span class="n">file</span> <span class="k">on</span> <span class="n">disk</span><span class="p">.</span>
+<span class="n">crc</span><span class="p">:</span>  <span class="n">An</span> <span class="n">optional</span> <span class="n">CRC</span><span class="p">-</span><span class="m">32</span> <span class="n">checksum</span> <span class="n">of</span> <span class="n">the</span> <span class="n">uncompressed</span> <span class="n">content</span><span class="p">.</span> <span class="n">If</span> <span class="k">this</span> <span class="k">is</span> <span class="n">non</span><span class="p">-</span><span class="n">zero</span><span class="p">,</span> <span class="n">then</span> <span class="n">the</span> <span class="n">content</span> <span class="n">will</span> <span class="n">be</span> <span class="n">compared</span> <span class="n">against</span> <span class="n">the</span> <span class="n">checksum</span> <span class="n">before</span> <span class="n">loading</span> <span class="n">it</span><span class="p">,</span> <span class="n">and</span> <span class="n">give</span> <span class="n">an</span> <span class="n">error</span> <span class="k">if</span> <span class="n">it</span> <span class="n">does</span> <span class="n">not</span> <span class="n">match</span><span class="p">.</span>
+<span class="n">offset</span><span class="p">:</span>	<span class="n">An</span> <span class="n">optional</span> <span class="kt">byte</span> <span class="n">offset</span><span class="p">.</span> <span class="n">This</span> <span class="k">value</span> <span class="n">specifies</span> <span class="k">where</span> <span class="n">to</span> <span class="n">start</span> <span class="n">reading</span> <span class="n">the</span> <span class="n">AssetBundle</span> <span class="k">from</span><span class="p">.</span>
+
+
+<span class="n">Returns</span>
+<span class="n">AssetBundle</span><span class="err"> </span><span class="n">Loaded</span> <span class="n">AssetBundle</span> <span class="kt">object</span> <span class="n">or</span> <span class="k">null</span> <span class="k">if</span> <span class="n">failed</span><span class="p">.</span>
+
+<span class="n">Description</span>
+<span class="n">Synchronously</span> <span class="n">loads</span> <span class="n">an</span> <span class="n">AssetBundle</span> <span class="k">from</span> <span class="n">a</span> <span class="n">file</span> <span class="k">on</span> <span class="n">disk</span><span class="p">.</span>
+
+<span class="n">The</span> <span class="n">function</span> <span class="n">supports</span> <span class="n">bundles</span> <span class="n">of</span> <span class="n">any</span> <span class="n">compression</span> <span class="n">type</span><span class="p">.</span> <span class="n">In</span> <span class="k">case</span> <span class="n">of</span> <span class="n">lzma</span> <span class="n">compression</span><span class="p">,</span> <span class="n">the</span> <span class="n">data</span> <span class="n">will</span> <span class="n">be</span> <span class="n">decompressed</span> <span class="n">to</span> <span class="n">the</span> <span class="n">memory</span><span class="p">.</span> <span class="n">Uncompressed</span> <span class="n">and</span> <span class="n">chunk</span><span class="p">-</span><span class="n">compressed</span> <span class="n">bundles</span> <span class="n">can</span> <span class="n">be</span> <span class="n">read</span> <span class="n">directly</span> <span class="k">from</span> <span class="n">disk</span><span class="p">.</span>
+<span class="n">Compared</span> <span class="n">to</span><span class="err"> </span><span class="n">LoadFromFileAsync</span><span class="p">,</span> <span class="k">this</span> <span class="n">version</span> <span class="k">is</span> <span class="n">synchronous</span> <span class="n">and</span> <span class="n">will</span> <span class="n">not</span> <span class="k">return</span> <span class="n">until</span> <span class="n">it</span> <span class="k">is</span> <span class="n">done</span> <span class="n">creating</span> <span class="n">the</span> <span class="n">AssetBundle</span> <span class="kt">object</span><span class="p">.</span>
+<span class="n">This</span> <span class="k">is</span> <span class="n">the</span> <span class="n">fastest</span> <span class="n">way</span> <span class="n">to</span> <span class="n">load</span> <span class="n">an</span> <span class="n">AssetBundle</span><span class="p">.</span>
+</code></pre>
+</div>
+
+<p>首先，我们需将XAsset生成好的AssetBundle文件内容进行偏移处理，待Unity打包完成后遍历所有AssetBundle文件，并对文件添加offset后进行覆盖，代码如下：</p>
+
+<div class="language-cs highlighter-rouge"><pre class="highlight"><code><span class="k">foreach</span> <span class="p">(</span><span class="kt">string</span> <span class="n">bundleName</span> <span class="k">in</span> <span class="n">bundleNames</span><span class="p">)</span>
+<span class="p">{</span>
+    <span class="kt">string</span> <span class="n">filepath</span> <span class="p">=</span> <span class="n">outputPath</span> <span class="p">+</span> <span class="s">"/"</span> <span class="p">+</span> <span class="n">bundleName</span><span class="p">;</span>
+    <span class="c1">// 利用 hashcode 做偏移 
+</span>    <span class="kt">string</span> <span class="n">hashcode</span> <span class="p">=</span> <span class="n">manifest</span><span class="p">.</span><span class="nf">GetAssetBundleHash</span><span class="p">(</span><span class="n">bundleName</span><span class="p">).</span><span class="nf">ToString</span><span class="p">();</span>
+    <span class="kt">ulong</span> <span class="n">offset</span> <span class="p">=</span> <span class="n">Utility</span><span class="p">.</span><span class="nf">GetOffset</span><span class="p">(</span><span class="n">hashcode</span><span class="p">);</span>
+    <span class="k">if</span> <span class="p">(</span> <span class="n">offset</span> <span class="p">&gt;</span> <span class="m">0</span><span class="p">)</span>
+    <span class="p">{</span>
+        <span class="kt">byte</span><span class="p">[]</span> <span class="n">filedata</span> <span class="p">=</span> <span class="n">File</span><span class="p">.</span><span class="nf">ReadAllBytes</span><span class="p">(</span><span class="n">filepath</span><span class="p">);</span>
+        <span class="kt">int</span> <span class="n">filelen</span> <span class="p">=</span> <span class="p">((</span><span class="kt">int</span><span class="p">)</span><span class="n">offset</span> <span class="p">+</span> <span class="n">filedata</span><span class="p">.</span><span class="n">Length</span><span class="p">);</span>
+        <span class="kt">byte</span><span class="p">[]</span> <span class="n">buffer</span> <span class="p">=</span> <span class="k">new</span> <span class="kt">byte</span><span class="p">[</span><span class="n">filelen</span><span class="p">];</span>
+        <span class="nf">copyHead</span><span class="p">(</span><span class="n">filedata</span><span class="p">,</span> <span class="n">buffer</span><span class="p">,</span> <span class="p">(</span><span class="kt">uint</span><span class="p">)</span><span class="n">offset</span><span class="p">);</span>
+        <span class="nf">copyTo</span><span class="p">(</span><span class="n">filedata</span><span class="p">,</span> <span class="n">buffer</span><span class="p">,</span> <span class="p">(</span><span class="kt">uint</span><span class="p">)</span><span class="n">offset</span><span class="p">);</span>
+        <span class="n">FileStream</span> <span class="n">fs</span> <span class="p">=</span> <span class="n">File</span><span class="p">.</span><span class="nf">OpenWrite</span><span class="p">(</span><span class="n">filepath</span><span class="p">);</span>
+        <span class="n">fs</span><span class="p">.</span><span class="nf">Write</span><span class="p">(</span><span class="n">buffer</span><span class="p">,</span> <span class="m">0</span><span class="p">,</span> <span class="n">filelen</span><span class="p">);</span>
+        <span class="n">fs</span><span class="p">.</span><span class="nf">Close</span><span class="p">();</span>
+        <span class="n">offsets</span>  <span class="p">+=</span> <span class="n">filepath</span> <span class="p">+</span> <span class="s">" offset:"</span> <span class="p">+</span> <span class="n">offset</span> <span class="p">+</span> <span class="s">"\n"</span><span class="p">;</span>
+    <span class="p">}</span>
+    <span class="nf">WriteItem</span><span class="p">(</span><span class="n">stream</span><span class="p">,</span> <span class="n">bundleName</span><span class="p">,</span> <span class="n">filepath</span><span class="p">,</span> <span class="n">hashcode</span><span class="p">);</span>
+<span class="p">}</span>
+</code></pre>
+</div>
+<p>然后，我们再进行加载测试，我们分别使用offset参数加载AssetBundle，和模拟解密文件后从内存中加载AssetBundle然后读取其中的一个Texture用于显示.</p>
+
+<p>使用offset参数加载之前:</p>
+
+<p><img src="/img/post-unity/ab2.jpeg" alt="使用offset参数加载之前" /></p>
+
+<p>使用offset参数加载之后:</p>
+
+<p><img src="/img/post-unity/ab3.jpeg" alt="使用offset参数加载之后" /></p>
+
+<p>由于我们对AssetBundle的资源进行了偏移，势必在理论上，AssetStudio无法直接解析出我们Unity工程中的AssetBundle，接下来我们再来看下，我们的理论是否经得起实践的考验。</p>
+
+<p>经测试，没加offset的时候可以轻易地用AssetStudio预览AssetBundle中的资源，请参考下图（因为用的是公司项目的资源所以需要打码处理）</p>
+
+<p><img src="/img/post-unity/ab4.jpeg" alt="" /></p>
+
+<p>带offset的资源，发现和我们的理论推测结果一致，请参考：</p>
+
+<p><img src="/img/post-unity/ab5.jpeg" alt="" /></p>
+
+<p>在测试过程中发现，有些老版本的AssetStudio，在解析带offest的资源的时候甚至会直接奔溃。</p>
+
+<p>其实，对于资源加密，我们大多数时候能做到的是防小白不防专家，不管你是采用简单的或者复杂的，在反编译高手手里都有点苍白，我亲眼所见一个大佬用IDA把人家的通信加密算法反出来了，所以这里就不做更深入的分析了。</p>
+
+    </div>
+  </div>
+
+  <style>
+  .post-nav {
+    overflow: hidden;
+    /* margin-top: 60px; */
+    padding: 12px;
+    white-space: nowrap;
+    /* border-top: 1px solid #eee; */
+  }
+
+  .post-nav-item {
+    display: inline-block;
+    width: 50%;
+    white-space: normal;
+  }
+
+  .post-nav-item a {
+    position: relative;
+    display: inline-block;
+    line-height: 25px;
+    font-size: 14px;
+    color: #555;
+    border-bottom: none;
+  }
+
+  .post-nav-item a:hover {
+    color: #222;
+    font-weight: bold;
+    border-bottom: none;
+  }
+
+  .post-nav-item a:active {
+    top: 2px;
+  }
+
+  .post-nav-item a:before,
+  .post-nav-item a:after {
+    display: inline-block;
+    width: 16px;
+    height: 25px;
+    vertical-align: top;
+    opacity: 0.4;
+    background-size: 16px;
+  }
+
+  .post-nav-none a:none {
+    content: ' ';
+    background-size: 8px;
+  }
+
+  .post-nav-none a:hover:none {
+    opacity: 1;
+  }
+
+  .post-nav-prev a:before {
+    content: ' ';
+    background: url("data:image/svg+xml;base64,PD94bWwgdmVyc2lvbj0iMS4wIiA/PjxzdmcgaGVpZ2h0PSIxMnB4IiB2ZXJzaW9uPSIxLjEiIHZpZXdCb3g9IjAgMCA5IDEyIiB3aWR0aD0iOXB4IiB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHhtbG5zOnNrZXRjaD0iaHR0cDovL3d3dy5ib2hlbWlhbmNvZGluZy5jb20vc2tldGNoL25zIiB4bWxuczp4bGluaz0iaHR0cDovL3d3dy53My5vcmcvMTk5OS94bGluayI+PHRpdGxlLz48ZGVzYy8+PGRlZnMvPjxnIGZpbGw9Im5vbmUiIGZpbGwtcnVsZT0iZXZlbm9kZCIgaWQ9IlBhZ2UtMSIgc3Ryb2tlPSJub25lIiBzdHJva2Utd2lkdGg9IjEiPjxnIGZpbGw9IiMwMDAwMDAiIGlkPSJDb3JlIiB0cmFuc2Zvcm09InRyYW5zbGF0ZSgtMjE4LjAwMDAwMCwgLTkwLjAwMDAwMCkiPjxnIGlkPSJjaGV2cm9uLWxlZnQiIHRyYW5zZm9ybT0idHJhbnNsYXRlKDIxOC41MDAwMDAsIDkwLjAwMDAwMCkiPjxwYXRoIGQ9Ik03LjQsMS40IEw2LDAgTC04Ljg4MTc4NDJlLTE2LDYgTDYsMTIgTDcuNCwxMC42IEwyLjgsNiBMNy40LDEuNCBaIiBpZD0iU2hhcGUiLz48L2c+PC9nPjwvZz48L3N2Zz4=") no-repeat 0 50%;
+    background-size: 8px;
+  }
+
+  .post-nav-prev a:hover:before {
+    opacity: 1;
+  }
+
+  .post-nav-next {
+    text-align: right;
+  }
+
+  .post-nav-next a:after {
+    content: ' ';
+    background: url("data:image/svg+xml;base64,PD94bWwgdmVyc2lvbj0iMS4wIiA/PjxzdmcgaGVpZ2h0PSIxMnB4IiB2ZXJzaW9uPSIxLjEiIHZpZXdCb3g9IjAgMCA5IDEyIiB3aWR0aD0iOXB4IiB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHhtbG5zOnNrZXRjaD0iaHR0cDovL3d3dy5ib2hlbWlhbmNvZGluZy5jb20vc2tldGNoL25zIiB4bWxuczp4bGluaz0iaHR0cDovL3d3dy53My5vcmcvMTk5OS94bGluayI+PHRpdGxlLz48ZGVzYy8+PGRlZnMvPjxnIGZpbGw9Im5vbmUiIGZpbGwtcnVsZT0iZXZlbm9kZCIgaWQ9IlBhZ2UtMSIgc3Ryb2tlPSJub25lIiBzdHJva2Utd2lkdGg9IjEiPjxnIGZpbGw9IiMwMDAwMDAiIGlkPSJDb3JlIiB0cmFuc2Zvcm09InRyYW5zbGF0ZSgtMjYwLjAwMDAwMCwgLTkwLjAwMDAwMCkiPjxnIGlkPSJjaGV2cm9uLXJpZ2h0IiB0cmFuc2Zvcm09InRyYW5zbGF0ZSgyNjAuNTAwMDAwLCA5MC4wMDAwMDApIj48cGF0aCBkPSJNMSwwIEwtMC40LDEuNCBMNC4yLDYgTC0wLjQsMTAuNiBMMSwxMiBMNyw2IEwxLDAgWiIgaWQ9IlNoYXBlIi8+PC9nPjwvZz48L2c+PC9zdmc+") no-repeat 100% 50%;
+    background-size: 8px;
+  }
+
+  .post-nav-next a:hover:after {
+    opacity: 1;
+  }
+</style>
+
+
+
+<div class="post-nav">
+
+  
+  <div class="post-nav-none post-nav-item">
+    <a href=""> </a>
+  </div>
+  
+
+  
+  <div class="post-nav-next post-nav-item">
+    
+    <a href="/blog/2019/timeline/"> Timeline Signals - Marker标记</a>
+  </div>
+  
+
+</div>
+
+</article>
+    </div>
+
+    <footer class="site-footer">
+  <div class="container">
+    <ul class="social">
+  <li><a href="https://twitter.com/penghuailiang" target="_blank"><i class="icon icon-twitter"></i></a></li>
+  <li><a href="https://www.zhihu.com/people/huailiangpenguin" target="_blank"><i class="icon icon-zhihu"></i></a></li>
+  <li><a href="https://www.facebook.com/profile.php?id=100004290725320" target="_blank"><i class="icon icon-facebook"></i></a></li>
+  <li><a href="https://weibo.com/6212299692/profile?topnav=1&wvr=6" target="_blank"><i class="icon icon-sina"></i></a></li>
+  <li><a href="https://www.linkedin.com/in/penghuailiang/" target="_blank"><i class="icon icon-linkedin"></i></a></li>
+  <li><a href="https://github.com/huailiang" target="_blank"><i class="icon icon-github"></i></a></li>
+</ul>
+    <p class="txt-medium-gray">
+      <small>&copy;2019 All rights reserved. </small>
+    </p>
+  </div>
+</footer>
+    <a href="https://github.com/huailiang" target="_blank" class="github-corner"><svg width="80" height="80" viewBox="0 0 250 250" style="fill:#337ab7; color:#fff; position: absolute; top: 0; border: 0; right: 0;"><path d="M0,0 L115,115 L130,115 L142,142 L250,250 L250,0 Z"></path><path d="M128.3,109.0 C113.8,99.7 119.0,89.6 119.0,89.6 C122.0,82.7 120.5,78.6 120.5,78.6 C119.2,72.0 123.4,76.3 123.4,76.3 C127.3,80.9 125.5,87.3 125.5,87.3 C122.9,97.6 130.6,101.9 134.4,103.2" fill="currentColor" style="transform-origin: 130px 106px;" class="octo-arm"></path><path d="M115.0,115.0 C114.9,115.1 118.7,116.5 119.8,115.4 L133.7,101.6 C136.9,99.2 139.9,98.4 142.2,98.6 C133.8,88.0 127.5,74.4 143.8,58.0 C148.5,53.4 154.0,51.2 159.7,51.0 C160.3,49.4 163.2,43.6 171.4,40.1 C171.4,40.1 176.1,42.5 178.8,56.2 C183.1,58.6 187.2,61.8 190.9,65.4 C194.5,69.0 197.7,73.2 200.1,77.6 C213.8,80.2 216.3,84.9 216.3,84.9 C212.7,93.1 206.9,96.0 205.4,96.6 C205.1,102.4 203.0,107.8 198.3,112.5 C181.9,128.9 168.3,122.5 157.7,114.1 C157.9,116.9 156.7,120.9 152.7,124.9 L141.0,136.5 C139.8,137.7 141.6,141.9 141.8,141.8 Z" fill="currentColor" class="octo-body"></path></svg></a>
+
+
+    <script src="//code.jquery.com/jquery-1.11.3.min.js"></script>
+    <script>
+      $(document).ready(function () {
+        $('.sliding-panel-button,.sliding-panel-fade-screen,.sliding-panel-close').on('click touchstart', function (e) {
+          $('.sliding-panel-content,.sliding-panel-fade-screen').toggleClass('is-visible');
+          e.preventDefault();
+        });
+      });
+    </script>
+  </main>
+</body>
+
+</html>

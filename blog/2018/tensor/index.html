@@ -1,0 +1,528 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <meta http-equiv="X-UA-Compatible" content="IE=edge">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+
+  <title>TensorFlow 学习入门</title>
+  <meta name="description"
+    content="  TensorFlow是谷歌基于DistBelief进行研发的第二代人工智能学习系统，其命名来源于本身的运行原理。Tensor（张量）意味着N维数组，Flow（流）意味着基于数据流图的计算，TensorFlow为张量从流图的一端流动到另一端计算过程。TensorFlow是将复杂的数据结构传输至人工智能神经网中进...">
+
+  <link rel="shortcut icon" href="/img/favicon.ico">
+  <link rel="stylesheet" href="/css/main.css">
+  <link rel="canonical" href="https://huailiang.github.io/blog/2018/tensor/">
+  <link rel="alternate" type="application/rss+xml" title="Huailiang Blog"
+    href="https://huailiang.github.io/feed.xml" />
+
+</head>
+
+<body>
+  <main>
+    <header class="site-header">
+  <div class="container">
+    <h1><a href="/">Hom<span>e</span></a></h1>
+
+    <button type="button" class="sliding-panel-button">
+      <span></span>
+      <span></span>
+      <span></span>
+    </button>
+
+    <nav class="navbar sliding-panel-content">
+      <ul>
+        
+        <li><a href="/about" title="About">About</a>
+        </li>
+        
+        <li><a href="/blog" title="Blog">Blog</a>
+        </li>
+        
+        <!-- <li><a href="/feed.xml" target="_blank"><i class="icon icon-feed"></i></a></li> -->
+        <li><a href="/category/" target="_blank"><i class="icon icon-feed"></i></a></li>
+      </ul>
+    </nav>
+  </div>
+</header>
+
+<div class="sliding-panel-fade-screen"></div>
+    <script type="text/javascript" src="/js/MathJax.js?config=TeX-AMS-MML_HTMLorMML"></script>
+
+<script type="text/x-mathjax-config">
+MathJax.Hub.Config({
+  tex2jax: {
+    inlineMath: [['$','$'], ['\\(','\\)']],
+    processEscapes: true
+  }
+});
+</script>
+
+<script type="text/x-mathjax-config">
+  MathJax.Hub.Config({
+    tex2jax: {
+      skipTags: ['script', 'noscript', 'style', 'textarea', 'pre', 'code']
+    }
+  });
+
+</script>
+    <div class="container">
+      <article role="article" class="post">
+
+  <div class="card">
+    <header class="post-header">
+      <h1 class="post-title">TensorFlow 学习入门</h1>
+      <p class="post-meta">Mar 8, 2018 •
+        Huailiang</p>
+    </header>
+
+    <div class="post-content">
+      <blockquote>
+  <p>TensorFlow是谷歌基于DistBelief进行研发的第二代人工智能学习系统，其命名来源于本身的运行原理。Tensor（张量）意味着N维数组，Flow（流）意味着基于数据流图的计算，TensorFlow为张量从流图的一端流动到另一端计算过程。TensorFlow是将复杂的数据结构传输至人工智能神经网中进行分析和处理过程的系统。</p>
+</blockquote>
+
+<h2 id="导入tensorflow">导入TensorFlow</h2>
+
+<p>典型的导入TensorFlow程序的做法如下：</p>
+
+<figure class="highlight"><pre><code class="language-python" data-lang="python"><span class="kn">import</span> <span class="nn">tensorflow</span> <span class="kn">as</span> <span class="nn">tf</span></code></pre></figure>
+
+<p>运行这个，可以得到Python下的TensorFlow中的所有类、方法和符号。大多数的文档默认你已经执行了这个。</p>
+
+<h2 id="计算图-computational-graph">计算图 (Computational Graph)</h2>
+
+<p>TensorFlow Core程序是由两个分离的部分组成的：</p>
+
+<p>1、构建计算图。</p>
+
+<p>2、运行计算图。</p>
+
+<p>一个计算图是一系列TensorFlow操作的点(nodes)。我们构建一个简单的计算图。每一个点需要零个或者更多的张量(tensor)作为输入，并且产生一个张量作为输出。</p>
+
+<h3 id="数据类型">数据类型</h3>
+
+<p>下图列出了所有的 tensorflow的数据类型</p>
+
+<p><img src="/img/post-tf/tf01.jpeg" alt="" /></p>
+
+<h3 id="常量constant">常量(Constant)</h3>
+
+<p>点的一种形式是常数。像所有TensorFlow常数，它不需要输入，而它会从内部输出一个值。我们可以创建两个点的张量c1和c2，如下所示：</p>
+
+<figure class="highlight"><pre><code class="language-python" data-lang="python"><span class="kn">import</span> <span class="nn">tensorflow</span> <span class="kn">as</span> <span class="nn">tf</span>
+<span class="kn">import</span> <span class="nn">numpy</span> <span class="kn">as</span> <span class="nn">np</span>
+
+<span class="n">c1</span> <span class="o">=</span> <span class="n">tf</span><span class="o">.</span><span class="n">constant</span><span class="p">([</span><span class="mf">0.3</span><span class="p">,</span><span class="mf">2.0</span><span class="p">],</span><span class="n">tf</span><span class="o">.</span><span class="n">float32</span><span class="p">)</span>
+<span class="n">c2</span> <span class="o">=</span> <span class="n">tf</span><span class="o">.</span><span class="n">constant</span><span class="p">([</span><span class="mf">1.3</span><span class="p">,</span><span class="mf">1.2</span><span class="p">],</span><span class="n">tf</span><span class="o">.</span><span class="n">float32</span><span class="p">)</span>
+<span class="k">print</span> <span class="n">c1</span><span class="p">,</span><span class="n">c2</span>
+
+<span class="s">"""
+ 输出：Tensor("Const:0", shape=(2,), dtype=float32) Tensor("Const_1:0", shape=(2,), dtype=float32)
+"""</span></code></pre></figure>
+
+<p>注意到，它输出的并不是[0.3,2.0]和([1.3,1.2]的值，而是对应的点张量，要通过开启会话，才能直接输出其值。这直接反映了TensorFlow的构建和计算是分离的。</p>
+
+<h3 id="张量的阶形状">张量的阶、形状</h3>
+
+<p>TensorFlow用张量这种数据结构来表示所有的数据.你可以把一个张量想象成一个n维的数组或列表.一个张量有一个静态类型和动态类型的维数.张量可以在图中的节点之间流通.</p>
+
+<p>阶<br />
+在TensorFlow系统中，张量的维数来被描述为阶.但是张量的阶和矩阵的阶并不是同一个概念.张量的阶（有时是关于如顺序或度数或者是n维）是张量维数的一个数量描述.比如，下面的张量（使用Python中list定义的）就是2阶.</p>
+
+<figure class="highlight"><pre><code class="language-json" data-lang="json"><span class="w">    </span><span class="err">t</span><span class="w"> </span><span class="err">=</span><span class="w"> </span><span class="p">[[</span><span class="mi">1</span><span class="p">,</span><span class="w"> </span><span class="mi">2</span><span class="p">,</span><span class="w"> </span><span class="mi">3</span><span class="p">],</span><span class="w"> </span><span class="p">[</span><span class="mi">4</span><span class="p">,</span><span class="w"> </span><span class="mi">5</span><span class="p">,</span><span class="w"> </span><span class="mi">6</span><span class="p">],</span><span class="w"> </span><span class="p">[</span><span class="mi">7</span><span class="p">,</span><span class="w"> </span><span class="mi">8</span><span class="p">,</span><span class="w"> </span><span class="mi">9</span><span class="p">]]</span></code></pre></figure>
+
+<p>你可以认为一个二阶张量就是我们平常所说的矩阵，一阶张量可以认为是一个向量.对于一个二阶张量你可以用语句t[i, j]来访问其中的任何元素.而对于三阶张量你可以用’t[i, j, k]’来访问其中的任何元素.</p>
+
+<p>阶	数学实例	Python 例子</p>
+
+<p>0	纯量 (只有大小)	s = 483</p>
+
+<p>1	向量(大小和方向)	v = [1.1, 2.2, 3.3]</p>
+
+<p>2	矩阵(数据表)	m = [[1, 2, 3], [4, 5, 6], [7, 8, 9]]</p>
+
+<p>3	3阶张量 (数据立体)	t = [[[2], [4], [6]], [[8], [10], [12]], [[14], [16], [18]]]</p>
+
+<p>n	n阶 (自己想想看)	….</p>
+
+<p>shape [2,3] 表示为数组的意思是第一维有两个元素，第二维有三个元素，如: [[1,2,3],[4,5,6]]</p>
+
+<figure class="highlight"><pre><code class="language-python" data-lang="python"> <span class="c"># 2-D tensor `a`</span>
+ <span class="n">a</span> <span class="o">=</span> <span class="n">tf</span><span class="o">.</span><span class="n">constant</span><span class="p">([</span><span class="mi">1</span><span class="p">,</span> <span class="mi">2</span><span class="p">,</span> <span class="mi">3</span><span class="p">,</span> <span class="mi">4</span><span class="p">,</span> <span class="mi">5</span><span class="p">,</span> <span class="mi">6</span><span class="p">],</span> <span class="n">shape</span><span class="o">=</span><span class="p">[</span><span class="mi">2</span><span class="p">,</span> <span class="mi">3</span><span class="p">])</span> <span class="o">=&gt;</span> <span class="p">[[</span><span class="mf">1.</span> <span class="mf">2.</span> <span class="mf">3.</span><span class="p">]</span>
+                                                       <span class="p">[</span><span class="mf">4.</span> <span class="mf">5.</span> <span class="mf">6.</span><span class="p">]]</span>
+ <span class="c"># 2-D tensor `b`</span>
+ <span class="n">b</span> <span class="o">=</span> <span class="n">tf</span><span class="o">.</span><span class="n">constant</span><span class="p">([</span><span class="mi">7</span><span class="p">,</span> <span class="mi">8</span><span class="p">,</span> <span class="mi">9</span><span class="p">,</span> <span class="mi">10</span><span class="p">,</span> <span class="mi">11</span><span class="p">,</span> <span class="mi">12</span><span class="p">],</span> <span class="n">shape</span><span class="o">=</span><span class="p">[</span><span class="mi">3</span><span class="p">,</span> <span class="mi">2</span><span class="p">])</span> <span class="o">=&gt;</span> <span class="p">[[</span><span class="mf">7.</span> <span class="mf">8.</span><span class="p">]</span>
+                                                          <span class="p">[</span><span class="mf">9.</span> <span class="mf">10.</span><span class="p">]</span>
+                                                          <span class="p">[</span><span class="mf">11.</span> <span class="mf">12.</span><span class="p">]]</span>
+ <span class="n">c</span> <span class="o">=</span> <span class="n">tf</span><span class="o">.</span><span class="n">matmul</span><span class="p">(</span><span class="n">a</span><span class="p">,</span> <span class="n">b</span><span class="p">)</span> <span class="o">=&gt;</span> <span class="p">[[</span><span class="mi">58</span> <span class="mi">64</span><span class="p">]</span>
+                         <span class="p">[</span><span class="mi">139</span> <span class="mi">154</span><span class="p">]]</span>
+
+
+ <span class="c"># 3-D tensor `a`</span>
+ <span class="n">a</span> <span class="o">=</span> <span class="n">tf</span><span class="o">.</span><span class="n">constant</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">arange</span><span class="p">(</span><span class="mi">1</span><span class="p">,</span><span class="mi">13</span><span class="p">),</span> <span class="n">shape</span><span class="o">=</span><span class="p">[</span><span class="mi">2</span><span class="p">,</span> <span class="mi">2</span><span class="p">,</span> <span class="mi">3</span><span class="p">])</span> <span class="o">=&gt;</span> <span class="p">[[[</span> <span class="mf">1.</span>  <span class="mf">2.</span>  <span class="mf">3.</span><span class="p">]</span>
+                                                        <span class="p">[</span> <span class="mf">4.</span>  <span class="mf">5.</span>  <span class="mf">6.</span><span class="p">]],</span>
+                                                       <span class="p">[[</span> <span class="mf">7.</span>  <span class="mf">8.</span>  <span class="mf">9.</span><span class="p">]</span>
+                                                        <span class="p">[</span><span class="mf">10.</span> <span class="mf">11.</span> <span class="mf">12.</span><span class="p">]]]</span>
+
+ <span class="c"># 3-D tensor `b`</span>
+ <span class="n">b</span> <span class="o">=</span> <span class="n">tf</span><span class="o">.</span><span class="n">constant</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">arange</span><span class="p">(</span><span class="mi">13</span><span class="p">,</span><span class="mi">25</span><span class="p">),</span> <span class="n">shape</span><span class="o">=</span><span class="p">[</span><span class="mi">2</span><span class="p">,</span> <span class="mi">3</span><span class="p">,</span> <span class="mi">2</span><span class="p">])</span> <span class="o">=&gt;</span> <span class="p">[[[</span><span class="mf">13.</span> <span class="mf">14.</span><span class="p">]</span>
+                                                         <span class="p">[</span><span class="mf">15.</span> <span class="mf">16.</span><span class="p">]</span>
+                                                         <span class="p">[</span><span class="mf">17.</span> <span class="mf">18.</span><span class="p">]],</span>
+                                                        <span class="p">[[</span><span class="mf">19.</span> <span class="mf">20.</span><span class="p">]</span>
+                                                         <span class="p">[</span><span class="mf">21.</span> <span class="mf">22.</span><span class="p">]</span>
+                                                         <span class="p">[</span><span class="mf">23.</span> <span class="mf">24.</span><span class="p">]]]</span>
+ <span class="n">c</span> <span class="o">=</span> <span class="n">tf</span><span class="o">.</span><span class="n">matmul</span><span class="p">(</span><span class="n">a</span><span class="p">,</span> <span class="n">b</span><span class="p">)</span> <span class="o">=&gt;</span> <span class="p">[[[</span> <span class="mi">94</span> <span class="mi">100</span><span class="p">]</span>
+                          <span class="p">[</span><span class="mi">229</span> <span class="mi">244</span><span class="p">]],</span>
+                         <span class="p">[[</span><span class="mi">508</span> <span class="mi">532</span><span class="p">]</span>
+                          <span class="p">[</span><span class="mi">697</span> <span class="mi">730</span><span class="p">]]]</span></code></pre></figure>
+
+<p>tensorflow中有一类在tensor的某一维度上求值的函数，如：</p>
+
+<p>求最大值tf.reduce_max(input_tensor, reduction_indices=None, keep_dims=False, name=None)</p>
+
+<p>求平均值tf.reduce_mean(input_tensor, reduction_indices=None, keep_dims=False, name=None)</p>
+
+<p>参数（1）input_tensor:待求值的tensor。</p>
+
+<p>参数（2）reduction_indices:在哪一维上求解。</p>
+
+<p>参数（3）（4）可忽略</p>
+
+<p>举例说明：</p>
+
+<figure class="highlight"><pre><code class="language-python" data-lang="python"><span class="kn">import</span> <span class="nn">numpy</span> <span class="kn">as</span> <span class="nn">np</span>
+<span class="kn">import</span> <span class="nn">tensorflow</span> <span class="kn">as</span> <span class="nn">tf</span>
+
+<span class="n">x</span><span class="o">=</span><span class="p">[[</span><span class="mf">1.</span><span class="p">,</span><span class="mf">2.</span><span class="p">],[</span><span class="mf">3.</span><span class="p">,</span><span class="mf">4.</span><span class="p">]]</span>
+<span class="n">x_</span><span class="o">=</span><span class="n">tf</span><span class="o">.</span><span class="n">constant</span><span class="p">(</span><span class="n">x</span><span class="p">,</span><span class="n">shape</span><span class="o">=</span><span class="p">[</span><span class="mi">2</span><span class="p">,</span><span class="mi">2</span><span class="p">])</span>
+
+<span class="k">with</span> <span class="n">tf</span><span class="o">.</span><span class="n">Session</span><span class="p">()</span> <span class="k">as</span> <span class="n">sess</span><span class="p">:</span>
+	<span class="n">y1_</span> <span class="o">=</span> <span class="n">tf</span><span class="o">.</span><span class="n">reduce_mean</span><span class="p">(</span><span class="n">x_</span><span class="p">)</span>
+	<span class="n">y2_</span> <span class="o">=</span><span class="n">tf</span><span class="o">.</span><span class="n">reduce_mean</span><span class="p">(</span><span class="n">x_</span><span class="p">,</span><span class="mi">0</span><span class="p">)</span>
+	<span class="n">y3_</span><span class="o">=</span><span class="n">tf</span><span class="o">.</span><span class="n">reduce_mean</span><span class="p">(</span><span class="n">x_</span><span class="p">,</span><span class="mi">1</span><span class="p">)</span>
+	<span class="k">print</span> <span class="n">sess</span><span class="o">.</span><span class="n">run</span><span class="p">(</span><span class="n">y1_</span><span class="p">),</span><span class="n">sess</span><span class="o">.</span><span class="n">run</span><span class="p">(</span><span class="n">y2_</span><span class="p">),</span><span class="n">sess</span><span class="o">.</span><span class="n">run</span><span class="p">(</span><span class="n">y3_</span><span class="p">)</span>
+	<span class="n">y1_</span><span class="o">=</span><span class="n">tf</span><span class="o">.</span><span class="n">reduce_max</span><span class="p">(</span><span class="n">x_</span><span class="p">)</span>
+	<span class="n">y2_</span><span class="o">=</span><span class="n">tf</span><span class="o">.</span><span class="n">reduce_max</span><span class="p">(</span><span class="n">x_</span><span class="p">,</span><span class="mi">0</span><span class="p">)</span>
+	<span class="n">y3_</span><span class="o">=</span><span class="n">tf</span><span class="o">.</span><span class="n">reduce_max</span><span class="p">(</span><span class="n">x_</span><span class="p">,</span><span class="mi">1</span><span class="p">)</span>
+	<span class="k">print</span> <span class="n">sess</span><span class="o">.</span><span class="n">run</span><span class="p">(</span><span class="n">y1_</span><span class="p">),</span><span class="n">sess</span><span class="o">.</span><span class="n">run</span><span class="p">(</span><span class="n">y2_</span><span class="p">),</span><span class="n">sess</span><span class="o">.</span><span class="n">run</span><span class="p">(</span><span class="n">y3_</span><span class="p">)</span></code></pre></figure>
+
+<p>首先求平均值，<br />
+tf.reduce_mean(x_) ==&gt; 2.5 #如果不指定第二个参数，那么就在所有的元素中取平均值</p>
+
+<p>tf.reduce_mean(x_, 0) ==&gt; [2.,  3.] #指定第二个参数为0，则第一维的元素取平均值，即每一列求平均值</p>
+
+<p>tf.reduce_mean(x_, 1) ==&gt; [1.5,  3.5] #<br />
+指定第二个参数为1，则第二维的元素取平均值，即每一行求平均值</p>
+
+<p>同理，还可用tf.reduce_max()求最大值。</p>
+
+<figure class="highlight"><pre><code class="language-bash" data-lang="bash"><span class="c">#输出结果：</span>
+2.5 <span class="o">[</span>2. 3.] <span class="o">[</span>1.5 3.5]
+4.0 <span class="o">[</span>3. 4.] <span class="o">[</span>2. 4.]</code></pre></figure>
+
+<h3 id="会话">会话</h3>
+
+<p>接下来的代码就是创建一个Session对象，调用它的run方法。只有这样，才能进行真正的运算。如下所示：</p>
+
+<figure class="highlight"><pre><code class="language-python" data-lang="python"><span class="k">with</span> <span class="n">tf</span><span class="o">.</span><span class="n">Session</span><span class="p">()</span> <span class="k">as</span> <span class="n">sess</span><span class="p">:</span>
+    <span class="k">print</span> <span class="n">sess</span><span class="o">.</span><span class="n">run</span><span class="p">([</span><span class="n">c1</span><span class="p">,</span><span class="n">c2</span><span class="p">])</span>
+
+<span class="c"># 输出： [array([0.3, 2. ], dtype=float32), array([1.3, 1.2], dtype=float32)]</span></code></pre></figure>
+
+<p>这时，我们就能得到了想象中的两个值。</p>
+
+<p>我们可以通过联合多个张量(Tensors)，构建更为复杂的运算。例如，我们可以进行点张量的相加，如下所示：</p>
+
+<figure class="highlight"><pre><code class="language-python" data-lang="python"><span class="kn">import</span> <span class="nn">tensorflow</span> <span class="kn">as</span> <span class="nn">tf</span>
+<span class="kn">import</span> <span class="nn">numpy</span> <span class="kn">as</span> <span class="nn">np</span>
+
+<span class="n">c1</span> <span class="o">=</span> <span class="n">tf</span><span class="o">.</span><span class="n">constant</span><span class="p">([</span><span class="mf">0.3</span><span class="p">,</span><span class="mf">2.0</span><span class="p">],</span><span class="n">tf</span><span class="o">.</span><span class="n">float32</span><span class="p">)</span>
+<span class="n">c2</span> <span class="o">=</span> <span class="n">tf</span><span class="o">.</span><span class="n">constant</span><span class="p">([</span><span class="mf">1.3</span><span class="p">,</span><span class="mf">1.2</span><span class="p">],</span><span class="n">tf</span><span class="o">.</span><span class="n">float32</span><span class="p">)</span>
+
+<span class="n">op_add</span> <span class="o">=</span> <span class="n">tf</span><span class="o">.</span><span class="n">add</span><span class="p">(</span><span class="n">c1</span><span class="p">,</span><span class="n">c2</span><span class="p">)</span>
+
+<span class="k">with</span> <span class="n">tf</span><span class="o">.</span><span class="n">Session</span><span class="p">()</span> <span class="k">as</span> <span class="n">sess</span><span class="p">:</span>
+    <span class="k">print</span> <span class="s">"op_add rst:{}"</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">sess</span><span class="o">.</span><span class="n">run</span><span class="p">(</span><span class="n">op_add</span><span class="p">))</span>
+
+<span class="c"># 输出：op_add rst:[1.5999999 3.2      ]</span></code></pre></figure>
+
+<h3 id="占位符placeholder">占位符(Placeholder)</h3>
+
+<p>有些时候，我们不会直接使用常量进行计算，而需要事先创建一个量去表示运算。这时，在TensorFlow中可以采用placeholders的方法。它的本质就是一个占位符，先用placeholder表示进行运算的表达，程序后面在进行“喂值”(feed_dict)。如下所示：</p>
+
+<figure class="highlight"><pre><code class="language-python" data-lang="python"><span class="c"># placeholder</span>
+<span class="n">x</span> <span class="o">=</span> <span class="n">tf</span><span class="o">.</span><span class="n">placeholder</span><span class="p">(</span><span class="n">tf</span><span class="o">.</span><span class="n">float32</span><span class="p">)</span>
+<span class="n">y</span> <span class="o">=</span> <span class="n">tf</span><span class="o">.</span><span class="n">placeholder</span><span class="p">(</span><span class="n">tf</span><span class="o">.</span><span class="n">float32</span><span class="p">)</span>
+<span class="n">op_add</span> <span class="o">=</span> <span class="n">tf</span><span class="o">.</span><span class="n">add</span><span class="p">(</span><span class="n">x</span><span class="p">,</span><span class="n">y</span><span class="p">)</span></code></pre></figure>
+
+<p>由上面操作可见，x和y都没有固定的值，它们创建的目的只是为了表示相加这种运算。</p>
+
+<p>如果程序后面需要用到这种运算，我们可以使用feed_dict进行喂值。</p>
+
+<figure class="highlight"><pre><code class="language-python" data-lang="python"><span class="n">cc</span> <span class="o">=</span><span class="n">sess</span><span class="o">.</span><span class="n">run</span><span class="p">(</span><span class="n">op_add</span><span class="p">,{</span><span class="n">x</span><span class="p">:[</span><span class="mf">1.0</span><span class="p">,</span><span class="mf">2.0</span><span class="p">,</span><span class="mi">3</span><span class="p">,</span><span class="mi">4</span><span class="p">],</span><span class="n">y</span><span class="p">:[</span><span class="mi">2</span><span class="p">,</span><span class="mi">3</span><span class="p">,</span><span class="mi">4</span><span class="p">,</span><span class="mi">1</span><span class="p">]})</span>
+<span class="k">print</span> <span class="n">cc</span>
+<span class="c"># 输出 [3. 5. 7. 5.]</span></code></pre></figure>
+
+<p>显然，不同的“喂值”，得出的结果可能也不同。</p>
+
+<p>在基础上，我们可以进行更复杂的操作。我们可以对op_add进行相乘操作。如下所示:</p>
+
+<figure class="highlight"><pre><code class="language-python" data-lang="python"><span class="n">c1</span> <span class="o">=</span> <span class="n">tf</span><span class="o">.</span><span class="n">constant</span><span class="p">(</span><span class="mf">0.3</span><span class="p">,</span><span class="n">tf</span><span class="o">.</span><span class="n">float32</span><span class="p">)</span>
+<span class="n">c2</span> <span class="o">=</span> <span class="n">tf</span><span class="o">.</span><span class="n">constant</span><span class="p">(</span><span class="mf">1.3</span><span class="p">,</span><span class="n">tf</span><span class="o">.</span><span class="n">float32</span><span class="p">)</span>
+
+<span class="n">op_add</span> <span class="o">=</span> <span class="n">tf</span><span class="o">.</span><span class="n">add</span><span class="p">(</span><span class="n">c1</span><span class="p">,</span><span class="n">c2</span><span class="p">)</span>
+<span class="n">triple</span><span class="o">=</span><span class="n">op_add</span><span class="o">*</span><span class="mi">3</span>
+
+<span class="k">with</span> <span class="n">tf</span><span class="o">.</span><span class="n">Session</span><span class="p">()</span> <span class="k">as</span> <span class="n">sess</span><span class="p">:</span>
+    <span class="k">print</span> <span class="n">sess</span><span class="o">.</span><span class="n">run</span><span class="p">([</span><span class="n">c1</span><span class="p">,</span><span class="n">c2</span><span class="p">])</span>
+    <span class="k">print</span> <span class="s">"triple rst:{}"</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">sess</span><span class="o">.</span><span class="n">run</span><span class="p">(</span><span class="n">triple</span><span class="p">))</span>
+
+<span class="c"># 输出：triple rst:4.7999997139</span></code></pre></figure>
+
+<p>当然，要显示最终结果，需要进行回话和喂值。</p>
+
+<h3 id="变量variable">变量(Variable)</h3>
+
+<p>机器学习中，我们构建模型，TensorFlow中模型有输入有输出，训练中参数会不断更新，这时，我们需要创建变量(Variable)。TensorFlow中，Variable可以将训练参数添加到图中，声明变量时，一般需要声明变量的类型（如：tf.float32）和赋初值。如下所示：</p>
+
+<figure class="highlight"><pre><code class="language-python" data-lang="python"><span class="n">x</span> <span class="o">=</span> <span class="n">tf</span><span class="o">.</span><span class="n">placeholder</span><span class="p">(</span><span class="n">tf</span><span class="o">.</span><span class="n">float32</span><span class="p">)</span>
+<span class="n">y</span> <span class="o">=</span> <span class="n">tf</span><span class="o">.</span><span class="n">placeholder</span><span class="p">(</span><span class="n">tf</span><span class="o">.</span><span class="n">float32</span><span class="p">)</span>
+<span class="n">op_add</span> <span class="o">=</span> <span class="n">tf</span><span class="o">.</span><span class="n">add</span><span class="p">(</span><span class="n">x</span><span class="p">,</span><span class="n">y</span><span class="p">)</span>
+<span class="n">op_tri</span> <span class="o">=</span> <span class="n">op_add</span><span class="o">*</span><span class="mi">3</span></code></pre></figure>
+
+<p>这样，我们就成功地创建了变量。从上面例子，我们可以看出placeholder和Variable的区别。当该量是通过训练更新的，我们可以通过Variable创建，当该量是作为模型的输入，我们可以通过placeholder创建。</p>
+
+<p>当然，变量的启动不仅需要开启会话，还要在会话中进行初始化。</p>
+
+<figure class="highlight"><pre><code class="language-python" data-lang="python"><span class="k">with</span> <span class="n">tf</span><span class="o">.</span><span class="n">Session</span><span class="p">()</span> <span class="k">as</span> <span class="n">sess</span><span class="p">:</span>
+    <span class="n">init</span> <span class="o">=</span> <span class="n">tf</span><span class="o">.</span><span class="n">global_variables_initializer</span><span class="p">()</span>
+    <span class="n">sess</span><span class="o">.</span><span class="n">run</span><span class="p">(</span><span class="n">init</span><span class="p">)</span></code></pre></figure>
+
+<p>这样，变量才真正地被初始化。</p>
+
+<p>初始化成功之后，我们给模型喂值，</p>
+
+<figure class="highlight"><pre><code class="language-python" data-lang="python"><span class="n">W</span> <span class="o">=</span> <span class="n">tf</span><span class="o">.</span><span class="n">Variable</span><span class="p">([</span><span class="mf">1.1</span><span class="p">],</span><span class="n">tf</span><span class="o">.</span><span class="n">float32</span><span class="p">)</span>
+<span class="n">b</span> <span class="o">=</span> <span class="n">tf</span><span class="o">.</span><span class="n">Variable</span><span class="p">([</span><span class="o">-</span><span class="mf">2.1</span><span class="p">],</span><span class="n">tf</span><span class="o">.</span><span class="n">float32</span><span class="p">)</span>
+<span class="n">x_train</span> <span class="o">=</span> <span class="p">[</span><span class="mi">1</span><span class="p">,</span><span class="mi">2</span><span class="p">,</span><span class="mi">3</span><span class="p">,</span><span class="mi">4</span><span class="p">,</span><span class="mi">5</span><span class="p">,</span><span class="mi">6</span><span class="p">]</span>
+<span class="n">linear_mode</span><span class="o">=</span><span class="n">W</span><span class="o">*</span><span class="n">x</span><span class="o">+</span><span class="n">b</span>
+
+<span class="k">with</span> <span class="n">tf</span><span class="o">.</span><span class="n">Session</span><span class="p">()</span> <span class="k">as</span> <span class="n">sess</span><span class="p">:</span>
+    <span class="n">init</span> <span class="o">=</span> <span class="n">tf</span><span class="o">.</span><span class="n">global_variables_initializer</span><span class="p">()</span>
+    <span class="n">sess</span><span class="o">.</span><span class="n">run</span><span class="p">(</span><span class="n">init</span><span class="p">)</span>
+    <span class="k">print</span><span class="p">(</span><span class="s">"real vale: {}"</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">sess</span><span class="o">.</span><span class="n">run</span><span class="p">(</span><span class="n">linear_mode</span><span class="p">,{</span><span class="n">x</span><span class="p">:</span><span class="n">x_train</span><span class="p">})))</span></code></pre></figure>
+
+<p>其实，这里我们构建了一个很简单的线性模型。我们希望该模型能够进行训练优化，然而，我们没有设定训练集的期望值。因此，我们自定义期望值。</p>
+
+<p>优化训练，我们采用最小二乘法。</p>
+
+<p>代价函数为：cost(x) = sum(linear_model(x) - y)/number of trainset</p>
+
+<figure class="highlight"><pre><code class="language-python" data-lang="python"><span class="n">square_details</span> <span class="o">=</span> <span class="n">tf</span><span class="o">.</span><span class="n">square</span><span class="p">(</span><span class="n">linear_mode</span><span class="o">-</span> <span class="n">y</span><span class="p">)</span>
+<span class="n">loss</span> <span class="o">=</span> <span class="n">tf</span><span class="o">.</span><span class="n">reduce_sum</span><span class="p">(</span><span class="n">square_details</span><span class="p">)</span></code></pre></figure>
+
+<p>得到了损失函数，我们就可以对模型的准确性进行评估了。</p>
+
+<h3 id="tensorboard">tensorboard</h3>
+
+<p>Tensorboard可以记录与展示以下数据形式：</p>
+<ul>
+  <li>标量Scalars</li>
+  <li>图片Images</li>
+  <li>音频Audio</li>
+  <li>计算图Graph</li>
+  <li>数据分布Distribution</li>
+  <li>直方图Histograms</li>
+  <li>嵌入向量Embeddings</li>
+</ul>
+
+<p>Tensorboard的可视化过程</p>
+
+<ul>
+  <li>
+    <p>首先肯定是先建立一个graph,你想从这个graph中获取某些数据的信息</p>
+  </li>
+  <li>
+    <p>确定要在graph中的哪些节点放置summary operations以记录信息</p>
+  </li>
+</ul>
+
+<p><b>使用tf.summary.scalar记录标量</b></p>
+
+<p>常量则可使用Tensorflow.scalar_summary()方法：</p>
+
+<p>tf.scalar_summary(‘loss’,loss) #命名和赋值</p>
+
+<p><img src="/img/post-tf/tf39.jpeg" alt="" /></p>
+
+<p><b>使用tf.summary.histogram记录数据的直方图</b></p>
+
+<p><img src="/img/post-tf/tf37.jpeg" alt="" /></p>
+
+<ul>
+  <li>
+    <p>operations并不会去真的执行计算，除非你告诉他们需要去run,或者它被其他的需要run的operation所依赖。而我们上一步创建的这些summary operations其实并不被其他节点依赖，因此，我们需要特地去运行所有的summary节点。但是呢，一份程序下来可能有超多这样的summary 节点，要手动一个一个去启动自然是及其繁琐的，因此我们可以使用tf.summary.merge_all去将所有summary节点合并成一个节点，只要运行这个节点，就能产生所有我们之前设置的summary data。</p>
+  </li>
+  <li>
+    <p>使用tf.summary.FileWriter将运行后输出的数据都保存到本地磁盘中</p>
+  </li>
+  <li>
+    <p>运行整个程序，并在命令行输入运行tensorboard的指令，之后打开web端可查看可视化的结果</p>
+  </li>
+</ul>
+
+<figure class="highlight"><pre><code class="language-python" data-lang="python"><span class="c">#合并到Summary中  </span>
+<span class="n">merged</span> <span class="o">=</span> <span class="n">tf</span><span class="o">.</span><span class="n">merge_all_summaries</span><span class="p">()</span>  
+<span class="c">#选定可视化存储目录  </span>
+<span class="n">writer</span> <span class="o">=</span> <span class="n">tf</span><span class="o">.</span><span class="n">train</span><span class="o">.</span><span class="n">SummaryWriter</span><span class="p">(</span><span class="s">"/目录"</span><span class="p">,</span><span class="n">sess</span><span class="o">.</span><span class="n">graph</span><span class="p">)</span>  
+
+<span class="c">#merged也是需要run的  </span>
+<span class="n">result</span> <span class="o">=</span> <span class="n">sess</span><span class="o">.</span><span class="n">run</span><span class="p">(</span><span class="n">merged</span><span class="p">)</span>
+<span class="n">writer</span><span class="o">.</span><span class="n">add_summary</span><span class="p">(</span><span class="n">result</span><span class="p">,</span><span class="n">step</span><span class="p">)</span>  </code></pre></figure>
+
+<p><img src="/img/post-tf/tf38.jpeg" alt="" /></p>
+
+<p>如果6006端口被占用，会报一下错误：</p>
+
+<figure class="highlight"><pre><code class="language-json" data-lang="json"><span class="err">ERROR:tensorflow:Tried</span><span class="w"> </span><span class="err">to</span><span class="w"> </span><span class="err">connect</span><span class="w"> </span><span class="err">to</span><span class="w"> </span><span class="err">port</span><span class="w"> </span><span class="mi">6006</span><span class="err">,</span><span class="w"> </span><span class="err">but</span><span class="w"> </span><span class="err">address</span><span class="w"> </span><span class="err">is</span><span class="w"> </span><span class="err">in</span><span class="w"> </span><span class="err">use.</span><span class="w">
+</span><span class="err">Tried</span><span class="w"> </span><span class="err">to</span><span class="w"> </span><span class="err">connect</span><span class="w"> </span><span class="err">to</span><span class="w"> </span><span class="err">port</span><span class="w"> </span><span class="mi">6006</span><span class="err">,</span><span class="w"> </span><span class="err">but</span><span class="w"> </span><span class="err">address</span><span class="w"> </span><span class="err">is</span><span class="w"> </span><span class="err">in</span><span class="w"> </span><span class="err">use.</span></code></pre></figure>
+
+<p>解决可以使用 –port 指定端口：</p>
+
+<figure class="highlight"><pre><code class="language-bash" data-lang="bash">tensorboard --host<span class="o">=</span>10.10.101.2 --port<span class="o">=</span>6099 --logdir<span class="o">=</span><span class="s2">"my_graph"</span></code></pre></figure>
+
+
+    </div>
+  </div>
+
+  <style>
+  .post-nav {
+    overflow: hidden;
+    /* margin-top: 60px; */
+    padding: 12px;
+    white-space: nowrap;
+    /* border-top: 1px solid #eee; */
+  }
+
+  .post-nav-item {
+    display: inline-block;
+    width: 50%;
+    white-space: normal;
+  }
+
+  .post-nav-item a {
+    position: relative;
+    display: inline-block;
+    line-height: 25px;
+    font-size: 14px;
+    color: #555;
+    border-bottom: none;
+  }
+
+  .post-nav-item a:hover {
+    color: #222;
+    font-weight: bold;
+    border-bottom: none;
+  }
+
+  .post-nav-item a:active {
+    top: 2px;
+  }
+
+  .post-nav-item a:before,
+  .post-nav-item a:after {
+    display: inline-block;
+    width: 16px;
+    height: 25px;
+    vertical-align: top;
+    opacity: 0.4;
+    background-size: 16px;
+  }
+
+  .post-nav-none a:none {
+    content: ' ';
+    background-size: 8px;
+  }
+
+  .post-nav-none a:hover:none {
+    opacity: 1;
+  }
+
+  .post-nav-prev a:before {
+    content: ' ';
+    background: url("data:image/svg+xml;base64,PD94bWwgdmVyc2lvbj0iMS4wIiA/PjxzdmcgaGVpZ2h0PSIxMnB4IiB2ZXJzaW9uPSIxLjEiIHZpZXdCb3g9IjAgMCA5IDEyIiB3aWR0aD0iOXB4IiB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHhtbG5zOnNrZXRjaD0iaHR0cDovL3d3dy5ib2hlbWlhbmNvZGluZy5jb20vc2tldGNoL25zIiB4bWxuczp4bGluaz0iaHR0cDovL3d3dy53My5vcmcvMTk5OS94bGluayI+PHRpdGxlLz48ZGVzYy8+PGRlZnMvPjxnIGZpbGw9Im5vbmUiIGZpbGwtcnVsZT0iZXZlbm9kZCIgaWQ9IlBhZ2UtMSIgc3Ryb2tlPSJub25lIiBzdHJva2Utd2lkdGg9IjEiPjxnIGZpbGw9IiMwMDAwMDAiIGlkPSJDb3JlIiB0cmFuc2Zvcm09InRyYW5zbGF0ZSgtMjE4LjAwMDAwMCwgLTkwLjAwMDAwMCkiPjxnIGlkPSJjaGV2cm9uLWxlZnQiIHRyYW5zZm9ybT0idHJhbnNsYXRlKDIxOC41MDAwMDAsIDkwLjAwMDAwMCkiPjxwYXRoIGQ9Ik03LjQsMS40IEw2LDAgTC04Ljg4MTc4NDJlLTE2LDYgTDYsMTIgTDcuNCwxMC42IEwyLjgsNiBMNy40LDEuNCBaIiBpZD0iU2hhcGUiLz48L2c+PC9nPjwvZz48L3N2Zz4=") no-repeat 0 50%;
+    background-size: 8px;
+  }
+
+  .post-nav-prev a:hover:before {
+    opacity: 1;
+  }
+
+  .post-nav-next {
+    text-align: right;
+  }
+
+  .post-nav-next a:after {
+    content: ' ';
+    background: url("data:image/svg+xml;base64,PD94bWwgdmVyc2lvbj0iMS4wIiA/PjxzdmcgaGVpZ2h0PSIxMnB4IiB2ZXJzaW9uPSIxLjEiIHZpZXdCb3g9IjAgMCA5IDEyIiB3aWR0aD0iOXB4IiB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHhtbG5zOnNrZXRjaD0iaHR0cDovL3d3dy5ib2hlbWlhbmNvZGluZy5jb20vc2tldGNoL25zIiB4bWxuczp4bGluaz0iaHR0cDovL3d3dy53My5vcmcvMTk5OS94bGluayI+PHRpdGxlLz48ZGVzYy8+PGRlZnMvPjxnIGZpbGw9Im5vbmUiIGZpbGwtcnVsZT0iZXZlbm9kZCIgaWQ9IlBhZ2UtMSIgc3Ryb2tlPSJub25lIiBzdHJva2Utd2lkdGg9IjEiPjxnIGZpbGw9IiMwMDAwMDAiIGlkPSJDb3JlIiB0cmFuc2Zvcm09InRyYW5zbGF0ZSgtMjYwLjAwMDAwMCwgLTkwLjAwMDAwMCkiPjxnIGlkPSJjaGV2cm9uLXJpZ2h0IiB0cmFuc2Zvcm09InRyYW5zbGF0ZSgyNjAuNTAwMDAwLCA5MC4wMDAwMDApIj48cGF0aCBkPSJNMSwwIEwtMC40LDEuNCBMNC4yLDYgTC0wLjQsMTAuNiBMMSwxMiBMNyw2IEwxLDAgWiIgaWQ9IlNoYXBlIi8+PC9nPjwvZz48L2c+PC9zdmc+") no-repeat 100% 50%;
+    background-size: 8px;
+  }
+
+  .post-nav-next a:hover:after {
+    opacity: 1;
+  }
+</style>
+
+
+
+<div class="post-nav">
+
+  
+  <div class="post-nav-prev post-nav-item">
+    
+    <a href="/blog/2018/tensorflow/"> TensorFlow-神经网络</a>
+  </div>
+  
+
+  
+  <div class="post-nav-next post-nav-item">
+    
+    <a href="/blog/2018/pil/"> Python Pillow做一个强大的图形工具</a>
+  </div>
+  
+
+</div>
+
+</article>
+    </div>
+
+    <footer class="site-footer">
+  <div class="container">
+    <ul class="social">
+  <li><a href="https://twitter.com/penghuailiang" target="_blank"><i class="icon icon-twitter"></i></a></li>
+  <li><a href="https://www.zhihu.com/people/huailiangpenguin" target="_blank"><i class="icon icon-zhihu"></i></a></li>
+  <li><a href="https://www.facebook.com/profile.php?id=100004290725320" target="_blank"><i class="icon icon-facebook"></i></a></li>
+  <li><a href="https://weibo.com/6212299692/profile?topnav=1&wvr=6" target="_blank"><i class="icon icon-sina"></i></a></li>
+  <li><a href="https://www.linkedin.com/in/penghuailiang/" target="_blank"><i class="icon icon-linkedin"></i></a></li>
+  <li><a href="https://github.com/huailiang" target="_blank"><i class="icon icon-github"></i></a></li>
+</ul>
+    <p class="txt-medium-gray">
+      <small>&copy;2019 All rights reserved. </small>
+    </p>
+  </div>
+</footer>
+    <a href="https://github.com/huailiang" target="_blank" class="github-corner"><svg width="80" height="80" viewBox="0 0 250 250" style="fill:#337ab7; color:#fff; position: absolute; top: 0; border: 0; right: 0;"><path d="M0,0 L115,115 L130,115 L142,142 L250,250 L250,0 Z"></path><path d="M128.3,109.0 C113.8,99.7 119.0,89.6 119.0,89.6 C122.0,82.7 120.5,78.6 120.5,78.6 C119.2,72.0 123.4,76.3 123.4,76.3 C127.3,80.9 125.5,87.3 125.5,87.3 C122.9,97.6 130.6,101.9 134.4,103.2" fill="currentColor" style="transform-origin: 130px 106px;" class="octo-arm"></path><path d="M115.0,115.0 C114.9,115.1 118.7,116.5 119.8,115.4 L133.7,101.6 C136.9,99.2 139.9,98.4 142.2,98.6 C133.8,88.0 127.5,74.4 143.8,58.0 C148.5,53.4 154.0,51.2 159.7,51.0 C160.3,49.4 163.2,43.6 171.4,40.1 C171.4,40.1 176.1,42.5 178.8,56.2 C183.1,58.6 187.2,61.8 190.9,65.4 C194.5,69.0 197.7,73.2 200.1,77.6 C213.8,80.2 216.3,84.9 216.3,84.9 C212.7,93.1 206.9,96.0 205.4,96.6 C205.1,102.4 203.0,107.8 198.3,112.5 C181.9,128.9 168.3,122.5 157.7,114.1 C157.9,116.9 156.7,120.9 152.7,124.9 L141.0,136.5 C139.8,137.7 141.6,141.9 141.8,141.8 Z" fill="currentColor" class="octo-body"></path></svg></a>
+
+
+    <script src="//code.jquery.com/jquery-1.11.3.min.js"></script>
+    <script>
+      $(document).ready(function () {
+        $('.sliding-panel-button,.sliding-panel-fade-screen,.sliding-panel-close').on('click touchstart', function (e) {
+          $('.sliding-panel-content,.sliding-panel-fade-screen').toggleClass('is-visible');
+          e.preventDefault();
+        });
+      });
+    </script>
+  </main>
+</body>
+
+</html>

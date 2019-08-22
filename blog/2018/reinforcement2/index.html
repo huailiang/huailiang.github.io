@@ -1,0 +1,465 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <meta http-equiv="X-UA-Compatible" content="IE=edge">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+
+  <title>强化学习-游戏AI Trainning (二)</title>
+  <meta name="description"
+    content="  上一节我们介绍了如何 q_learning 强化学习算法， 但不好的地方是运算都在 Unity里，这节我们把 q_learning算法提取到 python 环境中，并且用 Sarsa算法实现一遍强化学习。所有本机的代码都可以在Github 下载。">
+
+  <link rel="shortcut icon" href="/img/favicon.ico">
+  <link rel="stylesheet" href="/css/main.css">
+  <link rel="canonical" href="https://huailiang.github.io/blog/2018/reinforcement2/">
+  <link rel="alternate" type="application/rss+xml" title="Huailiang Blog"
+    href="https://huailiang.github.io/feed.xml" />
+
+</head>
+
+<body>
+  <main>
+    <header class="site-header">
+  <div class="container">
+    <h1><a href="/">Hom<span>e</span></a></h1>
+
+    <button type="button" class="sliding-panel-button">
+      <span></span>
+      <span></span>
+      <span></span>
+    </button>
+
+    <nav class="navbar sliding-panel-content">
+      <ul>
+        
+        <li><a href="/about" title="About">About</a>
+        </li>
+        
+        <li><a href="/blog" title="Blog">Blog</a>
+        </li>
+        
+        <!-- <li><a href="/feed.xml" target="_blank"><i class="icon icon-feed"></i></a></li> -->
+        <li><a href="/category/" target="_blank"><i class="icon icon-feed"></i></a></li>
+      </ul>
+    </nav>
+  </div>
+</header>
+
+<div class="sliding-panel-fade-screen"></div>
+    <script type="text/javascript" src="/js/MathJax.js?config=TeX-AMS-MML_HTMLorMML"></script>
+
+<script type="text/x-mathjax-config">
+MathJax.Hub.Config({
+  tex2jax: {
+    inlineMath: [['$','$'], ['\\(','\\)']],
+    processEscapes: true
+  }
+});
+</script>
+
+<script type="text/x-mathjax-config">
+  MathJax.Hub.Config({
+    tex2jax: {
+      skipTags: ['script', 'noscript', 'style', 'textarea', 'pre', 'code']
+    }
+  });
+
+</script>
+    <div class="container">
+      <article role="article" class="post">
+
+  <div class="card">
+    <header class="post-header">
+      <h1 class="post-title">强化学习-游戏AI Trainning (二)</h1>
+      <p class="post-meta">Mar 20, 2018 •
+        Huailiang</p>
+    </header>
+
+    <div class="post-content">
+      <blockquote>
+  <p><a href="https://huailiang.github.io/2018/03/19/reinforcement/">上一节</a>我们介绍了如何 q_learning 强化学习算法， 但不好的地方是运算都在 Unity里，这节我们把 q_learning算法提取到 python 环境中，并且用 Sarsa算法实现一遍强化学习。所有本机的代码都可以在<a href="https://huailiang.github.io/2018/03/19/reinforcement/">Github 下载</a>。</p>
+</blockquote>
+
+<p>完成本节内容，你需要本地有如下环境：</p>
+<ul>
+  <li>Python2.x</li>
+  <li>Pandas</li>
+  <li>Numpy</li>
+  <li>Tensorflow</li>
+</ul>
+
+<h3 id="unity设置">Unity设置</h3>
+
+<p>本地作者使用的 unity 版本是2017.3， 我们需要导出 Unity mac 平台上的包，我们在导出之前需要做如下设置：<br />
+在 GameManager 的 GameObject 上的脚本设置：IsTrainning需要勾上，Mode 选择 External。</p>
+
+<p><img src="/img/post-reinforcement/re7.jpg" alt="" /></p>
+
+<p>在 PlayerSetting 中需要做如下设置，Run in Background 需要勾上， Display Resoluyion Dialog 选择 Disabled。</p>
+
+<p><img src="/img/post-reinforcement/re8.jpg" alt="" /></p>
+
+<p>选择 build，导出一个 app, 导出的位置对应的/Python目录，并且导出的文件名一定要命名为 bird，这个变量名我们会在 python 使用到。最终的相对目录如下图所示，这个 bird.app 由于大小的原因没有上传到 github，如果读者需要的话，请自行导出。</p>
+
+<p><img src="/img/post-reinforcement/re9.jpg" alt="" /></p>
+
+<p>上图同时展示了我们 python 的目录结构，下面我们对几个文件做简要的说明：</p>
+
+<ul>
+  <li>
+    <p>brain.py</p>
+
+    <p>用于q_learning的算法实现</p>
+  </li>
+  <li>
+    <p>environment.py</p>
+
+    <p>与 Unity 交互，主要是 Socket</p>
+  </li>
+  <li>
+    <p>exception.py</p>
+
+    <p>用于处理异常</p>
+  </li>
+  <li>
+    <p>main.py</p>
+
+    <p>启动入口 在这里启动一个 Environment</p>
+  </li>
+</ul>
+
+<p>python 和 c#的交互是通过 Socket 来通信的，这里开了一个默认的端口-5006，关于python 和 c#如何TCP通信的，这里有个简单的<a href="https://github.com/huailiang/ConnectPy">GitHub工程</a>，读者可以自行点击学习。</p>
+
+<p>在environment.py 中实现了UnityEnvironment类。</p>
+
+<p>在它的构造函数中，做了以下几件事情：</p>
+<ul>
+  <li>使用atexit注册一个进程退出的函数，在退出的时候关闭 socket</li>
+</ul>
+
+<figure class="highlight"><pre><code class="language-python" data-lang="python">  <span class="kn">import</span> <span class="nn">atexit</span>
+
+  <span class="n">atexit</span><span class="o">.</span><span class="n">register</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">close</span><span class="p">)</span>
+
+  <span class="k">def</span> <span class="nf">close</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+    <span class="n">logger</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="s">"env closed"</span><span class="p">)</span></code></pre></figure>
+
+<ul>
+  <li>由模块subprocess开启一个子进程用来启动 unity 导出来的包，这里考虑 Linux, Windows, Macos 三种平台的包，考虑的比较全面。</li>
+</ul>
+
+<figure class="highlight"><pre><code class="language-python" data-lang="python"><span class="kn">import</span> <span class="nn">subprocess</span>
+<span class="n">proc1</span> <span class="o">=</span> <span class="n">subprocess</span><span class="o">.</span><span class="n">Popen</span><span class="p">([</span><span class="n">launch_string</span><span class="p">,</span><span class="s">'--port'</span><span class="p">,</span> <span class="nb">str</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">port</span><span class="p">)])</span></code></pre></figure>
+
+<ul>
+  <li>建立 Socket， 用于监听的 Unity 侧发过来的参数，设置好超时时间。</li>
+</ul>
+
+<div class="language-python highlighter-rouge"><pre class="highlight"><code>
+  <span class="bp">self</span><span class="o">.</span><span class="n">port</span> <span class="o">=</span> <span class="n">base_port</span>
+  <span class="bp">self</span><span class="o">.</span><span class="n">_buffer_size</span> <span class="o">=</span> <span class="mi">10240</span>
+  <span class="bp">self</span><span class="o">.</span><span class="n">_loaded</span> <span class="o">=</span> <span class="bp">False</span>
+  <span class="bp">self</span><span class="o">.</span><span class="n">_open_socket</span> <span class="o">=</span> <span class="bp">False</span>
+  <span class="n">logger</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="s">"unity env try created, socket with port:{}"</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="nb">str</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">port</span><span class="p">)))</span>
+
+  <span class="k">try</span><span class="p">:</span>
+      <span class="c"># Establish communication socket</span>
+      <span class="bp">self</span><span class="o">.</span><span class="n">_socket</span> <span class="o">=</span> <span class="n">socket</span><span class="o">.</span><span class="n">socket</span><span class="p">(</span><span class="n">socket</span><span class="o">.</span><span class="n">AF_INET</span><span class="p">,</span> <span class="n">socket</span><span class="o">.</span><span class="n">SOCK_STREAM</span><span class="p">)</span>
+      <span class="bp">self</span><span class="o">.</span><span class="n">_socket</span><span class="o">.</span><span class="n">setsockopt</span><span class="p">(</span><span class="n">socket</span><span class="o">.</span><span class="n">SOL_SOCKET</span><span class="p">,</span> <span class="n">socket</span><span class="o">.</span><span class="n">SO_REUSEADDR</span><span class="p">,</span> <span class="mi">1</span><span class="p">)</span>
+      <span class="bp">self</span><span class="o">.</span><span class="n">_socket</span><span class="o">.</span><span class="n">bind</span><span class="p">((</span><span class="s">"localhost"</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">port</span><span class="p">))</span>
+      <span class="bp">self</span><span class="o">.</span><span class="n">_open_socket</span> <span class="o">=</span> <span class="bp">True</span>
+  <span class="k">except</span> <span class="n">socket</span><span class="o">.</span><span class="n">error</span><span class="p">:</span>
+      <span class="bp">self</span><span class="o">.</span><span class="n">_open_socket</span> <span class="o">=</span> <span class="bp">True</span>
+      <span class="bp">self</span><span class="o">.</span><span class="n">close</span><span class="p">()</span>
+      <span class="k">raise</span> <span class="n">socket</span><span class="o">.</span><span class="n">error</span><span class="p">(</span><span class="s">"Couldn't launch new environment "</span>
+                         <span class="s">"You may need to manually close a previously opened environment "</span>
+                         <span class="s">"or use a different worker number."</span><span class="p">)</span>
+
+  <span class="bp">self</span><span class="o">.</span><span class="n">_socket</span><span class="o">.</span><span class="n">settimeout</span><span class="p">(</span><span class="mi">60</span><span class="p">)</span>
+  <span class="k">try</span><span class="p">:</span>
+      <span class="k">try</span><span class="p">:</span>
+          <span class="bp">self</span><span class="o">.</span><span class="n">_socket</span><span class="o">.</span><span class="n">listen</span><span class="p">(</span><span class="mi">1</span><span class="p">)</span>
+          <span class="bp">self</span><span class="o">.</span><span class="n">_conn</span><span class="p">,</span> <span class="n">_</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_socket</span><span class="o">.</span><span class="n">accept</span><span class="p">()</span>
+          <span class="bp">self</span><span class="o">.</span><span class="n">_conn</span><span class="o">.</span><span class="n">settimeout</span><span class="p">(</span><span class="mi">30</span><span class="p">)</span>
+
+      <span class="k">except</span> <span class="n">socket</span><span class="o">.</span><span class="n">timeout</span> <span class="k">as</span> <span class="n">e</span><span class="p">:</span>
+          <span class="k">raise</span> <span class="n">UnityTimeOutException</span><span class="p">(</span>
+              <span class="s">"The Unity environment took too long to respond. Make sure {} does not need user interaction to "</span>
+              <span class="s">"launch and that the Academy and the external Brain(s) are attached to objects in the Scene."</span>
+              <span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="nb">str</span><span class="p">(</span><span class="n">file_name</span><span class="p">)))</span>
+
+</code></pre>
+</div>
+
+<ul>
+  <li>解析 socket 发过来的参数，同时初始化 Brain， 在 Brain 中构建一张 q_table。</li>
+</ul>
+
+<div class="language-python highlighter-rouge"><pre class="highlight"><code>  <span class="n">p</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_conn</span><span class="o">.</span><span class="n">recv</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_buffer_size</span><span class="p">)</span><span class="o">.</span><span class="n">decode</span><span class="p">(</span><span class="s">'utf-8'</span><span class="p">)</span>
+  <span class="n">p</span> <span class="o">=</span> <span class="n">json</span><span class="o">.</span><span class="n">loads</span><span class="p">(</span><span class="n">p</span><span class="p">)</span>
+  <span class="bp">self</span><span class="o">.</span><span class="n">_data</span> <span class="o">=</span> <span class="p">{}</span>
+  <span class="bp">self</span><span class="o">.</span><span class="n">_global_done</span> <span class="o">=</span> <span class="bp">None</span>
+  <span class="bp">self</span><span class="o">.</span><span class="n">_log_path</span> <span class="o">=</span> <span class="n">p</span><span class="p">[</span><span class="s">"logPath"</span><span class="p">]</span>
+  <span class="bp">self</span><span class="o">.</span><span class="n">_alpha</span> <span class="o">=</span> <span class="n">p</span><span class="p">[</span><span class="s">"alpha"</span><span class="p">]</span>
+  <span class="bp">self</span><span class="o">.</span><span class="n">_epsilon</span> <span class="o">=</span> <span class="n">p</span><span class="p">[</span><span class="s">"epsilon"</span><span class="p">]</span>
+  <span class="bp">self</span><span class="o">.</span><span class="n">_gamma</span> <span class="o">=</span> <span class="n">p</span><span class="p">[</span><span class="s">"gamma"</span><span class="p">]</span>
+  <span class="bp">self</span><span class="o">.</span><span class="n">_states</span> <span class="o">=</span> <span class="n">p</span><span class="p">[</span><span class="s">"states"</span><span class="p">]</span>
+  <span class="bp">self</span><span class="o">.</span><span class="n">_actions</span> <span class="o">=</span> <span class="n">p</span><span class="p">[</span><span class="s">"actions"</span><span class="p">]</span>
+  <span class="bp">self</span><span class="o">.</span><span class="n">_brain</span> <span class="o">=</span> <span class="n">QLearningTable</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_actions</span><span class="p">,</span><span class="bp">self</span><span class="o">.</span><span class="n">_states</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">_alpha</span><span class="p">,</span><span class="bp">self</span><span class="o">.</span><span class="n">_gamma</span><span class="p">,</span><span class="bp">self</span><span class="o">.</span><span class="n">_epsilon</span><span class="p">)</span>
+  <span class="bp">self</span><span class="o">.</span><span class="n">_loaded</span> <span class="o">=</span> <span class="bp">True</span>
+  <span class="bp">self</span><span class="o">.</span><span class="n">_recv_bytes</span><span class="p">()</span>
+  <span class="n">logger</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="s">"started successfully!"</span><span class="p">)</span>
+  <span class="k">except</span> <span class="n">UnityEnvironmentException</span><span class="p">:</span>
+  <span class="n">proc1</span><span class="o">.</span><span class="n">kill</span><span class="p">()</span>
+  <span class="bp">self</span><span class="o">.</span><span class="n">close</span><span class="p">()</span>
+  <span class="k">raise</span>
+
+</code></pre>
+</div>
+
+<p>在 brain.py中实现了 q_learning和 Sarsa的 reinforcement算法， 二者在根据 state 做选择的是一样的，差别就是二者学习的过程，即更新 q_table 的方式。 q_learning在下一个 state_ 的选择的是action 值最大的 q 值来算 q_target, 而 sarsa是根据 下一个 state_和下一个action_来算 q_target。class RL是基类，显现了二者共同的choose_action，export，而QLearningTable和SarsaTable都继承 RL,并实现了各自的 learn()，即更新 q_Table 的方法。具体的代码实现如下：</p>
+
+<figure class="highlight"><pre><code class="language-python" data-lang="python"><span class="kn">import</span> <span class="nn">numpy</span> <span class="kn">as</span> <span class="nn">np</span>
+<span class="kn">import</span> <span class="nn">pandas</span> <span class="kn">as</span> <span class="nn">pd</span>
+<span class="kn">import</span> <span class="nn">os</span>
+
+<span class="k">class</span> <span class="nc">RL</span><span class="p">(</span><span class="nb">object</span><span class="p">):</span>
+    <span class="k">def</span> <span class="nf">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">_actions</span><span class="p">,</span> <span class="n">_states</span><span class="p">,</span> <span class="n">learning_rate</span><span class="o">=</span><span class="mf">0.01</span><span class="p">,</span> <span class="n">_gamma</span><span class="o">=</span><span class="mf">0.9</span><span class="p">,</span> <span class="n">_epsilon</span><span class="o">=</span><span class="mf">0.9</span><span class="p">):</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">actions</span> <span class="o">=</span> <span class="n">_actions</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">lr</span> <span class="o">=</span> <span class="n">learning_rate</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">gamma</span> <span class="o">=</span> <span class="n">_gamma</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">epsilon</span> <span class="o">=</span> <span class="n">_epsilon</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">states</span> <span class="o">=</span> <span class="n">_states</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">step</span> <span class="o">=</span> <span class="mi">0</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">csv</span> <span class="o">=</span> <span class="s">"q_table.csv"</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">state_num</span> <span class="o">=</span> <span class="nb">len</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">states</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">action_num</span> <span class="o">=</span> <span class="nb">len</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">actions</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">q_table</span> <span class="o">=</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">zeros</span><span class="p">((</span><span class="bp">self</span><span class="o">.</span><span class="n">state_num</span><span class="p">,</span><span class="bp">self</span><span class="o">.</span><span class="n">action_num</span><span class="p">)),</span> <span class="n">columns</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">actions</span><span class="p">,</span> <span class="n">index</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">states</span><span class="p">)</span>
+        <span class="k">print</span> <span class="bp">self</span><span class="o">.</span><span class="n">q_table</span>
+
+
+    <span class="k">def</span> <span class="nf">choose_action</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">observation</span><span class="p">):</span>
+        <span class="c"># action selection</span>
+        <span class="k">if</span> <span class="n">np</span><span class="o">.</span><span class="n">random</span><span class="o">.</span><span class="n">rand</span><span class="p">()</span> <span class="o">&lt;</span> <span class="bp">self</span><span class="o">.</span><span class="n">epsilon</span><span class="p">:</span>
+            <span class="c"># choose best action</span>
+            <span class="n">state_action</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">q_table</span><span class="o">.</span><span class="n">loc</span><span class="p">[</span><span class="n">observation</span><span class="p">,</span> <span class="p">:]</span>
+            <span class="n">state_action</span> <span class="o">=</span> <span class="n">state_action</span><span class="o">.</span><span class="n">reindex</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">random</span><span class="o">.</span><span class="n">permutation</span><span class="p">(</span><span class="n">state_action</span><span class="o">.</span><span class="n">index</span><span class="p">))</span>     <span class="c"># some actions have same value</span>
+            <span class="n">action</span> <span class="o">=</span> <span class="n">state_action</span><span class="o">.</span><span class="n">idxmax</span><span class="p">()</span>
+            <span class="k">print</span> <span class="s">"state_action:"</span><span class="o">+</span><span class="nb">str</span><span class="p">(</span><span class="n">state_action</span><span class="p">)</span><span class="o">+</span><span class="s">" action:"</span><span class="o">+</span><span class="nb">str</span><span class="p">(</span><span class="n">action</span><span class="p">)</span><span class="o">+</span><span class="s">" state:"</span><span class="o">+</span><span class="nb">str</span><span class="p">(</span><span class="n">observation</span><span class="p">)</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="c"># choose random action</span>
+            <span class="n">action</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">random</span><span class="o">.</span><span class="n">choice</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">actions</span><span class="p">)</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">step</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">step</span><span class="o">+</span><span class="mi">1</span>
+        <span class="k">if</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">step</span><span class="o">%</span><span class="mi">10</span><span class="o">==</span><span class="mi">0</span><span class="p">):</span>
+            <span class="k">print</span> <span class="bp">self</span><span class="o">.</span><span class="n">q_table</span>
+        <span class="k">return</span> <span class="n">action</span>
+
+    <span class="k">def</span> <span class="nf">learn</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="o">*</span><span class="n">args</span><span class="p">):</span>
+        <span class="k">pass</span>
+
+    <span class="k">def</span> <span class="nf">export</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="k">print</span> <span class="s">"brain export"</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">q_table</span><span class="o">.</span><span class="n">to_csv</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">csv</span><span class="p">)</span>
+
+
+<span class="c"># off-policy</span>
+<span class="k">class</span> <span class="nc">QLearningTable</span><span class="p">(</span><span class="n">RL</span><span class="p">):</span>
+    <span class="k">def</span> <span class="nf">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">actions</span><span class="p">,</span> <span class="n">states</span><span class="p">,</span> <span class="n">learning_rate</span><span class="o">=</span><span class="mf">0.01</span><span class="p">,</span> <span class="n">_gamma</span><span class="o">=</span><span class="mf">0.9</span><span class="p">,</span> <span class="n">_epsilon</span><span class="o">=</span><span class="mf">0.9</span><span class="p">):</span>
+        <span class="nb">super</span><span class="p">(</span><span class="n">QLearningTable</span><span class="p">,</span> <span class="bp">self</span><span class="p">)</span><span class="o">.</span><span class="n">__init__</span><span class="p">(</span><span class="n">actions</span><span class="p">,</span><span class="n">states</span><span class="p">,</span> <span class="n">learning_rate</span><span class="p">,</span> <span class="n">_gamma</span><span class="p">,</span> <span class="n">_epsilon</span><span class="p">)</span>
+
+    <span class="k">def</span> <span class="nf">learn</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">s</span><span class="p">,</span> <span class="n">a</span><span class="p">,</span> <span class="n">r</span><span class="p">,</span> <span class="n">s_</span><span class="p">):</span>
+        <span class="n">q_predict</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">q_table</span><span class="o">.</span><span class="n">loc</span><span class="p">[</span><span class="n">s</span><span class="p">,</span> <span class="n">a</span><span class="p">]</span>
+        <span class="k">if</span> <span class="n">s_</span> <span class="o">!=</span> <span class="s">'terminal'</span><span class="p">:</span>
+            <span class="n">q_target</span> <span class="o">=</span> <span class="n">r</span> <span class="o">+</span> <span class="bp">self</span><span class="o">.</span><span class="n">gamma</span> <span class="o">*</span> <span class="bp">self</span><span class="o">.</span><span class="n">q_table</span><span class="o">.</span><span class="n">loc</span><span class="p">[</span><span class="n">s_</span><span class="p">,</span> <span class="p">:]</span><span class="o">.</span><span class="nb">max</span><span class="p">()</span>  <span class="c"># next state is not terminal</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="n">q_target</span> <span class="o">=</span> <span class="n">r</span>  <span class="c"># next state is terminal</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">q_table</span><span class="o">.</span><span class="n">loc</span><span class="p">[</span><span class="n">s</span><span class="p">,</span> <span class="n">a</span><span class="p">]</span> <span class="o">+=</span> <span class="bp">self</span><span class="o">.</span><span class="n">lr</span> <span class="o">*</span> <span class="p">(</span><span class="n">q_target</span> <span class="o">-</span> <span class="n">q_predict</span><span class="p">)</span>  <span class="c"># update</span>
+
+
+<span class="c"># on-policy</span>
+<span class="k">class</span> <span class="nc">SarsaTable</span><span class="p">(</span><span class="n">RL</span><span class="p">):</span>
+
+    <span class="k">def</span> <span class="nf">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">actions</span><span class="p">,</span> <span class="n">states</span><span class="p">,</span> <span class="n">learning_rate</span><span class="o">=</span><span class="mf">0.01</span><span class="p">,</span> <span class="n">_gamma</span><span class="o">=</span><span class="mf">0.9</span><span class="p">,</span> <span class="n">_epsilon</span><span class="o">=</span><span class="mf">0.9</span><span class="p">):</span>
+        <span class="nb">super</span><span class="p">(</span><span class="n">SarsaTable</span><span class="p">,</span> <span class="bp">self</span><span class="p">)</span><span class="o">.</span><span class="n">__init__</span><span class="p">(</span><span class="n">actions</span><span class="p">,</span> <span class="n">states</span><span class="p">,</span> <span class="n">learning_rate</span><span class="p">,</span> <span class="n">_gamma</span><span class="p">,</span> <span class="n">_epsilon</span><span class="p">)</span>
+
+    <span class="k">def</span> <span class="nf">learn</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">s</span><span class="p">,</span> <span class="n">a</span><span class="p">,</span> <span class="n">r</span><span class="p">,</span> <span class="n">s_</span><span class="p">,</span> <span class="n">a_</span><span class="p">):</span>
+        <span class="n">q_predict</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">q_table</span><span class="o">.</span><span class="n">loc</span><span class="p">[</span><span class="n">s</span><span class="p">,</span> <span class="n">a</span><span class="p">]</span>
+        <span class="k">if</span> <span class="n">s_</span> <span class="o">!=</span> <span class="s">'terminal'</span><span class="p">:</span>
+            <span class="n">q_target</span> <span class="o">=</span> <span class="n">r</span> <span class="o">+</span> <span class="bp">self</span><span class="o">.</span><span class="n">gamma</span> <span class="o">*</span> <span class="bp">self</span><span class="o">.</span><span class="n">q_table</span><span class="o">.</span><span class="n">loc</span><span class="p">[</span><span class="n">s_</span><span class="p">,</span> <span class="n">a_</span><span class="p">]</span>  
+        <span class="k">else</span><span class="p">:</span>
+            <span class="n">q_target</span> <span class="o">=</span> <span class="n">r</span>  <span class="c"># next state is terminal</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">q_table</span><span class="o">.</span><span class="n">loc</span><span class="p">[</span><span class="n">s</span><span class="p">,</span> <span class="n">a</span><span class="p">]</span> <span class="o">+=</span> <span class="bp">self</span><span class="o">.</span><span class="n">lr</span> <span class="o">*</span> <span class="p">(</span><span class="n">q_target</span> <span class="o">-</span> <span class="n">q_predict</span><span class="p">)</span>  <span class="c"># update</span></code></pre></figure>
+
+<p>在 Unity 侧，我们使用ExternalEnv.cs 与 python 交互，所有通信的数据结构都定义在ExternalData.cs 中。<br />
+我们使用ExternalEnv中，我们在 socket建立起来就会把 q_learning 需要的参数同步到 python, 比如说：</p>
+
+<div class="language-csharp highlighter-rouge"><pre class="highlight"><code>
+<span class="c1">//迭代概率
+</span><span class="n">paramerters</span><span class="p">.</span><span class="n">epsilon</span> <span class="p">=</span> <span class="n">epsilon</span><span class="p">;</span>
+
+<span class="c1">//衰减因子
+</span><span class="n">paramerters</span><span class="p">.</span><span class="n">gamma</span> <span class="p">=</span> <span class="n">gamma</span><span class="p">;</span>
+
+<span class="c1">//学习率
+</span><span class="n">paramerters</span><span class="p">.</span><span class="n">alpha</span> <span class="p">=</span> <span class="n">alpha</span><span class="p">;</span>
+
+<span class="c1">//日志位置
+</span><span class="n">paramerters</span><span class="p">.</span><span class="n">logPath</span> <span class="p">=</span> <span class="k">this</span><span class="p">.</span><span class="n">save_path</span><span class="p">;</span>
+
+</code></pre>
+</div>
+
+<p>游戏每15帧触发一个心跳-Tick， 每个心跳做一个决定和更新一次 q_table，这些数据都是通过 socket 连接起来的。然后根据 python 返回的 action 去表现。</p>
+
+<figure class="highlight"><pre><code class="language-csharp" data-lang="csharp"><span class="k">public</span> <span class="k">override</span> <span class="k">void</span> <span class="nf">OnTick</span><span class="p">()</span>
+<span class="p">{</span>
+     <span class="kt">int</span> <span class="n">state</span> <span class="p">=</span> <span class="nf">GetCurrentState</span><span class="p">();</span>
+     <span class="k">if</span> <span class="p">(</span><span class="n">last_state</span> <span class="p">!=</span> <span class="p">-</span><span class="m">1</span><span class="p">)</span>
+     <span class="p">{</span>
+         <span class="nf">UpdateState</span><span class="p">(</span><span class="n">last_state</span><span class="p">,</span> <span class="n">state</span><span class="p">,</span> <span class="n">last_r</span><span class="p">,</span> <span class="n">last_action</span><span class="p">);</span>
+     <span class="p">}</span>
+     <span class="kt">bool</span> <span class="n">action</span> <span class="p">=</span> <span class="nf">choose_action</span><span class="p">(</span><span class="n">state</span><span class="p">);</span>
+     <span class="n">GameManager</span><span class="p">.</span><span class="n">S</span><span class="p">.</span><span class="nf">RespondByDecision</span><span class="p">(</span><span class="n">action</span><span class="p">);</span>
+<span class="p">}</span></code></pre></figure>
+
+<p>运行 main.py，最后的表现如下图所示：</p>
+
+<p><img src="/img/post-reinforcement/re10.gif" alt="" /></p>
+
+
+    </div>
+  </div>
+
+  <style>
+  .post-nav {
+    overflow: hidden;
+    /* margin-top: 60px; */
+    padding: 12px;
+    white-space: nowrap;
+    /* border-top: 1px solid #eee; */
+  }
+
+  .post-nav-item {
+    display: inline-block;
+    width: 50%;
+    white-space: normal;
+  }
+
+  .post-nav-item a {
+    position: relative;
+    display: inline-block;
+    line-height: 25px;
+    font-size: 14px;
+    color: #555;
+    border-bottom: none;
+  }
+
+  .post-nav-item a:hover {
+    color: #222;
+    font-weight: bold;
+    border-bottom: none;
+  }
+
+  .post-nav-item a:active {
+    top: 2px;
+  }
+
+  .post-nav-item a:before,
+  .post-nav-item a:after {
+    display: inline-block;
+    width: 16px;
+    height: 25px;
+    vertical-align: top;
+    opacity: 0.4;
+    background-size: 16px;
+  }
+
+  .post-nav-none a:none {
+    content: ' ';
+    background-size: 8px;
+  }
+
+  .post-nav-none a:hover:none {
+    opacity: 1;
+  }
+
+  .post-nav-prev a:before {
+    content: ' ';
+    background: url("data:image/svg+xml;base64,PD94bWwgdmVyc2lvbj0iMS4wIiA/PjxzdmcgaGVpZ2h0PSIxMnB4IiB2ZXJzaW9uPSIxLjEiIHZpZXdCb3g9IjAgMCA5IDEyIiB3aWR0aD0iOXB4IiB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHhtbG5zOnNrZXRjaD0iaHR0cDovL3d3dy5ib2hlbWlhbmNvZGluZy5jb20vc2tldGNoL25zIiB4bWxuczp4bGluaz0iaHR0cDovL3d3dy53My5vcmcvMTk5OS94bGluayI+PHRpdGxlLz48ZGVzYy8+PGRlZnMvPjxnIGZpbGw9Im5vbmUiIGZpbGwtcnVsZT0iZXZlbm9kZCIgaWQ9IlBhZ2UtMSIgc3Ryb2tlPSJub25lIiBzdHJva2Utd2lkdGg9IjEiPjxnIGZpbGw9IiMwMDAwMDAiIGlkPSJDb3JlIiB0cmFuc2Zvcm09InRyYW5zbGF0ZSgtMjE4LjAwMDAwMCwgLTkwLjAwMDAwMCkiPjxnIGlkPSJjaGV2cm9uLWxlZnQiIHRyYW5zZm9ybT0idHJhbnNsYXRlKDIxOC41MDAwMDAsIDkwLjAwMDAwMCkiPjxwYXRoIGQ9Ik03LjQsMS40IEw2LDAgTC04Ljg4MTc4NDJlLTE2LDYgTDYsMTIgTDcuNCwxMC42IEwyLjgsNiBMNy40LDEuNCBaIiBpZD0iU2hhcGUiLz48L2c+PC9nPjwvZz48L3N2Zz4=") no-repeat 0 50%;
+    background-size: 8px;
+  }
+
+  .post-nav-prev a:hover:before {
+    opacity: 1;
+  }
+
+  .post-nav-next {
+    text-align: right;
+  }
+
+  .post-nav-next a:after {
+    content: ' ';
+    background: url("data:image/svg+xml;base64,PD94bWwgdmVyc2lvbj0iMS4wIiA/PjxzdmcgaGVpZ2h0PSIxMnB4IiB2ZXJzaW9uPSIxLjEiIHZpZXdCb3g9IjAgMCA5IDEyIiB3aWR0aD0iOXB4IiB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHhtbG5zOnNrZXRjaD0iaHR0cDovL3d3dy5ib2hlbWlhbmNvZGluZy5jb20vc2tldGNoL25zIiB4bWxuczp4bGluaz0iaHR0cDovL3d3dy53My5vcmcvMTk5OS94bGluayI+PHRpdGxlLz48ZGVzYy8+PGRlZnMvPjxnIGZpbGw9Im5vbmUiIGZpbGwtcnVsZT0iZXZlbm9kZCIgaWQ9IlBhZ2UtMSIgc3Ryb2tlPSJub25lIiBzdHJva2Utd2lkdGg9IjEiPjxnIGZpbGw9IiMwMDAwMDAiIGlkPSJDb3JlIiB0cmFuc2Zvcm09InRyYW5zbGF0ZSgtMjYwLjAwMDAwMCwgLTkwLjAwMDAwMCkiPjxnIGlkPSJjaGV2cm9uLXJpZ2h0IiB0cmFuc2Zvcm09InRyYW5zbGF0ZSgyNjAuNTAwMDAwLCA5MC4wMDAwMDApIj48cGF0aCBkPSJNMSwwIEwtMC40LDEuNCBMNC4yLDYgTC0wLjQsMTAuNiBMMSwxMiBMNyw2IEwxLDAgWiIgaWQ9IlNoYXBlIi8+PC9nPjwvZz48L2c+PC9zdmc+") no-repeat 100% 50%;
+    background-size: 8px;
+  }
+
+  .post-nav-next a:hover:after {
+    opacity: 1;
+  }
+</style>
+
+
+
+<div class="post-nav">
+
+  
+  <div class="post-nav-prev post-nav-item">
+    
+    <a href="/blog/2018/reinforcement3/"> 强化学习-游戏AI Trainning (三)</a>
+  </div>
+  
+
+  
+  <div class="post-nav-next post-nav-item">
+    
+    <a href="/blog/2018/reinforcement/"> 强化学习-游戏AI Trainning (一)</a>
+  </div>
+  
+
+</div>
+
+</article>
+    </div>
+
+    <footer class="site-footer">
+  <div class="container">
+    <ul class="social">
+  <li><a href="https://twitter.com/penghuailiang" target="_blank"><i class="icon icon-twitter"></i></a></li>
+  <li><a href="https://www.zhihu.com/people/huailiangpenguin" target="_blank"><i class="icon icon-zhihu"></i></a></li>
+  <li><a href="https://www.facebook.com/profile.php?id=100004290725320" target="_blank"><i class="icon icon-facebook"></i></a></li>
+  <li><a href="https://weibo.com/6212299692/profile?topnav=1&wvr=6" target="_blank"><i class="icon icon-sina"></i></a></li>
+  <li><a href="https://www.linkedin.com/in/penghuailiang/" target="_blank"><i class="icon icon-linkedin"></i></a></li>
+  <li><a href="https://github.com/huailiang" target="_blank"><i class="icon icon-github"></i></a></li>
+</ul>
+    <p class="txt-medium-gray">
+      <small>&copy;2019 All rights reserved. </small>
+    </p>
+  </div>
+</footer>
+    <a href="https://github.com/huailiang" target="_blank" class="github-corner"><svg width="80" height="80" viewBox="0 0 250 250" style="fill:#337ab7; color:#fff; position: absolute; top: 0; border: 0; right: 0;"><path d="M0,0 L115,115 L130,115 L142,142 L250,250 L250,0 Z"></path><path d="M128.3,109.0 C113.8,99.7 119.0,89.6 119.0,89.6 C122.0,82.7 120.5,78.6 120.5,78.6 C119.2,72.0 123.4,76.3 123.4,76.3 C127.3,80.9 125.5,87.3 125.5,87.3 C122.9,97.6 130.6,101.9 134.4,103.2" fill="currentColor" style="transform-origin: 130px 106px;" class="octo-arm"></path><path d="M115.0,115.0 C114.9,115.1 118.7,116.5 119.8,115.4 L133.7,101.6 C136.9,99.2 139.9,98.4 142.2,98.6 C133.8,88.0 127.5,74.4 143.8,58.0 C148.5,53.4 154.0,51.2 159.7,51.0 C160.3,49.4 163.2,43.6 171.4,40.1 C171.4,40.1 176.1,42.5 178.8,56.2 C183.1,58.6 187.2,61.8 190.9,65.4 C194.5,69.0 197.7,73.2 200.1,77.6 C213.8,80.2 216.3,84.9 216.3,84.9 C212.7,93.1 206.9,96.0 205.4,96.6 C205.1,102.4 203.0,107.8 198.3,112.5 C181.9,128.9 168.3,122.5 157.7,114.1 C157.9,116.9 156.7,120.9 152.7,124.9 L141.0,136.5 C139.8,137.7 141.6,141.9 141.8,141.8 Z" fill="currentColor" class="octo-body"></path></svg></a>
+
+
+    <script src="//code.jquery.com/jquery-1.11.3.min.js"></script>
+    <script>
+      $(document).ready(function () {
+        $('.sliding-panel-button,.sliding-panel-fade-screen,.sliding-panel-close').on('click touchstart', function (e) {
+          $('.sliding-panel-content,.sliding-panel-fade-screen').toggleClass('is-visible');
+          e.preventDefault();
+        });
+      });
+    </script>
+  </main>
+</body>
+
+</html>

@@ -1,0 +1,527 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <meta http-equiv="X-UA-Compatible" content="IE=edge">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+
+  <title>PBR之基于图像的光照IBL (Specular)</title>
+  <meta name="description"
+    content="理论">
+
+  <link rel="shortcut icon" href="/img/favicon.ico">
+  <link rel="stylesheet" href="/css/main.css">
+  <link rel="canonical" href="https://huailiang.github.io/blog/2019/ibl2/">
+  <link rel="alternate" type="application/rss+xml" title="Huailiang Blog"
+    href="https://huailiang.github.io/feed.xml" />
+
+</head>
+
+<body>
+  <main>
+    <header class="site-header">
+  <div class="container">
+    <h1><a href="/">Hom<span>e</span></a></h1>
+
+    <button type="button" class="sliding-panel-button">
+      <span></span>
+      <span></span>
+      <span></span>
+    </button>
+
+    <nav class="navbar sliding-panel-content">
+      <ul>
+        
+        <li><a href="/about" title="About">About</a>
+        </li>
+        
+        <li><a href="/blog" title="Blog">Blog</a>
+        </li>
+        
+        <!-- <li><a href="/feed.xml" target="_blank"><i class="icon icon-feed"></i></a></li> -->
+        <li><a href="/category/" target="_blank"><i class="icon icon-feed"></i></a></li>
+      </ul>
+    </nav>
+  </div>
+</header>
+
+<div class="sliding-panel-fade-screen"></div>
+    <script type="text/javascript" src="/js/MathJax.js?config=TeX-AMS-MML_HTMLorMML"></script>
+
+<script type="text/x-mathjax-config">
+MathJax.Hub.Config({
+  tex2jax: {
+    inlineMath: [['$','$'], ['\\(','\\)']],
+    processEscapes: true
+  }
+});
+</script>
+
+<script type="text/x-mathjax-config">
+  MathJax.Hub.Config({
+    tex2jax: {
+      skipTags: ['script', 'noscript', 'style', 'textarea', 'pre', 'code']
+    }
+  });
+
+</script>
+    <div class="container">
+      <article role="article" class="post">
+
+  <div class="card">
+    <header class="post-header">
+      <h1 class="post-title">PBR之基于图像的光照IBL (Specular)</h1>
+      <p class="post-meta">Jun 27, 2019 •
+        Huailiang</p>
+    </header>
+
+    <div class="post-content">
+      <h2 id="理论">理论</h2>
+
+<h3 id="hammersley采样">Hammersley采样</h3>
+
+<blockquote>
+  <p>在图形学里面，用到了很多的采样算法。特别当你在写一个光线追踪器的时候，会使用大量的采样算法来对BRDF，光源等进行采样。这些采样操作，一般是先通过创建一个具有均匀分布的2D随机点集合，然后通过变换，将这些2D随机点变换到具体的采样数据上去，如BRDF的方向等等。其中经常被使用到的均匀分布的2D随机采样方式–Hammersley采样。</p>
+</blockquote>
+
+<p>Hammersley采样是在计算机里面大量使用了二进制来表示数据，如下表所示的一些十进制与二进制的对应关系：</p>
+
+<table>
+  <thead>
+    <tr>
+      <th style="text-align: center">十进制</th>
+      <th style="text-align: center">二进制</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td style="text-align: center">1</td>
+      <td style="text-align: center">1</td>
+    </tr>
+    <tr>
+      <td style="text-align: center">2</td>
+      <td style="text-align: center">10</td>
+    </tr>
+    <tr>
+      <td style="text-align: center">3</td>
+      <td style="text-align: center">11</td>
+    </tr>
+    <tr>
+      <td style="text-align: center">4</td>
+      <td style="text-align: center">100</td>
+    </tr>
+  </tbody>
+</table>
+
+<p>而Hammersley采样就是利用计算机使用二进制表示的特性，来构造均匀分布的2D随机采样点。它是通过对一个二进制数进行Radical Inverse方法，来构造出一个值来实现的。它的过程如下表：</p>
+
+<table>
+<thead>
+<tr>
+  <th align="center">十进制</th>
+  <th align="center">二进制</th>
+  <th align="left" width="280">Radical Inverse</th>
+  <th align="center">值</th>
+</tr>
+</thead>
+<tbody><tr>
+  <td align="center">1</td>
+  <td align="center">1</td>
+  <td align="left">.1 = 1 * 1/2</td>
+  <td align="center">0.5</td>
+</tr>
+<tr>
+  <td align="center">2</td>
+  <td align="center">10</td>
+  <td align="left">.01 = 0 * 1/2 + 1 * 1/4</td>
+  <td align="center">0.25</td>
+</tr>
+<tr>
+  <td align="center">3</td>
+  <td align="center">11</td>
+  <td align="left">.11 = 1 * 1/2 + 1 * 1/4</td>
+  <td align="center">0.75</td>
+</tr>
+<tr>
+  <td align="center">4</td>
+  <td align="center">100</td>
+  <td align="left">.001 = 0 * 1/2 + 0 * 1/4 + 1 * 1/8</td>
+  <td align="center">0.125</td>
+</tr>
+</tbody></table>
+
+<p>从上表可以看到，Radical Inverse方法，就是简单的将给定的十进制数的二进制表示方法，反过来放在小数点之后，构造一个在[0,1]之间的值。</p>
+
+<p>在明白了Radical Inverse方法之后，我们就可以构造hammersley的2D随机分布的采样点集合，如下所示：</p>
+
+<script type="math/tex; mode=display">p_i = (x_i,y_i) =(i/N,\phi(i))</script>
+
+<p>其中N表示的是一共有多少个采样点，$ \phi(i) $ 就是对i进行Radical Inverse之后的值。</p>
+
+<p>对应的分布图如下所示：</p>
+
+<p><img src="/img/post-engine/tex14.jpg" alt="" /></p>
+
+<p>引擎里对应的分别给出支持位运算和低阶实现的GLSL代码:</p>
+
+<div class="language-glsl highlighter-rouge"><pre class="highlight"><code>
+<span class="c1">// 位运算
+</span><span class="kt">float</span> <span class="nf">RadicalInverse_VdC</span><span class="p">(</span><span class="kt">uint</span> <span class="n">bits</span><span class="p">)</span>
+<span class="p">{</span>
+    <span class="n">bits</span> <span class="o">=</span> <span class="p">(</span><span class="n">bits</span> <span class="o">&lt;&lt;</span> <span class="mi">16u</span><span class="p">)</span> <span class="o">|</span> <span class="p">(</span><span class="n">bits</span> <span class="o">&gt;&gt;</span> <span class="mi">16u</span><span class="p">);</span>
+    <span class="n">bits</span> <span class="o">=</span> <span class="p">((</span><span class="n">bits</span> <span class="o">&amp;</span> <span class="mh">0x55555555u</span><span class="p">)</span> <span class="o">&lt;&lt;</span> <span class="mi">1u</span><span class="p">)</span> <span class="o">|</span> <span class="p">((</span><span class="n">bits</span> <span class="o">&amp;</span> <span class="mh">0xAAAAAAAAu</span><span class="p">)</span> <span class="o">&gt;&gt;</span> <span class="mi">1u</span><span class="p">);</span>
+    <span class="n">bits</span> <span class="o">=</span> <span class="p">((</span><span class="n">bits</span> <span class="o">&amp;</span> <span class="mh">0x33333333u</span><span class="p">)</span> <span class="o">&lt;&lt;</span> <span class="mi">2u</span><span class="p">)</span> <span class="o">|</span> <span class="p">((</span><span class="n">bits</span> <span class="o">&amp;</span> <span class="mh">0xCCCCCCCCu</span><span class="p">)</span> <span class="o">&gt;&gt;</span> <span class="mi">2u</span><span class="p">);</span>
+    <span class="n">bits</span> <span class="o">=</span> <span class="p">((</span><span class="n">bits</span> <span class="o">&amp;</span> <span class="mh">0x0F0F0F0Fu</span><span class="p">)</span> <span class="o">&lt;&lt;</span> <span class="mi">4u</span><span class="p">)</span> <span class="o">|</span> <span class="p">((</span><span class="n">bits</span> <span class="o">&amp;</span> <span class="mh">0xF0F0F0F0u</span><span class="p">)</span> <span class="o">&gt;&gt;</span> <span class="mi">4u</span><span class="p">);</span>
+    <span class="n">bits</span> <span class="o">=</span> <span class="p">((</span><span class="n">bits</span> <span class="o">&amp;</span> <span class="mh">0x00FF00FFu</span><span class="p">)</span> <span class="o">&lt;&lt;</span> <span class="mi">8u</span><span class="p">)</span> <span class="o">|</span> <span class="p">((</span><span class="n">bits</span> <span class="o">&amp;</span> <span class="mh">0xFF00FF00u</span><span class="p">)</span> <span class="o">&gt;&gt;</span> <span class="mi">8u</span><span class="p">);</span>
+    <span class="k">return</span> <span class="kt">float</span><span class="p">(</span><span class="n">bits</span><span class="p">)</span> <span class="o">*</span> <span class="mf">2.3283064365386963e-10</span><span class="p">;</span> <span class="c1">// / 0x100000000
+</span><span class="p">}</span>
+
+<span class="c1">// 不支持位运算
+</span><span class="kt">float</span> <span class="nf">VanDerCorpus</span><span class="p">(</span><span class="kt">uint</span> <span class="n">n</span><span class="p">,</span> <span class="kt">uint</span> <span class="n">base</span><span class="p">)</span>
+<span class="p">{</span>
+    <span class="kt">float</span> <span class="n">invBase</span> <span class="o">=</span> <span class="mi">1</span><span class="p">.</span><span class="mi">0</span> <span class="o">/</span> <span class="kt">float</span><span class="p">(</span><span class="n">base</span><span class="p">);</span>
+    <span class="kt">float</span> <span class="n">denom</span> <span class="o">=</span> <span class="mi">1</span><span class="p">.</span><span class="mi">0</span><span class="p">;</span>
+    <span class="kt">float</span> <span class="n">result</span> <span class="o">=</span> <span class="mi">0</span><span class="p">.</span><span class="mi">0</span><span class="p">;</span>
+    <span class="k">for</span><span class="p">(</span><span class="kt">uint</span> <span class="n">i</span> <span class="o">=</span> <span class="mi">0u</span><span class="p">;</span> <span class="n">i</span> <span class="o">&lt;</span> <span class="mi">32u</span><span class="p">;</span> <span class="o">++</span><span class="n">i</span><span class="p">)</span>
+    <span class="p">{</span>
+        <span class="k">if</span><span class="p">(</span><span class="n">n</span> <span class="o">&gt;</span> <span class="mi">0u</span><span class="p">)</span>
+        <span class="p">{</span>
+            <span class="n">denom</span> <span class="o">=</span> <span class="n">mod</span><span class="p">(</span><span class="kt">float</span><span class="p">(</span><span class="n">n</span><span class="p">),</span> <span class="mi">2</span><span class="p">.</span><span class="mi">0</span><span class="p">);</span>
+            <span class="n">result</span> <span class="o">+=</span> <span class="n">denom</span> <span class="o">*</span> <span class="n">invBase</span><span class="p">;</span>
+            <span class="n">invBase</span> <span class="o">=</span> <span class="n">invBase</span> <span class="o">/</span> <span class="mi">2</span><span class="p">.</span><span class="mi">0</span><span class="p">;</span>
+            <span class="n">n</span> <span class="o">=</span> <span class="kt">uint</span><span class="p">(</span><span class="kt">float</span><span class="p">(</span><span class="n">n</span><span class="p">)</span> <span class="o">/</span> <span class="mi">2</span><span class="p">.</span><span class="mi">0</span><span class="p">);</span>
+        <span class="p">}</span>
+    <span class="p">}</span>
+    <span class="k">return</span> <span class="n">result</span><span class="p">;</span>
+<span class="p">}</span>
+
+</code></pre>
+</div>
+
+<h2 id="蒙特卡罗尔积分monte-carlo-integration">蒙特卡罗尔积分(Monte Carlo Integration)</h2>
+
+<p>蒙特卡洛积分主要出现在统计和概率学理论中。 <br />
+举一个例子：假如你想统计某个国家公民的平均身高。为了得到你的答案，你可以测量每个人的身高并取平均值最后得到十分准确的答案。当然，这种方法十分耗时耗力，所以我们会采取更为方便但结果不是很精确的方法。 <br />
+我们可以在这些人口中完全随机的测量一定人数的身高并获得平均结果。人数可以小到只测量100人的身高。这样你可得到一个比较准确的结果，这被称之为大数定律。具体而言就是，只要做到真正的随机选取一个集合中的子集合进行测量，你就能得到非常接近最终答案的答案，而答案的精确度随着子集合的大小而增加。</p>
+
+<p>蒙特卡洛积分建立在这个大数定律的基础之上，并且使用同样的方法来解决积分。不使用所有可能的采样值X来计算积分，而是生成几个随机采样值N来解决积分。随着N的增加我们会获得更加接近准确答案的结果。</p>
+
+<script type="math/tex; mode=display">\int_a^b f(x) \,{\rm d}x = \frac{(b-a)}{N}\sum_{i=0}^{n-1}f(x_i)</script>
+
+<p>为了解决这个积分，我们在区间a到b中随机选取N个采样向量，求它们的和并最后除以采样的数量。pdf是可能性密度函数，它告诉我们在总采样向量集合中选取某个特定的采样向量的概率。举一个例子：人群身高的pdf看起来是这个样子</p>
+
+<p><img src="/img/post-engine/tex15.png" alt="" /></p>
+
+<p>从这幅图片可以看出如果我们对人群随机采样身高，有很高的概率得到1.70，很低的概率得到1.50。</p>
+
+<p>根据蒙特卡洛积分，一些采样值可能会有比其他采样值更高的生成概率。这就是为什么对于任意的蒙特卡洛估计值，我们要除以或者乘上该采样向量的概率值即pdf函数值。到目前为止，对于估算积分的每种情况，我们生成的采样都是统一的，都有相同的生成概率。我们的估计值直到现在都是公平的，这意味着给一个数量不断增长的采样，我们最终会收敛到一个准确的积分值。</p>
+
+<p>当然，一些蒙特卡洛估量是不公平的，这意味着生成采样向量的时候不是完全随机的，而是聚集在某个特殊的值或方向附近。这些非公平的蒙特卡洛估量有着更快的收敛速度，这意味着它们能够非常快的收敛到准确答案，但是由于它们不公正的天性，它们并不是总能收敛到准确答案。这往往意味着需要一个可接受的权衡，特别是在计算机图形当中，准确的答案对结果并不是特别重要。</p>
+
+<p>蒙特卡洛积分在计算机图形学中十分流行，因为它使用一种相当直观的方式来近似获取连续积分的结果：在任何地方/体积中进行采样（比如半球体Ω），生成N个随机采样，计算并权衡每个采样对最终结果的贡献。</p>
+
+<h2 id="重要性采样">重要性采样</h2>
+
+<p>概率密度</p>
+
+<p>对于连续型随机变量来说，概率密度函数就是描述了在样本区间里面子区间发生概率的一种函数，它和随机变量X的关系如下所示：</p>
+
+<script type="math/tex; mode=display">X([a,b]) = \int_a^bp(x){\rm d}x</script>
+
+<p>。其中$X([a,b])$表示的就是事件发生在样本区间$[a,b]$中的概率。而$p(x)$就是随机变量$X$的概率分布函数。所以随机变量$X$和概率密度函数$p(x)$之间就是积分关系。这也就说明了，对于单一事件发生的概率在该积分中是没有意义的。</p>
+
+<p>除了上面的公式之外，概率密度函数还有一个重要的特性：</p>
+
+<script type="math/tex; mode=display">\int_{-\infty}^{+\infty}p(x){\rm d}x = 1</script>
+
+<p>这个特性表示，事件发生在整个概率区间里面的概率为1。</p>
+
+<script type="math/tex; mode=display">\int_a^b f(x) \,{\rm d}x ≈ \frac{1}{N}\sum_{i=0}^{n-1} \frac{f(x_i)}{p(x_i)}\quad</script>
+
+<p>其中$p(x)$就是概率密度函数。这里之所以要除以$p(x_i)$，是因为当我们的采样点为$x_i$的时候，我们可以通过$p(x_i)$计算出该采样点对最终积分的一个贡献度权重值，这样一除就能够得到最终的积分值。</p>
+
+<p>细心的读者可能会发现，好像我们只要找到一个采样点$x_i$，然后求出$p(x_i)$和$f(x_i)$，在使用$\frac{f(x_i)}{p(x_i)}$就已经能够得到最终的积分值了啊，干么还要采样那么多的数据，然后在求个平均值？这是因为，在解决实际问题的时候，我们往往很难精确的求出某个函数$f(x)$对应的概率密度函数$p(x)$。这时候的概率密度函数，就依靠于我们选取的采样策略来定义，它实际上是与最终的概率密度函数接近的一个函数，并不是真真的概率密度函数，所以需要通过多次采样，求平均值的方法来抵消这种近似带来的误差。关于这段内容，等到后面讲解对BRDF进行采样的时候，大家就能够理解。我们对BRDF进行采样的时候，往往很难求出BRDF本身的PDF，而是通过选取合适的采样策略，比如对GGX进行采样来逼近。</p>
+
+<h2 id="公式部分">公式部分</h2>
+
+<p>原始的PBR反射方程：</p>
+
+<script type="math/tex; mode=display">L_o(p,\omega_o) = \int\limits_{\Omega} (k_d\frac{c}{\pi} + k_s\frac{DFG}{4(\omega_o \cdot n)(\omega_i \cdot n)}) L_i(p,\omega_i) n \cdot \omega_i  d\omega_i</script>
+
+<p>在解决漫反射辐照问题的时候，我们仅仅需要的是入射光线Wi，但是在解决镜面反射辐照的时候，因为双向反射分布函数：</p>
+
+<script type="math/tex; mode=display">f_r(p, w_i, w_o) = \frac{DFG}{4(\omega_o \cdot n)(\omega_i \cdot n)}</script>
+
+<p>我们需要的输入变量由入射光Wi和出射（观察）方向Wo两者同时决定，我们不能将Wi和Wo的所有组合都尝试并计算一遍来得出结果（因为性能要求太过庞大），所以我们需要一些别的方法。 <br />
+Epic Games的split sum approximation 通过将方程分成两部分，分别计算结果再组合的方式来解决这个问题，他们将镜面反射方程变成如下形式</p>
+
+<script type="math/tex; mode=display">L_o(p,\omega_o) = 
+		\int\limits_{\Omega} (k_s\frac{DFG}{4(\omega_o \cdot n)(\omega_i \cdot n)}
+			L_i(p,\omega_i) n \cdot \omega_i  d\omega_i
+			=
+		\int\limits_{\Omega} f_r(p, \omega_i, \omega_o) L_i(p,\omega_i) n \cdot \omega_i  d\omega_i</script>
+
+<p>对于第一部分，我们使用预过滤环境贴图来解决，并且我们把粗糙度加入进去。由于粗糙程度的增加，环境贴图需要更多的离散采样向量和更多的模糊反射。对于每一个粗糙度等级，我们将其连续的模糊结果储存在预过滤贴图的mipmap等级中（不熟悉mipmap的可以先去了解一下mipmap的作用）。如下例所示：我们将5个不同模糊等级的结果存储在5个mipmap等级的贴图中。</p>
+
+<p><img src="/img/post-engine/tex17.png" alt="" /></p>
+
+<p>我们通过获得双向反射分布函数（BRDF）中的输入变量——法线和观察方向及其正态分布函数来生成采样向量和散射强度。但是在这之前，我们无法获取观察向量（因为我们还没有真正绘制物体，现在只是在预处理环境贴图），Epic Games为了解决这个问题，让观察方向总是等于Wo，即下列代码：</p>
+
+<div class="language-glsl highlighter-rouge"><pre class="highlight"><code><span class="kt">vec3</span> <span class="n">N</span> <span class="o">=</span> <span class="n">normalize</span><span class="p">(</span><span class="n">WorldPos</span><span class="p">);</span>
+<span class="kt">vec3</span> <span class="n">R</span> <span class="o">=</span> <span class="n">N</span><span class="p">;</span>
+<span class="kt">vec3</span> <span class="n">V</span> <span class="o">=</span> <span class="n">R</span><span class="p">;</span>
+</code></pre>
+</div>
+
+<p>对于方程的第二部分，该部分就是双向反射分布函数（BRDF）的镜面反射积分。如果我们假设每个方向的入射光的颜色是白的（即L(p,x)=1.0），在给出粗糙度和法线n与光向量Wi的夹角的情况下，我们可以预计算双向反射分布函数（BRDF）的返回值。Epic Games 会根据每个法线n与光向量Wi的组合以及粗糙度来存储一个值到2D的查找纹理当中（LUT），这个贴图也叫做BRDF积分贴图。这个2D查找纹理输出一个scale（不知道这里应该怎么翻译，对应于图片的红色分量）和一个偏移值（绿色分量）为菲涅尔方程提供参数，最终会给予我们第二部分的镜面反射积分：</p>
+
+<p><img src="/img/post-engine/tex18.png" alt="" /></p>
+
+<p>关于前面给到的第二部分方程， 如下：</p>
+
+<script type="math/tex; mode=display">L_o(p,\omega_o) = 
+		\int\limits_{\Omega} L_i(p,\omega_i) d\omega_i
+		*
+		\int\limits_{\Omega} f_r(p, \omega_i, \omega_o) n \cdot \omega_i d\omega_i</script>
+
+<p>右边部分要求我们在给出N与W0的夹角、表面粗糙度和菲涅尔F0后对BRDF方程进行卷积。这很像当Li为1.0时对镜面BRDF进行积分。在3个变量的情况下对BRDF进行卷积十分麻烦，但是我们可以把F0移出镜面BRDF方程：</p>
+
+<script type="math/tex; mode=display">\int\limits_{\Omega} f_r(p, \omega_i, \omega_o) n \cdot \omega_i d\omega_i 
+  = \int\limits_{\Omega} f_r(p, \omega_i, \omega_o) \frac{F(\omega_o, h)}{F(\omega_o, h)} n \cdot \omega_i d\omega_i</script>
+
+<p>F代表的是菲涅尔方程。将菲涅尔移动到BRDF的分母上，可以得到如下方程：</p>
+
+<script type="math/tex; mode=display">\int\limits_{\Omega} \frac{f_r(p, \omega_i, \omega_o)}{F(\omega_o, h)} F(\omega_o, h)  n \cdot \omega_i d\omega_i</script>
+
+<p>我们用菲涅尔方程的近似值来代替最右边的菲涅尔方程：</p>
+
+<script type="math/tex; mode=display">\int\limits_{\Omega} \frac{f_r(p, \omega_i, \omega_o)}{F(\omega_o, h)} (F_0 + (1 - F_0){(1 - \omega_o \cdot h)}^5)  n \cdot \omega_i d\omega_i</script>
+
+<p>让我们用α来代替(1−ωo⋅h)5(1−ωo⋅h)^5，以便于更方便的解决F0：</p>
+
+<script type="math/tex; mode=display">\int\limits_{\Omega} \frac{f_r(p, \omega_i, \omega_o)}{F(\omega_o, h)} (F_0 + (1 - F_0)\alpha)  n \cdot \omega_i d\omega_i</script>
+
+<script type="math/tex; mode=display">\int\limits_{\Omega} \frac{f_r(p, \omega_i, \omega_o)}{F(\omega_o, h)} (F_0 + 1*\alpha - F_0*\alpha)  n \cdot \omega_i d\omega_i</script>
+
+<script type="math/tex; mode=display">\int\limits_{\Omega} \frac{f_r(p, \omega_i, \omega_o)}{F(\omega_o, h)} (F_0 * (1 - \alpha) + \alpha)  n \cdot \omega_i d\omega_i</script>
+
+<p>然后我们将其分成两部分：</p>
+
+<script type="math/tex; mode=display">\int\limits_{\Omega} \frac{f_r(p, \omega_i, \omega_o)}{F(\omega_o, h)} (F_0 * (1 - \alpha))  n \cdot \omega_i d\omega_i
+              +
+	\int\limits_{\Omega} \frac{f_r(p, \omega_i, \omega_o)}{F(\omega_o, h)} (\alpha)  n \cdot \omega_i d\omega_i</script>
+
+<p>接下来，我们可以把F0提到积分外面，并将α变回原来的式子：</p>
+
+<script type="math/tex; mode=display">F_0 \int\limits_{\Omega} f_r(p, \omega_i, \omega_o)(1 - {(1 - \omega_o \cdot h)}^5)  n \cdot \omega_i d\omega_i
+              +
+	\int\limits_{\Omega} f_r(p, \omega_i, \omega_o) {(1 - \omega_o \cdot h)}^5  n \cdot \omega_i d\omega_i</script>
+
+<p>注意！！：因为本身f(p,ωi,ωo)包含菲涅尔方程， 所以我们可以将分母上的F与其抵消~</p>
+
+<p>使用一种相似的方式更早的对环境贴图进行卷积，我们可以通过BRDF方程的输入进行卷积：N与W0的夹角和粗糙度以及存储在纹理中的卷积结果。我们将卷积结果存储在一张2D查找纹理中（LUT），也被称为BRDF积分贴图，我们稍后会在PBR光照着色器中使用它来得到简介镜面反射结果。</p>
+
+<p>BRDF卷积着色器对一个2D平面进行操作，使用2D纹理的坐标作为BRDF 卷积的直接输入（NdotV和粗糙度）。这部分的卷积代码与预过滤卷积代码十分的相似，不同之处是它的采样向量是根据BRDF的几何函数和菲涅尔方程近似值得到的：</p>
+
+<div class="language-glsl highlighter-rouge"><pre class="highlight"><code><span class="kt">vec2</span> <span class="nf">IntegrateBRDF</span><span class="p">(</span><span class="kt">float</span> <span class="n">NdotV</span><span class="p">,</span> <span class="kt">float</span> <span class="n">roughness</span><span class="p">)</span>
+<span class="p">{</span>
+    <span class="kt">vec3</span> <span class="n">V</span><span class="p">;</span>
+    <span class="n">V</span><span class="p">.</span><span class="n">x</span> <span class="o">=</span> <span class="n">sqrt</span><span class="p">(</span><span class="mi">1</span><span class="p">.</span><span class="mi">0</span> <span class="o">-</span> <span class="n">NdotV</span><span class="o">*</span><span class="n">NdotV</span><span class="p">);</span>
+    <span class="n">V</span><span class="p">.</span><span class="n">y</span> <span class="o">=</span> <span class="mi">0</span><span class="p">.</span><span class="mi">0</span><span class="p">;</span>
+    <span class="n">V</span><span class="p">.</span><span class="n">z</span> <span class="o">=</span> <span class="n">NdotV</span><span class="p">;</span>
+
+    <span class="kt">float</span> <span class="n">A</span> <span class="o">=</span> <span class="mi">0</span><span class="p">.</span><span class="mi">0</span><span class="p">;</span>
+    <span class="kt">float</span> <span class="n">B</span> <span class="o">=</span> <span class="mi">0</span><span class="p">.</span><span class="mi">0</span><span class="p">;</span> 
+
+    <span class="kt">vec3</span> <span class="n">N</span> <span class="o">=</span> <span class="kt">vec3</span><span class="p">(</span><span class="mi">0</span><span class="p">.</span><span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">.</span><span class="mi">0</span><span class="p">,</span> <span class="mi">1</span><span class="p">.</span><span class="mi">0</span><span class="p">);</span>
+    
+    <span class="k">const</span> <span class="kt">uint</span> <span class="n">SAMPLE_COUNT</span> <span class="o">=</span> <span class="mi">1024u</span><span class="p">;</span>
+    <span class="k">for</span><span class="p">(</span><span class="kt">uint</span> <span class="n">i</span> <span class="o">=</span> <span class="mi">0u</span><span class="p">;</span> <span class="n">i</span> <span class="o">&lt;</span> <span class="n">SAMPLE_COUNT</span><span class="p">;</span> <span class="o">++</span><span class="n">i</span><span class="p">)</span>
+    <span class="p">{</span>
+        <span class="c1">// generates a sample vector that's biased towards the
+</span>        <span class="c1">// preferred alignment direction (importance sampling).
+</span>        <span class="kt">vec2</span> <span class="n">Xi</span> <span class="o">=</span> <span class="n">Hammersley</span><span class="p">(</span><span class="n">i</span><span class="p">,</span> <span class="n">SAMPLE_COUNT</span><span class="p">);</span>
+        <span class="kt">vec3</span> <span class="n">H</span> <span class="o">=</span> <span class="n">ImportanceSampleGGX</span><span class="p">(</span><span class="n">Xi</span><span class="p">,</span> <span class="n">N</span><span class="p">,</span> <span class="n">roughness</span><span class="p">);</span>
+        <span class="kt">vec3</span> <span class="n">L</span> <span class="o">=</span> <span class="n">normalize</span><span class="p">(</span><span class="mi">2</span><span class="p">.</span><span class="mi">0</span> <span class="o">*</span> <span class="n">dot</span><span class="p">(</span><span class="n">V</span><span class="p">,</span> <span class="n">H</span><span class="p">)</span> <span class="o">*</span> <span class="n">H</span> <span class="o">-</span> <span class="n">V</span><span class="p">);</span>
+
+        <span class="kt">float</span> <span class="n">NdotL</span> <span class="o">=</span> <span class="n">max</span><span class="p">(</span><span class="n">L</span><span class="p">.</span><span class="n">z</span><span class="p">,</span> <span class="mi">0</span><span class="p">.</span><span class="mi">0</span><span class="p">);</span>
+        <span class="kt">float</span> <span class="n">NdotH</span> <span class="o">=</span> <span class="n">max</span><span class="p">(</span><span class="n">H</span><span class="p">.</span><span class="n">z</span><span class="p">,</span> <span class="mi">0</span><span class="p">.</span><span class="mi">0</span><span class="p">);</span>
+        <span class="kt">float</span> <span class="n">VdotH</span> <span class="o">=</span> <span class="n">max</span><span class="p">(</span><span class="n">dot</span><span class="p">(</span><span class="n">V</span><span class="p">,</span> <span class="n">H</span><span class="p">),</span> <span class="mi">0</span><span class="p">.</span><span class="mi">0</span><span class="p">);</span>
+
+        <span class="k">if</span><span class="p">(</span><span class="n">NdotL</span> <span class="o">&gt;</span> <span class="mi">0</span><span class="p">.</span><span class="mi">0</span><span class="p">)</span>
+        <span class="p">{</span>
+            <span class="kt">float</span> <span class="n">G</span> <span class="o">=</span> <span class="n">GeometrySmithIBL</span><span class="p">(</span><span class="n">N</span><span class="p">,</span> <span class="n">V</span><span class="p">,</span> <span class="n">L</span><span class="p">,</span> <span class="n">roughness</span><span class="p">);</span>
+            <span class="kt">float</span> <span class="n">G_Vis</span> <span class="o">=</span> <span class="p">(</span><span class="n">G</span> <span class="o">*</span> <span class="n">VdotH</span><span class="p">)</span> <span class="o">/</span> <span class="p">(</span><span class="n">NdotH</span> <span class="o">*</span> <span class="n">NdotV</span><span class="p">);</span>
+            <span class="kt">float</span> <span class="n">Fc</span> <span class="o">=</span> <span class="n">pow</span><span class="p">(</span><span class="mi">1</span><span class="p">.</span><span class="mi">0</span> <span class="o">-</span> <span class="n">VdotH</span><span class="p">,</span> <span class="mi">5</span><span class="p">.</span><span class="mi">0</span><span class="p">);</span>
+
+            <span class="n">A</span> <span class="o">+=</span> <span class="p">(</span><span class="mi">1</span><span class="p">.</span><span class="mi">0</span> <span class="o">-</span> <span class="n">Fc</span><span class="p">)</span> <span class="o">*</span> <span class="n">G_Vis</span><span class="p">;</span>
+            <span class="n">B</span> <span class="o">+=</span> <span class="n">Fc</span> <span class="o">*</span> <span class="n">G_Vis</span><span class="p">;</span>
+        <span class="p">}</span>
+    <span class="p">}</span>
+    <span class="n">A</span> <span class="o">/=</span> <span class="kt">float</span><span class="p">(</span><span class="n">SAMPLE_COUNT</span><span class="p">);</span>
+    <span class="n">B</span> <span class="o">/=</span> <span class="kt">float</span><span class="p">(</span><span class="n">SAMPLE_COUNT</span><span class="p">);</span>
+    <span class="k">return</span> <span class="kt">vec2</span><span class="p">(</span><span class="n">A</span><span class="p">,</span> <span class="n">B</span><span class="p">);</span>
+<span class="p">}</span>
+
+<span class="kt">void</span> <span class="nf">main</span><span class="p">()</span> 
+<span class="p">{</span>
+    <span class="kt">vec2</span> <span class="n">integratedBRDF</span> <span class="o">=</span> <span class="n">IntegrateBRDF</span><span class="p">(</span><span class="n">TexCoords</span><span class="p">.</span><span class="n">x</span><span class="p">,</span> <span class="n">TexCoords</span><span class="p">.</span><span class="n">y</span><span class="p">);</span>
+    <span class="n">FragColor</span> <span class="o">=</span> <span class="n">integratedBRDF</span><span class="p">;</span>
+<span class="p">}</span>
+</code></pre>
+</div>
+
+<p>我们生成的这个查找纹理的水平分量代表BRDF的输入n*Wi，竖直分量则是输入的粗糙度。当我们拥有BRDF积分贴图和预过滤环境贴图后，我们可以将两者合并，并得到镜面积分结果：</p>
+
+<div class="language-glsl highlighter-rouge"><pre class="highlight"><code><span class="kt">float</span> <span class="n">lod</span>  <span class="o">=</span> <span class="n">getMipLevelFromRoughness</span><span class="p">(</span><span class="n">roughness</span><span class="p">);</span>
+<span class="kt">vec3</span> <span class="n">prefilteredColor</span> <span class="o">=</span> <span class="n">textureCubeLod</span><span class="p">(</span><span class="n">PrefilteredEnvMap</span><span class="p">,</span> <span class="n">refVec</span><span class="p">,</span> <span class="n">lod</span><span class="p">);</span>
+<span class="kt">vec2</span> <span class="n">envBRDF</span>  <span class="o">=</span> <span class="n">texture2D</span><span class="p">(</span><span class="n">BRDFIntegrationMap</span><span class="p">,</span> <span class="kt">vec2</span><span class="p">(</span><span class="n">roughness</span><span class="p">,</span> <span class="n">ndotv</span><span class="p">)).</span><span class="n">xy</span><span class="p">;</span>
+<span class="kt">vec3</span> <span class="n">indirectSpecular</span> <span class="o">=</span> <span class="n">prefilteredColor</span> <span class="o">*</span> <span class="p">(</span><span class="n">F</span> <span class="o">*</span> <span class="n">envBRDF</span><span class="p">.</span><span class="n">x</span> <span class="o">+</span> <span class="n">envBRDF</span><span class="p">.</span><span class="n">y</span><span class="p">)</span> 
+</code></pre>
+</div>
+
+<p>只看间接光高光部分输出：</p>
+
+<p><img src="/img/post-engine/tex16.jpg" alt="" /></p>
+
+<p>整体PBR渲染输出：</p>
+
+<p><img src="/img/post-engine/tex15.jpg" alt="" /></p>
+
+<p>右下角对应的是预过滤环境贴图。</p>
+
+    </div>
+  </div>
+
+  <style>
+  .post-nav {
+    overflow: hidden;
+    /* margin-top: 60px; */
+    padding: 12px;
+    white-space: nowrap;
+    /* border-top: 1px solid #eee; */
+  }
+
+  .post-nav-item {
+    display: inline-block;
+    width: 50%;
+    white-space: normal;
+  }
+
+  .post-nav-item a {
+    position: relative;
+    display: inline-block;
+    line-height: 25px;
+    font-size: 14px;
+    color: #555;
+    border-bottom: none;
+  }
+
+  .post-nav-item a:hover {
+    color: #222;
+    font-weight: bold;
+    border-bottom: none;
+  }
+
+  .post-nav-item a:active {
+    top: 2px;
+  }
+
+  .post-nav-item a:before,
+  .post-nav-item a:after {
+    display: inline-block;
+    width: 16px;
+    height: 25px;
+    vertical-align: top;
+    opacity: 0.4;
+    background-size: 16px;
+  }
+
+  .post-nav-none a:none {
+    content: ' ';
+    background-size: 8px;
+  }
+
+  .post-nav-none a:hover:none {
+    opacity: 1;
+  }
+
+  .post-nav-prev a:before {
+    content: ' ';
+    background: url("data:image/svg+xml;base64,PD94bWwgdmVyc2lvbj0iMS4wIiA/PjxzdmcgaGVpZ2h0PSIxMnB4IiB2ZXJzaW9uPSIxLjEiIHZpZXdCb3g9IjAgMCA5IDEyIiB3aWR0aD0iOXB4IiB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHhtbG5zOnNrZXRjaD0iaHR0cDovL3d3dy5ib2hlbWlhbmNvZGluZy5jb20vc2tldGNoL25zIiB4bWxuczp4bGluaz0iaHR0cDovL3d3dy53My5vcmcvMTk5OS94bGluayI+PHRpdGxlLz48ZGVzYy8+PGRlZnMvPjxnIGZpbGw9Im5vbmUiIGZpbGwtcnVsZT0iZXZlbm9kZCIgaWQ9IlBhZ2UtMSIgc3Ryb2tlPSJub25lIiBzdHJva2Utd2lkdGg9IjEiPjxnIGZpbGw9IiMwMDAwMDAiIGlkPSJDb3JlIiB0cmFuc2Zvcm09InRyYW5zbGF0ZSgtMjE4LjAwMDAwMCwgLTkwLjAwMDAwMCkiPjxnIGlkPSJjaGV2cm9uLWxlZnQiIHRyYW5zZm9ybT0idHJhbnNsYXRlKDIxOC41MDAwMDAsIDkwLjAwMDAwMCkiPjxwYXRoIGQ9Ik03LjQsMS40IEw2LDAgTC04Ljg4MTc4NDJlLTE2LDYgTDYsMTIgTDcuNCwxMC42IEwyLjgsNiBMNy40LDEuNCBaIiBpZD0iU2hhcGUiLz48L2c+PC9nPjwvZz48L3N2Zz4=") no-repeat 0 50%;
+    background-size: 8px;
+  }
+
+  .post-nav-prev a:hover:before {
+    opacity: 1;
+  }
+
+  .post-nav-next {
+    text-align: right;
+  }
+
+  .post-nav-next a:after {
+    content: ' ';
+    background: url("data:image/svg+xml;base64,PD94bWwgdmVyc2lvbj0iMS4wIiA/PjxzdmcgaGVpZ2h0PSIxMnB4IiB2ZXJzaW9uPSIxLjEiIHZpZXdCb3g9IjAgMCA5IDEyIiB3aWR0aD0iOXB4IiB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHhtbG5zOnNrZXRjaD0iaHR0cDovL3d3dy5ib2hlbWlhbmNvZGluZy5jb20vc2tldGNoL25zIiB4bWxuczp4bGluaz0iaHR0cDovL3d3dy53My5vcmcvMTk5OS94bGluayI+PHRpdGxlLz48ZGVzYy8+PGRlZnMvPjxnIGZpbGw9Im5vbmUiIGZpbGwtcnVsZT0iZXZlbm9kZCIgaWQ9IlBhZ2UtMSIgc3Ryb2tlPSJub25lIiBzdHJva2Utd2lkdGg9IjEiPjxnIGZpbGw9IiMwMDAwMDAiIGlkPSJDb3JlIiB0cmFuc2Zvcm09InRyYW5zbGF0ZSgtMjYwLjAwMDAwMCwgLTkwLjAwMDAwMCkiPjxnIGlkPSJjaGV2cm9uLXJpZ2h0IiB0cmFuc2Zvcm09InRyYW5zbGF0ZSgyNjAuNTAwMDAwLCA5MC4wMDAwMDApIj48cGF0aCBkPSJNMSwwIEwtMC40LDEuNCBMNC4yLDYgTC0wLjQsMTAuNiBMMSwxMiBMNyw2IEwxLDAgWiIgaWQ9IlNoYXBlIi8+PC9nPjwvZz48L2c+PC9zdmc+") no-repeat 100% 50%;
+    background-size: 8px;
+  }
+
+  .post-nav-next a:hover:after {
+    opacity: 1;
+  }
+</style>
+
+
+
+<div class="post-nav">
+
+  
+  <div class="post-nav-prev post-nav-item">
+    
+    <a href="/blog/2019/harmonics/"> 球谐光照</a>
+  </div>
+  
+
+  
+  <div class="post-nav-next post-nav-item">
+    
+    <a href="/blog/2019/ibl/"> PBR之基于图像的光照IBL (Diffuse)</a>
+  </div>
+  
+
+</div>
+
+</article>
+    </div>
+
+    <footer class="site-footer">
+  <div class="container">
+    <ul class="social">
+  <li><a href="https://twitter.com/penghuailiang" target="_blank"><i class="icon icon-twitter"></i></a></li>
+  <li><a href="https://www.zhihu.com/people/huailiangpenguin" target="_blank"><i class="icon icon-zhihu"></i></a></li>
+  <li><a href="https://www.facebook.com/profile.php?id=100004290725320" target="_blank"><i class="icon icon-facebook"></i></a></li>
+  <li><a href="https://weibo.com/6212299692/profile?topnav=1&wvr=6" target="_blank"><i class="icon icon-sina"></i></a></li>
+  <li><a href="https://www.linkedin.com/in/penghuailiang/" target="_blank"><i class="icon icon-linkedin"></i></a></li>
+  <li><a href="https://github.com/huailiang" target="_blank"><i class="icon icon-github"></i></a></li>
+</ul>
+    <p class="txt-medium-gray">
+      <small>&copy;2019 All rights reserved. </small>
+    </p>
+  </div>
+</footer>
+    <a href="https://github.com/huailiang" target="_blank" class="github-corner"><svg width="80" height="80" viewBox="0 0 250 250" style="fill:#337ab7; color:#fff; position: absolute; top: 0; border: 0; right: 0;"><path d="M0,0 L115,115 L130,115 L142,142 L250,250 L250,0 Z"></path><path d="M128.3,109.0 C113.8,99.7 119.0,89.6 119.0,89.6 C122.0,82.7 120.5,78.6 120.5,78.6 C119.2,72.0 123.4,76.3 123.4,76.3 C127.3,80.9 125.5,87.3 125.5,87.3 C122.9,97.6 130.6,101.9 134.4,103.2" fill="currentColor" style="transform-origin: 130px 106px;" class="octo-arm"></path><path d="M115.0,115.0 C114.9,115.1 118.7,116.5 119.8,115.4 L133.7,101.6 C136.9,99.2 139.9,98.4 142.2,98.6 C133.8,88.0 127.5,74.4 143.8,58.0 C148.5,53.4 154.0,51.2 159.7,51.0 C160.3,49.4 163.2,43.6 171.4,40.1 C171.4,40.1 176.1,42.5 178.8,56.2 C183.1,58.6 187.2,61.8 190.9,65.4 C194.5,69.0 197.7,73.2 200.1,77.6 C213.8,80.2 216.3,84.9 216.3,84.9 C212.7,93.1 206.9,96.0 205.4,96.6 C205.1,102.4 203.0,107.8 198.3,112.5 C181.9,128.9 168.3,122.5 157.7,114.1 C157.9,116.9 156.7,120.9 152.7,124.9 L141.0,136.5 C139.8,137.7 141.6,141.9 141.8,141.8 Z" fill="currentColor" class="octo-body"></path></svg></a>
+
+
+    <script src="//code.jquery.com/jquery-1.11.3.min.js"></script>
+    <script>
+      $(document).ready(function () {
+        $('.sliding-panel-button,.sliding-panel-fade-screen,.sliding-panel-close').on('click touchstart', function (e) {
+          $('.sliding-panel-content,.sliding-panel-fade-screen').toggleClass('is-visible');
+          e.preventDefault();
+        });
+      });
+    </script>
+  </main>
+</body>
+
+</html>

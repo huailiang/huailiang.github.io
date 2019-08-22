@@ -1,0 +1,382 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <meta http-equiv="X-UA-Compatible" content="IE=edge">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+
+  <title>Unity 植入 c++版protobuf</title>
+  <meta name="description"
+    content="  现在使用Unity引擎开发游戏使用的脚本语言越来越灵活了。就拿《王者荣耀》来说吧，战斗的核心都采取 c++的语言来实现，外围系统都是采用 csharp的开发的。使用 c++指针操作不断有更高的执行效率，作为 native 语言也不会有 mono 内存的开销。使用 csharp 语言语法简单，对面向对象的支持也...">
+
+  <link rel="shortcut icon" href="/img/favicon.ico">
+  <link rel="stylesheet" href="/css/main.css">
+  <link rel="canonical" href="https://huailiang.github.io/blog/2018/protobuf/">
+  <link rel="alternate" type="application/rss+xml" title="Huailiang Blog"
+    href="https://huailiang.github.io/feed.xml" />
+
+</head>
+
+<body>
+  <main>
+    <header class="site-header">
+  <div class="container">
+    <h1><a href="/">Hom<span>e</span></a></h1>
+
+    <button type="button" class="sliding-panel-button">
+      <span></span>
+      <span></span>
+      <span></span>
+    </button>
+
+    <nav class="navbar sliding-panel-content">
+      <ul>
+        
+        <li><a href="/about" title="About">About</a>
+        </li>
+        
+        <li><a href="/blog" title="Blog">Blog</a>
+        </li>
+        
+        <!-- <li><a href="/feed.xml" target="_blank"><i class="icon icon-feed"></i></a></li> -->
+        <li><a href="/category/" target="_blank"><i class="icon icon-feed"></i></a></li>
+      </ul>
+    </nav>
+  </div>
+</header>
+
+<div class="sliding-panel-fade-screen"></div>
+    <script type="text/javascript" src="/js/MathJax.js?config=TeX-AMS-MML_HTMLorMML"></script>
+
+<script type="text/x-mathjax-config">
+MathJax.Hub.Config({
+  tex2jax: {
+    inlineMath: [['$','$'], ['\\(','\\)']],
+    processEscapes: true
+  }
+});
+</script>
+
+<script type="text/x-mathjax-config">
+  MathJax.Hub.Config({
+    tex2jax: {
+      skipTags: ['script', 'noscript', 'style', 'textarea', 'pre', 'code']
+    }
+  });
+
+</script>
+    <div class="container">
+      <article role="article" class="post">
+
+  <div class="card">
+    <header class="post-header">
+      <h1 class="post-title">Unity 植入 c++版protobuf</h1>
+      <p class="post-meta">Jun 24, 2018 •
+        Huailiang</p>
+    </header>
+
+    <div class="post-content">
+      <blockquote>
+  <p>现在使用Unity引擎开发游戏使用的脚本语言越来越灵活了。就拿《王者荣耀》来说吧，战斗的核心都采取 c++的语言来实现，外围系统都是采用 csharp的开发的。使用 c++指针操作不断有更高的执行效率，作为 native 语言也不会有 mono 内存的开销。使用 csharp 语言语法简单，对面向对象的支持也比较好，适合快速开发和版本迭代。还有使用 lua 脚本来做游戏的热更新。这样问题来了，解析数据就需要三个版本的 protobuf 集成在游戏里了。这个暂且只讨论unity里集成c++版本 protobuf 的流程。</p>
+</blockquote>
+
+<p>首先去 google 的 github 网站下载稳定版本的 protobuf。读者需要的话，点击<a href="https://github.com/google/protobuf">这里</a>。这里我们选择3.5.1版本，完整的 protobuf 包含了大量的测试的代码，这里我们只需要一个完整的 lib 项目就可以了，没有用的测试代码如果不想编进库里，可以删去测试代码部分。</p>
+
+<p>先看下，c#与 c++交互的部分。我们传给 c++ protobuf 序列化的二进制数组，在 c++里解析二进制。所以传递参数是 char* 指针和 bytes数组对应的长度，csharp 里我们把二进制数组转换成可以 c++交互的Intptr 指针。定义如下：</p>
+
+<p>csharp 与 c++交互接口定义如下：</p>
+
+<div class="language-csharp highlighter-rouge"><pre class="highlight"><code><span class="cp">#if UNITY_IPHONE || UNITY_XBOX360
+</span>    <span class="p">[</span><span class="nf">DllImport</span><span class="p">(</span><span class="s">"__Internal"</span><span class="p">)]</span>
+<span class="cp">#else
+</span>    <span class="p">[</span><span class="nf">DllImport</span><span class="p">(</span><span class="s">"ptotobuf-lib"</span><span class="p">)]</span>
+<span class="cp">#endif
+</span>
+    <span class="k">public</span> <span class="k">static</span> <span class="k">extern</span> <span class="kt">int</span> <span class="nf">iDeserial</span><span class="p">(</span><span class="n">IntPtr</span> <span class="n">pb</span><span class="p">,</span> <span class="kt">int</span> <span class="n">length</span><span class="p">);</span>
+
+</code></pre>
+</div>
+
+<p>csharp 获取 bytes 数组的首地址可以通过GCHandle来获取：</p>
+
+<figure class="highlight"><pre><code class="language-csharp" data-lang="csharp"> <span class="n">GCHandle</span> <span class="n">hObject</span> <span class="p">=</span> <span class="n">GCHandle</span><span class="p">.</span><span class="nf">Alloc</span><span class="p">(</span><span class="n">bytes</span><span class="p">,</span> <span class="n">GCHandleType</span><span class="p">.</span><span class="n">Pinned</span><span class="p">);</span>
+<span class="n">IntPtr</span> <span class="n">pObject</span> <span class="p">=</span> <span class="n">hObject</span><span class="p">.</span><span class="nf">AddrOfPinnedObject</span><span class="p">();</span></code></pre></figure>
+
+<p>c++部分与 c#交互的部分需要写在 extern里, 参数传递指针和 bytes 数组的长度：</p>
+
+<div class="language-cpp highlighter-rouge"><pre class="highlight"><code><span class="k">extern</span> <span class="s">"C"</span>
+<span class="p">{</span>
+	<span class="kt">int</span> <span class="n">iDeserial</span><span class="p">(</span><span class="k">const</span> <span class="kt">char</span><span class="o">*</span> <span class="n">pb</span><span class="p">,</span> <span class="kt">int</span> <span class="n">length</span><span class="p">)</span>
+	<span class="p">{</span>
+		<span class="n">XNet</span><span class="o">::</span><span class="n">Student</span> <span class="n">student</span><span class="p">;</span>
+		<span class="k">if</span> <span class="p">(</span><span class="o">!</span><span class="n">student</span><span class="p">.</span><span class="n">ParseFromArray</span><span class="p">(</span><span class="n">pb</span><span class="p">,</span> <span class="n">length</span><span class="p">))</span>
+		<span class="p">{</span>
+			<span class="n">printf</span><span class="p">(</span><span class="s">"parse student error"</span><span class="p">);</span>
+		<span class="p">}</span>
+		<span class="k">else</span>
+		<span class="p">{</span>
+			<span class="kt">int</span> <span class="n">age</span> <span class="o">=</span> <span class="n">student</span><span class="p">.</span><span class="n">age</span><span class="p">();</span>
+			<span class="kt">int</span> <span class="n">num</span> <span class="o">=</span> <span class="n">student</span><span class="p">.</span><span class="n">num</span><span class="p">();</span>
+			<span class="n">std</span><span class="o">::</span><span class="n">cout</span> <span class="o">&lt;&lt;</span> <span class="s">"age: "</span> <span class="o">&lt;&lt;</span> <span class="n">age</span> <span class="o">&lt;&lt;</span> <span class="n">std</span><span class="o">::</span><span class="n">endl</span><span class="p">;</span>
+			<span class="n">std</span><span class="o">::</span><span class="n">cout</span> <span class="o">&lt;&lt;</span> <span class="s">"num:"</span> <span class="o">&lt;&lt;</span> <span class="n">num</span> <span class="o">&lt;&lt;</span> <span class="n">std</span><span class="o">::</span><span class="n">endl</span><span class="p">;</span>
+			<span class="k">return</span> <span class="n">age</span> <span class="o">+</span> <span class="n">num</span><span class="p">;</span>
+		<span class="p">}</span>
+		<span class="k">return</span> <span class="mi">0</span><span class="p">;</span>
+	<span class="p">}</span>
+<span class="p">}</span>
+</code></pre>
+</div>
+
+<p>下面就是不同平台部分的编译 dll 部分</p>
+
+<p>打进 dll里的内容包含两部分：1.google protobuf 的c++代码 2.与 c#交互的代码和游戏逻辑代码</p>
+
+<ol>
+  <li>Windows 部分</li>
+</ol>
+
+<p>首先编出来的 dll 得指定到 x64平台， c/c++附加包含目录指定到 google文件夹所在你的目录。SDL 检查选择否。</p>
+
+<p><img src="/img/post-cpp/1.jpg" alt="" /></p>
+
+<p>在 vs 工程点击生成即可以生成 64位 的 dll，把编译好的 dll copy 到unity plugins 目录里，就可以调试看到结果了。</p>
+
+<ol>
+  <li>Android 部分</li>
+</ol>
+
+<p>手机平台比较复杂，特别是 Android 机型众多，区分 arm 和 x86。而 arm 还有各种细分的架构，不过通过解压 unity 生成的 apk 可以发现，libs的目录只有 armv7和 x86两种平台，其他高阶的构架兼容低阶架构，就不需要我们再去编了。</p>
+
+<p>编译 android 的 c++代码，我们使用 android 原生支持的 NDK，我们只需要配置好Android.mk和Application.mk两个文件就好了。</p>
+
+<p>所以在编译 so 之前，需要里下载好 ndk，google官方的下载地址点击<a href="https://developer.android.google.cn/ndk/downloads/">这里</a>.</p>
+
+<p>在Application.mk 中声明编译的平台，使用的 Android 版本：</p>
+
+<div class="language-cpp highlighter-rouge"><pre class="highlight"><code><span class="n">APP_ABI</span>          <span class="o">:=</span> <span class="n">armeabi</span><span class="o">-</span><span class="n">v7a</span> <span class="n">x86</span>
+<span class="n">APP_OPTIM</span>         <span class="o">:=</span> <span class="n">release</span>
+<span class="n">APP_PLATFORM</span>      <span class="o">:=</span> <span class="n">android</span><span class="o">-</span><span class="mi">14</span>
+<span class="cp">#APP_BUILD_SCRIPT := Android.mk
+</span><span class="n">APP_STL</span>       <span class="o">:=</span> <span class="n">c</span><span class="o">++</span><span class="n">_static</span>
+</code></pre>
+</div>
+
+<p>在Android.mk中配置所要编译的 c++文件，编译使用的宏。使用方式跟 linux 使用 gcc编译c++很类似。</p>
+
+<div class="language-cpp highlighter-rouge"><pre class="highlight"><code>
+<span class="n">LOCAL_PATH</span> <span class="o">:=</span> <span class="err">$</span><span class="p">(</span><span class="n">call</span> <span class="n">my</span><span class="o">-</span><span class="n">dir</span><span class="p">)</span>  
+
+<span class="n">include</span> <span class="err">$</span><span class="p">(</span><span class="n">CLEAR_VARS</span><span class="p">)</span>
+
+<span class="n">LOCAL_CFLAGS</span><span class="o">:=</span> <span class="o">-</span><span class="n">DHAVE_PTHREAD</span><span class="o">=</span><span class="mi">1</span>
+
+<span class="cp">#  c++目录的相对路径
+</span><span class="n">MY_FILES_PATH</span>  <span class="o">:=</span>  <span class="err">$</span><span class="p">(</span><span class="n">LOCAL_PATH</span><span class="p">)</span><span class="o">/</span>
+
+<span class="cp"># c++后缀
+</span><span class="n">MY_FILES_SUFFIX</span> <span class="o">:=</span> <span class="o">%</span><span class="p">.</span><span class="n">cpp</span> <span class="o">%</span><span class="p">.</span><span class="n">cc</span> <span class="o">%</span><span class="p">.</span><span class="n">c</span>
+
+<span class="cp"># 递归遍历目录下的所有的文件
+</span><span class="n">rwildcard</span><span class="o">=</span><span class="err">$</span><span class="p">(</span><span class="n">wildcard</span> <span class="err">$</span><span class="mi">1</span><span class="err">$</span><span class="mi">2</span><span class="p">)</span> <span class="err">$</span><span class="p">(</span><span class="n">foreach</span> <span class="n">d</span><span class="p">,</span><span class="err">$</span><span class="p">(</span><span class="n">wildcard</span> <span class="err">$</span><span class="mi">1</span><span class="o">*</span><span class="p">),</span><span class="err">$</span><span class="p">(</span><span class="n">call</span> <span class="n">rwildcard</span><span class="p">,</span><span class="err">$</span><span class="n">d</span><span class="o">/</span><span class="p">,</span><span class="err">$</span><span class="mi">2</span><span class="p">))</span>
+
+<span class="cp"># 获取相应的源文件
+</span><span class="n">MY_ALL_FILES</span> <span class="o">:=</span> <span class="err">$</span><span class="p">(</span><span class="n">foreach</span> <span class="n">src_path</span><span class="p">,</span><span class="err">$</span><span class="p">(</span><span class="n">MY_FILES_PATH</span><span class="p">),</span> <span class="err">$</span><span class="p">(</span><span class="n">call</span> <span class="n">rwildcard</span><span class="p">,</span><span class="err">$</span><span class="p">(</span><span class="n">src_path</span><span class="p">),</span><span class="o">*</span><span class="p">.</span><span class="o">*</span><span class="p">)</span> <span class="p">)</span> 
+<span class="n">MY_ALL_FILES</span> <span class="o">:=</span> <span class="err">$</span><span class="p">(</span><span class="n">MY_ALL_FILES</span><span class="o">:</span><span class="err">$</span><span class="p">(</span><span class="n">MY_CPP_PATH</span><span class="p">)</span><span class="o">/</span><span class="p">.</span><span class="o">/%=</span><span class="err">$</span><span class="p">(</span><span class="n">MY_CPP_PATH</span><span class="p">)</span><span class="o">%</span><span class="p">)</span>
+<span class="n">MY_SRC_LIST</span>  <span class="o">:=</span> <span class="err">$</span><span class="p">(</span><span class="n">filter</span> <span class="err">$</span><span class="p">(</span><span class="n">MY_FILES_SUFFIX</span><span class="p">),</span><span class="err">$</span><span class="p">(</span><span class="n">MY_ALL_FILES</span><span class="p">))</span> 
+<span class="n">MY_SRC_LIST</span>  <span class="o">:=</span> <span class="err">$</span><span class="p">(</span><span class="n">MY_SRC_LIST</span><span class="o">:</span><span class="err">$</span><span class="p">(</span><span class="n">LOCAL_PATH</span><span class="p">)</span><span class="o">/%=%</span><span class="p">)</span>
+
+<span class="cp"># 去除字串的重复单词
+</span><span class="n">define</span> <span class="n">uniq</span> <span class="o">=</span>
+  <span class="err">$</span><span class="p">(</span><span class="n">eval</span> <span class="n">seen</span> <span class="o">:=</span><span class="p">)</span>
+  <span class="err">$</span><span class="p">(</span><span class="n">foreach</span> <span class="n">_</span><span class="p">,</span><span class="err">$</span><span class="mi">1</span><span class="p">,</span><span class="err">$</span><span class="p">(</span><span class="k">if</span> <span class="err">$</span><span class="p">(</span><span class="n">filter</span> <span class="err">$</span><span class="n">_</span><span class="p">,</span><span class="err">$</span><span class="p">{</span><span class="n">seen</span><span class="p">}),,</span><span class="err">$</span><span class="p">(</span><span class="n">eval</span> <span class="n">seen</span> <span class="o">+=</span> <span class="err">$</span><span class="n">_</span><span class="p">)))</span>
+  <span class="err">$</span><span class="p">{</span><span class="n">seen</span><span class="p">}</span>
+<span class="n">endef</span>
+
+<span class="cp"># 递归遍历获取所有目录
+</span><span class="n">MY_ALL_DIRS</span> <span class="o">:=</span> <span class="err">$</span><span class="p">(</span><span class="n">dir</span> <span class="err">$</span><span class="p">(</span><span class="n">foreach</span> <span class="n">src_path</span><span class="p">,</span><span class="err">$</span><span class="p">(</span><span class="n">MY_FILES_PATH</span><span class="p">),</span> <span class="err">$</span><span class="p">(</span><span class="n">call</span> <span class="n">rwildcard</span><span class="p">,</span><span class="err">$</span><span class="p">(</span><span class="n">src_path</span><span class="p">),</span><span class="err">*/</span><span class="p">)</span> <span class="p">)</span> <span class="p">)</span>
+<span class="n">MY_ALL_DIRS</span> <span class="o">:=</span> <span class="err">$</span><span class="p">(</span><span class="n">call</span> <span class="n">uniq</span><span class="p">,</span><span class="err">$</span><span class="p">(</span><span class="n">MY_ALL_DIRS</span><span class="p">))</span>
+
+<span class="cp"># 赋值给NDK编译系统
+</span><span class="n">LOCAL_SRC_FILES</span>  <span class="o">:=</span> <span class="err">$</span><span class="p">(</span><span class="n">MY_SRC_LIST</span><span class="p">)</span>
+<span class="n">LOCAL_C_INCLUDES</span><span class="o">:=</span> <span class="err">$</span><span class="p">(</span><span class="n">LOCAL_PATH</span><span class="p">)</span><span class="o">/</span>
+
+<span class="n">LOCAL_SHARED_LIBRARIES</span><span class="o">:=</span> 
+<span class="n">LOCAL_MODULE</span><span class="o">:=</span> <span class="n">libprotobuf</span><span class="o">-</span><span class="n">lib</span>
+<span class="n">LOCAL_MODULE_TAGS</span> <span class="o">:=</span> <span class="n">optional</span>
+<span class="n">LOCAL_LDLIBS</span> <span class="o">+=</span> <span class="o">-</span><span class="n">llog</span>
+<span class="n">include</span> <span class="err">$</span><span class="p">(</span><span class="n">BUILD_SHARED_LIBRARY</span><span class="p">)</span>
+
+</code></pre>
+</div>
+
+<p>下载好 ndk，把路径配置到环境变量中，就可以使用了 ndk-build 来编译 so 了。</p>
+
+<ol>
+  <li>osx 部分</li>
+</ol>
+
+<p>osx 需要把 c++代码编译成 bundle格式的库文件，需要新建一个 xcode 工程，选项如下图如下所示：<br />
+<img src="/img/post-cpp/5.jpg" alt="" /></p>
+
+<p>我们把 c++引用到 xcode 工程， 然后设置好需要的宏：<br />
+<img src="/img/post-cpp/2.jpg" alt="" /></p>
+
+<p>设置文件搜索路径：<br />
+<img src="/img/post-cpp/3.jpg" alt="" /></p>
+
+<p>点击 build，bundle 文件就可以生成了。</p>
+
+<ol>
+  <li>ios 部分<br />
+osx 需要把 c++代码编译成 bundle格式的库文件，需要新建一个 xcode 工程，选项如下图如下所示：<br />
+<img src="/img/post-cpp/6.jpg" alt="" /></li>
+</ol>
+
+<p>ios 设置部分基本上和 osx 是一样的，记得一处地方要设置好，build 的对象要选择真机而不是模拟器，否则在真机上无法运行：</p>
+
+<p><img src="/img/post-cpp/4.jpg" alt="" /></p>
+
+<p>当所有平台的 c++库都编译完成之后，对应到 unity 的目录如下图所示：</p>
+
+<p><img src="/img/post-cpp/7.jpg" alt="" /></p>
+
+<p>可能介绍的语言比较简洁，不过对应的完整的工程我都上传到 github 去了，大家可以去下载下来，跑一遍流程之后，就一切都清楚了。</p>
+
+<p>**github 对应的地址，点击<a href="https://github.com/huailiang/game_pb">这里</a>.</p>
+
+
+    </div>
+  </div>
+
+  <style>
+  .post-nav {
+    overflow: hidden;
+    /* margin-top: 60px; */
+    padding: 12px;
+    white-space: nowrap;
+    /* border-top: 1px solid #eee; */
+  }
+
+  .post-nav-item {
+    display: inline-block;
+    width: 50%;
+    white-space: normal;
+  }
+
+  .post-nav-item a {
+    position: relative;
+    display: inline-block;
+    line-height: 25px;
+    font-size: 14px;
+    color: #555;
+    border-bottom: none;
+  }
+
+  .post-nav-item a:hover {
+    color: #222;
+    font-weight: bold;
+    border-bottom: none;
+  }
+
+  .post-nav-item a:active {
+    top: 2px;
+  }
+
+  .post-nav-item a:before,
+  .post-nav-item a:after {
+    display: inline-block;
+    width: 16px;
+    height: 25px;
+    vertical-align: top;
+    opacity: 0.4;
+    background-size: 16px;
+  }
+
+  .post-nav-none a:none {
+    content: ' ';
+    background-size: 8px;
+  }
+
+  .post-nav-none a:hover:none {
+    opacity: 1;
+  }
+
+  .post-nav-prev a:before {
+    content: ' ';
+    background: url("data:image/svg+xml;base64,PD94bWwgdmVyc2lvbj0iMS4wIiA/PjxzdmcgaGVpZ2h0PSIxMnB4IiB2ZXJzaW9uPSIxLjEiIHZpZXdCb3g9IjAgMCA5IDEyIiB3aWR0aD0iOXB4IiB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHhtbG5zOnNrZXRjaD0iaHR0cDovL3d3dy5ib2hlbWlhbmNvZGluZy5jb20vc2tldGNoL25zIiB4bWxuczp4bGluaz0iaHR0cDovL3d3dy53My5vcmcvMTk5OS94bGluayI+PHRpdGxlLz48ZGVzYy8+PGRlZnMvPjxnIGZpbGw9Im5vbmUiIGZpbGwtcnVsZT0iZXZlbm9kZCIgaWQ9IlBhZ2UtMSIgc3Ryb2tlPSJub25lIiBzdHJva2Utd2lkdGg9IjEiPjxnIGZpbGw9IiMwMDAwMDAiIGlkPSJDb3JlIiB0cmFuc2Zvcm09InRyYW5zbGF0ZSgtMjE4LjAwMDAwMCwgLTkwLjAwMDAwMCkiPjxnIGlkPSJjaGV2cm9uLWxlZnQiIHRyYW5zZm9ybT0idHJhbnNsYXRlKDIxOC41MDAwMDAsIDkwLjAwMDAwMCkiPjxwYXRoIGQ9Ik03LjQsMS40IEw2LDAgTC04Ljg4MTc4NDJlLTE2LDYgTDYsMTIgTDcuNCwxMC42IEwyLjgsNiBMNy40LDEuNCBaIiBpZD0iU2hhcGUiLz48L2c+PC9nPjwvZz48L3N2Zz4=") no-repeat 0 50%;
+    background-size: 8px;
+  }
+
+  .post-nav-prev a:hover:before {
+    opacity: 1;
+  }
+
+  .post-nav-next {
+    text-align: right;
+  }
+
+  .post-nav-next a:after {
+    content: ' ';
+    background: url("data:image/svg+xml;base64,PD94bWwgdmVyc2lvbj0iMS4wIiA/PjxzdmcgaGVpZ2h0PSIxMnB4IiB2ZXJzaW9uPSIxLjEiIHZpZXdCb3g9IjAgMCA5IDEyIiB3aWR0aD0iOXB4IiB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHhtbG5zOnNrZXRjaD0iaHR0cDovL3d3dy5ib2hlbWlhbmNvZGluZy5jb20vc2tldGNoL25zIiB4bWxuczp4bGluaz0iaHR0cDovL3d3dy53My5vcmcvMTk5OS94bGluayI+PHRpdGxlLz48ZGVzYy8+PGRlZnMvPjxnIGZpbGw9Im5vbmUiIGZpbGwtcnVsZT0iZXZlbm9kZCIgaWQ9IlBhZ2UtMSIgc3Ryb2tlPSJub25lIiBzdHJva2Utd2lkdGg9IjEiPjxnIGZpbGw9IiMwMDAwMDAiIGlkPSJDb3JlIiB0cmFuc2Zvcm09InRyYW5zbGF0ZSgtMjYwLjAwMDAwMCwgLTkwLjAwMDAwMCkiPjxnIGlkPSJjaGV2cm9uLXJpZ2h0IiB0cmFuc2Zvcm09InRyYW5zbGF0ZSgyNjAuNTAwMDAwLCA5MC4wMDAwMDApIj48cGF0aCBkPSJNMSwwIEwtMC40LDEuNCBMNC4yLDYgTC0wLjQsMTAuNiBMMSwxMiBMNyw2IEwxLDAgWiIgaWQ9IlNoYXBlIi8+PC9nPjwvZz48L2c+PC9zdmc+") no-repeat 100% 50%;
+    background-size: 8px;
+  }
+
+  .post-nav-next a:hover:after {
+    opacity: 1;
+  }
+</style>
+
+
+
+<div class="post-nav">
+
+  
+  <div class="post-nav-prev post-nav-item">
+    
+    <a href="/blog/2018/terrain/"> Unity 大地形加载研究</a>
+  </div>
+  
+
+  
+  <div class="post-nav-next post-nav-item">
+    
+    <a href="/blog/2018/hud/"> Batch 合并Drawcall绘制HUD</a>
+  </div>
+  
+
+</div>
+
+</article>
+    </div>
+
+    <footer class="site-footer">
+  <div class="container">
+    <ul class="social">
+  <li><a href="https://twitter.com/penghuailiang" target="_blank"><i class="icon icon-twitter"></i></a></li>
+  <li><a href="https://www.zhihu.com/people/huailiangpenguin" target="_blank"><i class="icon icon-zhihu"></i></a></li>
+  <li><a href="https://www.facebook.com/profile.php?id=100004290725320" target="_blank"><i class="icon icon-facebook"></i></a></li>
+  <li><a href="https://weibo.com/6212299692/profile?topnav=1&wvr=6" target="_blank"><i class="icon icon-sina"></i></a></li>
+  <li><a href="https://www.linkedin.com/in/penghuailiang/" target="_blank"><i class="icon icon-linkedin"></i></a></li>
+  <li><a href="https://github.com/huailiang" target="_blank"><i class="icon icon-github"></i></a></li>
+</ul>
+    <p class="txt-medium-gray">
+      <small>&copy;2019 All rights reserved. </small>
+    </p>
+  </div>
+</footer>
+    <a href="https://github.com/huailiang" target="_blank" class="github-corner"><svg width="80" height="80" viewBox="0 0 250 250" style="fill:#337ab7; color:#fff; position: absolute; top: 0; border: 0; right: 0;"><path d="M0,0 L115,115 L130,115 L142,142 L250,250 L250,0 Z"></path><path d="M128.3,109.0 C113.8,99.7 119.0,89.6 119.0,89.6 C122.0,82.7 120.5,78.6 120.5,78.6 C119.2,72.0 123.4,76.3 123.4,76.3 C127.3,80.9 125.5,87.3 125.5,87.3 C122.9,97.6 130.6,101.9 134.4,103.2" fill="currentColor" style="transform-origin: 130px 106px;" class="octo-arm"></path><path d="M115.0,115.0 C114.9,115.1 118.7,116.5 119.8,115.4 L133.7,101.6 C136.9,99.2 139.9,98.4 142.2,98.6 C133.8,88.0 127.5,74.4 143.8,58.0 C148.5,53.4 154.0,51.2 159.7,51.0 C160.3,49.4 163.2,43.6 171.4,40.1 C171.4,40.1 176.1,42.5 178.8,56.2 C183.1,58.6 187.2,61.8 190.9,65.4 C194.5,69.0 197.7,73.2 200.1,77.6 C213.8,80.2 216.3,84.9 216.3,84.9 C212.7,93.1 206.9,96.0 205.4,96.6 C205.1,102.4 203.0,107.8 198.3,112.5 C181.9,128.9 168.3,122.5 157.7,114.1 C157.9,116.9 156.7,120.9 152.7,124.9 L141.0,136.5 C139.8,137.7 141.6,141.9 141.8,141.8 Z" fill="currentColor" class="octo-body"></path></svg></a>
+
+
+    <script src="//code.jquery.com/jquery-1.11.3.min.js"></script>
+    <script>
+      $(document).ready(function () {
+        $('.sliding-panel-button,.sliding-panel-fade-screen,.sliding-panel-close').on('click touchstart', function (e) {
+          $('.sliding-panel-content,.sliding-panel-fade-screen').toggleClass('is-visible');
+          e.preventDefault();
+        });
+      });
+    </script>
+  </main>
+</body>
+
+</html>

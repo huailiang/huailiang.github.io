@@ -1,0 +1,479 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <meta http-equiv="X-UA-Compatible" content="IE=edge">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+
+  <title>各种移动GPU压缩纹理的使用方法</title>
+  <meta name="description"
+    content="  介绍了各种移动设备所使用的GPU，以及各个GPU所支持的压缩纹理的格式和使用方法。">
+
+  <link rel="shortcut icon" href="/img/favicon.ico">
+  <link rel="stylesheet" href="/css/main.css">
+  <link rel="canonical" href="https://huailiang.github.io/blog/2019/texture/">
+  <link rel="alternate" type="application/rss+xml" title="Huailiang Blog"
+    href="https://huailiang.github.io/feed.xml" />
+
+</head>
+
+<body>
+  <main>
+    <header class="site-header">
+  <div class="container">
+    <h1><a href="/">Hom<span>e</span></a></h1>
+
+    <button type="button" class="sliding-panel-button">
+      <span></span>
+      <span></span>
+      <span></span>
+    </button>
+
+    <nav class="navbar sliding-panel-content">
+      <ul>
+        
+        <li><a href="/about" title="About">About</a>
+        </li>
+        
+        <li><a href="/blog" title="Blog">Blog</a>
+        </li>
+        
+        <!-- <li><a href="/feed.xml" target="_blank"><i class="icon icon-feed"></i></a></li> -->
+        <li><a href="/category/" target="_blank"><i class="icon icon-feed"></i></a></li>
+      </ul>
+    </nav>
+  </div>
+</header>
+
+<div class="sliding-panel-fade-screen"></div>
+    <script type="text/javascript" src="/js/MathJax.js?config=TeX-AMS-MML_HTMLorMML"></script>
+
+<script type="text/x-mathjax-config">
+MathJax.Hub.Config({
+  tex2jax: {
+    inlineMath: [['$','$'], ['\\(','\\)']],
+    processEscapes: true
+  }
+});
+</script>
+
+<script type="text/x-mathjax-config">
+  MathJax.Hub.Config({
+    tex2jax: {
+      skipTags: ['script', 'noscript', 'style', 'textarea', 'pre', 'code']
+    }
+  });
+
+</script>
+    <div class="container">
+      <article role="article" class="post">
+
+  <div class="card">
+    <header class="post-header">
+      <h1 class="post-title">各种移动GPU压缩纹理的使用方法</h1>
+      <p class="post-meta">Jun 19, 2019 •
+        Huailiang</p>
+    </header>
+
+    <div class="post-content">
+      <blockquote>
+  <p>介绍了各种移动设备所使用的GPU，以及各个GPU所支持的压缩纹理的格式和使用方法。</p>
+</blockquote>
+
+<h2 id="1-移动gpu大全">1. 移动GPU大全</h2>
+
+<p>目前移动市场的GPU主要有四大厂商系列：</p>
+
+<h4 id="1imagination-technologies的powervr-sgx系列">1）Imagination Technologies的PowerVR SGX系列</h4>
+
+<p><img src="/img/post-engine/tex1.jpg" alt="" /></p>
+
+<p>代表型号：PowerVR SGX 535、PowerVR SGX 540、PowerVR SGX 543MP、PowerVR SGX 554MP等<br />
+代表作  ：Apple iPhone全系、iPad全系，三星I9000、P3100等</p>
+
+<h4 id="2qualcomm高通的adreno系列">2）Qualcomm(高通)的Adreno系列</h4>
+
+<p><img src="/img/post-engine/tex2.jpg" alt="" /></p>
+
+<p>代表型号：Adreno 200、Adreno 205、Adreno 220、Adreno 320等<br />
+代表作  ：HTC G10、G14，小米1、2等</p>
+
+<h4 id="3arm的mali系列">3）ARM的Mali系列</h4>
+
+<p><img src="/img/post-engine/tex3.jpg" alt="" /></p>
+
+<p>代表型号：Mali-400、Mali-T604等<br />
+代表作  ：三星Galaxy SII、Galaxy SIII、Galaxy Note1、Galaxy Note2(亚版)等</p>
+
+<h4 id="4nvidia英伟达的tegra系列">4）nVIDIA(英伟达)的Tegra系列</h4>
+
+<p><img src="/img/post-engine/tex4.jpg" alt="" /></p>
+
+<p>代表型号：nVIDIA Tegra2、nVIDIA Tegra3等<br />
+代表作  ：Google Nexus 7，HTC One X等</p>
+
+<h2 id="2-压缩纹理的必要性">2. 压缩纹理的必要性</h2>
+
+<p>1）首先要说一下图像文件格式和纹理格式的区别。<br />
+常用的图像文件格式有BMP，TGA，JPG，GIF，PNG等；<br />
+常用的纹理格式有R5G6B5，A4R4G4B4，A1R5G5B5，R8G8B8, A8R8G8B8等。</p>
+
+<p>文件格式是图像为了存储信息而使用的对信息的特殊编码方式，它存储在磁盘中，或者内存中，但是并不能被GPU所识别，因为以向量计算见长的GPU对于这些复杂的计算无能为力。这些文件格式当被游戏读入后，还是需要经过CPU解压成R5G6B5，A4R4G4B4，A1R5G5B5，R8G8B8, A8R8G8B8等像素格式，再传送到GPU端进行使用。<br />
+纹理格式是能被GPU所识别的像素格式，能被快速寻址并采样。<br />
+举个例子，DDS文件是游戏开发中常用的文件格式，它内部可以包含A4R4G4B4的纹理格式，也可以包含A8R8G8B8的纹理格式，甚至可以包含DXT1的纹理格式。在这里DDS文件有点容器的意味。</p>
+
+<p>OpenGL ES 2.0支持以上提到的R5G6B5，A4R4G4B4，A1R5G5B5，R8G8B8，A8R8G8B8等纹理格式，其中 R5G6B5，A4R4G4B4，A1R5G5B5每个像素占用2个字节(BYTE)，R8G8B8每个像素占用3个字节，A8R8G8B8每个像素占用 4个字节。</p>
+
+<p><img src="/img/post-engine/tex5.jpg" alt="" /></p>
+
+<p>对于一张512<em>512的纹理的话，R5G6B5格式的文件需要占用512KB的容量，A8R8G8B8格式的文件需要占用1MB的容量；如果是1024</em>1024的纹理，则各需要2M和4M的容量，这对于动辄需要几十、几百张甚至更多纹理的游戏，上G容量的游戏在移动平台上是不容易被接受的(当然，还是有1、2G的大作的，里面包含了几千张的纹理)。</p>
+
+<p>聪明的设计师们在想，有没有其他办法，既能表现丰富的色彩和细节，又能是最小失真的情况下，达到更小的纹理容量呢。压缩纹理格式应运而生(当然，并不是在移动平台后才有的产物)。</p>
+
+<h2 id="3-常见的压缩纹理格式">3. 常见的压缩纹理格式</h2>
+<p>基于OpenGL ES的压缩纹理有常见的如下几种实现：<br />
+1）ETC1（Ericsson texture compression)<br />
+2）PVRTC (PowerVR texture compression)<br />
+3）ATITC (ATI texture compression)<br />
+4）S3TC (S3 texture compression)</p>
+
+<h4 id="etc1">ETC1</h4>
+<p>ETC1格式是OpenGL ES图形标准的一部分，并且被所有的Android设备所支持。<br />
+扩展名为: GL_OES_compressed_ETC1_RGB8_texture，不支持透明通道，所以仅能用于不透明纹理。<br />
+当加载压缩纹理时，<internal format="">参数支持如下格式：
+GL_ETC1_RGB8_OES(RGB，每个像素0.5个字节)</internal></p>
+
+<h4 id="pvrtc">PVRTC</h4>
+<p>支持的GPU为Imagination Technologies的PowerVR SGX系列。<br />
+OpenGL ES的扩展名为: GL_IMG_texture_compression_pvrtc。<br />
+当加载压缩纹理时，<internal format="">参数支持如下几种格式：
+GL_COMPRESSED_RGB_PVRTC_4BPPV1_IMG (RGB，每个像素0.5个字节)
+GL_COMPRESSED_RGB_PVRTC_2BPPV1_IMG (RGB，每个像素0.25个字节)
+GL_COMPRESSED_RGBA_PVRTC_4BPPV1_IMG (RGBA，每个像素0.5个字节)
+GL_COMPRESSED_RGBA_PVRTC_2BPPV1_IMG (RGBA，每个像素0.25个字节)</internal></p>
+
+<h4 id="atitc">ATITC</h4>
+<p>支持的GPU为Qualcomm的Adreno系列。<br />
+支持的OpenGL ES扩展名为: GL_ATI_texture_compression_atitc。<br />
+当加载压缩纹理时，<internal format="">参数支持如下类型的纹理：
+GL_ATC_RGB_AMD (RGB，每个像素0.5个字节)
+GL_ATC_RGBA_EXPLICIT_ALPHA_AMD (RGBA，每个像素1个字节)
+GL_ATC_RGBA_INTERPOLATED_ALPHA_AMD (RGBA，每个像素1个字节)</internal></p>
+
+<h4 id="s3tc">S3TC</h4>
+<p>也被称为DXTC，在PC上广泛被使用，但是在移动设备上还是属于新鲜事物。支持的GPU为NVIDIA Tegra系列。<br />
+OpenGL ES扩展名为:<br />
+GL_EXT_texture_compression_dxt1和GL_EXT_texture_compression_s3tc。<br />
+当加载压缩纹理时，<internal format="">的参数有如下几种格式：
+GL_COMPRESSED_RGB_S3TC_DXT1 (RGB，每个像素0.5个字节)
+GL_COMPRESSED_RGBA_S3TC_DXT1 (RGBA，每个像素0.5个字节)
+GL_COMPRESSED_RGBA_S3TC_DXT3 (RGBA，每个像素1个字节)
+GL_COMPRESSED_RGBA_S3TC_DXT5 (RGBA，每个像素1个字节)</internal></p>
+
+<p>由此可见，Mali系列GPU只支持ETC1格式的压缩纹理，而且该纹理不支持透明通道，有一定局限性。</p>
+
+<p>以上压缩纹理格式每个像素大小相对A8R8G8B8格式的比例，最高压缩比是16:1，最低压缩比是4:1，对于减小纹理的数据容量有明显作用，相应在显存带宽上也有明显优势，从而提高游戏的运行效率(此特性没有绝对数值，根据每个游戏的用法和瓶颈点不同而有差别)。</p>
+
+<h2 id="4-opengl中相关api的使用">4. OpenGL中相关API的使用</h2>
+
+<p>1） 获得GPU的型号</p>
+
+<div class="language-cpp highlighter-rouge"><pre class="highlight"><code><span class="n">glGetString</span><span class="p">(</span><span class="n">GL_RENDERER</span><span class="p">)</span>
+</code></pre>
+</div>
+
+<p>2） 获得GPU的生产厂商</p>
+
+<div class="language-cpp highlighter-rouge"><pre class="highlight"><code><span class="n">glGetString</span><span class="p">(</span><span class="n">GL_VENDOR</span><span class="p">);</span>
+</code></pre>
+</div>
+
+<p>3） 获取GPU支持哪些压缩纹理</p>
+
+<div class="language-cpp highlighter-rouge"><pre class="highlight"><code><span class="n">string</span> <span class="n">extensions</span> <span class="o">=</span> <span class="p">(</span><span class="k">const</span> <span class="kt">char</span><span class="o">*</span><span class="p">)</span><span class="n">glGetString</span><span class="p">(</span><span class="n">GL_EXTENSIONS</span><span class="p">);</span>
+</code></pre>
+</div>
+
+<p>a. 判断是否支持ETC1格式的压缩纹理</p>
+
+<div class="language-cpp highlighter-rouge"><pre class="highlight"><code><span class="k">return</span> <span class="p">(</span><span class="n">extensions</span><span class="p">.</span><span class="n">find</span><span class="p">(</span><span class="err">“</span><span class="n">GL_OES_compressed_ETC1_RGB8_texture</span><span class="err">”</span><span class="p">)</span><span class="o">!=</span> <span class="n">string</span><span class="o">::</span><span class="n">npos</span><span class="p">);</span>
+</code></pre>
+</div>
+
+<p>b. 判断是否支持DXT格式的压缩纹理</p>
+
+<div class="language-cpp highlighter-rouge"><pre class="highlight"><code><span class="k">return</span> <span class="p">(</span><span class="n">extensions</span><span class="p">.</span><span class="n">find</span><span class="p">(</span><span class="err">“</span><span class="n">GL_EXT_texture_compression_dxt1</span><span class="err">”</span><span class="p">)</span><span class="o">!=</span> <span class="n">string</span><span class="o">::</span><span class="n">npos</span> <span class="o">||</span>
+    <span class="n">extensions</span><span class="p">.</span><span class="n">find</span><span class="p">(</span><span class="err">“</span><span class="n">GL_EXT_texture_compression_s3tc</span><span class="err">”</span><span class="p">)</span><span class="o">!=</span> <span class="n">string</span><span class="o">::</span><span class="n">npos</span><span class="p">);</span>
+</code></pre>
+</div>
+
+<p>c. 判断是否支持PVRTC格式的压缩纹理</p>
+
+<div class="language-cpp highlighter-rouge"><pre class="highlight"><code><span class="k">return</span> <span class="p">(</span><span class="n">extensions</span><span class="p">.</span><span class="n">find</span><span class="p">(</span><span class="err">“</span><span class="n">GL_IMG_texture_compression_pvrtc</span><span class="err">”</span><span class="p">)</span><span class="o">!=</span> <span class="n">string</span><span class="o">::</span><span class="n">npos</span><span class="p">);</span>
+</code></pre>
+</div>
+
+<p>d. 判断是否支持ATITC格式的压缩纹理</p>
+
+<div class="language-cpp highlighter-rouge"><pre class="highlight"><code><span class="k">return</span> <span class="p">(</span><span class="n">extensions</span><span class="p">.</span><span class="n">find</span><span class="p">(</span><span class="err">“</span><span class="n">GL_AMD_compressed_ATC_texture</span><span class="err">”</span><span class="p">)</span><span class="o">!=</span> <span class="n">string</span><span class="o">::</span><span class="n">npos</span> <span class="o">||</span>
+    <span class="n">extensions</span><span class="p">.</span><span class="n">find</span><span class="p">(</span><span class="err">“</span><span class="n">GL_ATI_texture_compression_atitc</span><span class="err">”</span><span class="p">)</span><span class="o">!=</span> <span class="n">string</span><span class="o">::</span><span class="n">npos</span><span class="p">);</span>
+</code></pre>
+</div>
+
+<p>4） 填充压缩纹理数据</p>
+
+<div class="language-cpp highlighter-rouge"><pre class="highlight"><code><span class="kt">void</span> <span class="n">glCompressedTexImage2D</span><span class="p">(</span>
+        <span class="n">GLenum</span> <span class="n">target</span><span class="p">,</span>
+        <span class="n">GLint</span> <span class="n">level</span><span class="p">,</span>
+        <span class="n">GLenum</span> <span class="n">internalformat</span><span class="p">,</span>
+        <span class="n">GLsizei</span> <span class="n">width</span><span class="p">,</span>
+        <span class="n">GLsizei</span> <span class="n">height</span><span class="p">,</span>
+        <span class="n">GLint</span> <span class="n">border</span><span class="p">,</span>
+        <span class="n">GLsizei</span> <span class="n">imageSize</span><span class="p">,</span>
+        <span class="k">const</span> <span class="n">GLvoid</span> <span class="o">*</span> <span class="n">data</span><span class="p">);</span>
+</code></pre>
+</div>
+
+<p>这里的参数不做详细解释，其中internalformat即是压缩纹理格式的类型。</p>
+
+<p>查看设备支持的texture压缩格式，可以使用如下代码获取：</p>
+
+<div class="language-cpp highlighter-rouge"><pre class="highlight"><code><span class="kt">int</span> <span class="n">num_formats</span><span class="p">;</span>
+<span class="n">glGetIntegerv</span><span class="p">(</span><span class="n">GL_NUM_COMPRESSED_TEXTURE_FORMATS</span><span class="p">,</span> <span class="o">&amp;</span><span class="n">num_formats</span><span class="p">);</span>
+<span class="n">std</span><span class="o">::</span><span class="n">cout</span><span class="o">&lt;&lt;</span><span class="s">"Texture extensions: "</span><span class="o">&lt;&lt;</span><span class="n">num_formats</span><span class="o">&lt;&lt;</span><span class="n">std</span><span class="o">::</span><span class="n">endl</span><span class="p">;</span>
+
+<span class="kt">int</span> <span class="o">*</span><span class="n">formats</span> <span class="o">=</span> <span class="p">(</span><span class="kt">int</span><span class="o">*</span><span class="p">)</span><span class="n">alloca</span><span class="p">(</span><span class="n">num_formats</span> <span class="o">*</span> <span class="k">sizeof</span><span class="p">(</span><span class="kt">int</span><span class="p">));</span>
+<span class="n">glGetIntegerv</span><span class="p">(</span><span class="n">GL_COMPRESSED_TEXTURE_FORMATS</span><span class="p">,</span> <span class="n">formats</span><span class="p">);</span>
+<span class="k">for</span><span class="p">(</span><span class="kt">int</span> <span class="n">i</span><span class="o">=</span><span class="mi">0</span><span class="p">;</span> <span class="n">i</span><span class="o">&lt;</span><span class="n">num_formats</span><span class="p">;</span> <span class="n">i</span><span class="o">++</span><span class="p">)</span>
+<span class="p">{</span>
+    <span class="n">std</span><span class="o">::</span><span class="n">cout</span><span class="o">&lt;&lt;</span><span class="n">i</span><span class="o">&lt;&lt;</span><span class="s">" 0x"</span><span class="o">&lt;&lt;</span><span class="n">hex</span><span class="o">&lt;&lt;</span><span class="n">formats</span><span class="p">[</span><span class="n">i</span><span class="p">]</span><span class="o">&lt;&lt;</span><span class="n">dec</span><span class="o">&lt;&lt;</span><span class="n">std</span><span class="o">::</span><span class="n">endl</span><span class="p">;</span>
+<span class="p">}</span> 
+</code></pre>
+</div>
+
+<p>需要注意的是，使用glCompressedTexImage2D时(PVRTC)，FilterMode不能设置为 GL_LINEAR_MIPMAP_LINEAR, 否则的话加载出来的画线显示黑色, <a href="https://stackoverflow.com/questions/14488005/pvrtc-texture-with-mipmaps-stays-black">这里</a>有提到, 就是这个问题困扰了我一大天。</p>
+
+<div class="language-cpp highlighter-rouge"><pre class="highlight"><code><span class="c1">// 能正确加载PVRTC
+</span><span class="n">glTexParameteri</span><span class="p">(</span><span class="n">GL_TEXTURE_2D</span><span class="p">,</span> <span class="n">GL_TEXTURE_MIN_FILTER</span><span class="p">,</span> <span class="n">GL_LINEAR</span><span class="p">);</span>
+
+<span class="c1">// 不能正确加载
+</span><span class="n">glTexParameteri</span><span class="p">(</span><span class="n">GL_TEXTURE_2D</span><span class="p">,</span> <span class="n">GL_TEXTURE_MIN_FILTER</span><span class="p">,</span> <span class="n">GL_LINEAR_MIPMAP_LINEAR</span><span class="p">);</span>
+</code></pre>
+</div>
+
+<h2 id="5-压缩纹理工具的使用">5. 压缩纹理工具的使用</h2>
+
+<p>每种压缩纹理以及相应的厂商都提供了压缩纹理的工具，工具都分两个版本：<br />
+a. 可视化转换工具 (给美工或小白少量使用)<br />
+b. 命令行转换工具 (给程序批量使用)</p>
+
+<p>下面对每个工具的用法进行说明。</p>
+
+<h3 id="1imagination-technologies-powervr">1）Imagination Technologies PowerVR</h3>
+<p>工具<a href="http://www.imgtec.com/powervr/insider/sdkdownloads/index.asp?installer=Windows%20Installer">下载地址</a></p>
+
+<p><img src="/img/post-engine/tex6.jpg" alt="" /></p>
+
+<p>命令行转换脚本</p>
+
+<pre><code class="language-bat">@echo off
+for %%i in (*.tga) do PVRTexTool.exe -f PVRTC4 -i %%i
+pause
+</code></pre>
+
+<p>(将本目录下的所有tga文件，转换成”PVRTC4″编码格式的pvr文件，不带mipmap)</p>
+
+<p>在mac平台下，也可以使用xcode 自带的texturetool，结合命令行的方式来进行格式转换.</p>
+
+<div class="language-sh highlighter-rouge"><pre class="highlight"><code><span class="nv">IXCODE</span><span class="o">=</span><span class="sb">`</span>xcode-select -print-path<span class="sb">`</span>
+<span class="nv">ISDK</span><span class="o">=</span><span class="nv">$IXCODE</span>/Platforms/iPhoneOS.platform/Developer
+<span class="nv">ITEXTURE</span><span class="o">=</span><span class="nv">$ISDK</span>/usr/bin/texturetool
+
+<span class="c"># ${1} 代表外部传入的图片路径</span>
+<span class="k">${</span><span class="nv">ITEXTURE</span><span class="k">}</span>  -m -f pvr -e PVRTC 
+    --bits-per-pixel-2 <span class="k">${</span><span class="nv">1</span><span class="k">}</span> 
+    -o <span class="k">${</span><span class="nv">1</span><span class="p">%%.*</span><span class="k">}</span><span class="s2">".pvr"</span> 
+    -p <span class="k">${</span><span class="nv">1</span><span class="p">%%.*</span><span class="k">}</span><span class="s2">"_prev.pvr"</span>
+</code></pre>
+</div>
+
+<p>你可以在<a href="https://github.com/huailiang/OpenGLEngine/blob/dev/tools/texture.sh">这里</a>下载到完整的脚本.</p>
+
+<h3 id="2qualcomm-adreno">2）Qualcomm Adreno</h3>
+<p>工具<a href="https://developer.qualcomm.com/mobile-development/mobile-technologies/gaming-graphics-optimization-adreno/tools-and-resources">下载地址</a></p>
+
+<p><img src="/img/post-engine/tex7.jpg" alt="" /></p>
+
+<p>命令行转换脚本</p>
+
+<pre><code class="language-bat">@echo off
+for %%i in (*.tga) do QCompressCmd.exe %%i %%i.ktx “ATC RGBA Explicit” yes
+pause
+</code></pre>
+
+<p>(将本目录下的所有tga文件，转换成”ATC RGBA Explicit”编码格式的ktx文件，带mipmap)</p>
+
+<h3 id="3arm-mali">3）ARM Mali</h3>
+<p>工具<a href="http://malideveloper.arm.com/develop-for-mali/mali-gpu-texture-compression-tool/">下载地址</a></p>
+
+<p><img src="/img/post-engine/tex8.jpg" alt="" /></p>
+
+<p>命令行转换脚本</p>
+
+<pre><code class="language-bat">@echo off
+for %%i in (*.tga) do PVRTexTool.exe -f ETC -i %%i
+pause
+</code></pre>
+
+<p>(将本目录下的所有tga文件，转换成”ETC”编码格式的pvr文件，不带mipmap这里还是使用的PVRTexTool.exe，也可以使用QCompressCmd.exe)</p>
+
+<h3 id="4nvidia-tegra">4）nVIDIA Tegra</h3>
+<p>可以使用DirectX SDK中自带的DirectX Texture Tool进行转换</p>
+
+<p><img src="/img/post-engine/tex9.jpg" alt="" /></p>
+
+<p>命令行转换脚本</p>
+
+<pre><code class="language-bat">@echo off
+for %%i in (*.tga) do texconv.exe -f DXT5 %%i
+pause
+</code></pre>
+
+<p>(将本目录下的所有tga文件，转换成”DXT5″编码格式的dds文件，不带mipmap)</p>
+
+
+    </div>
+  </div>
+
+  <style>
+  .post-nav {
+    overflow: hidden;
+    /* margin-top: 60px; */
+    padding: 12px;
+    white-space: nowrap;
+    /* border-top: 1px solid #eee; */
+  }
+
+  .post-nav-item {
+    display: inline-block;
+    width: 50%;
+    white-space: normal;
+  }
+
+  .post-nav-item a {
+    position: relative;
+    display: inline-block;
+    line-height: 25px;
+    font-size: 14px;
+    color: #555;
+    border-bottom: none;
+  }
+
+  .post-nav-item a:hover {
+    color: #222;
+    font-weight: bold;
+    border-bottom: none;
+  }
+
+  .post-nav-item a:active {
+    top: 2px;
+  }
+
+  .post-nav-item a:before,
+  .post-nav-item a:after {
+    display: inline-block;
+    width: 16px;
+    height: 25px;
+    vertical-align: top;
+    opacity: 0.4;
+    background-size: 16px;
+  }
+
+  .post-nav-none a:none {
+    content: ' ';
+    background-size: 8px;
+  }
+
+  .post-nav-none a:hover:none {
+    opacity: 1;
+  }
+
+  .post-nav-prev a:before {
+    content: ' ';
+    background: url("data:image/svg+xml;base64,PD94bWwgdmVyc2lvbj0iMS4wIiA/PjxzdmcgaGVpZ2h0PSIxMnB4IiB2ZXJzaW9uPSIxLjEiIHZpZXdCb3g9IjAgMCA5IDEyIiB3aWR0aD0iOXB4IiB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHhtbG5zOnNrZXRjaD0iaHR0cDovL3d3dy5ib2hlbWlhbmNvZGluZy5jb20vc2tldGNoL25zIiB4bWxuczp4bGluaz0iaHR0cDovL3d3dy53My5vcmcvMTk5OS94bGluayI+PHRpdGxlLz48ZGVzYy8+PGRlZnMvPjxnIGZpbGw9Im5vbmUiIGZpbGwtcnVsZT0iZXZlbm9kZCIgaWQ9IlBhZ2UtMSIgc3Ryb2tlPSJub25lIiBzdHJva2Utd2lkdGg9IjEiPjxnIGZpbGw9IiMwMDAwMDAiIGlkPSJDb3JlIiB0cmFuc2Zvcm09InRyYW5zbGF0ZSgtMjE4LjAwMDAwMCwgLTkwLjAwMDAwMCkiPjxnIGlkPSJjaGV2cm9uLWxlZnQiIHRyYW5zZm9ybT0idHJhbnNsYXRlKDIxOC41MDAwMDAsIDkwLjAwMDAwMCkiPjxwYXRoIGQ9Ik03LjQsMS40IEw2LDAgTC04Ljg4MTc4NDJlLTE2LDYgTDYsMTIgTDcuNCwxMC42IEwyLjgsNiBMNy40LDEuNCBaIiBpZD0iU2hhcGUiLz48L2c+PC9nPjwvZz48L3N2Zz4=") no-repeat 0 50%;
+    background-size: 8px;
+  }
+
+  .post-nav-prev a:hover:before {
+    opacity: 1;
+  }
+
+  .post-nav-next {
+    text-align: right;
+  }
+
+  .post-nav-next a:after {
+    content: ' ';
+    background: url("data:image/svg+xml;base64,PD94bWwgdmVyc2lvbj0iMS4wIiA/PjxzdmcgaGVpZ2h0PSIxMnB4IiB2ZXJzaW9uPSIxLjEiIHZpZXdCb3g9IjAgMCA5IDEyIiB3aWR0aD0iOXB4IiB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHhtbG5zOnNrZXRjaD0iaHR0cDovL3d3dy5ib2hlbWlhbmNvZGluZy5jb20vc2tldGNoL25zIiB4bWxuczp4bGluaz0iaHR0cDovL3d3dy53My5vcmcvMTk5OS94bGluayI+PHRpdGxlLz48ZGVzYy8+PGRlZnMvPjxnIGZpbGw9Im5vbmUiIGZpbGwtcnVsZT0iZXZlbm9kZCIgaWQ9IlBhZ2UtMSIgc3Ryb2tlPSJub25lIiBzdHJva2Utd2lkdGg9IjEiPjxnIGZpbGw9IiMwMDAwMDAiIGlkPSJDb3JlIiB0cmFuc2Zvcm09InRyYW5zbGF0ZSgtMjYwLjAwMDAwMCwgLTkwLjAwMDAwMCkiPjxnIGlkPSJjaGV2cm9uLXJpZ2h0IiB0cmFuc2Zvcm09InRyYW5zbGF0ZSgyNjAuNTAwMDAwLCA5MC4wMDAwMDApIj48cGF0aCBkPSJNMSwwIEwtMC40LDEuNCBMNC4yLDYgTC0wLjQsMTAuNiBMMSwxMiBMNyw2IEwxLDAgWiIgaWQ9IlNoYXBlIi8+PC9nPjwvZz48L2c+PC9zdmc+") no-repeat 100% 50%;
+    background-size: 8px;
+  }
+
+  .post-nav-next a:hover:after {
+    opacity: 1;
+  }
+</style>
+
+
+
+<div class="post-nav">
+
+  
+  <div class="post-nav-prev post-nav-item">
+    
+    <a href="/blog/2019/ibl/"> PBR之基于图像的光照IBL (Diffuse)</a>
+  </div>
+  
+
+  
+  <div class="post-nav-next post-nav-item">
+    
+    <a href="/blog/2019/engine/"> 矢量字是如何画出来的</a>
+  </div>
+  
+
+</div>
+
+</article>
+    </div>
+
+    <footer class="site-footer">
+  <div class="container">
+    <ul class="social">
+  <li><a href="https://twitter.com/penghuailiang" target="_blank"><i class="icon icon-twitter"></i></a></li>
+  <li><a href="https://www.zhihu.com/people/huailiangpenguin" target="_blank"><i class="icon icon-zhihu"></i></a></li>
+  <li><a href="https://www.facebook.com/profile.php?id=100004290725320" target="_blank"><i class="icon icon-facebook"></i></a></li>
+  <li><a href="https://weibo.com/6212299692/profile?topnav=1&wvr=6" target="_blank"><i class="icon icon-sina"></i></a></li>
+  <li><a href="https://www.linkedin.com/in/penghuailiang/" target="_blank"><i class="icon icon-linkedin"></i></a></li>
+  <li><a href="https://github.com/huailiang" target="_blank"><i class="icon icon-github"></i></a></li>
+</ul>
+    <p class="txt-medium-gray">
+      <small>&copy;2019 All rights reserved. </small>
+    </p>
+  </div>
+</footer>
+    <a href="https://github.com/huailiang" target="_blank" class="github-corner"><svg width="80" height="80" viewBox="0 0 250 250" style="fill:#337ab7; color:#fff; position: absolute; top: 0; border: 0; right: 0;"><path d="M0,0 L115,115 L130,115 L142,142 L250,250 L250,0 Z"></path><path d="M128.3,109.0 C113.8,99.7 119.0,89.6 119.0,89.6 C122.0,82.7 120.5,78.6 120.5,78.6 C119.2,72.0 123.4,76.3 123.4,76.3 C127.3,80.9 125.5,87.3 125.5,87.3 C122.9,97.6 130.6,101.9 134.4,103.2" fill="currentColor" style="transform-origin: 130px 106px;" class="octo-arm"></path><path d="M115.0,115.0 C114.9,115.1 118.7,116.5 119.8,115.4 L133.7,101.6 C136.9,99.2 139.9,98.4 142.2,98.6 C133.8,88.0 127.5,74.4 143.8,58.0 C148.5,53.4 154.0,51.2 159.7,51.0 C160.3,49.4 163.2,43.6 171.4,40.1 C171.4,40.1 176.1,42.5 178.8,56.2 C183.1,58.6 187.2,61.8 190.9,65.4 C194.5,69.0 197.7,73.2 200.1,77.6 C213.8,80.2 216.3,84.9 216.3,84.9 C212.7,93.1 206.9,96.0 205.4,96.6 C205.1,102.4 203.0,107.8 198.3,112.5 C181.9,128.9 168.3,122.5 157.7,114.1 C157.9,116.9 156.7,120.9 152.7,124.9 L141.0,136.5 C139.8,137.7 141.6,141.9 141.8,141.8 Z" fill="currentColor" class="octo-body"></path></svg></a>
+
+
+    <script src="//code.jquery.com/jquery-1.11.3.min.js"></script>
+    <script>
+      $(document).ready(function () {
+        $('.sliding-panel-button,.sliding-panel-fade-screen,.sliding-panel-close').on('click touchstart', function (e) {
+          $('.sliding-panel-content,.sliding-panel-fade-screen').toggleClass('is-visible');
+          e.preventDefault();
+        });
+      });
+    </script>
+  </main>
+</body>
+
+</html>

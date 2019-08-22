@@ -1,0 +1,420 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <meta http-equiv="X-UA-Compatible" content="IE=edge">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+
+  <title>龙之谷技能编辑器是如何实现的</title>
+  <meta name="description"
+    content="  不知道大家游戏的技能编辑器是怎么实现的呢，可能不同类型的游戏，技能编辑会有很大的不同吧。下面就介绍一个《龙之谷》手游作为一款经典的 ARPG 游戏，技能编辑器是如何实现的。">
+
+  <link rel="shortcut icon" href="/img/favicon.ico">
+  <link rel="stylesheet" href="/css/main.css">
+  <link rel="canonical" href="https://huailiang.github.io/blog/2018/skill/">
+  <link rel="alternate" type="application/rss+xml" title="Huailiang Blog"
+    href="https://huailiang.github.io/feed.xml" />
+
+</head>
+
+<body>
+  <main>
+    <header class="site-header">
+  <div class="container">
+    <h1><a href="/">Hom<span>e</span></a></h1>
+
+    <button type="button" class="sliding-panel-button">
+      <span></span>
+      <span></span>
+      <span></span>
+    </button>
+
+    <nav class="navbar sliding-panel-content">
+      <ul>
+        
+        <li><a href="/about" title="About">About</a>
+        </li>
+        
+        <li><a href="/blog" title="Blog">Blog</a>
+        </li>
+        
+        <!-- <li><a href="/feed.xml" target="_blank"><i class="icon icon-feed"></i></a></li> -->
+        <li><a href="/category/" target="_blank"><i class="icon icon-feed"></i></a></li>
+      </ul>
+    </nav>
+  </div>
+</header>
+
+<div class="sliding-panel-fade-screen"></div>
+    <script type="text/javascript" src="/js/MathJax.js?config=TeX-AMS-MML_HTMLorMML"></script>
+
+<script type="text/x-mathjax-config">
+MathJax.Hub.Config({
+  tex2jax: {
+    inlineMath: [['$','$'], ['\\(','\\)']],
+    processEscapes: true
+  }
+});
+</script>
+
+<script type="text/x-mathjax-config">
+  MathJax.Hub.Config({
+    tex2jax: {
+      skipTags: ['script', 'noscript', 'style', 'textarea', 'pre', 'code']
+    }
+  });
+
+</script>
+    <div class="container">
+      <article role="article" class="post">
+
+  <div class="card">
+    <header class="post-header">
+      <h1 class="post-title">龙之谷技能编辑器是如何实现的</h1>
+      <p class="post-meta">Feb 25, 2018 •
+        Huailiang</p>
+    </header>
+
+    <div class="post-content">
+      <blockquote>
+  <p>不知道大家游戏的技能编辑器是怎么实现的呢，可能不同类型的游戏，技能编辑会有很大的不同吧。下面就介绍一个《龙之谷》手游作为一款经典的 ARPG 游戏，技能编辑器是如何实现的。</p>
+</blockquote>
+
+<h3 id="技能编辑器界面预览">技能编辑器界面预览</h3>
+<p><img src="/img/post-skill/gif1.gif" alt="" /></p>
+
+<p><em>图片来源: <a href="https://huailiang.github.io" title="Huailiang: A Progressive Web App">huailiang.github.io</a></em></p>
+
+<h3 id="在unity对应的编辑器">在unity对应的编辑器</h3>
+
+<p><img src="/img/post-skill/skill1.jpg" alt="" /></p>
+
+<p><em>图片来源: <a href="https://huailiang.github.io" title="Huailiang: A Progressive Web App">huailiang.github.io</a></em></p>
+
+<h3 id="数据保存格式-xml">数据保存格式-xml</h3>
+<p>龙之谷的技能编辑生成的中间数据是 xml,用来供游戏逻辑来读取，进一步实现相关的逻辑。客户端使用System.Xml.Serialization.XmlSerializer序列化解析xml,服务器使用tinyxml来解析xml</p>
+
+<p>技能编辑是基于帧率的，游戏锁定在30帧。 技能编辑器总体设置镜头FOV, 配置文件的物理位置， 技能的长度， 技能使用的animation动画等。</p>
+
+<p>龙之谷的技能类型由三种类型：JA(普通技能), Arts(大招)，Combine(组合技能) ,下面主要介绍Arts类型的技能为切入点，介绍龙之谷技能的实现方式。</p>
+
+<p>龙之谷技能编辑器的实现是基于Unity Editor扩展实现的。策划在编辑器里编辑，编辑好之后保存成xml格式。 运行时读取xml。 运行时又区分在unity里预览编辑器里效果和游戏实际运行的效果。</p>
+
+<p>下面的配置是基于帧率实现的：</p>
+<h3 id="result-技能作用效果">Result 技能作用效果</h3>
+<p>配置打击点 子弹效果</p>
+
+<p><img src="/img/post-skill/skill2.jpg" alt="" /></p>
+
+<p><em>图片来源: <a href="https://huailiang.github.io" title="Huailiang: A Progressive Web App">huailiang.github.io</a></em></p>
+
+<p>伤害范围一共分为两种Sector Damage勾选上表示扇形（配置360度就是圆形了）和方形<br />
+扇形和方形的范围计算参照：</p>
+
+<figure class="highlight"><pre><code class="language-csharp" data-lang="csharp"><span class="k">if</span> <span class="p">(</span><span class="n">CurrentSkillData</span><span class="p">.</span><span class="n">Result</span><span class="p">[</span><span class="n">nHotID</span><span class="p">].</span><span class="n">Sector_Type</span><span class="p">)</span>  <span class="c1">//扇形
+</span><span class="p">{</span>
+    <span class="kt">float</span> <span class="n">m_Theta</span> <span class="p">=</span> <span class="m">0.01f</span><span class="p">;</span>
+    <span class="n">Vector3</span> <span class="n">beginPoint</span> <span class="p">=</span> <span class="n">Vector3</span><span class="p">.</span><span class="n">zero</span><span class="p">;</span>
+    <span class="n">Vector3</span> <span class="n">firstPoint</span> <span class="p">=</span> <span class="n">Vector3</span><span class="p">.</span><span class="n">zero</span><span class="p">;</span>
+
+    <span class="k">for</span> <span class="p">(</span><span class="kt">float</span> <span class="n">theta</span> <span class="p">=</span> <span class="m">0</span><span class="p">;</span> <span class="n">theta</span> <span class="p">&lt;</span> <span class="m">2</span> <span class="p">*</span> <span class="n">Mathf</span><span class="p">.</span><span class="n">PI</span><span class="p">;</span> <span class="n">theta</span> <span class="p">+=</span> <span class="n">m_Theta</span><span class="p">)</span>
+    <span class="p">{</span>
+        <span class="kt">float</span> <span class="n">x</span> <span class="p">=</span> <span class="n">CurrentSkillData</span><span class="p">.</span><span class="n">Result</span><span class="p">[</span><span class="n">nHotID</span><span class="p">].</span><span class="n">Range</span> <span class="p">/</span> <span class="n">ShownTransform</span><span class="p">.</span><span class="n">localScale</span><span class="p">.</span><span class="n">y</span> <span class="p">*</span> <span class="n">Mathf</span><span class="p">.</span><span class="nf">Cos</span><span class="p">(</span><span class="n">theta</span><span class="p">);</span>
+        <span class="kt">float</span> <span class="n">z</span> <span class="p">=</span> <span class="n">CurrentSkillData</span><span class="p">.</span><span class="n">Result</span><span class="p">[</span><span class="n">nHotID</span><span class="p">].</span><span class="n">Range</span> <span class="p">/</span> <span class="n">ShownTransform</span><span class="p">.</span><span class="n">localScale</span><span class="p">.</span><span class="n">y</span> <span class="p">*</span> <span class="n">Mathf</span><span class="p">.</span><span class="nf">Sin</span><span class="p">(</span><span class="n">theta</span><span class="p">);</span>
+        <span class="n">Vector3</span> <span class="n">endPoint</span> <span class="p">=</span> <span class="k">new</span> <span class="nf">Vector3</span><span class="p">(</span><span class="n">x</span><span class="p">,</span> <span class="m">0</span><span class="p">,</span> <span class="n">z</span><span class="p">);</span>
+        <span class="k">if</span> <span class="p">(</span><span class="n">theta</span> <span class="p">==</span> <span class="m">0</span><span class="err">）</span> <span class="n">firstPoint</span> <span class="p">=</span> <span class="n">endPoint</span><span class="p">;</span>
+        <span class="k">else</span> <span class="n">Gizmos</span><span class="p">.</span><span class="nf">DrawLine</span><span class="p">(</span><span class="n">beginPoint</span><span class="p">,</span> <span class="n">endPoint</span><span class="p">);</span>
+        <span class="n">beginPoint</span> <span class="p">=</span> <span class="n">endPoint</span><span class="p">;</span>
+    <span class="p">}</span>
+    <span class="n">Gizmos</span><span class="p">.</span><span class="nf">DrawLine</span><span class="p">(</span><span class="n">firstPoint</span><span class="p">,</span> <span class="n">beginPoint</span><span class="p">);</span>
+    <span class="k">if</span> <span class="p">(</span><span class="n">CurrentSkillData</span><span class="p">.</span><span class="n">Result</span><span class="p">[</span><span class="n">nHotID</span><span class="p">].</span><span class="n">Low_Range</span> <span class="p">&gt;</span> <span class="m">0</span><span class="p">)</span>
+    <span class="p">{</span>
+        <span class="n">m_Theta</span> <span class="p">=</span> <span class="m">0.01f</span><span class="p">;</span>
+        <span class="n">beginPoint</span> <span class="p">=</span> <span class="n">Vector3</span><span class="p">.</span><span class="n">zero</span><span class="p">;</span>
+        <span class="n">firstPoint</span> <span class="p">=</span> <span class="n">Vector3</span><span class="p">.</span><span class="n">zero</span><span class="p">;</span>
+        <span class="k">for</span> <span class="p">(</span><span class="kt">float</span> <span class="n">theta</span> <span class="p">=</span> <span class="m">0</span><span class="p">;</span> <span class="n">theta</span> <span class="p">&lt;</span> <span class="m">2</span> <span class="p">*</span> <span class="n">Mathf</span><span class="p">.</span><span class="n">PI</span><span class="p">;</span> <span class="n">theta</span> <span class="p">+=</span> <span class="n">m_Theta</span><span class="p">)</span>
+        <span class="p">{</span>
+            <span class="kt">float</span> <span class="n">x</span> <span class="p">=</span> <span class="n">CurrentSkillData</span><span class="p">.</span><span class="n">Result</span><span class="p">[</span><span class="n">nHotID</span><span class="p">].</span><span class="n">Range</span> <span class="p">/</span> <span class="n">ShownTransform</span><span class="p">.</span><span class="n">localScale</span><span class="p">.</span><span class="n">y</span> <span class="p">*</span> <span class="n">Mathf</span><span class="p">.</span><span class="nf">Cos</span><span class="p">(</span><span class="n">theta</span><span class="p">);</span>
+            <span class="kt">float</span> <span class="n">z</span> <span class="p">=</span> <span class="n">CurrentSkillData</span><span class="p">.</span><span class="n">Result</span><span class="p">[</span><span class="n">nHotID</span><span class="p">].</span><span class="n">Range</span> <span class="p">/</span> <span class="n">ShownTransform</span><span class="p">.</span><span class="n">localScale</span><span class="p">.</span><span class="n">y</span> <span class="p">*</span> <span class="n">Mathf</span><span class="p">.</span><span class="nf">Sin</span><span class="p">(</span><span class="n">theta</span><span class="p">);</span>
+            <span class="n">Vector3</span> <span class="n">endPoint</span> <span class="p">=</span> <span class="k">new</span> <span class="nf">Vector3</span><span class="p">(</span><span class="n">x</span><span class="p">,</span> <span class="m">0</span><span class="p">,</span> <span class="n">z</span><span class="p">);</span>
+            <span class="k">if</span> <span class="p">(</span><span class="n">theta</span> <span class="p">==</span> <span class="m">0</span><span class="p">)</span>  <span class="n">firstPoint</span> <span class="p">=</span> <span class="n">endPoint</span><span class="p">;</span>
+            <span class="k">else</span>  <span class="n">Gizmos</span><span class="p">.</span><span class="nf">DrawLine</span><span class="p">(</span><span class="n">beginPoint</span><span class="p">,</span> <span class="n">endPoint</span><span class="p">);</span>
+            <span class="n">beginPoint</span> <span class="p">=</span> <span class="n">endPoint</span><span class="p">;</span>
+        <span class="p">}</span>
+        <span class="n">Gizmos</span><span class="p">.</span><span class="nf">DrawLine</span><span class="p">(</span><span class="n">firstPoint</span><span class="p">,</span> <span class="n">beginPoint</span><span class="p">);</span>
+    <span class="p">}</span>
+<span class="p">}</span>
+<span class="k">else</span>  <span class="c1">//方形
+</span><span class="p">{</span>
+    <span class="n">Vector3</span> <span class="n">fr</span> <span class="p">=</span> <span class="k">new</span> <span class="nf">Vector3</span><span class="p">(</span><span class="n">CurrentSkillData</span><span class="p">.</span><span class="n">Result</span><span class="p">[</span><span class="n">nHotID</span><span class="p">].</span><span class="n">Scope</span> <span class="p">/</span> <span class="m">2.0f</span><span class="p">,</span> <span class="m">0</span><span class="p">,</span> <span class="n">CurrentSkillData</span><span class="p">.</span><span class="n">Result</span><span class="p">[</span><span class="n">nHotID</span><span class="p">].</span><span class="n">Range</span> <span class="p">/</span> <span class="m">2.0f</span><span class="p">);</span>
+    <span class="n">Vector3</span> <span class="n">fl</span> <span class="p">=</span> <span class="k">new</span> <span class="nf">Vector3</span><span class="p">(</span><span class="n">CurrentSkillData</span><span class="p">.</span><span class="n">Result</span><span class="p">[</span><span class="n">nHotID</span><span class="p">].</span><span class="n">Scope</span> <span class="p">/</span> <span class="m">2.0f</span><span class="p">,</span> <span class="m">0</span><span class="p">,</span> <span class="n">CurrentSkillData</span><span class="p">.</span><span class="n">Result</span><span class="p">[</span><span class="n">nHotID</span><span class="p">].</span><span class="n">Rect_HalfEffect</span> <span class="p">?</span> <span class="m">0</span> <span class="p">:</span> <span class="p">(-</span><span class="n">CurrentSkillData</span><span class="p">.</span><span class="n">Result</span><span class="p">[</span><span class="n">nHotID</span><span class="p">].</span><span class="n">Range</span> <span class="p">/</span> <span class="m">2.0f</span><span class="p">));</span>
+    <span class="n">Vector3</span> <span class="n">br</span> <span class="p">=</span> <span class="k">new</span> <span class="nf">Vector3</span><span class="p">(-</span><span class="n">CurrentSkillData</span><span class="p">.</span><span class="n">Result</span><span class="p">[</span><span class="n">nHotID</span><span class="p">].</span><span class="n">Scope</span> <span class="p">/</span> <span class="m">2.0f</span><span class="p">,</span> <span class="m">0</span><span class="p">,</span> <span class="n">CurrentSkillData</span><span class="p">.</span><span class="n">Result</span><span class="p">[</span><span class="n">nHotID</span><span class="p">].</span><span class="n">Range</span> <span class="p">/</span> <span class="m">2.0f</span><span class="p">);</span>
+    <span class="n">Vector3</span> <span class="n">bl</span> <span class="p">=</span> <span class="k">new</span> <span class="nf">Vector3</span><span class="p">(-</span><span class="n">CurrentSkillData</span><span class="p">.</span><span class="n">Result</span><span class="p">[</span><span class="n">nHotID</span><span class="p">].</span><span class="n">Scope</span> <span class="p">/</span> <span class="m">2.0f</span><span class="p">,</span> <span class="m">0</span><span class="p">,</span> <span class="n">CurrentSkillData</span><span class="p">.</span><span class="n">Result</span><span class="p">[</span><span class="n">nHotID</span><span class="p">].</span><span class="n">Rect_HalfEffect</span> <span class="p">?</span> <span class="m">0</span> <span class="p">:</span> <span class="p">(-</span><span class="n">CurrentSkillData</span><span class="p">.</span><span class="n">Result</span><span class="p">[</span><span class="n">nHotID</span><span class="p">].</span><span class="n">Range</span> <span class="p">/</span> <span class="m">2.0f</span><span class="p">));</span>
+
+    <span class="n">Gizmos</span><span class="p">.</span><span class="nf">DrawLine</span><span class="p">(</span><span class="n">fr</span><span class="p">,</span> <span class="n">fl</span><span class="p">);</span>
+    <span class="n">Gizmos</span><span class="p">.</span><span class="nf">DrawLine</span><span class="p">(</span><span class="n">fl</span><span class="p">,</span> <span class="n">bl</span><span class="p">);</span>
+    <span class="n">Gizmos</span><span class="p">.</span><span class="nf">DrawLine</span><span class="p">(</span><span class="n">bl</span><span class="p">,</span> <span class="n">br</span><span class="p">);</span>
+    <span class="n">Gizmos</span><span class="p">.</span><span class="nf">DrawLine</span><span class="p">(</span><span class="n">br</span><span class="p">,</span> <span class="n">fr</span><span class="p">);</span>
+<span class="p">}</span></code></pre></figure>
+
+<h3 id="hit-配置技能的打击效果">Hit 配置技能的打击效果</h3>
+<p>可以在hit Dummy 设置一个被打击的对象<br />
+type是被打击的效果<br />
+还可以配置一些打击使用的特效</p>
+
+<p><img src="/img/post-skill/skill3.jpg" alt="" /></p>
+
+<p><em>图片来源: <a href="https://huailiang.github.io" title="Huailiang: A Progressive Web App">huailiang.github.io</a></em></p>
+
+<h3 id="fmod-技能使用的音效">FMOd 技能使用的音效</h3>
+<p>配置基本上播放其实帧数 还有就是fmod需要的一些参数如路径、还有频道</p>
+
+<p><img src="/img/post-skill/skill5.jpg" alt="" /></p>
+
+<p><em>图片来源: <a href="https://huailiang.github.io" title="Huailiang: A Progressive Web App">huailiang.github.io</a></em></p>
+
+<h3 id="fx-配置技能在某帧播放的特效">Fx 配置技能在某帧播放的特效</h3>
+<p>配置帧的起始位置，特效对应的prefab 地址等相关的属性  <br />
+编辑器里还支持跟随效果、延时播放 transform 缩放和postion偏移<br />
+<img src="/img/post-skill/skill4.jpg" alt="" /></p>
+
+<p><em>图片来源: <a href="https://huailiang.github.io" title="Huailiang: A Progressive Web App">huailiang.github.io</a></em></p>
+
+<p>对应的代码实现</p>
+
+<figure class="highlight"><pre><code class="language-csharp" data-lang="csharp"><span class="k">protected</span> <span class="k">override</span> <span class="k">void</span> <span class="nf">OnInnerGUI</span><span class="p">()</span>
+<span class="p">{</span>
+    <span class="k">for</span> <span class="p">(</span><span class="kt">int</span> <span class="n">i</span> <span class="p">=</span> <span class="m">0</span><span class="p">;</span> <span class="n">i</span> <span class="p">&lt;</span> <span class="n">Hoster</span><span class="p">.</span><span class="n">SkillData</span><span class="p">.</span><span class="n">Fx</span><span class="p">.</span><span class="n">Count</span><span class="p">;</span> <span class="n">i</span><span class="p">++)</span>
+    <span class="p">{</span>
+        <span class="n">Hoster</span><span class="p">.</span><span class="n">SkillData</span><span class="p">.</span><span class="n">Fx</span><span class="p">[</span><span class="n">i</span><span class="p">].</span><span class="n">Combined</span> <span class="p">=</span> <span class="p">(</span><span class="n">Hoster</span><span class="p">.</span><span class="n">SkillData</span><span class="p">.</span><span class="n">TypeToken</span> <span class="p">==</span> <span class="m">2</span><span class="p">);</span>
+        <span class="n">Hoster</span><span class="p">.</span><span class="n">SkillData</span><span class="p">.</span><span class="n">Fx</span><span class="p">[</span><span class="n">i</span><span class="p">].</span><span class="n">Index</span> <span class="p">=</span> <span class="n">i</span><span class="p">;</span>
+        <span class="n">EditorGUILayout</span><span class="p">.</span><span class="nf">BeginHorizontal</span><span class="p">();</span>
+        <span class="n">Hoster</span><span class="p">.</span><span class="n">SkillData</span><span class="p">.</span><span class="n">Fx</span><span class="p">[</span><span class="n">i</span><span class="p">].</span><span class="n">Type</span> <span class="p">=</span> <span class="p">(</span><span class="n">SkillFxType</span><span class="p">)</span><span class="n">EditorGUILayout</span><span class="p">.</span><span class="nf">EnumPopup</span><span class="p">(</span><span class="s">"Type Based on"</span><span class="p">,</span> <span class="n">Hoster</span><span class="p">.</span><span class="n">SkillData</span><span class="p">.</span><span class="n">Fx</span><span class="p">[</span><span class="n">i</span><span class="p">].</span><span class="n">Type</span><span class="p">);</span>
+        <span class="k">if</span> <span class="p">(</span><span class="n">GUILayout</span><span class="p">.</span><span class="nf">Button</span><span class="p">(</span><span class="n">_content_remove</span><span class="p">,</span> <span class="n">GUILayout</span><span class="p">.</span><span class="nf">MaxWidth</span><span class="p">(</span><span class="m">30</span><span class="p">)))</span>
+        <span class="p">{</span>
+            <span class="n">Hoster</span><span class="p">.</span><span class="n">SkillData</span><span class="p">.</span><span class="n">Fx</span><span class="p">.</span><span class="nf">RemoveAt</span><span class="p">(</span><span class="n">i</span><span class="p">);</span>
+            <span class="n">Hoster</span><span class="p">.</span><span class="n">SkillDataExtra</span><span class="p">.</span><span class="n">Fx</span><span class="p">.</span><span class="nf">RemoveAt</span><span class="p">(</span><span class="n">i</span><span class="p">);</span>
+            <span class="n">EditorGUILayout</span><span class="p">.</span><span class="nf">EndHorizontal</span><span class="p">();</span>
+            <span class="k">continue</span><span class="p">;</span>
+        <span class="p">}</span>
+        <span class="n">EditorGUILayout</span><span class="p">.</span><span class="nf">EndHorizontal</span><span class="p">();</span>
+
+        <span class="n">Hoster</span><span class="p">.</span><span class="n">SkillDataExtra</span><span class="p">.</span><span class="n">Fx</span><span class="p">[</span><span class="n">i</span><span class="p">].</span><span class="n">Fx</span> <span class="p">=</span> <span class="n">EditorGUILayout</span><span class="p">.</span><span class="nf">ObjectField</span><span class="p">(</span><span class="s">"Fx Object"</span><span class="p">,</span> <span class="n">Hoster</span><span class="p">.</span><span class="n">SkillDataExtra</span><span class="p">.</span><span class="n">Fx</span><span class="p">[</span><span class="n">i</span><span class="p">].</span><span class="n">Fx</span><span class="p">,</span> <span class="k">typeof</span><span class="p">(</span><span class="n">GameObject</span><span class="p">),</span> <span class="k">true</span><span class="p">)</span> <span class="k">as</span> <span class="n">GameObject</span><span class="p">;</span>
+        <span class="k">if</span> <span class="p">(</span><span class="k">null</span> <span class="p">==</span> <span class="n">Hoster</span><span class="p">.</span><span class="n">SkillDataExtra</span><span class="p">.</span><span class="n">Fx</span><span class="p">[</span><span class="n">i</span><span class="p">].</span><span class="n">Fx</span> <span class="p">||</span> <span class="p">!</span><span class="n">AssetDatabase</span><span class="p">.</span><span class="nf">GetAssetPath</span><span class="p">(</span><span class="n">Hoster</span><span class="p">.</span><span class="n">SkillDataExtra</span><span class="p">.</span><span class="n">Fx</span><span class="p">[</span><span class="n">i</span><span class="p">].</span><span class="n">Fx</span><span class="p">).</span><span class="nf">Contains</span><span class="p">(</span><span class="s">"Resources/Effects/"</span><span class="p">))</span>
+        <span class="p">{</span>
+            <span class="n">Hoster</span><span class="p">.</span><span class="n">SkillDataExtra</span><span class="p">.</span><span class="n">Fx</span><span class="p">[</span><span class="n">i</span><span class="p">].</span><span class="n">Fx</span> <span class="p">=</span> <span class="k">null</span><span class="p">;</span>
+        <span class="p">}</span>
+        <span class="k">if</span> <span class="p">(</span><span class="k">null</span> <span class="p">!=</span> <span class="n">Hoster</span><span class="p">.</span><span class="n">SkillDataExtra</span><span class="p">.</span><span class="n">Fx</span><span class="p">[</span><span class="n">i</span><span class="p">].</span><span class="n">Fx</span><span class="p">)</span>
+        <span class="p">{</span>
+            <span class="kt">string</span> <span class="n">path</span> <span class="p">=</span> <span class="n">AssetDatabase</span><span class="p">.</span><span class="nf">GetAssetPath</span><span class="p">(</span><span class="n">Hoster</span><span class="p">.</span><span class="n">SkillDataExtra</span><span class="p">.</span><span class="n">Fx</span><span class="p">[</span><span class="n">i</span><span class="p">].</span><span class="n">Fx</span><span class="p">).</span><span class="nf">Remove</span><span class="p">(</span><span class="m">0</span><span class="p">,</span> <span class="m">17</span><span class="p">);</span>
+            <span class="n">Hoster</span><span class="p">.</span><span class="n">SkillData</span><span class="p">.</span><span class="n">Fx</span><span class="p">[</span><span class="n">i</span><span class="p">].</span><span class="n">Fx</span> <span class="p">=</span> <span class="n">path</span><span class="p">.</span><span class="nf">Remove</span><span class="p">(</span><span class="n">path</span><span class="p">.</span><span class="nf">LastIndexOf</span><span class="p">(</span><span class="sc">'.'</span><span class="p">));</span>
+            <span class="n">EditorGUILayout</span><span class="p">.</span><span class="nf">LabelField</span><span class="p">(</span><span class="s">"Fx Name"</span><span class="p">,</span> <span class="n">Hoster</span><span class="p">.</span><span class="n">SkillData</span><span class="p">.</span><span class="n">Fx</span><span class="p">[</span><span class="n">i</span><span class="p">].</span><span class="n">Fx</span><span class="p">);</span>
+
+            <span class="n">EditorGUILayout</span><span class="p">.</span><span class="nf">Space</span><span class="p">();</span>
+            <span class="n">Vector3</span> <span class="n">vec</span> <span class="p">=</span> <span class="k">new</span> <span class="nf">Vector3</span><span class="p">(</span><span class="n">Hoster</span><span class="p">.</span><span class="n">SkillData</span><span class="p">.</span><span class="n">Fx</span><span class="p">[</span><span class="n">i</span><span class="p">].</span><span class="n">ScaleX</span><span class="p">,</span> <span class="n">Hoster</span><span class="p">.</span><span class="n">SkillData</span><span class="p">.</span><span class="n">Fx</span><span class="p">[</span><span class="n">i</span><span class="p">].</span><span class="n">ScaleY</span><span class="p">,</span> <span class="n">Hoster</span><span class="p">.</span><span class="n">SkillData</span><span class="p">.</span><span class="n">Fx</span><span class="p">[</span><span class="n">i</span><span class="p">].</span><span class="n">ScaleZ</span><span class="p">);</span>
+            <span class="n">vec</span> <span class="p">=</span> <span class="n">EditorGUILayout</span><span class="p">.</span><span class="nf">Vector3Field</span><span class="p">(</span><span class="s">"Scale"</span><span class="p">,</span> <span class="n">vec</span><span class="p">);</span>
+            <span class="n">Hoster</span><span class="p">.</span><span class="n">SkillData</span><span class="p">.</span><span class="n">Fx</span><span class="p">[</span><span class="n">i</span><span class="p">].</span><span class="n">ScaleX</span> <span class="p">=</span> <span class="n">vec</span><span class="p">.</span><span class="n">x</span><span class="p">;</span>
+            <span class="n">Hoster</span><span class="p">.</span><span class="n">SkillData</span><span class="p">.</span><span class="n">Fx</span><span class="p">[</span><span class="n">i</span><span class="p">].</span><span class="n">ScaleY</span> <span class="p">=</span> <span class="n">vec</span><span class="p">.</span><span class="n">y</span><span class="p">;</span>
+            <span class="n">Hoster</span><span class="p">.</span><span class="n">SkillData</span><span class="p">.</span><span class="n">Fx</span><span class="p">[</span><span class="n">i</span><span class="p">].</span><span class="n">ScaleZ</span> <span class="p">=</span> <span class="n">vec</span><span class="p">.</span><span class="n">z</span><span class="p">;</span>
+            <span class="n">vec</span><span class="p">.</span><span class="nf">Set</span><span class="p">(</span><span class="n">Hoster</span><span class="p">.</span><span class="n">SkillData</span><span class="p">.</span><span class="n">Fx</span><span class="p">[</span><span class="n">i</span><span class="p">].</span><span class="n">OffsetX</span><span class="p">,</span> <span class="n">Hoster</span><span class="p">.</span><span class="n">SkillData</span><span class="p">.</span><span class="n">Fx</span><span class="p">[</span><span class="n">i</span><span class="p">].</span><span class="n">OffsetY</span><span class="p">,</span> <span class="n">Hoster</span><span class="p">.</span><span class="n">SkillData</span><span class="p">.</span><span class="n">Fx</span><span class="p">[</span><span class="n">i</span><span class="p">].</span><span class="n">OffsetZ</span><span class="p">);</span>
+            <span class="n">vec</span> <span class="p">=</span> <span class="n">EditorGUILayout</span><span class="p">.</span><span class="nf">Vector3Field</span><span class="p">(</span><span class="s">"Offset"</span><span class="p">,</span> <span class="n">vec</span><span class="p">);</span>
+            <span class="n">Hoster</span><span class="p">.</span><span class="n">SkillData</span><span class="p">.</span><span class="n">Fx</span><span class="p">[</span><span class="n">i</span><span class="p">].</span><span class="n">OffsetX</span> <span class="p">=</span> <span class="n">vec</span><span class="p">.</span><span class="n">x</span><span class="p">;</span>
+            <span class="n">Hoster</span><span class="p">.</span><span class="n">SkillData</span><span class="p">.</span><span class="n">Fx</span><span class="p">[</span><span class="n">i</span><span class="p">].</span><span class="n">OffsetY</span> <span class="p">=</span> <span class="n">vec</span><span class="p">.</span><span class="n">y</span><span class="p">;</span>
+            <span class="n">Hoster</span><span class="p">.</span><span class="n">SkillData</span><span class="p">.</span><span class="n">Fx</span><span class="p">[</span><span class="n">i</span><span class="p">].</span><span class="n">OffsetZ</span> <span class="p">=</span> <span class="n">vec</span><span class="p">.</span><span class="n">z</span><span class="p">;</span>
+
+            <span class="n">EditorGUILayout</span><span class="p">.</span><span class="nf">Space</span><span class="p">();</span>
+            <span class="kt">float</span> <span class="n">fx_at</span> <span class="p">=</span> <span class="p">(</span><span class="n">Hoster</span><span class="p">.</span><span class="n">SkillData</span><span class="p">.</span><span class="n">Fx</span><span class="p">[</span><span class="n">i</span><span class="p">].</span><span class="n">At</span> <span class="p">/</span> <span class="n">XSkillInspector</span><span class="p">.</span><span class="n">frame</span><span class="p">);</span>
+            <span class="n">EditorGUILayout</span><span class="p">.</span><span class="nf">BeginHorizontal</span><span class="p">();</span>
+            <span class="n">fx_at</span> <span class="p">=</span> <span class="n">EditorGUILayout</span><span class="p">.</span><span class="nf">FloatField</span><span class="p">(</span><span class="s">"Play At"</span><span class="p">,</span> <span class="n">fx_at</span><span class="p">);</span>
+            <span class="n">GUILayout</span><span class="p">.</span><span class="nf">Label</span><span class="p">(</span><span class="s">"(frame)"</span><span class="p">);</span>
+            <span class="n">GUILayout</span><span class="p">.</span><span class="nf">Label</span><span class="p">(</span><span class="s">""</span><span class="p">,</span> <span class="n">GUILayout</span><span class="p">.</span><span class="nf">MaxWidth</span><span class="p">(</span><span class="m">30</span><span class="p">));</span>
+            <span class="n">EditorGUILayout</span><span class="p">.</span><span class="nf">EndHorizontal</span><span class="p">();</span>
+
+            <span class="n">Hoster</span><span class="p">.</span><span class="n">SkillDataExtra</span><span class="p">.</span><span class="n">Fx</span><span class="p">[</span><span class="n">i</span><span class="p">].</span><span class="n">Ratio</span> <span class="p">=</span> <span class="n">fx_at</span> <span class="p">/</span> <span class="n">Hoster</span><span class="p">.</span><span class="n">SkillDataExtra</span><span class="p">.</span><span class="n">SkillClip_Frame</span><span class="p">;</span>
+            <span class="k">if</span> <span class="p">(</span><span class="n">Hoster</span><span class="p">.</span><span class="n">SkillDataExtra</span><span class="p">.</span><span class="n">Fx</span><span class="p">[</span><span class="n">i</span><span class="p">].</span><span class="n">Ratio</span> <span class="p">&gt;</span> <span class="m">1</span><span class="p">)</span> <span class="n">Hoster</span><span class="p">.</span><span class="n">SkillDataExtra</span><span class="p">.</span><span class="n">Fx</span><span class="p">[</span><span class="n">i</span><span class="p">].</span><span class="n">Ratio</span> <span class="p">=</span> <span class="m">1</span><span class="p">;</span>
+
+            <span class="k">if</span> <span class="p">(</span><span class="n">Hoster</span><span class="p">.</span><span class="n">SkillData</span><span class="p">.</span><span class="n">Fx</span><span class="p">[</span><span class="n">i</span><span class="p">].</span><span class="n">End</span> <span class="p">&lt;</span> <span class="m">0</span><span class="p">)</span> <span class="n">Hoster</span><span class="p">.</span><span class="n">SkillData</span><span class="p">.</span><span class="n">Fx</span><span class="p">[</span><span class="n">i</span><span class="p">].</span><span class="n">End</span> <span class="p">=</span> <span class="n">Hoster</span><span class="p">.</span><span class="n">SkillDataExtra</span><span class="p">.</span><span class="n">SkillClip_Frame</span> <span class="p">*</span> <span class="n">XSkillInspector</span><span class="p">.</span><span class="n">frame</span><span class="p">;</span>
+            <span class="kt">float</span> <span class="n">fx_end_at</span> <span class="p">=</span> <span class="p">(</span><span class="n">Hoster</span><span class="p">.</span><span class="n">SkillData</span><span class="p">.</span><span class="n">Fx</span><span class="p">[</span><span class="n">i</span><span class="p">].</span><span class="n">End</span> <span class="p">/</span> <span class="n">XSkillInspector</span><span class="p">.</span><span class="n">frame</span><span class="p">);</span>
+            <span class="n">EditorGUILayout</span><span class="p">.</span><span class="nf">BeginHorizontal</span><span class="p">();</span>
+            <span class="n">fx_end_at</span> <span class="p">=</span> <span class="n">EditorGUILayout</span><span class="p">.</span><span class="nf">FloatField</span><span class="p">(</span><span class="s">"End At"</span><span class="p">,</span> <span class="n">fx_end_at</span><span class="p">);</span>
+            <span class="n">GUILayout</span><span class="p">.</span><span class="nf">Label</span><span class="p">(</span><span class="s">"(frame)"</span><span class="p">);</span>
+            <span class="n">GUILayout</span><span class="p">.</span><span class="nf">Label</span><span class="p">(</span><span class="s">""</span><span class="p">,</span> <span class="n">GUILayout</span><span class="p">.</span><span class="nf">MaxWidth</span><span class="p">(</span><span class="m">30</span><span class="p">));</span>
+            <span class="n">EditorGUILayout</span><span class="p">.</span><span class="nf">EndHorizontal</span><span class="p">();</span>
+
+            <span class="k">if</span> <span class="p">(</span><span class="n">Hoster</span><span class="p">.</span><span class="n">SkillData</span><span class="p">.</span><span class="n">Fx</span><span class="p">[</span><span class="n">i</span><span class="p">].</span><span class="n">Type</span> <span class="p">==</span> <span class="n">SkillFxType</span><span class="p">.</span><span class="n">FirerBased</span><span class="p">)</span>
+                <span class="n">Hoster</span><span class="p">.</span><span class="n">SkillData</span><span class="p">.</span><span class="n">Fx</span><span class="p">[</span><span class="n">i</span><span class="p">].</span><span class="n">Follow</span> <span class="p">=</span> <span class="n">EditorGUILayout</span><span class="p">.</span><span class="nf">Toggle</span><span class="p">(</span><span class="s">"Follow"</span><span class="p">,</span> <span class="n">Hoster</span><span class="p">.</span><span class="n">SkillData</span><span class="p">.</span><span class="n">Fx</span><span class="p">[</span><span class="n">i</span><span class="p">].</span><span class="n">Follow</span><span class="p">);</span>
+            <span class="k">else</span>
+                <span class="n">Hoster</span><span class="p">.</span><span class="n">SkillData</span><span class="p">.</span><span class="n">Fx</span><span class="p">[</span><span class="n">i</span><span class="p">].</span><span class="n">Follow</span> <span class="p">=</span> <span class="k">false</span><span class="p">;</span>
+            <span class="n">EditorGUILayout</span><span class="p">.</span><span class="nf">Space</span><span class="p">();</span>
+            <span class="n">EditorGUILayout</span><span class="p">.</span><span class="nf">BeginHorizontal</span><span class="p">();</span>
+            <span class="n">Hoster</span><span class="p">.</span><span class="n">SkillData</span><span class="p">.</span><span class="n">Fx</span><span class="p">[</span><span class="n">i</span><span class="p">].</span><span class="n">Destroy_Delay</span> <span class="p">=</span> <span class="n">EditorGUILayout</span><span class="p">.</span><span class="nf">FloatField</span><span class="p">(</span><span class="s">"Delay Destroy"</span><span class="p">,</span> <span class="n">Hoster</span><span class="p">.</span><span class="n">SkillData</span><span class="p">.</span><span class="n">Fx</span><span class="p">[</span><span class="n">i</span><span class="p">].</span><span class="n">Destroy_Delay</span><span class="p">);</span>
+            <span class="n">GUILayout</span><span class="p">.</span><span class="nf">Label</span><span class="p">(</span><span class="s">"(s)"</span><span class="p">);</span>
+            <span class="n">EditorGUILayout</span><span class="p">.</span><span class="nf">EndHorizontal</span><span class="p">();</span>
+            <span class="n">Hoster</span><span class="p">.</span><span class="n">SkillData</span><span class="p">.</span><span class="n">Fx</span><span class="p">[</span><span class="n">i</span><span class="p">].</span><span class="n">Shield</span> <span class="p">=</span> <span class="n">EditorGUILayout</span><span class="p">.</span><span class="nf">Toggle</span><span class="p">(</span><span class="s">"Shield"</span><span class="p">,</span> <span class="n">Hoster</span><span class="p">.</span><span class="n">SkillData</span><span class="p">.</span><span class="n">Fx</span><span class="p">[</span><span class="n">i</span><span class="p">].</span><span class="n">Shield</span><span class="p">);</span>
+        <span class="p">}</span>
+        <span class="k">else</span>
+        <span class="p">{</span>
+            <span class="n">Hoster</span><span class="p">.</span><span class="n">SkillData</span><span class="p">.</span><span class="n">Fx</span><span class="p">[</span><span class="n">i</span><span class="p">].</span><span class="n">Fx</span> <span class="p">=</span> <span class="k">null</span><span class="p">;</span>
+        <span class="p">}</span>
+    <span class="p">}</span>
+<span class="p">}</span></code></pre></figure>
+
+<p>运行时有一个timer，在指定帧触发回调，不同的逻辑到通过虚函数分发到不同的脚本。</p>
+
+<figure class="highlight"><pre><code class="language-csharp" data-lang="csharp"><span class="k">void</span> <span class="nf">LateUpdate</span><span class="p">()</span>
+<span class="p">{</span>
+    <span class="k">if</span> <span class="p">(</span><span class="n">_attribute</span> <span class="p">!=</span> <span class="k">null</span><span class="p">)</span> <span class="n">_attribute</span><span class="p">.</span><span class="nf">UpdateRotation</span><span class="p">();</span>
+    <span class="c1">//trigger 在技能触发的时候会赋值
+</span>    <span class="k">if</span> <span class="p">(!</span><span class="kt">string</span><span class="p">.</span><span class="nf">IsNullOrEmpty</span><span class="p">(</span><span class="n">trigger</span><span class="p">)</span> <span class="p">&amp;&amp;</span> <span class="n">ator</span> <span class="p">!=</span> <span class="k">null</span> <span class="p">&amp;&amp;</span> <span class="p">!</span><span class="n">ator</span><span class="p">.</span><span class="nf">IsInTransition</span><span class="p">(</span><span class="m">0</span><span class="p">))</span>
+    <span class="p">{</span>
+        <span class="k">if</span> <span class="p">(</span><span class="n">trigger</span> <span class="p">!=</span> <span class="n">AnimTriger</span><span class="p">.</span><span class="n">ToStand</span> <span class="p">&amp;&amp;</span>
+            <span class="n">trigger</span> <span class="p">!=</span> <span class="n">AnimTriger</span><span class="p">.</span><span class="n">ToMove</span> <span class="p">&amp;&amp;</span>
+            <span class="n">trigger</span> <span class="p">!=</span> <span class="n">AnimTriger</span><span class="p">.</span><span class="n">EndSkill</span><span class="p">)</span>
+            <span class="c1">//casting
+</span>            <span class="k">for</span> <span class="p">(</span><span class="kt">int</span> <span class="n">i</span> <span class="p">=</span> <span class="m">0</span><span class="p">,</span> <span class="n">max</span> <span class="p">=</span> <span class="n">skills</span><span class="p">.</span><span class="n">Count</span><span class="p">;</span> <span class="n">i</span> <span class="p">&lt;</span> <span class="n">max</span><span class="p">;</span> <span class="n">i</span><span class="p">++)</span>
+            <span class="p">{</span>
+                <span class="n">skills</span><span class="p">[</span><span class="n">i</span><span class="p">].</span><span class="nf">Execute</span><span class="p">();</span>
+            <span class="p">}</span>
+
+        <span class="n">ator</span><span class="p">.</span><span class="n">speed</span> <span class="p">=</span> <span class="m">1</span><span class="p">;</span>
+        <span class="n">ator</span><span class="p">.</span><span class="nf">SetTrigger</span><span class="p">(</span><span class="n">trigger</span><span class="p">);</span>
+        <span class="n">trigger</span> <span class="p">=</span> <span class="k">null</span><span class="p">;</span>
+    <span class="p">}</span>
+<span class="p">}</span></code></pre></figure>
+
+
+    </div>
+  </div>
+
+  <style>
+  .post-nav {
+    overflow: hidden;
+    /* margin-top: 60px; */
+    padding: 12px;
+    white-space: nowrap;
+    /* border-top: 1px solid #eee; */
+  }
+
+  .post-nav-item {
+    display: inline-block;
+    width: 50%;
+    white-space: normal;
+  }
+
+  .post-nav-item a {
+    position: relative;
+    display: inline-block;
+    line-height: 25px;
+    font-size: 14px;
+    color: #555;
+    border-bottom: none;
+  }
+
+  .post-nav-item a:hover {
+    color: #222;
+    font-weight: bold;
+    border-bottom: none;
+  }
+
+  .post-nav-item a:active {
+    top: 2px;
+  }
+
+  .post-nav-item a:before,
+  .post-nav-item a:after {
+    display: inline-block;
+    width: 16px;
+    height: 25px;
+    vertical-align: top;
+    opacity: 0.4;
+    background-size: 16px;
+  }
+
+  .post-nav-none a:none {
+    content: ' ';
+    background-size: 8px;
+  }
+
+  .post-nav-none a:hover:none {
+    opacity: 1;
+  }
+
+  .post-nav-prev a:before {
+    content: ' ';
+    background: url("data:image/svg+xml;base64,PD94bWwgdmVyc2lvbj0iMS4wIiA/PjxzdmcgaGVpZ2h0PSIxMnB4IiB2ZXJzaW9uPSIxLjEiIHZpZXdCb3g9IjAgMCA5IDEyIiB3aWR0aD0iOXB4IiB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHhtbG5zOnNrZXRjaD0iaHR0cDovL3d3dy5ib2hlbWlhbmNvZGluZy5jb20vc2tldGNoL25zIiB4bWxuczp4bGluaz0iaHR0cDovL3d3dy53My5vcmcvMTk5OS94bGluayI+PHRpdGxlLz48ZGVzYy8+PGRlZnMvPjxnIGZpbGw9Im5vbmUiIGZpbGwtcnVsZT0iZXZlbm9kZCIgaWQ9IlBhZ2UtMSIgc3Ryb2tlPSJub25lIiBzdHJva2Utd2lkdGg9IjEiPjxnIGZpbGw9IiMwMDAwMDAiIGlkPSJDb3JlIiB0cmFuc2Zvcm09InRyYW5zbGF0ZSgtMjE4LjAwMDAwMCwgLTkwLjAwMDAwMCkiPjxnIGlkPSJjaGV2cm9uLWxlZnQiIHRyYW5zZm9ybT0idHJhbnNsYXRlKDIxOC41MDAwMDAsIDkwLjAwMDAwMCkiPjxwYXRoIGQ9Ik03LjQsMS40IEw2LDAgTC04Ljg4MTc4NDJlLTE2LDYgTDYsMTIgTDcuNCwxMC42IEwyLjgsNiBMNy40LDEuNCBaIiBpZD0iU2hhcGUiLz48L2c+PC9nPjwvZz48L3N2Zz4=") no-repeat 0 50%;
+    background-size: 8px;
+  }
+
+  .post-nav-prev a:hover:before {
+    opacity: 1;
+  }
+
+  .post-nav-next {
+    text-align: right;
+  }
+
+  .post-nav-next a:after {
+    content: ' ';
+    background: url("data:image/svg+xml;base64,PD94bWwgdmVyc2lvbj0iMS4wIiA/PjxzdmcgaGVpZ2h0PSIxMnB4IiB2ZXJzaW9uPSIxLjEiIHZpZXdCb3g9IjAgMCA5IDEyIiB3aWR0aD0iOXB4IiB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHhtbG5zOnNrZXRjaD0iaHR0cDovL3d3dy5ib2hlbWlhbmNvZGluZy5jb20vc2tldGNoL25zIiB4bWxuczp4bGluaz0iaHR0cDovL3d3dy53My5vcmcvMTk5OS94bGluayI+PHRpdGxlLz48ZGVzYy8+PGRlZnMvPjxnIGZpbGw9Im5vbmUiIGZpbGwtcnVsZT0iZXZlbm9kZCIgaWQ9IlBhZ2UtMSIgc3Ryb2tlPSJub25lIiBzdHJva2Utd2lkdGg9IjEiPjxnIGZpbGw9IiMwMDAwMDAiIGlkPSJDb3JlIiB0cmFuc2Zvcm09InRyYW5zbGF0ZSgtMjYwLjAwMDAwMCwgLTkwLjAwMDAwMCkiPjxnIGlkPSJjaGV2cm9uLXJpZ2h0IiB0cmFuc2Zvcm09InRyYW5zbGF0ZSgyNjAuNTAwMDAwLCA5MC4wMDAwMDApIj48cGF0aCBkPSJNMSwwIEwtMC40LDEuNCBMNC4yLDYgTC0wLjQsMTAuNiBMMSwxMiBMNyw2IEwxLDAgWiIgaWQ9IlNoYXBlIi8+PC9nPjwvZz48L2c+PC9zdmc+") no-repeat 100% 50%;
+    background-size: 8px;
+  }
+
+  .post-nav-next a:hover:after {
+    opacity: 1;
+  }
+</style>
+
+
+
+<div class="post-nav">
+
+  
+  <div class="post-nav-prev post-nav-item">
+    
+    <a href="/blog/2018/homebew/"> Mac 下使用 Homebrew</a>
+  </div>
+  
+
+  
+  <div class="post-nav-next post-nav-item">
+    
+    <a href="/blog/2018/fashion/"> Unity 实现Avatar换装</a>
+  </div>
+  
+
+</div>
+
+</article>
+    </div>
+
+    <footer class="site-footer">
+  <div class="container">
+    <ul class="social">
+  <li><a href="https://twitter.com/penghuailiang" target="_blank"><i class="icon icon-twitter"></i></a></li>
+  <li><a href="https://www.zhihu.com/people/huailiangpenguin" target="_blank"><i class="icon icon-zhihu"></i></a></li>
+  <li><a href="https://www.facebook.com/profile.php?id=100004290725320" target="_blank"><i class="icon icon-facebook"></i></a></li>
+  <li><a href="https://weibo.com/6212299692/profile?topnav=1&wvr=6" target="_blank"><i class="icon icon-sina"></i></a></li>
+  <li><a href="https://www.linkedin.com/in/penghuailiang/" target="_blank"><i class="icon icon-linkedin"></i></a></li>
+  <li><a href="https://github.com/huailiang" target="_blank"><i class="icon icon-github"></i></a></li>
+</ul>
+    <p class="txt-medium-gray">
+      <small>&copy;2019 All rights reserved. </small>
+    </p>
+  </div>
+</footer>
+    <a href="https://github.com/huailiang" target="_blank" class="github-corner"><svg width="80" height="80" viewBox="0 0 250 250" style="fill:#337ab7; color:#fff; position: absolute; top: 0; border: 0; right: 0;"><path d="M0,0 L115,115 L130,115 L142,142 L250,250 L250,0 Z"></path><path d="M128.3,109.0 C113.8,99.7 119.0,89.6 119.0,89.6 C122.0,82.7 120.5,78.6 120.5,78.6 C119.2,72.0 123.4,76.3 123.4,76.3 C127.3,80.9 125.5,87.3 125.5,87.3 C122.9,97.6 130.6,101.9 134.4,103.2" fill="currentColor" style="transform-origin: 130px 106px;" class="octo-arm"></path><path d="M115.0,115.0 C114.9,115.1 118.7,116.5 119.8,115.4 L133.7,101.6 C136.9,99.2 139.9,98.4 142.2,98.6 C133.8,88.0 127.5,74.4 143.8,58.0 C148.5,53.4 154.0,51.2 159.7,51.0 C160.3,49.4 163.2,43.6 171.4,40.1 C171.4,40.1 176.1,42.5 178.8,56.2 C183.1,58.6 187.2,61.8 190.9,65.4 C194.5,69.0 197.7,73.2 200.1,77.6 C213.8,80.2 216.3,84.9 216.3,84.9 C212.7,93.1 206.9,96.0 205.4,96.6 C205.1,102.4 203.0,107.8 198.3,112.5 C181.9,128.9 168.3,122.5 157.7,114.1 C157.9,116.9 156.7,120.9 152.7,124.9 L141.0,136.5 C139.8,137.7 141.6,141.9 141.8,141.8 Z" fill="currentColor" class="octo-body"></path></svg></a>
+
+
+    <script src="//code.jquery.com/jquery-1.11.3.min.js"></script>
+    <script>
+      $(document).ready(function () {
+        $('.sliding-panel-button,.sliding-panel-fade-screen,.sliding-panel-close').on('click touchstart', function (e) {
+          $('.sliding-panel-content,.sliding-panel-fade-screen').toggleClass('is-visible');
+          e.preventDefault();
+        });
+      });
+    </script>
+  </main>
+</body>
+
+</html>

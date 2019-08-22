@@ -1,0 +1,335 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <meta http-equiv="X-UA-Compatible" content="IE=edge">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+
+  <title>Batch 合并Drawcall绘制HUD</title>
+  <meta name="description"
+    content="  hud是游戏中大量使用的元素，一个血条往往只需要很少的表现。在Unity中常用的UI大都是nGUI或者uGUI,因为图文层级交错或者Depth重叠，往往带来不少的Drawcall开销，从而导致游戏性能的开销。这里我们建议使用3D mesh的方式去绘制HUD，从而去优化性能。">
+
+  <link rel="shortcut icon" href="/img/favicon.ico">
+  <link rel="stylesheet" href="/css/main.css">
+  <link rel="canonical" href="https://huailiang.github.io/blog/2018/hud/">
+  <link rel="alternate" type="application/rss+xml" title="Huailiang Blog"
+    href="https://huailiang.github.io/feed.xml" />
+
+</head>
+
+<body>
+  <main>
+    <header class="site-header">
+  <div class="container">
+    <h1><a href="/">Hom<span>e</span></a></h1>
+
+    <button type="button" class="sliding-panel-button">
+      <span></span>
+      <span></span>
+      <span></span>
+    </button>
+
+    <nav class="navbar sliding-panel-content">
+      <ul>
+        
+        <li><a href="/about" title="About">About</a>
+        </li>
+        
+        <li><a href="/blog" title="Blog">Blog</a>
+        </li>
+        
+        <!-- <li><a href="/feed.xml" target="_blank"><i class="icon icon-feed"></i></a></li> -->
+        <li><a href="/category/" target="_blank"><i class="icon icon-feed"></i></a></li>
+      </ul>
+    </nav>
+  </div>
+</header>
+
+<div class="sliding-panel-fade-screen"></div>
+    <script type="text/javascript" src="/js/MathJax.js?config=TeX-AMS-MML_HTMLorMML"></script>
+
+<script type="text/x-mathjax-config">
+MathJax.Hub.Config({
+  tex2jax: {
+    inlineMath: [['$','$'], ['\\(','\\)']],
+    processEscapes: true
+  }
+});
+</script>
+
+<script type="text/x-mathjax-config">
+  MathJax.Hub.Config({
+    tex2jax: {
+      skipTags: ['script', 'noscript', 'style', 'textarea', 'pre', 'code']
+    }
+  });
+
+</script>
+    <div class="container">
+      <article role="article" class="post">
+
+  <div class="card">
+    <header class="post-header">
+      <h1 class="post-title">Batch 合并Drawcall绘制HUD</h1>
+      <p class="post-meta">May 10, 2018 •
+        Huailiang</p>
+    </header>
+
+    <div class="post-content">
+      <blockquote>
+  <p>hud是游戏中大量使用的元素，一个血条往往只需要很少的表现。在Unity中常用的UI大都是nGUI或者uGUI,因为图文层级交错或者Depth重叠，往往带来不少的Drawcall开销，从而导致游戏性能的开销。这里我们建议使用3D mesh的方式去绘制HUD，从而去优化性能。</p>
+</blockquote>
+
+<p>本文对应的源码已经公开到github,点击<a href="https://github.com/huailiang/hud">地址</a>可以查阅。</p>
+
+<h2 id="绘制血条">绘制血条</h2>
+
+<p>我们使用c#代码-Hud.cs动态创建一个mesh。首先动态创建一个mesh，我们画四个三角一共使用八个顶点。设置好他们对于的本地坐标。创建好的mesh如下图所示：</p>
+
+<p><img src="/img/post-hud/hud-2.jpg" alt="" /></p>
+
+<p>我们将前面两个三角使用顶点色-红色来表示血条， 后面两个三角使用灰色表示满血的情况。</p>
+
+<p>项目中我们内置了两个shader, 都是采样顶点色。不同的是VertxSurfShader使用surface shader实现，会计算光照的颜色，而VertxFragShader直接输出顶点色，不参与光照的计算。相对来说VertxFragShader更省一些。</p>
+
+<p>在VertxSurfShade中我们采样顶点色(appdata_full)来作为vert shader输出的颜色。</p>
+
+<figure class="highlight"><pre><code class="language-cpp" data-lang="cpp"><span class="n">fixed4</span> <span class="n">_Color</span><span class="p">;</span>  
+
+<span class="k">struct</span> <span class="n">Input</span>
+<span class="p">{</span>
+    <span class="n">float4</span> <span class="n">vertexColor</span><span class="p">;</span>
+<span class="p">};</span>
+
+<span class="kt">void</span> <span class="nf">vert</span><span class="p">(</span><span class="n">inout</span> <span class="n">appdata_full</span> <span class="n">v</span><span class="p">,</span><span class="n">out</span> <span class="n">Input</span> <span class="n">o</span><span class="p">)</span>
+<span class="p">{</span>
+    <span class="n">UNITY_INITIALIZE_OUTPUT</span><span class="p">(</span><span class="n">Input</span><span class="p">,</span><span class="n">o</span><span class="p">);</span>
+    <span class="n">o</span><span class="p">.</span><span class="n">vertexColor</span><span class="o">=</span><span class="n">v</span><span class="p">.</span><span class="n">color</span><span class="p">;</span>
+<span class="p">}</span>
+
+<span class="kt">void</span> <span class="nf">surf</span> <span class="p">(</span><span class="n">Input</span> <span class="n">IN</span><span class="p">,</span> <span class="n">inout</span> <span class="n">SurfaceOutput</span> <span class="n">o</span><span class="p">)</span> 
+<span class="p">{</span>
+    <span class="n">o</span><span class="p">.</span><span class="n">Albedo</span><span class="o">=</span><span class="n">IN</span><span class="p">.</span><span class="n">vertexColor</span> <span class="o">*</span> <span class="n">_Color</span><span class="p">;</span>
+<span class="p">}</span></code></pre></figure>
+
+<p>在VertxFragShader中采样顶点色的使用如下：</p>
+
+<figure class="highlight"><pre><code class="language-cpp" data-lang="cpp"><span class="n">CGPROGRAM</span>
+<span class="cp">#pragma vertex vert
+</span>
+<span class="cp">#pragma fragment frag
+</span>
+<span class="cp">#include "UnityCG.cginc"
+</span>
+<span class="n">fixed4</span> <span class="n">_Color</span><span class="p">;</span>  
+
+<span class="k">struct</span> <span class="n">appdata</span> <span class="p">{</span>
+    <span class="n">float4</span> <span class="n">vertex</span> <span class="o">:</span> <span class="n">POSITION</span><span class="p">;</span>
+    <span class="n">fixed4</span> <span class="n">color</span> <span class="o">:</span> <span class="n">COLOR</span><span class="p">;</span>
+<span class="p">};</span>
+
+<span class="k">struct</span> <span class="n">v2f</span> <span class="p">{</span>
+    <span class="n">fixed4</span> <span class="n">vertexColor</span> <span class="o">:</span> <span class="n">TEXCOORD0</span><span class="p">;</span>
+    <span class="n">float4</span> <span class="n">vertex</span> <span class="o">:</span> <span class="n">SV_POSITION</span><span class="p">;</span>
+<span class="p">};</span>
+
+
+<span class="n">v2f</span> <span class="nf">vert</span> <span class="p">(</span><span class="n">appdata</span> <span class="n">v</span><span class="p">)</span> <span class="p">{</span>
+    <span class="n">v2f</span> <span class="n">o</span><span class="p">;</span>
+    <span class="n">o</span><span class="p">.</span><span class="n">vertex</span> <span class="o">=</span> <span class="n">UnityObjectToClipPos</span><span class="p">(</span><span class="n">v</span><span class="p">.</span><span class="n">vertex</span><span class="p">);</span>
+    <span class="n">o</span><span class="p">.</span><span class="n">vertexColor</span> <span class="o">=</span> <span class="n">v</span><span class="p">.</span><span class="n">color</span><span class="p">;</span>
+    <span class="k">return</span> <span class="n">o</span><span class="p">;</span>
+<span class="p">}</span>
+
+<span class="n">fixed4</span> <span class="n">frag</span> <span class="p">(</span><span class="n">v2f</span> <span class="n">i</span><span class="p">)</span> <span class="o">:</span> <span class="n">SV_Target</span> <span class="p">{</span>
+    <span class="n">fixed4</span> <span class="n">c</span> <span class="o">=</span> <span class="n">i</span><span class="p">.</span><span class="n">vertexColor</span><span class="p">;</span>
+    <span class="k">return</span> <span class="n">c</span> <span class="o">*</span> <span class="n">_Color</span><span class="p">;</span>
+<span class="p">}</span>
+<span class="n">ENDCG</span></code></pre></figure>
+
+<p>然后设置关联的render组件里关闭反射光线和接收投射阴影。</p>
+
+<p><img src="/img/post-hud/hud-1.jpg" alt="" /></p>
+
+<p>对应的代码实现如下：</p>
+
+<figure class="highlight"><pre><code class="language-csharp" data-lang="csharp"><span class="n">rend</span><span class="p">.</span><span class="n">shadowCastingMode</span> <span class="p">=</span> <span class="n">ShadowCastingMode</span><span class="p">.</span><span class="n">Off</span><span class="p">;</span>
+<span class="n">rend</span><span class="p">.</span><span class="n">receiveShadows</span> <span class="p">=</span> <span class="k">false</span><span class="p">;</span>
+<span class="n">rend</span><span class="p">.</span><span class="n">lightProbeUsage</span> <span class="p">=</span> <span class="n">LightProbeUsage</span><span class="p">.</span><span class="n">Off</span><span class="p">;</span>
+<span class="n">rend</span><span class="p">.</span><span class="n">reflectionProbeUsage</span> <span class="p">=</span> <span class="n">ReflectionProbeUsage</span><span class="p">.</span><span class="n">Off</span><span class="p">;</span></code></pre></figure>
+
+<h2 id="绘制文字">绘制文字</h2>
+
+<p>绘制文字也不实用nGUI或者uGui使用的组件，而是使用Unity自带的组件TextMesh。我们把TextMesh挂在Hud组件下面，设置好文字大小和对齐方式。对应的代码实现如下：</p>
+
+<figure class="highlight"><pre><code class="language-csharp" data-lang="csharp"><span class="k">private</span> <span class="k">void</span> <span class="nf">CreateText</span><span class="p">()</span>
+<span class="p">{</span>
+    <span class="n">GameObject</span> <span class="n">go</span> <span class="p">=</span> <span class="k">new</span> <span class="nf">GameObject</span><span class="p">(</span><span class="s">"Name"</span><span class="p">);</span>
+    <span class="n">go</span><span class="p">.</span><span class="n">transform</span><span class="p">.</span><span class="nf">SetParent</span><span class="p">(</span><span class="n">hud</span><span class="p">.</span><span class="n">transform</span><span class="p">);</span>
+    <span class="n">go</span><span class="p">.</span><span class="n">transform</span><span class="p">.</span><span class="n">rotation</span> <span class="p">=</span> <span class="n">Quaternion</span><span class="p">.</span><span class="n">identity</span><span class="p">;</span>
+    <span class="n">go</span><span class="p">.</span><span class="n">transform</span><span class="p">.</span><span class="n">localScale</span> <span class="p">=</span> <span class="m">0.1f</span> <span class="p">*</span> <span class="n">Vector3</span><span class="p">.</span><span class="n">one</span><span class="p">;</span>
+    <span class="n">go</span><span class="p">.</span><span class="n">transform</span><span class="p">.</span><span class="n">localPosition</span> <span class="p">=</span> <span class="k">new</span> <span class="nf">Vector3</span><span class="p">(</span><span class="m">0</span><span class="p">,</span> <span class="m">0.5f</span><span class="p">,</span> <span class="m">0</span><span class="p">);</span>
+    <span class="n">font</span> <span class="p">=</span> <span class="n">go</span><span class="p">.</span><span class="n">AddComponent</span><span class="p">&lt;</span><span class="n">TextMesh</span><span class="p">&gt;();</span>
+    <span class="n">font</span><span class="p">.</span><span class="n">text</span> <span class="p">=</span> <span class="n">_txt</span><span class="p">;</span>
+    <span class="n">font</span><span class="p">.</span><span class="n">fontSize</span> <span class="p">=</span> <span class="m">36</span><span class="p">;</span>
+    <span class="n">font</span><span class="p">.</span><span class="n">alignment</span> <span class="p">=</span> <span class="n">TextAlignment</span><span class="p">.</span><span class="n">Center</span><span class="p">;</span>
+    <span class="n">font</span><span class="p">.</span><span class="n">anchor</span> <span class="p">=</span> <span class="n">TextAnchor</span><span class="p">.</span><span class="n">MiddleCenter</span><span class="p">;</span>
+    <span class="n">font</span><span class="p">.</span><span class="n">color</span> <span class="p">=</span> <span class="n">Color</span><span class="p">.</span><span class="n">black</span><span class="p">;</span>
+<span class="p">}</span></code></pre></figure>
+
+<h3 id="控制血条进度">控制血条进度</h3>
+
+<p>控制血条进度，其实控制的就是顶点1、3、4、6的uv信息。这些顶点的位置在[-x,x] 之间（x=2),我们根据传进来的值在[-2,2]进行差值，算出最终的顶点位置，最后赋值给mesh，来达到控制血条进度的效果。</p>
+
+<figure class="highlight"><pre><code class="language-csharp" data-lang="csharp"><span class="k">public</span> <span class="k">void</span> <span class="nf">UpdateHud</span><span class="p">(</span><span class="kt">float</span> <span class="n">v</span><span class="p">)</span>
+<span class="p">{</span>
+    <span class="kt">float</span> <span class="n">val</span> <span class="p">=</span> <span class="n">Mathf</span><span class="p">.</span><span class="nf">Lerp</span><span class="p">(-</span><span class="n">x</span><span class="p">,</span> <span class="n">x</span><span class="p">,</span> <span class="m">1</span> <span class="p">-</span> <span class="n">v</span><span class="p">);</span>
+    <span class="n">vertices</span><span class="p">[</span><span class="m">1</span><span class="p">].</span><span class="nf">Set</span><span class="p">(</span><span class="n">val</span><span class="p">,</span> <span class="n">y</span><span class="p">,</span> <span class="n">z</span><span class="p">);</span>
+    <span class="n">vertices</span><span class="p">[</span><span class="m">3</span><span class="p">].</span><span class="nf">Set</span><span class="p">(</span><span class="n">val</span><span class="p">,</span> <span class="p">-</span><span class="n">y</span><span class="p">,</span> <span class="n">z</span><span class="p">);</span>
+    <span class="n">vertices</span><span class="p">[</span><span class="m">4</span><span class="p">]</span> <span class="p">=</span> <span class="n">vertices</span><span class="p">[</span><span class="m">1</span><span class="p">];</span>
+    <span class="n">vertices</span><span class="p">[</span><span class="m">6</span><span class="p">]</span> <span class="p">=</span> <span class="n">vertices</span><span class="p">[</span><span class="m">3</span><span class="p">];</span>
+    <span class="n">filter</span><span class="p">.</span><span class="n">mesh</span><span class="p">.</span><span class="n">vertices</span> <span class="p">=</span> <span class="n">vertices</span><span class="p">;</span>
+<span class="p">}</span></code></pre></figure>
+
+<p>在Unity中运行HudShow， 在Game视图左上角的GUI-Slider调整进度，我们可以发现对应的血条也跟着发生变化。下面查看Drawcall的信息，运行DCShow，我们创建了大量的hud,并控制不同的血条进度和位置，打开Stats面板，我们看见一共只有四个drawcall，除了摄像机固定的两个drawcall,所有的hud通过合批一共只有2个drawcall。</p>
+
+<p><img src="/img/post-hud/hud-3.jpg" alt="" /></p>
+
+<p>好了就这样，拜拜！</p>
+
+
+    </div>
+  </div>
+
+  <style>
+  .post-nav {
+    overflow: hidden;
+    /* margin-top: 60px; */
+    padding: 12px;
+    white-space: nowrap;
+    /* border-top: 1px solid #eee; */
+  }
+
+  .post-nav-item {
+    display: inline-block;
+    width: 50%;
+    white-space: normal;
+  }
+
+  .post-nav-item a {
+    position: relative;
+    display: inline-block;
+    line-height: 25px;
+    font-size: 14px;
+    color: #555;
+    border-bottom: none;
+  }
+
+  .post-nav-item a:hover {
+    color: #222;
+    font-weight: bold;
+    border-bottom: none;
+  }
+
+  .post-nav-item a:active {
+    top: 2px;
+  }
+
+  .post-nav-item a:before,
+  .post-nav-item a:after {
+    display: inline-block;
+    width: 16px;
+    height: 25px;
+    vertical-align: top;
+    opacity: 0.4;
+    background-size: 16px;
+  }
+
+  .post-nav-none a:none {
+    content: ' ';
+    background-size: 8px;
+  }
+
+  .post-nav-none a:hover:none {
+    opacity: 1;
+  }
+
+  .post-nav-prev a:before {
+    content: ' ';
+    background: url("data:image/svg+xml;base64,PD94bWwgdmVyc2lvbj0iMS4wIiA/PjxzdmcgaGVpZ2h0PSIxMnB4IiB2ZXJzaW9uPSIxLjEiIHZpZXdCb3g9IjAgMCA5IDEyIiB3aWR0aD0iOXB4IiB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHhtbG5zOnNrZXRjaD0iaHR0cDovL3d3dy5ib2hlbWlhbmNvZGluZy5jb20vc2tldGNoL25zIiB4bWxuczp4bGluaz0iaHR0cDovL3d3dy53My5vcmcvMTk5OS94bGluayI+PHRpdGxlLz48ZGVzYy8+PGRlZnMvPjxnIGZpbGw9Im5vbmUiIGZpbGwtcnVsZT0iZXZlbm9kZCIgaWQ9IlBhZ2UtMSIgc3Ryb2tlPSJub25lIiBzdHJva2Utd2lkdGg9IjEiPjxnIGZpbGw9IiMwMDAwMDAiIGlkPSJDb3JlIiB0cmFuc2Zvcm09InRyYW5zbGF0ZSgtMjE4LjAwMDAwMCwgLTkwLjAwMDAwMCkiPjxnIGlkPSJjaGV2cm9uLWxlZnQiIHRyYW5zZm9ybT0idHJhbnNsYXRlKDIxOC41MDAwMDAsIDkwLjAwMDAwMCkiPjxwYXRoIGQ9Ik03LjQsMS40IEw2LDAgTC04Ljg4MTc4NDJlLTE2LDYgTDYsMTIgTDcuNCwxMC42IEwyLjgsNiBMNy40LDEuNCBaIiBpZD0iU2hhcGUiLz48L2c+PC9nPjwvZz48L3N2Zz4=") no-repeat 0 50%;
+    background-size: 8px;
+  }
+
+  .post-nav-prev a:hover:before {
+    opacity: 1;
+  }
+
+  .post-nav-next {
+    text-align: right;
+  }
+
+  .post-nav-next a:after {
+    content: ' ';
+    background: url("data:image/svg+xml;base64,PD94bWwgdmVyc2lvbj0iMS4wIiA/PjxzdmcgaGVpZ2h0PSIxMnB4IiB2ZXJzaW9uPSIxLjEiIHZpZXdCb3g9IjAgMCA5IDEyIiB3aWR0aD0iOXB4IiB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHhtbG5zOnNrZXRjaD0iaHR0cDovL3d3dy5ib2hlbWlhbmNvZGluZy5jb20vc2tldGNoL25zIiB4bWxuczp4bGluaz0iaHR0cDovL3d3dy53My5vcmcvMTk5OS94bGluayI+PHRpdGxlLz48ZGVzYy8+PGRlZnMvPjxnIGZpbGw9Im5vbmUiIGZpbGwtcnVsZT0iZXZlbm9kZCIgaWQ9IlBhZ2UtMSIgc3Ryb2tlPSJub25lIiBzdHJva2Utd2lkdGg9IjEiPjxnIGZpbGw9IiMwMDAwMDAiIGlkPSJDb3JlIiB0cmFuc2Zvcm09InRyYW5zbGF0ZSgtMjYwLjAwMDAwMCwgLTkwLjAwMDAwMCkiPjxnIGlkPSJjaGV2cm9uLXJpZ2h0IiB0cmFuc2Zvcm09InRyYW5zbGF0ZSgyNjAuNTAwMDAwLCA5MC4wMDAwMDApIj48cGF0aCBkPSJNMSwwIEwtMC40LDEuNCBMNC4yLDYgTC0wLjQsMTAuNiBMMSwxMiBMNyw2IEwxLDAgWiIgaWQ9IlNoYXBlIi8+PC9nPjwvZz48L2c+PC9zdmc+") no-repeat 100% 50%;
+    background-size: 8px;
+  }
+
+  .post-nav-next a:hover:after {
+    opacity: 1;
+  }
+</style>
+
+
+
+<div class="post-nav">
+
+  
+  <div class="post-nav-prev post-nav-item">
+    
+    <a href="/blog/2018/protobuf/"> Unity 植入 c++版protobuf</a>
+  </div>
+  
+
+  
+  <div class="post-nav-next post-nav-item">
+    
+    <a href="/blog/2018/videoreg/"> 提取视频特征进行人脸识别</a>
+  </div>
+  
+
+</div>
+
+</article>
+    </div>
+
+    <footer class="site-footer">
+  <div class="container">
+    <ul class="social">
+  <li><a href="https://twitter.com/penghuailiang" target="_blank"><i class="icon icon-twitter"></i></a></li>
+  <li><a href="https://www.zhihu.com/people/huailiangpenguin" target="_blank"><i class="icon icon-zhihu"></i></a></li>
+  <li><a href="https://www.facebook.com/profile.php?id=100004290725320" target="_blank"><i class="icon icon-facebook"></i></a></li>
+  <li><a href="https://weibo.com/6212299692/profile?topnav=1&wvr=6" target="_blank"><i class="icon icon-sina"></i></a></li>
+  <li><a href="https://www.linkedin.com/in/penghuailiang/" target="_blank"><i class="icon icon-linkedin"></i></a></li>
+  <li><a href="https://github.com/huailiang" target="_blank"><i class="icon icon-github"></i></a></li>
+</ul>
+    <p class="txt-medium-gray">
+      <small>&copy;2019 All rights reserved. </small>
+    </p>
+  </div>
+</footer>
+    <a href="https://github.com/huailiang" target="_blank" class="github-corner"><svg width="80" height="80" viewBox="0 0 250 250" style="fill:#337ab7; color:#fff; position: absolute; top: 0; border: 0; right: 0;"><path d="M0,0 L115,115 L130,115 L142,142 L250,250 L250,0 Z"></path><path d="M128.3,109.0 C113.8,99.7 119.0,89.6 119.0,89.6 C122.0,82.7 120.5,78.6 120.5,78.6 C119.2,72.0 123.4,76.3 123.4,76.3 C127.3,80.9 125.5,87.3 125.5,87.3 C122.9,97.6 130.6,101.9 134.4,103.2" fill="currentColor" style="transform-origin: 130px 106px;" class="octo-arm"></path><path d="M115.0,115.0 C114.9,115.1 118.7,116.5 119.8,115.4 L133.7,101.6 C136.9,99.2 139.9,98.4 142.2,98.6 C133.8,88.0 127.5,74.4 143.8,58.0 C148.5,53.4 154.0,51.2 159.7,51.0 C160.3,49.4 163.2,43.6 171.4,40.1 C171.4,40.1 176.1,42.5 178.8,56.2 C183.1,58.6 187.2,61.8 190.9,65.4 C194.5,69.0 197.7,73.2 200.1,77.6 C213.8,80.2 216.3,84.9 216.3,84.9 C212.7,93.1 206.9,96.0 205.4,96.6 C205.1,102.4 203.0,107.8 198.3,112.5 C181.9,128.9 168.3,122.5 157.7,114.1 C157.9,116.9 156.7,120.9 152.7,124.9 L141.0,136.5 C139.8,137.7 141.6,141.9 141.8,141.8 Z" fill="currentColor" class="octo-body"></path></svg></a>
+
+
+    <script src="//code.jquery.com/jquery-1.11.3.min.js"></script>
+    <script>
+      $(document).ready(function () {
+        $('.sliding-panel-button,.sliding-panel-fade-screen,.sliding-panel-close').on('click touchstart', function (e) {
+          $('.sliding-panel-content,.sliding-panel-fade-screen').toggleClass('is-visible');
+          e.preventDefault();
+        });
+      });
+    </script>
+  </main>
+</body>
+
+</html>

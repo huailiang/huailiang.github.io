@@ -1,0 +1,401 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <meta http-equiv="X-UA-Compatible" content="IE=edge">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+
+  <title>机器学习-Unity 3D平衡球[转载]</title>
+  <meta name="description"
+    content="  最近，Unity宣布推出Unity Machine Learning Agent（ML-Agent），将游戏引擎连接到谷歌TensorFlow等机器学习框架中。通过深度强化学习算法，让非玩家角色（NPC）通过不断尝试和犯错，变得更有创造性和策略性。">
+
+  <link rel="shortcut icon" href="/img/favicon.ico">
+  <link rel="stylesheet" href="/css/main.css">
+  <link rel="canonical" href="https://huailiang.github.io/blog/2018/mlearn/">
+  <link rel="alternate" type="application/rss+xml" title="Huailiang Blog"
+    href="https://huailiang.github.io/feed.xml" />
+
+</head>
+
+<body>
+  <main>
+    <header class="site-header">
+  <div class="container">
+    <h1><a href="/">Hom<span>e</span></a></h1>
+
+    <button type="button" class="sliding-panel-button">
+      <span></span>
+      <span></span>
+      <span></span>
+    </button>
+
+    <nav class="navbar sliding-panel-content">
+      <ul>
+        
+        <li><a href="/about" title="About">About</a>
+        </li>
+        
+        <li><a href="/blog" title="Blog">Blog</a>
+        </li>
+        
+        <!-- <li><a href="/feed.xml" target="_blank"><i class="icon icon-feed"></i></a></li> -->
+        <li><a href="/category/" target="_blank"><i class="icon icon-feed"></i></a></li>
+      </ul>
+    </nav>
+  </div>
+</header>
+
+<div class="sliding-panel-fade-screen"></div>
+    <script type="text/javascript" src="/js/MathJax.js?config=TeX-AMS-MML_HTMLorMML"></script>
+
+<script type="text/x-mathjax-config">
+MathJax.Hub.Config({
+  tex2jax: {
+    inlineMath: [['$','$'], ['\\(','\\)']],
+    processEscapes: true
+  }
+});
+</script>
+
+<script type="text/x-mathjax-config">
+  MathJax.Hub.Config({
+    tex2jax: {
+      skipTags: ['script', 'noscript', 'style', 'textarea', 'pre', 'code']
+    }
+  });
+
+</script>
+    <div class="container">
+      <article role="article" class="post">
+
+  <div class="card">
+    <header class="post-header">
+      <h1 class="post-title">机器学习-Unity 3D平衡球[转载]</h1>
+      <p class="post-meta">Mar 3, 2018 •
+        Huailiang</p>
+    </header>
+
+    <div class="post-content">
+      <blockquote>
+  <p>最近，Unity宣布推出Unity Machine Learning Agent（ML-Agent），将游戏引擎连接到谷歌TensorFlow等机器学习框架中。通过深度强化学习算法，让非玩家角色（NPC）通过不断尝试和犯错，变得更有创造性和策略性。</p>
+</blockquote>
+
+<p>在游戏开发的过程中，既不能让玩家因过于简单而无聊，也不能因难度太高丧失玩家兴趣。Unity开发者Arthur Juliani表示，Unity的ML-Agent将帮助增加游戏的可玩性。</p>
+
+<p><img src="/img/post-ml/ml1.gif" alt="" /></p>
+
+<p>研究者和开发者可使用ML - Agents SDK将由Unity编辑器创建的游戏和模拟程序转换成可训练智能代理的环境。在这个环境中，只需一个简单的Python API即可使用深度增强学习、演化策略或其他机器学习方法对智能代理进行训练。测试版版的Unity ML – Agents已作为开源软件发布，其中包含了一套示例项目和基线算法用作新手入门。有关机器学习代理工具的github地址， 请访问<a href="https://github.com/Unity-Technologies/ml-agents">这里</a>。</p>
+<h3 id="环境配置">环境配置：</h3>
+<p>Python是机器学习常用的语言，TensorFlow就使用它作为主要开发语言。作为解释语言，它不需要进行编译，对于机器学习所需要的大量原型化和迭代处理有相当高的效率。而且Python开发生态成熟，有许多库可供使用。通过pip（Python Package Index）工具，你可以安装各种基于Python的库。</p>
+
+<p>安装项目所需Python库和工具</p>
+
+<p><b>安装Jupyter Notebook<b></b></b></p>
+
+<p>Jupyter Notebook是一个开源的Web应用程序，可以让你创建和共享包含实时代码，方程式，可视化和说明文本的文档。 用途包括：数据清理与转换，数值模拟，统计建模，机器学习等等。</p>
+
+<p>输入 pip3 install jupyter 安装Jupyter Notebook。</p>
+
+<p><img src="/img/post-ml/ml4.jpg" alt="" /></p>
+
+<p><b>安装NumPy<b>
+NumPy是Python语言的开源数学扩展库。支持高级大量的维度数组与矩阵运算，此外也针对数组运算提供大量的数学函数库。</b></b></p>
+
+<p>输入 pip3 install numpy 安装 NumPy。<br />
+<img src="/img/post-ml/ml5.jpg" alt="" /></p>
+
+<p><b>安装Pillow<b></b></b></p>
+
+<p>Pillow是PIL（Python Imaging Library，Python图像库）的一个分支，提供了对于开发者许多比较友好和直观的功能。</p>
+
+<p>输入 pip3 install pillow 安装 Pillow。</p>
+
+<p><img src="/img/post-ml/ml6.jpg" alt="" /></p>
+
+<p><b>安装docopt<b>
+docopt是Python的命令行参数解析器，其基于多年来用于描述程序界面的帮助信息而设计的，因此可以给开发者清晰的输出体验。</b></b></p>
+
+<p>输入 pip3 install docopt 安装 docopt 。</p>
+
+<p><img src="/img/post-ml/ml7.jpg" alt="" /></p>
+
+<p><b>安装TensorFlow<b>
+TensorFlow是现今非常流行的使用数据流图进行数值计算的开源软件库。图中的节点代表数学运算， 而图中的边则代表在这些节点之间传递的多维数组（张量）。这种灵活的架构可让你使用一个 API 将计算工作部署到桌面设备、服务器或者移动设备中的一个或多个 CPU 或 GPU。 TensorFlow 最初是由 Google 机器智能研究部门的 Google Brain 团队中的研究人员和工程师开发的，用于进行机器学习和深度神经网络研究， 但它是一个非常基础的系统，因此也可以应用于众多其他领域。</b></b></p>
+
+<p>输入 pip3 install tensorflow 安装 TensorFlow。</p>
+
+<p><img src="/img/post-ml/ml8.jpg" alt="" /></p>
+
+<p>在任何学习环境下都有的三种主要对象是:<br />
+<img src="/img/post-ml/ml3.jpg" alt="" /></p>
+
+<h4 id="agent">Agent:</h4>
+<p>每个代理都可以拥有一组独有的状态和观察，在环境中采取独有的行为，并在环境中获得独有的奖励。一个代理的动作由与之相联的大脑决定。</p>
+
+<h4 id="brain">Brain:</h4>
+<p>每个大脑都定义了一个特定的状态和动作空间，并负责决定每个关联的代理将采取哪些行动。当前版本支持将大脑设定为以下四种模式之一：</p>
+<ul>
+  <li>
+    <p>CoreBrainExternal.cs 动作决策由TensorFlow(或你选择的ML库)决定，我们的Python API负责打开套接字进行通信</p>
+  </li>
+  <li>
+    <p>CoreBrainInternal.cs 动作决策由一个已训练模型决定，该模型使用TensorFlowSharp嵌入项目。</p>
+  </li>
+  <li>
+    <p>CoreBrainPlayer.cs 动作决策由玩家输入决定。</p>
+  </li>
+  <li>
+    <p>CoreBrainHeuristic.cs 动作决策由手工编码(Decision.cs)的行为决定。</p>
+  </li>
+</ul>
+
+<h4 id="academy">Academy：</h4>
+<p>一个场景中的学院对象也包含了在环境中所有作为子对象的大脑。每个环境都包含单个学院对象，该对象从以下这些方面定义了环境的范围：</p>
+
+<p>引擎配置-在训练和推理模式下，游戏引擎的速度和渲染质量。</p>
+
+<p>跳帧-在每个代理做出一个新的决定之间要跳过多少引擎步骤。</p>
+
+<p>全局迭代长度-单次迭代的持续时间。到时间后，所有代理都将被设置为完成。</p>
+
+<p>所有连接着设置为外部模式大脑的代理，它们的状态和观察都会被外部通信器（External Communicator）收集，并通过我们的Python API与你选择的ML库进行通信。将多个代理设置到单个大脑，可以以批处理方式进行动作决策，从而在系统支持的情况下获得并行计算的优势。</p>
+
+<h3 id="设置unity环境">设置Unity环境</h3>
+
+<p>运行启动Unity 2017.1，在Unity中打开unity-environment文件夹。在启动窗口中，选择Open，并在弹出的文件浏览窗口中，选择unity-environment，点击Open。<br />
+注意：如遇见弹出警告信息为”Opening Project in Non-Matching Editor Installation”，请直接忽略。</p>
+
+<p>打开项目后，在Project窗口，定位到文件夹Assets/ML-Agents/Examples/3DBall/，双击Scene文件的图标，载入所有环境资源。</p>
+
+<p>点击菜单Edit -&gt; Project Settings -&gt; Player，选中Resolution and Presentation里的Run in Background属性。</p>
+
+<p><img src="/img/post-ml/ml15.png" alt="" /></p>
+
+<p>将Resolution and Presentation中的Display Resolution Dialog属性，选择Disabled。</p>
+
+<p><img src="/img/post-ml/ml17.png" alt="" /></p>
+
+<p>在左边的场景层级窗口中，展开Ball3DAcademy游戏对象，并选中它的子对象Brain3DBrain，在右边的检视窗口中查看属性。</p>
+
+<p><img src="/img/post-ml/ml18.jpg" alt="" /></p>
+
+<p>注意：该对象的Type of Brain设置为External。</p>
+
+<p>点击File -&gt; Build Settings，选择构建的目标平台。可以勾选Development Build来记录调试信息。</p>
+
+<p><img src="/img/post-ml/ml16.jpg" alt="" /></p>
+
+<p>点击Build,保存环境文件到python文件夹中</p>
+
+<h3 id="用强化学习训练大脑">用强化学习训练大脑</h3>
+
+<p>测试Python API</p>
+
+<p>要启动jupyter，在命令行中输入：jupyter notebook。在浏览器中打开localhost:8888，访问notebook文件。</p>
+
+<p><img src="/img/post-ml/ml9.jpg" alt="" /></p>
+
+<p>若要确保你的环境和Python API正常运行，你可以在上述窗口中打开python/Basics Jupyter notebook。这个笔记本文件包含一个Python API的简单演示。在这个笔记本文件中，请记得把env_name变量赋值为你刚刚生成的那个文件名</p>
+
+<p>用PPO训练模型</p>
+
+<p>下一步我们训练代理，让它在平台上平衡小球的位置，我们会使用一个叫做近端策略优化(Proximal Policy Optimization),简称PPO的强化学习算法。这个算法经过实验，证明是十分安全、高效且比其他强化学习算法实用性更强的，所以我们选择这个算法来作为Unity机器学习代理的示例算法。</p>
+
+<p>如果想要了解更多关于近端策略优化算法的信息，请参阅OpenAI发布的博客文章：<br />
+https://blog.openai.com/openai-baselines-ppo/</p>
+
+<p><img src="/img/post-ml/ml10.jpg" alt="" /></p>
+
+<p>要在Ball Balance环境中训练代理，请按以下步骤操作：</p>
+
+<ul>
+  <li>
+    <p>在Jupyter中打开python/PPO.ipynb</p>
+  </li>
+  <li>
+    <p>修改env_name的值为刚刚生成的环境文件的文件名</p>
+  </li>
+  <li>
+    <p>按自己需求修改run_path目录</p>
+  </li>
+  <li>
+    <p>运行PPO.ipynb的代码，注意不要运行”Export the trained Tensorflow graph.”这行文字后的代码。</p>
+  </li>
+</ul>
+
+<p><img src="/img/post-ml/ml11.jpg" alt="" /></p>
+
+<h3 id="观察训练过程">观察训练过程</h3>
+
+<p>要更仔细地观察训练过程，你可以使用Tensorboard。在命令行中，切换到前面提到的python文件夹下，输入：tensorboard –logdir=summaries</p>
+
+<p><img src="/img/post-ml/ml14.png" alt="" /></p>
+
+<p>从Tensorboard上，你会看到以下6个变量的统计数据：</p>
+
+<p>Cumulative Reward：所有代理各自的平均累计奖励。在成功的训练过程中，这个变量应该会增大。</p>
+
+<p>Value Loss：数值函数更新时的平均损失。这关系到模型是否能预测每个状态下的数值。在成功的训练过程中，这个变量会减小。</p>
+
+<p>Policy Loss：策略函数更新时的平均损失。这关系到策略（决定行为的过程）的变化大小。在成功的训练过程中，这个变量的大小会减小。</p>
+
+<p>Episode Length：设定环境下，所有代理中每个事件的平均长度。</p>
+
+<p>Value  Estimates：代理所访问的所有状态下的平均数值估计。在成功的训练过程中，这个变量数值会增大。</p>
+
+<p>Policy  Entropy：这个变量告诉你模型的决定随机度有多大。在成功的训练过程中，这个变量会缓慢减小。如果它减小得太快，beta hyperparameter应该会增大。<br />
+<img src="/img/post-ml/ml12.png" alt="" /></p>
+<h3 id="将训练好的模型载入unity环境">将训练好的模型载入Unity环境</h3>
+
+<p>当训练过程显示的平均回报为75或更大时，并且模型已经保存过后。你可以通过中止执行代码来停止训练。，现在你就已经有训练好的TensorFlow模型。你必须将保存的模型转换为Unity可使用的格式，这样就可以直接通过以下步骤载入到Unity项目中。</p>
+
+<p><img src="/img/post-ml/ml13.jpg" alt="" /></p>
+
+<h3 id="配置对tensorflowsharp的支持">配置对TensorFlowSharp的支持</h3>
+<p>因为对TensorFlowSharp的支持目前还处于实验阶段，默认情况下它是被禁用的。要打开它，你必须按如下步骤操作。</p>
+
+<p>请注意Internal Brain模式只在完成以下步骤后才能使用。</p>
+
+<p>确保使用的是Unity 2017.1以上版本。</p>
+
+<p>确保TensorFlowSharp插件已导入到Assets文件夹中。包含这个插件的插件包可以在这里下载(<a href="https://s3.amazonaws.com/unity-agents/TFSharpPlugin.unitypackage">https://s3.amazonaws.com/unity-agents/TFSharpPlugin.unitypackage</a>)。双击打开该文件，导入到Unity中。<br />
+菜单选择Edit -&gt; Project  Settings -&gt; Player。</p>
+
+<p>在Inspector检视窗口中对于你选择的所有平台（PC, Mac， Linux Standalone, iOS ，Android）这样操作：打开Other Settings; 在Scripting Runtime Version属性中选择Experimental (.NET 4.6 Equivalent);在Scripting Defined Symbols属性中，加入ENABLE_TENSORFLOW。</p>
+
+
+    </div>
+  </div>
+
+  <style>
+  .post-nav {
+    overflow: hidden;
+    /* margin-top: 60px; */
+    padding: 12px;
+    white-space: nowrap;
+    /* border-top: 1px solid #eee; */
+  }
+
+  .post-nav-item {
+    display: inline-block;
+    width: 50%;
+    white-space: normal;
+  }
+
+  .post-nav-item a {
+    position: relative;
+    display: inline-block;
+    line-height: 25px;
+    font-size: 14px;
+    color: #555;
+    border-bottom: none;
+  }
+
+  .post-nav-item a:hover {
+    color: #222;
+    font-weight: bold;
+    border-bottom: none;
+  }
+
+  .post-nav-item a:active {
+    top: 2px;
+  }
+
+  .post-nav-item a:before,
+  .post-nav-item a:after {
+    display: inline-block;
+    width: 16px;
+    height: 25px;
+    vertical-align: top;
+    opacity: 0.4;
+    background-size: 16px;
+  }
+
+  .post-nav-none a:none {
+    content: ' ';
+    background-size: 8px;
+  }
+
+  .post-nav-none a:hover:none {
+    opacity: 1;
+  }
+
+  .post-nav-prev a:before {
+    content: ' ';
+    background: url("data:image/svg+xml;base64,PD94bWwgdmVyc2lvbj0iMS4wIiA/PjxzdmcgaGVpZ2h0PSIxMnB4IiB2ZXJzaW9uPSIxLjEiIHZpZXdCb3g9IjAgMCA5IDEyIiB3aWR0aD0iOXB4IiB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHhtbG5zOnNrZXRjaD0iaHR0cDovL3d3dy5ib2hlbWlhbmNvZGluZy5jb20vc2tldGNoL25zIiB4bWxuczp4bGluaz0iaHR0cDovL3d3dy53My5vcmcvMTk5OS94bGluayI+PHRpdGxlLz48ZGVzYy8+PGRlZnMvPjxnIGZpbGw9Im5vbmUiIGZpbGwtcnVsZT0iZXZlbm9kZCIgaWQ9IlBhZ2UtMSIgc3Ryb2tlPSJub25lIiBzdHJva2Utd2lkdGg9IjEiPjxnIGZpbGw9IiMwMDAwMDAiIGlkPSJDb3JlIiB0cmFuc2Zvcm09InRyYW5zbGF0ZSgtMjE4LjAwMDAwMCwgLTkwLjAwMDAwMCkiPjxnIGlkPSJjaGV2cm9uLWxlZnQiIHRyYW5zZm9ybT0idHJhbnNsYXRlKDIxOC41MDAwMDAsIDkwLjAwMDAwMCkiPjxwYXRoIGQ9Ik03LjQsMS40IEw2LDAgTC04Ljg4MTc4NDJlLTE2LDYgTDYsMTIgTDcuNCwxMC42IEwyLjgsNiBMNy40LDEuNCBaIiBpZD0iU2hhcGUiLz48L2c+PC9nPjwvZz48L3N2Zz4=") no-repeat 0 50%;
+    background-size: 8px;
+  }
+
+  .post-nav-prev a:hover:before {
+    opacity: 1;
+  }
+
+  .post-nav-next {
+    text-align: right;
+  }
+
+  .post-nav-next a:after {
+    content: ' ';
+    background: url("data:image/svg+xml;base64,PD94bWwgdmVyc2lvbj0iMS4wIiA/PjxzdmcgaGVpZ2h0PSIxMnB4IiB2ZXJzaW9uPSIxLjEiIHZpZXdCb3g9IjAgMCA5IDEyIiB3aWR0aD0iOXB4IiB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHhtbG5zOnNrZXRjaD0iaHR0cDovL3d3dy5ib2hlbWlhbmNvZGluZy5jb20vc2tldGNoL25zIiB4bWxuczp4bGluaz0iaHR0cDovL3d3dy53My5vcmcvMTk5OS94bGluayI+PHRpdGxlLz48ZGVzYy8+PGRlZnMvPjxnIGZpbGw9Im5vbmUiIGZpbGwtcnVsZT0iZXZlbm9kZCIgaWQ9IlBhZ2UtMSIgc3Ryb2tlPSJub25lIiBzdHJva2Utd2lkdGg9IjEiPjxnIGZpbGw9IiMwMDAwMDAiIGlkPSJDb3JlIiB0cmFuc2Zvcm09InRyYW5zbGF0ZSgtMjYwLjAwMDAwMCwgLTkwLjAwMDAwMCkiPjxnIGlkPSJjaGV2cm9uLXJpZ2h0IiB0cmFuc2Zvcm09InRyYW5zbGF0ZSgyNjAuNTAwMDAwLCA5MC4wMDAwMDApIj48cGF0aCBkPSJNMSwwIEwtMC40LDEuNCBMNC4yLDYgTC0wLjQsMTAuNiBMMSwxMiBMNyw2IEwxLDAgWiIgaWQ9IlNoYXBlIi8+PC9nPjwvZz48L2c+PC9zdmc+") no-repeat 100% 50%;
+    background-size: 8px;
+  }
+
+  .post-nav-next a:hover:after {
+    opacity: 1;
+  }
+</style>
+
+
+
+<div class="post-nav">
+
+  
+  <div class="post-nav-prev post-nav-item">
+    
+    <a href="/blog/2018/vsdebug/"> Mac上用VS Code调试 Unity程序</a>
+  </div>
+  
+
+  
+  <div class="post-nav-next post-nav-item">
+    
+    <a href="/blog/2018/exportcpp/"> 自动化导出c++各个平台库</a>
+  </div>
+  
+
+</div>
+
+</article>
+    </div>
+
+    <footer class="site-footer">
+  <div class="container">
+    <ul class="social">
+  <li><a href="https://twitter.com/penghuailiang" target="_blank"><i class="icon icon-twitter"></i></a></li>
+  <li><a href="https://www.zhihu.com/people/huailiangpenguin" target="_blank"><i class="icon icon-zhihu"></i></a></li>
+  <li><a href="https://www.facebook.com/profile.php?id=100004290725320" target="_blank"><i class="icon icon-facebook"></i></a></li>
+  <li><a href="https://weibo.com/6212299692/profile?topnav=1&wvr=6" target="_blank"><i class="icon icon-sina"></i></a></li>
+  <li><a href="https://www.linkedin.com/in/penghuailiang/" target="_blank"><i class="icon icon-linkedin"></i></a></li>
+  <li><a href="https://github.com/huailiang" target="_blank"><i class="icon icon-github"></i></a></li>
+</ul>
+    <p class="txt-medium-gray">
+      <small>&copy;2019 All rights reserved. </small>
+    </p>
+  </div>
+</footer>
+    <a href="https://github.com/huailiang" target="_blank" class="github-corner"><svg width="80" height="80" viewBox="0 0 250 250" style="fill:#337ab7; color:#fff; position: absolute; top: 0; border: 0; right: 0;"><path d="M0,0 L115,115 L130,115 L142,142 L250,250 L250,0 Z"></path><path d="M128.3,109.0 C113.8,99.7 119.0,89.6 119.0,89.6 C122.0,82.7 120.5,78.6 120.5,78.6 C119.2,72.0 123.4,76.3 123.4,76.3 C127.3,80.9 125.5,87.3 125.5,87.3 C122.9,97.6 130.6,101.9 134.4,103.2" fill="currentColor" style="transform-origin: 130px 106px;" class="octo-arm"></path><path d="M115.0,115.0 C114.9,115.1 118.7,116.5 119.8,115.4 L133.7,101.6 C136.9,99.2 139.9,98.4 142.2,98.6 C133.8,88.0 127.5,74.4 143.8,58.0 C148.5,53.4 154.0,51.2 159.7,51.0 C160.3,49.4 163.2,43.6 171.4,40.1 C171.4,40.1 176.1,42.5 178.8,56.2 C183.1,58.6 187.2,61.8 190.9,65.4 C194.5,69.0 197.7,73.2 200.1,77.6 C213.8,80.2 216.3,84.9 216.3,84.9 C212.7,93.1 206.9,96.0 205.4,96.6 C205.1,102.4 203.0,107.8 198.3,112.5 C181.9,128.9 168.3,122.5 157.7,114.1 C157.9,116.9 156.7,120.9 152.7,124.9 L141.0,136.5 C139.8,137.7 141.6,141.9 141.8,141.8 Z" fill="currentColor" class="octo-body"></path></svg></a>
+
+
+    <script src="//code.jquery.com/jquery-1.11.3.min.js"></script>
+    <script>
+      $(document).ready(function () {
+        $('.sliding-panel-button,.sliding-panel-fade-screen,.sliding-panel-close').on('click touchstart', function (e) {
+          $('.sliding-panel-content,.sliding-panel-fade-screen').toggleClass('is-visible');
+          e.preventDefault();
+        });
+      });
+    </script>
+  </main>
+</body>
+
+</html>

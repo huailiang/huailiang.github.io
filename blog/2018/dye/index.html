@@ -1,0 +1,290 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <meta http-equiv="X-UA-Compatible" content="IE=edge">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+
+  <title>PBR实现染色效果</title>
+  <meta name="description"
+    content="  Unity5之后加入新的渲染方式 PBR。很多端游（洛奇英雄传），手游（楚留香）都有染色系统的存在。时装染色过程中支持自由调节色彩、饱和度以及明暗度，所以每一位少侠染色过后的衣服都是独一无二的，每一件外观都能改造出不同风格，走在街上再也不怕撞衫啦。">
+
+  <link rel="shortcut icon" href="/img/favicon.ico">
+  <link rel="stylesheet" href="/css/main.css">
+  <link rel="canonical" href="https://huailiang.github.io/blog/2018/dye/">
+  <link rel="alternate" type="application/rss+xml" title="Huailiang Blog"
+    href="https://huailiang.github.io/feed.xml" />
+
+</head>
+
+<body>
+  <main>
+    <header class="site-header">
+  <div class="container">
+    <h1><a href="/">Hom<span>e</span></a></h1>
+
+    <button type="button" class="sliding-panel-button">
+      <span></span>
+      <span></span>
+      <span></span>
+    </button>
+
+    <nav class="navbar sliding-panel-content">
+      <ul>
+        
+        <li><a href="/about" title="About">About</a>
+        </li>
+        
+        <li><a href="/blog" title="Blog">Blog</a>
+        </li>
+        
+        <!-- <li><a href="/feed.xml" target="_blank"><i class="icon icon-feed"></i></a></li> -->
+        <li><a href="/category/" target="_blank"><i class="icon icon-feed"></i></a></li>
+      </ul>
+    </nav>
+  </div>
+</header>
+
+<div class="sliding-panel-fade-screen"></div>
+    <script type="text/javascript" src="/js/MathJax.js?config=TeX-AMS-MML_HTMLorMML"></script>
+
+<script type="text/x-mathjax-config">
+MathJax.Hub.Config({
+  tex2jax: {
+    inlineMath: [['$','$'], ['\\(','\\)']],
+    processEscapes: true
+  }
+});
+</script>
+
+<script type="text/x-mathjax-config">
+  MathJax.Hub.Config({
+    tex2jax: {
+      skipTags: ['script', 'noscript', 'style', 'textarea', 'pre', 'code']
+    }
+  });
+
+</script>
+    <div class="container">
+      <article role="article" class="post">
+
+  <div class="card">
+    <header class="post-header">
+      <h1 class="post-title">PBR实现染色效果</h1>
+      <p class="post-meta">Nov 12, 2018 •
+        Huailiang</p>
+    </header>
+
+    <div class="post-content">
+      <blockquote>
+  <p>Unity5之后加入新的渲染方式 PBR。很多端游（洛奇英雄传），手游（楚留香）都有染色系统的存在。时装染色过程中支持自由调节色彩、饱和度以及明暗度，所以每一位少侠染色过后的衣服都是独一无二的，每一件外观都能改造出不同风格，走在街上再也不怕撞衫啦。</p>
+</blockquote>
+
+<h2 id="pbr模型">PBR模型</h2>
+
+<p>很多BRDF模型里的计算，比如微面元法线分布函数(GGXTerm)、微面元遮挡函数(SmithJointGGXVisibilityTerm)、菲涅耳反射(FresnelTerm), 我们直接使用了UnityStandardBRDF.cginc里已经为我们实现好的函数。</p>
+
+<h4 id="brdf处理镜面反射的公式">BRDF处理镜面反射的公式:</h4>
+
+<script type="math/tex; mode=display">F = \frac{D(h)F(v,h)G(l,v,h)}{4(n·l)(n·v)}</script>
+
+<p>其中：</p>
+
+<h4 id="微面元法线分布函数-dhggx">微面元法线分布函数 D(h):GGX</h4>
+
+<script type="math/tex; mode=display">D(h) = \frac{\alpha^2}{\pi·((n·h)^2 *(\alpha^2-1)+1)^2}</script>
+
+<p>alpha = roughness * roughness,roughness是粗糙度，roughness= 1-smoothness</p>
+
+<h4 id="微面元遮挡函数-glvh">微面元遮挡函数 G(l,v,h)</h4>
+
+<p>Smith-Schlick,在Smith近似下G(l,v,h) = g(l)*g(v)</p>
+
+<script type="math/tex; mode=display">g(v) = \frac{n·v}{(n·v)*(i-k)+k}</script>
+
+<p>k是α基于几何函数是针对直接光照还是针对IBL光照的重映射(Remapping)，<script type="math/tex">k=\alpha^2/2</script>, 很多的时候我们直接这里直接传roughness</p>
+
+<h4 id="菲涅尔方程-fvhue4对schlick的一个近似">菲涅尔方程 F(v,h):UE4对Schlick的一个近似</h4>
+
+<p>Schlick近似实现:</p>
+
+<script type="math/tex; mode=display">F(v,h) = F0 +(1-F0)*(1-(v·h))^5</script>
+
+<h2 id="染色系统">染色系统</h2>
+
+<p>网易《楚留香》手游实现的染色系统。</p>
+
+<p><img src="/img/post-pbr/pbr30.jpg" alt="" /></p>
+
+<p>为了实现类似的效果，我们在手游在还原端游的同时，也加入了染色系统。下面是一个自己实现的染色例子，感兴趣的读者，可以前往下载地址，<a href="https://github.com/huailiang/pbr_proj">点击这里</a>。Unity里打开Rendering/Art/Example_ROLE场景即可。实现的效果具体参考下图：</p>
+
+<p><img src="/img/post-pbr/dye.gif" alt="" /></p>
+
+<p>染色系统的实现不再基于对纹理简单的采样, 而是程序里自定义颜色。shader的属性里设置了R,G,B 三个通道的颜色，可以通过材质Inspector窗口自定义颜色。piexl shader中去混合这些颜色。在这个例子当中，我们只是定义了是三个通道，往往并不能满足策划们的需求。</p>
+
+<p>在实际情况中，我们通过uv划分，来支持更多的染色区域。 比如说uv.y 在[1,2]区间可以染色成一种颜色，在uv.y 在[2,3]区间还可以染成另外一种颜色，</p>
+
+<p>类似的原理来支持更多的颜色混合。在我们正在研发的手游中，定义了五个通道（RGB三个通道+2个uv区分）来实现混合的效果。由于游戏还在研发中，这里就不多赘诉了。</p>
+
+<p>至于颜色混合原码，这里贴出颜色混合的部位核心代码，至于完整的代码，可以去前面贴出的github地址前往下载：</p>
+
+<div class="language-glsl highlighter-rouge"><pre class="highlight"><code>
+<span class="n">float3</span> <span class="n">diffuseColor1</span> <span class="o">=</span> 
+        <span class="p">(</span><span class="n">_ColorR</span><span class="p">.</span><span class="n">rgb</span> <span class="o">*</span> <span class="n">texColor</span><span class="p">.</span><span class="n">r</span> <span class="o">*</span> <span class="n">_ColorR</span><span class="p">.</span><span class="n">a</span> <span class="o">+</span>
+         <span class="n">_ColorG</span><span class="p">.</span><span class="n">rgb</span> <span class="o">*</span> <span class="n">texColor</span><span class="p">.</span><span class="n">g</span> <span class="o">*</span> <span class="n">_ColorG</span><span class="p">.</span><span class="n">a</span> <span class="o">+</span> 
+         <span class="n">_ColorB</span><span class="p">.</span><span class="n">rgb</span> <span class="o">*</span> <span class="n">texColor</span><span class="p">.</span><span class="n">b</span> <span class="o">*</span> <span class="n">_ColorB</span><span class="p">.</span><span class="n">a</span><span class="p">)</span> <span class="o">*</span> <span class="n">_Color</span><span class="p">.</span><span class="n">rgb</span> <span class="o">*</span> <span class="kt">float</span><span class="p">(</span><span class="mi">8</span><span class="p">);</span>
+
+<span class="n">float2</span> <span class="n">newuv</span><span class="o">=</span> <span class="n">float2</span><span class="p">(</span><span class="n">i</span><span class="p">.</span><span class="n">uv0</span><span class="p">.</span><span class="n">x</span><span class="o">-</span><span class="mi">1</span><span class="p">,</span><span class="n">i</span><span class="p">.</span><span class="n">uv0</span><span class="p">.</span><span class="n">y</span><span class="p">);</span>
+<span class="n">float4</span> <span class="n">newColor</span> <span class="o">=</span> <span class="n">tex2D</span><span class="p">(</span><span class="n">_MainTex</span><span class="p">,</span><span class="n">TRANSFORM_TEX</span><span class="p">(</span><span class="n">newuv</span><span class="p">,</span> <span class="n">_MainTex</span><span class="p">));</span>
+<span class="n">float3</span> <span class="n">diffuseColor2</span> <span class="o">=</span> <span class="p">(</span><span class="n">newColor</span><span class="p">.</span><span class="n">rgb</span> <span class="o">*</span> <span class="n">_Color</span><span class="p">.</span><span class="n">rgb</span><span class="p">);</span>
+
+<span class="kt">float</span> <span class="n">uvlow</span> <span class="o">=</span> <span class="n">step</span><span class="p">(</span><span class="n">i</span><span class="p">.</span><span class="n">uv0</span><span class="p">.</span><span class="n">x</span><span class="p">,</span> <span class="mi">1</span><span class="p">);</span> 
+<span class="kt">float</span> <span class="n">uvhigh</span> <span class="o">=</span> <span class="mi">1</span> <span class="o">-</span> <span class="n">uvlow</span><span class="p">;</span>
+<span class="n">float3</span> <span class="n">diffuseColor</span> <span class="o">=</span> <span class="n">diffuseColor1</span> <span class="o">*</span> <span class="n">uvlow</span> <span class="o">+</span> <span class="n">diffuseColor2</span> <span class="o">*</span> <span class="n">uvhigh</span><span class="p">;</span>
+<span class="kt">float</span> <span class="n">alpha</span> <span class="o">=</span> <span class="p">(</span><span class="n">_ColorR</span><span class="p">.</span><span class="n">a</span> <span class="o">+</span> <span class="n">_ColorG</span><span class="p">.</span><span class="n">a</span> <span class="o">+</span> <span class="n">_ColorB</span><span class="p">.</span><span class="n">a</span><span class="p">)</span> <span class="o">*</span> <span class="mi">0</span><span class="p">.</span><span class="mi">7</span> <span class="o">+</span> <span class="n">uvhigh</span> <span class="o">*</span> <span class="mi">0</span><span class="p">.</span><span class="mi">3</span><span class="p">;</span>
+
+</code></pre>
+</div>
+
+<p>使用这套染色系统，对mesh有一定的要求，需要诸如衣服颜色这些固定颜色的部位使用R,G,B中的一种颜色，里面只有灰度变化。对于像皮肤肉色这种变化的且追求细节的部位，纹理绑定的uv.x区间需要超出1，这部分区域我们不再混合颜色，而是直接对原纹理进行采样。</p>
+
+<p>读者感兴趣的话，可以通过工具QUVEditor uv工具查看。unity的QUVEditor可以在<a href="http://www.qtoolsdevelop.com/">这里下载</a>。</p>
+
+<p><img src="/img/post-pbr/pbr31.jpg" alt="" /></p>
+
+
+    </div>
+  </div>
+
+  <style>
+  .post-nav {
+    overflow: hidden;
+    /* margin-top: 60px; */
+    padding: 12px;
+    white-space: nowrap;
+    /* border-top: 1px solid #eee; */
+  }
+
+  .post-nav-item {
+    display: inline-block;
+    width: 50%;
+    white-space: normal;
+  }
+
+  .post-nav-item a {
+    position: relative;
+    display: inline-block;
+    line-height: 25px;
+    font-size: 14px;
+    color: #555;
+    border-bottom: none;
+  }
+
+  .post-nav-item a:hover {
+    color: #222;
+    font-weight: bold;
+    border-bottom: none;
+  }
+
+  .post-nav-item a:active {
+    top: 2px;
+  }
+
+  .post-nav-item a:before,
+  .post-nav-item a:after {
+    display: inline-block;
+    width: 16px;
+    height: 25px;
+    vertical-align: top;
+    opacity: 0.4;
+    background-size: 16px;
+  }
+
+  .post-nav-none a:none {
+    content: ' ';
+    background-size: 8px;
+  }
+
+  .post-nav-none a:hover:none {
+    opacity: 1;
+  }
+
+  .post-nav-prev a:before {
+    content: ' ';
+    background: url("data:image/svg+xml;base64,PD94bWwgdmVyc2lvbj0iMS4wIiA/PjxzdmcgaGVpZ2h0PSIxMnB4IiB2ZXJzaW9uPSIxLjEiIHZpZXdCb3g9IjAgMCA5IDEyIiB3aWR0aD0iOXB4IiB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHhtbG5zOnNrZXRjaD0iaHR0cDovL3d3dy5ib2hlbWlhbmNvZGluZy5jb20vc2tldGNoL25zIiB4bWxuczp4bGluaz0iaHR0cDovL3d3dy53My5vcmcvMTk5OS94bGluayI+PHRpdGxlLz48ZGVzYy8+PGRlZnMvPjxnIGZpbGw9Im5vbmUiIGZpbGwtcnVsZT0iZXZlbm9kZCIgaWQ9IlBhZ2UtMSIgc3Ryb2tlPSJub25lIiBzdHJva2Utd2lkdGg9IjEiPjxnIGZpbGw9IiMwMDAwMDAiIGlkPSJDb3JlIiB0cmFuc2Zvcm09InRyYW5zbGF0ZSgtMjE4LjAwMDAwMCwgLTkwLjAwMDAwMCkiPjxnIGlkPSJjaGV2cm9uLWxlZnQiIHRyYW5zZm9ybT0idHJhbnNsYXRlKDIxOC41MDAwMDAsIDkwLjAwMDAwMCkiPjxwYXRoIGQ9Ik03LjQsMS40IEw2LDAgTC04Ljg4MTc4NDJlLTE2LDYgTDYsMTIgTDcuNCwxMC42IEwyLjgsNiBMNy40LDEuNCBaIiBpZD0iU2hhcGUiLz48L2c+PC9nPjwvZz48L3N2Zz4=") no-repeat 0 50%;
+    background-size: 8px;
+  }
+
+  .post-nav-prev a:hover:before {
+    opacity: 1;
+  }
+
+  .post-nav-next {
+    text-align: right;
+  }
+
+  .post-nav-next a:after {
+    content: ' ';
+    background: url("data:image/svg+xml;base64,PD94bWwgdmVyc2lvbj0iMS4wIiA/PjxzdmcgaGVpZ2h0PSIxMnB4IiB2ZXJzaW9uPSIxLjEiIHZpZXdCb3g9IjAgMCA5IDEyIiB3aWR0aD0iOXB4IiB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHhtbG5zOnNrZXRjaD0iaHR0cDovL3d3dy5ib2hlbWlhbmNvZGluZy5jb20vc2tldGNoL25zIiB4bWxuczp4bGluaz0iaHR0cDovL3d3dy53My5vcmcvMTk5OS94bGluayI+PHRpdGxlLz48ZGVzYy8+PGRlZnMvPjxnIGZpbGw9Im5vbmUiIGZpbGwtcnVsZT0iZXZlbm9kZCIgaWQ9IlBhZ2UtMSIgc3Ryb2tlPSJub25lIiBzdHJva2Utd2lkdGg9IjEiPjxnIGZpbGw9IiMwMDAwMDAiIGlkPSJDb3JlIiB0cmFuc2Zvcm09InRyYW5zbGF0ZSgtMjYwLjAwMDAwMCwgLTkwLjAwMDAwMCkiPjxnIGlkPSJjaGV2cm9uLXJpZ2h0IiB0cmFuc2Zvcm09InRyYW5zbGF0ZSgyNjAuNTAwMDAwLCA5MC4wMDAwMDApIj48cGF0aCBkPSJNMSwwIEwtMC40LDEuNCBMNC4yLDYgTC0wLjQsMTAuNiBMMSwxMiBMNyw2IEwxLDAgWiIgaWQ9IlNoYXBlIi8+PC9nPjwvZz48L2c+PC9zdmc+") no-repeat 100% 50%;
+    background-size: 8px;
+  }
+
+  .post-nav-next a:hover:after {
+    opacity: 1;
+  }
+</style>
+
+
+
+<div class="post-nav">
+
+  
+  <div class="post-nav-prev post-nav-item">
+    
+    <a href="/blog/2019/inout/"> CG中修饰符in out inout的使用</a>
+  </div>
+  
+
+  
+  <div class="post-nav-next post-nav-item">
+    
+    <a href="/blog/2018/ppo/"> 强化学习-游戏AI Trainning (四)</a>
+  </div>
+  
+
+</div>
+
+</article>
+    </div>
+
+    <footer class="site-footer">
+  <div class="container">
+    <ul class="social">
+  <li><a href="https://twitter.com/penghuailiang" target="_blank"><i class="icon icon-twitter"></i></a></li>
+  <li><a href="https://www.zhihu.com/people/huailiangpenguin" target="_blank"><i class="icon icon-zhihu"></i></a></li>
+  <li><a href="https://www.facebook.com/profile.php?id=100004290725320" target="_blank"><i class="icon icon-facebook"></i></a></li>
+  <li><a href="https://weibo.com/6212299692/profile?topnav=1&wvr=6" target="_blank"><i class="icon icon-sina"></i></a></li>
+  <li><a href="https://www.linkedin.com/in/penghuailiang/" target="_blank"><i class="icon icon-linkedin"></i></a></li>
+  <li><a href="https://github.com/huailiang" target="_blank"><i class="icon icon-github"></i></a></li>
+</ul>
+    <p class="txt-medium-gray">
+      <small>&copy;2019 All rights reserved. </small>
+    </p>
+  </div>
+</footer>
+    <a href="https://github.com/huailiang" target="_blank" class="github-corner"><svg width="80" height="80" viewBox="0 0 250 250" style="fill:#337ab7; color:#fff; position: absolute; top: 0; border: 0; right: 0;"><path d="M0,0 L115,115 L130,115 L142,142 L250,250 L250,0 Z"></path><path d="M128.3,109.0 C113.8,99.7 119.0,89.6 119.0,89.6 C122.0,82.7 120.5,78.6 120.5,78.6 C119.2,72.0 123.4,76.3 123.4,76.3 C127.3,80.9 125.5,87.3 125.5,87.3 C122.9,97.6 130.6,101.9 134.4,103.2" fill="currentColor" style="transform-origin: 130px 106px;" class="octo-arm"></path><path d="M115.0,115.0 C114.9,115.1 118.7,116.5 119.8,115.4 L133.7,101.6 C136.9,99.2 139.9,98.4 142.2,98.6 C133.8,88.0 127.5,74.4 143.8,58.0 C148.5,53.4 154.0,51.2 159.7,51.0 C160.3,49.4 163.2,43.6 171.4,40.1 C171.4,40.1 176.1,42.5 178.8,56.2 C183.1,58.6 187.2,61.8 190.9,65.4 C194.5,69.0 197.7,73.2 200.1,77.6 C213.8,80.2 216.3,84.9 216.3,84.9 C212.7,93.1 206.9,96.0 205.4,96.6 C205.1,102.4 203.0,107.8 198.3,112.5 C181.9,128.9 168.3,122.5 157.7,114.1 C157.9,116.9 156.7,120.9 152.7,124.9 L141.0,136.5 C139.8,137.7 141.6,141.9 141.8,141.8 Z" fill="currentColor" class="octo-body"></path></svg></a>
+
+
+    <script src="//code.jquery.com/jquery-1.11.3.min.js"></script>
+    <script>
+      $(document).ready(function () {
+        $('.sliding-panel-button,.sliding-panel-fade-screen,.sliding-panel-close').on('click touchstart', function (e) {
+          $('.sliding-panel-content,.sliding-panel-fade-screen').toggleClass('is-visible');
+          e.preventDefault();
+        });
+      });
+    </script>
+  </main>
+</body>
+
+</html>

@@ -1,0 +1,290 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <meta http-equiv="X-UA-Compatible" content="IE=edge">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+
+  <title>Huailiang Blog</title>
+  <meta name="description"
+    content="关于前端与设计、黑客与画家 | 怀亮，Web & Mobile Lover，Software Engineer，Game Designer | 这里是 @Huailiang怀亮 的个人博客，与你一起发现更大的世界。">
+
+  <link rel="shortcut icon" href="/img/favicon.ico">
+  <link rel="stylesheet" href="/css/main.css">
+  <link rel="canonical" href="https://huailiang.github.io/blog/page/3/">
+  <link rel="alternate" type="application/rss+xml" title="Huailiang Blog"
+    href="https://huailiang.github.io/feed.xml" />
+
+</head>
+
+<body>
+  <main>
+    <header class="site-header">
+  <div class="container">
+    <h1><a href="/">Hom<span>e</span></a></h1>
+
+    <button type="button" class="sliding-panel-button">
+      <span></span>
+      <span></span>
+      <span></span>
+    </button>
+
+    <nav class="navbar sliding-panel-content">
+      <ul>
+        
+        <li><a href="/about" title="About">About</a>
+        </li>
+        
+        <li><a href="/blog" title="Blog">Blog</a>
+        </li>
+        
+        <!-- <li><a href="/feed.xml" target="_blank"><i class="icon icon-feed"></i></a></li> -->
+        <li><a href="/category/" target="_blank"><i class="icon icon-feed"></i></a></li>
+      </ul>
+    </nav>
+  </div>
+</header>
+
+<div class="sliding-panel-fade-screen"></div>
+    <script type="text/javascript" src="/js/MathJax.js?config=TeX-AMS-MML_HTMLorMML"></script>
+
+<script type="text/x-mathjax-config">
+MathJax.Hub.Config({
+  tex2jax: {
+    inlineMath: [['$','$'], ['\\(','\\)']],
+    processEscapes: true
+  }
+});
+</script>
+
+<script type="text/x-mathjax-config">
+  MathJax.Hub.Config({
+    tex2jax: {
+      skipTags: ['script', 'noscript', 'style', 'textarea', 'pre', 'code']
+    }
+  });
+
+</script>
+    <div class="container">
+      <section class="post-list">
+  
+    <article class="post">
+  <header class="post-header">
+    <h1 class="post-title2">
+      <a class="post-link" href="/blog/2018/pbr/">PBR基于物理的着色</a>
+    </h1>
+    <div class="post-meta">
+      <time>Aug 4, 2018</time>
+    </div>
+  </header>
+
+  <p><a href="/blog/2018/pbr/" title="Permalink to: PBR基于物理的着色"
+      class="read-more">
+  Unity5之后加入新的渲染方式 PBR。PBR是一种着色和渲染技术，用于更精确的描述光如何与物体表面互动。PBS（Physically Based Shading）在有一些地方也叫PBR（Physically Based Rendering），是一个基于物体表面材质属性的着色方法。与之前的Blinn-Phong等算法不同。PBS通过对物体表面的材质属性与周围光照信息来进行着色计算。P...</a></p>
+</article>
+  
+    <article class="post">
+  <header class="post-header">
+    <h1 class="post-title2">
+      <a class="post-link" href="/blog/2018/terrain/">Unity 大地形加载研究</a>
+    </h1>
+    <div class="post-meta">
+      <time>Jul 15, 2018</time>
+    </div>
+  </header>
+
+  <p><a href="/blog/2018/terrain/" title="Permalink to: Unity 大地形加载研究"
+      class="read-more">
+  随着吃鸡手游的火爆，大世界、大地形类的手游正在变得越来越火热。想要大世界观的直面感受，大地形的研究课题也提上开发日程。我们都知道unreal 引擎直接提供了Level Streaming Volume方式的大地形加载方式，无需要过多的代码，就可以动态的生成大场景了。本文主要介绍unity 引擎下自己实现的大地形加载方式。
+
+
+Unity 大地形研究
+
+*github 对应的地址，点击这...</a></p>
+</article>
+  
+    <article class="post">
+  <header class="post-header">
+    <h1 class="post-title2">
+      <a class="post-link" href="/blog/2018/protobuf/">Unity 植入 c++版protobuf</a>
+    </h1>
+    <div class="post-meta">
+      <time>Jun 24, 2018</time>
+    </div>
+  </header>
+
+  <p><a href="/blog/2018/protobuf/" title="Permalink to: Unity 植入 c++版protobuf"
+      class="read-more">
+  现在使用Unity引擎开发游戏使用的脚本语言越来越灵活了。就拿《王者荣耀》来说吧，战斗的核心都采取 c++的语言来实现，外围系统都是采用 csharp的开发的。使用 c++指针操作不断有更高的执行效率，作为 native 语言也不会有 mono 内存的开销。使用 csharp 语言语法简单，对面向对象的支持也比较好，适合快速开发和版本迭代。还有使用 lua 脚本来做游戏的热更新。这样问...</a></p>
+</article>
+  
+    <article class="post">
+  <header class="post-header">
+    <h1 class="post-title2">
+      <a class="post-link" href="/blog/2018/hud/">Batch 合并Drawcall绘制HUD</a>
+    </h1>
+    <div class="post-meta">
+      <time>May 10, 2018</time>
+    </div>
+  </header>
+
+  <p><a href="/blog/2018/hud/" title="Permalink to: Batch 合并Drawcall绘制HUD"
+      class="read-more">
+  hud是游戏中大量使用的元素，一个血条往往只需要很少的表现。在Unity中常用的UI大都是nGUI或者uGUI,因为图文层级交错或者Depth重叠，往往带来不少的Drawcall开销，从而导致游戏性能的开销。这里我们建议使用3D mesh的方式去绘制HUD，从而去优化性能。
+
+
+本文对应的源码已经公开到github,点击地址可以查阅。
+
+绘制血条
+
+我们使用c#代码-Hud.cs动态创...</a></p>
+</article>
+  
+    <article class="post">
+  <header class="post-header">
+    <h1 class="post-title2">
+      <a class="post-link" href="/blog/2018/videoreg/">提取视频特征进行人脸识别</a>
+    </h1>
+    <div class="post-meta">
+      <time>Apr 6, 2018</time>
+    </div>
+  </header>
+
+  <p><a href="/blog/2018/videoreg/" title="Permalink to: 提取视频特征进行人脸识别"
+      class="read-more">
+  最近在麦子学院观看美国犹他州立大学的彭亮博士的《机器学习》的视频的系列。不错，就是跟我名字一字之差的彭亮，哈哈，世界巧合的事还真多。不过视频中他演示的《卧虎藏龙》的视频能够人脸识别周润发和章子怡，还真是激起了我的好奇心。不过好在现在互联网这么发达，什么东西只要想学，很多都能找到答案。
+
+
+本文所用到的技术：
+
+
+  Keras
+  OpenCV
+
+
+所有用到的技术都已上传到github...</a></p>
+</article>
+  
+    <article class="post">
+  <header class="post-header">
+    <h1 class="post-title2">
+      <a class="post-link" href="/blog/2018/gameai/">腾讯、网易都入局的游戏+AI，想象力有多大[转载]</a>
+    </h1>
+    <div class="post-meta">
+      <time>Apr 1, 2018</time>
+    </div>
+  </header>
+
+  <p><a href="/blog/2018/gameai/" title="Permalink to: 腾讯、网易都入局的游戏+AI，想象力有多大[转载]"
+      class="read-more">
+  ai战胜柯洁制霸围棋领域后，谷歌旗下DeepMind下一个目标瞄向了游戏领域。他们宣布与暴雪娱乐合作开发AI，用以在星际2游戏中对抗人类玩家。然而这仅仅算是AI+游戏拉开的序幕。      在亿欧智库发布的《2017 人工智能+内容生产研究报告》中，介绍了目前AI在游戏生产领域的多方面应用。不过报告中提及的只是AI+游戏的一部分，游戏未来可能是AI在内容领域应用最深最广的领域。游戏制作...</a></p>
+</article>
+  
+    <article class="post">
+  <header class="post-header">
+    <h1 class="post-title2">
+      <a class="post-link" href="/blog/2018/reinforcement3/">强化学习-游戏AI Trainning (三)</a>
+    </h1>
+    <div class="post-meta">
+      <time>Mar 23, 2018</time>
+    </div>
+  </header>
+
+  <p><a href="/blog/2018/reinforcement3/" title="Permalink to: 强化学习-游戏AI Trainning (三)"
+      class="read-more">
+  前两节我们学会了利用q_learning来做游戏强化学习，并能提取出来再外部训练，下面一节我们继续深入学习使用DQN神经网络来训练我们的模型。
+
+
+完成本节内容，你需要本地有如下环境：
+
+  Python
+  Pandas
+  Numpy
+  matplotlib（可选）
+  Tensorflow
+  Jupyter notebook(可选)
+
+
+DeepQNetwork
+
+Deep ...</a></p>
+</article>
+  
+    <article class="post">
+  <header class="post-header">
+    <h1 class="post-title2">
+      <a class="post-link" href="/blog/2018/reinforcement2/">强化学习-游戏AI Trainning (二)</a>
+    </h1>
+    <div class="post-meta">
+      <time>Mar 20, 2018</time>
+    </div>
+  </header>
+
+  <p><a href="/blog/2018/reinforcement2/" title="Permalink to: 强化学习-游戏AI Trainning (二)"
+      class="read-more">
+  上一节我们介绍了如何 q_learning 强化学习算法， 但不好的地方是运算都在 Unity里，这节我们把 q_learning算法提取到 python 环境中，并且用 Sarsa算法实现一遍强化学习。所有本机的代码都可以在Github 下载。
+
+
+完成本节内容，你需要本地有如下环境：
+
+  Python2.x
+  Pandas
+  Numpy
+  Tensorflow
+
+
+Unit...</a></p>
+</article>
+  
+
+  
+<nav class="pagination" role="pagination">
+  <ul>
+    
+    
+    
+    <li><a class="prev btn btn-ghost" href="/blog/page/2" title="Articles new">&laquo; Prev</a></li>
+    
+    <li><span class="page-number">Page 3 of 6</span></li>
+    
+    <li><a class="next btn btn-ghost" href="/blog/page/4"
+        title="Articles old">Next &raquo;</a></li>
+    
+  </ul>
+</nav>
+
+</section>
+
+    </div>
+
+    <footer class="site-footer">
+  <div class="container">
+    <ul class="social">
+  <li><a href="https://twitter.com/penghuailiang" target="_blank"><i class="icon icon-twitter"></i></a></li>
+  <li><a href="https://www.zhihu.com/people/huailiangpenguin" target="_blank"><i class="icon icon-zhihu"></i></a></li>
+  <li><a href="https://www.facebook.com/profile.php?id=100004290725320" target="_blank"><i class="icon icon-facebook"></i></a></li>
+  <li><a href="https://weibo.com/6212299692/profile?topnav=1&wvr=6" target="_blank"><i class="icon icon-sina"></i></a></li>
+  <li><a href="https://www.linkedin.com/in/penghuailiang/" target="_blank"><i class="icon icon-linkedin"></i></a></li>
+  <li><a href="https://github.com/huailiang" target="_blank"><i class="icon icon-github"></i></a></li>
+</ul>
+    <p class="txt-medium-gray">
+      <small>&copy;2019 All rights reserved. </small>
+    </p>
+  </div>
+</footer>
+    <a href="https://github.com/huailiang" target="_blank" class="github-corner"><svg width="80" height="80" viewBox="0 0 250 250" style="fill:#337ab7; color:#fff; position: absolute; top: 0; border: 0; right: 0;"><path d="M0,0 L115,115 L130,115 L142,142 L250,250 L250,0 Z"></path><path d="M128.3,109.0 C113.8,99.7 119.0,89.6 119.0,89.6 C122.0,82.7 120.5,78.6 120.5,78.6 C119.2,72.0 123.4,76.3 123.4,76.3 C127.3,80.9 125.5,87.3 125.5,87.3 C122.9,97.6 130.6,101.9 134.4,103.2" fill="currentColor" style="transform-origin: 130px 106px;" class="octo-arm"></path><path d="M115.0,115.0 C114.9,115.1 118.7,116.5 119.8,115.4 L133.7,101.6 C136.9,99.2 139.9,98.4 142.2,98.6 C133.8,88.0 127.5,74.4 143.8,58.0 C148.5,53.4 154.0,51.2 159.7,51.0 C160.3,49.4 163.2,43.6 171.4,40.1 C171.4,40.1 176.1,42.5 178.8,56.2 C183.1,58.6 187.2,61.8 190.9,65.4 C194.5,69.0 197.7,73.2 200.1,77.6 C213.8,80.2 216.3,84.9 216.3,84.9 C212.7,93.1 206.9,96.0 205.4,96.6 C205.1,102.4 203.0,107.8 198.3,112.5 C181.9,128.9 168.3,122.5 157.7,114.1 C157.9,116.9 156.7,120.9 152.7,124.9 L141.0,136.5 C139.8,137.7 141.6,141.9 141.8,141.8 Z" fill="currentColor" class="octo-body"></path></svg></a>
+
+
+    <script src="//code.jquery.com/jquery-1.11.3.min.js"></script>
+    <script>
+      $(document).ready(function () {
+        $('.sliding-panel-button,.sliding-panel-fade-screen,.sliding-panel-close').on('click touchstart', function (e) {
+          $('.sliding-panel-content,.sliding-panel-fade-screen').toggleClass('is-visible');
+          e.preventDefault();
+        });
+      });
+    </script>
+  </main>
+</body>
+
+</html>
