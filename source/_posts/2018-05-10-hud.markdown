@@ -1,0 +1,144 @@
+---
+layout:     post
+title:      "Batch 合并Drawcall绘制HUD"
+date:       2018-05-10 03:00:00
+author:     "Huailiang"
+header-mask: 0.3
+tags:
+    - Unity
+---
+
+
+> hud是游戏中大量使用的元素，一个血条往往只需要很少的表现。在Unity中常用的UI大都是nGUI或者uGUI,因为图文层级交错或者Depth重叠，往往带来不少的Drawcall开销，从而导致游戏性能的开销。这里我们建议使用3D mesh的方式去绘制HUD，从而去优化性能。
+
+
+本文对应的源码已经公开到github,点击[地址][i1]可以查阅。
+
+
+## 绘制血条
+
+我们使用c#代码-Hud.cs动态创建一个mesh。首先动态创建一个mesh，我们画四个三角一共使用八个顶点。设置好他们对于的本地坐标。创建好的mesh如下图所示：
+
+![](/img/post-hud/hud-2.jpg)
+
+我们将前面两个三角使用顶点色-红色来表示血条， 后面两个三角使用灰色表示满血的情况。
+
+项目中我们内置了两个shader, 都是采样顶点色。不同的是VertxSurfShader使用surface shader实现，会计算光照的颜色，而VertxFragShader直接输出顶点色，不参与光照的计算。相对来说VertxFragShader更省一些。
+
+在VertxSurfShade中我们采样顶点色(appdata_full)来作为vert shader输出的颜色。
+
+{% highlight cpp %}
+fixed4 _Color;  
+
+struct Input
+{
+    float4 vertexColor;
+};
+
+void vert(inout appdata_full v,out Input o)
+{
+    UNITY_INITIALIZE_OUTPUT(Input,o);
+    o.vertexColor=v.color;
+}
+
+void surf (Input IN, inout SurfaceOutput o) 
+{
+    o.Albedo=IN.vertexColor * _Color;
+}
+{% endhighlight %}
+
+在VertxFragShader中采样顶点色的使用如下：
+
+{% highlight cpp %}
+CGPROGRAM
+#pragma vertex vert
+
+#pragma fragment frag
+
+#include "UnityCG.cginc"
+
+fixed4 _Color;  
+
+struct appdata {
+    float4 vertex : POSITION;
+    fixed4 color : COLOR;
+};
+
+struct v2f {
+    fixed4 vertexColor : TEXCOORD0;
+    float4 vertex : SV_POSITION;
+};
+
+
+v2f vert (appdata v) {
+    v2f o;
+    o.vertex = UnityObjectToClipPos(v.vertex);
+    o.vertexColor = v.color;
+    return o;
+}
+
+fixed4 frag (v2f i) : SV_Target {
+    fixed4 c = i.vertexColor;
+    return c * _Color;
+}
+ENDCG
+{% endhighlight %}
+
+然后设置关联的render组件里关闭反射光线和接收投射阴影。
+
+![](/img/post-hud/hud-1.jpg)
+
+
+对应的代码实现如下：
+{% highlight csharp %}
+rend.shadowCastingMode = ShadowCastingMode.Off;
+rend.receiveShadows = false;
+rend.lightProbeUsage = LightProbeUsage.Off;
+rend.reflectionProbeUsage = ReflectionProbeUsage.Off;
+{% endhighlight %}
+
+
+
+## 绘制文字
+
+绘制文字也不实用nGUI或者uGui使用的组件，而是使用Unity自带的组件TextMesh。我们把TextMesh挂在Hud组件下面，设置好文字大小和对齐方式。对应的代码实现如下：
+
+{% highlight csharp %}
+private void CreateText()
+{
+    GameObject go = new GameObject("Name");
+    go.transform.SetParent(hud.transform);
+    go.transform.rotation = Quaternion.identity;
+    go.transform.localScale = 0.1f * Vector3.one;
+    go.transform.localPosition = new Vector3(0, 0.5f, 0);
+    font = go.AddComponent<TextMesh>();
+    font.text = _txt;
+    font.fontSize = 36;
+    font.alignment = TextAlignment.Center;
+    font.anchor = TextAnchor.MiddleCenter;
+    font.color = Color.black;
+}
+{% endhighlight %}
+
+### 控制血条进度
+
+控制血条进度，其实控制的就是顶点1、3、4、6的uv信息。这些顶点的位置在[-x,x] 之间（x=2),我们根据传进来的值在[-2,2]进行差值，算出最终的顶点位置，最后赋值给mesh，来达到控制血条进度的效果。
+ 
+{% highlight csharp %}
+public void UpdateHud(float v)
+{
+    float val = Mathf.Lerp(-x, x, 1 - v);
+    vertices[1].Set(val, y, z);
+    vertices[3].Set(val, -y, z);
+    vertices[4] = vertices[1];
+    vertices[6] = vertices[3];
+    filter.mesh.vertices = vertices;
+}
+{% endhighlight %}
+在Unity中运行HudShow， 在Game视图左上角的GUI-Slider调整进度，我们可以发现对应的血条也跟着发生变化。下面查看Drawcall的信息，运行DCShow，我们创建了大量的hud,并控制不同的血条进度和位置，打开Stats面板，我们看见一共只有四个drawcall，除了摄像机固定的两个drawcall,所有的hud通过合批一共只有2个drawcall。
+
+![](/img/post-hud/hud-3.jpg)
+
+好了就这样，拜拜！
+
+[i1]:https://github.com/huailiang/hud

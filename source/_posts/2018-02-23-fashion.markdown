@@ -1,0 +1,302 @@
+---
+layout:     post
+title:      "Unity 实现Avatar换装"
+date:       2018-02-23 12:00:00
+author:     "Huailiang"
+tags:
+    - 前端开发
+    - Unity
+---
+
+
+> Avatar换装是MMO/ARPG游戏不可缺少的一部分，一个人物模型通常可拆分为头、身体、手臂、腿、武器等部分，如何将这些部分组合到一起呢？本文将阐述如何将在Unity中实现人物模型的换装功能。
+
+在本节开始之前，我们先看下最终实现的效果：
+
+![](/img/post-fashion/fashion1.gif)
+
+# 提取资源-预处理
+
+### 第一步： 从fbx中提取部件mesh, 并给mesh赋值一些必要的属性
+{% highlight csharp %}
+string saveRootPath = "Assets/Resources/Equipments/";
+modelImporter.isReadable = true;
+AssetDatabase.ImportAsset(path, ImportAssetOptions.ForceUpdate);
+GameObject go = GameObject.Instantiate(fbx) as GameObject;
+
+SkinnedMeshRenderer[] smrs = go.GetComponentsInChildren<SkinnedMeshRenderer>();
+foreach (SkinnedMeshRenderer smr in smrs)
+{
+    Mesh mesh = Object.Instantiate(smr.sharedMesh) as Mesh;
+    mesh.name = smr.sharedMesh.name;
+    mesh.UploadMeshData(false);
+    SaveMeshAsset(mesh, smr.sharedMaterial.mainTexture as Texture2D, profession, saveRootPath);
+}
+modelImporter.isReadable = false;
+AssetDatabase.ImportAsset(path, ImportAssetOptions.ForceUpdate);
+{% endhighlight %}
+
+### 第二步： 保存mesh, 并提取出Main Texture,并且保存在本地
+{% highlight csharp %}
+void SaveMesh(Mesh mesh, Texture2D tex, int profession, string path)
+{
+    int uvOffsetX = GetUVOffset(profession, mesh.name, s_CombineConfig);
+
+    if (uvOffsetX >= 0) CalculateUV(mesh, uvOffsetX);
+    else Debug.LogError("Find UV Error:" , mesh.name);
+
+    CleanMesh(mesh);
+    string meshPath = path + mesh.name + ".asset";
+    AssetDatabase.CreateAsset(mesh, meshPath);
+    if (tex != null)
+    {
+        string srcTexPath = AssetDatabase.GetAssetPath(tex);
+        string destTexPath = "Assets/Resources/Equipments/" + tex.name + ".tga";
+        AssetDatabase.CopyAsset(srcTexPath, destTexPath);
+    }
+    AssetDatabase.SaveAssets();
+}
+{% endhighlight %}
+
+### 第三步： 预处理uv
+根据部件位置序列，设置相应uv, 先确保uv的区间在[0,1]之间，然后u加上部件的索引 uvOffsetX对应每个部位的枚举定义值[1-8], 至于为什么这么处理，我们对在后面shader中使用这些uv信息，拼接时装时会用到。
+
+{% highlight csharp %}
+void CalculateUV(Mesh mesh, int uvOffsetX)
+{
+    if (uvOffsetX >= 0)
+    {
+        Vector2[] uv = mesh.uv;
+        for (int i = 0, imax = mesh.uv.Length; i < imax; ++i)
+        {
+            Vector2 tmp = uv[i];
+            tmp.x = tmp.x - Mathf.Floor(tmp.x);
+            tmp.x += uvOffsetX;
+            tmp.y = tmp.y - Mathf.Floor(tmp.y);
+            uv[i] = tmp;
+        }
+        mesh.uv = uv;
+    }
+}
+{% endhighlight %}
+
+往往在预处理uv之前，为了减少不必要的计算和内存，也是为了优化，我们会清理掉mesh上可能附带的信息，比如uv2，切线信息。具体的实现如下：
+{% highlight csharp %}
+void CleanMesh(Mesh mesh)
+ {
+     mesh.uv2 = null;
+     mesh.uv3 = null;
+     mesh.uv4 = null;
+     mesh.colors = null;
+     mesh.colors32 = null;
+     mesh.tangents = null;
+ }
+{% endhighlight %}
+
+ 处理好的之后的mesh 确保是干净的，且只有我们想要的信息。如下图所示，只有第一层uv和skin信息，并没有其他冗余的信息。所有都处理好之后，我们可以写批处理脚本，把所有的资源都移到程序所用的工程Rsources目录下。
+
+ ![](/img/post-fashion/fashion2.jpg)
+
+ ### 第四步： 预处理Texture
+ 在Texture提取出来之后，往往是各种预带有各种信息，这时我们还需要写一个类似格式刷工具把项目里所有的texture全部处理一遍。类似这样实现：
+{% highlight csharp %}
+AssetDatabase.ImportAsset(alphaTexPath, ImportAssetOptions.ForceUpdate);
+TextureImporter alphaTextureImporter = AssetImporter.GetAtPath(alphaTexPath) as TextureImporter;
+if (alphaTextureImporter != null)
+{
+    int alphaSize = size;
+    alphaTextureImporter.textureType = TextureImporterType.Default;
+    alphaTextureImporter.anisoLevel = 0;
+    alphaTextureImporter.mipmapEnabled = false;
+    alphaTextureImporter.isReadable = false;
+    alphaTextureImporter.npotScale = TextureImporterNPOTScale.ToNearest;
+    SetPlatformSetting(alphaTextureImporter, alphaSize);
+    AssetDatabase.ImportAsset(alphaTexPath, ImportAssetOptions.ForceUpdate);
+}
+{% endhighlight %}
+
+# 运行时，组装时装
+
+### 第一步：Shader处理， DrawCall合并
+
+![](/img/post-fashion/fashion3.jpg)
+
+这时游戏中参与光照计算的shader,由八张Texture合并。 Shader针对预处理的uv拼接时装。
+下面代码会在MaskNV函数会在vert Shader中调用，BlendColor函数在frag 函数中调用。
+{% highlight cpp %}
+  #include "CommonHead_Include.cginc"
+  inline fixed MaskUV(half2 uv,inout half4 uvMask)
+  {
+  	uvMask.x = uvMask.x + 1.0;
+  	uvMask.z = uvMask.z + 1.0;
+  	half2 inside1 = step(uvMask.xy, uv.xy);
+  	half2 inside2 = step(uv.xy, uvMask.zw);
+  	return inside1.x * inside1.y * inside2.x * inside2.y;
+  }
+  inline void SkinUVMask(inout v2f o)
+  {
+  	half4 uvMask = half4(-1.0,0.0,0.0, 1.0);
+  	o.mask0.x = MaskUV(o.uv,uvMask);
+  	o.mask0.y = MaskUV(o.uv,uvMask);
+  	o.mask0.z = MaskUV(o.uv, uvMask);
+  	o.mask0.w = MaskUV(o.uv, uvMask);
+  	o.mask1.x = MaskUV(o.uv,uvMask);
+  	o.mask1.y = MaskUV(o.uv,uvMask);
+  	o.mask1.z = MaskUV(o.uv,uvMask);
+  	o.mask1.w = MaskUV(o.uv,uvMask);
+  }
+
+  sampler2D _Tex0;
+  sampler2D _Tex1;
+  sampler2D _Tex2;
+  sampler2D _Tex3;
+  fixed4 _HairColor;
+  sampler2D _Tex4;
+  sampler2D _Tex5;
+  sampler2D _Tex6;
+  sampler2D _Tex7;
+
+  inline fixed4 BlendColor(in v2f i)
+  {
+  	fixed4 c = fixed4(0,0,0,0);
+  	half2 uvOffset = float2(0,0);
+  	c = tex2D(_Tex0, i.uv-uvOffset)*i.mask0.x;
+  	uvOffset.x += 1;
+  	c+= tex2D(_Tex1, i.uv-uvOffset)*_HairColor*i.mask0.y;
+  	uvOffset.x += 1;
+  	c+= tex2D(_Tex2, i.uv-uvOffset)*i.mask0.z;
+  	uvOffset.x += 1;
+  	c+= tex2D(_Tex3, i.uv-uvOffset)*i.mask0.w;
+  	uvOffset.x += 1;
+  	c+= tex2D(_Tex4, i.uv-uvOffset)*i.mask1.x;
+  	uvOffset.x += 1;
+  	c+= tex2D(_Tex5, i.uv-uvOffset)*i.mask1.y;
+  	uvOffset.x += 1;
+  	c+= tex2D(_Tex6, i.uv-uvOffset)*i.mask1.z;
+  	uvOffset.x += 1;
+  	c+= tex2D(_Tex7, i.uv-uvOffset)*i.mask1.w;					
+  	return c;
+  }
+{% endhighlight %}
+下面一张图展示了根据部件不同的uv（这里在上一步中预处理好），推导了uvmask函数返回值，在frag shader采样Tex2D时使用的Texture。
+
+ ![](/img/post-fashion/fashion4.jpg)
+
+vert shader 所有的计算值都保存在v2f中mask0,mask1两个fixed4寄存器中，v2f声明如下：
+{% highlight cpp %}
+struct v2f
+{  
+	float4 pos : SV_POSITION;  	
+#ifndef NONORMAL
+
+	half3 normal: NORMAL;
+#endif//NONORMAL		  
+
+	half2 uv : TEXCOORD0;
+#ifdef UV2
+
+	half2 uv1 : TEXCOORD1;
+#endif//UV2
+
+
+#ifdef LIGHTON
+
+	fixed3 vertexLighting : TEXCOORD2;
+#endif//VERTEXLIGHTON
+
+#ifdef VIEWDIR
+
+	half3 viewDir: TEXCOORD3;
+#ifdef REFLECTUV
+
+	half3 refluv : TEXCOORD4;
+#endif //REFLECTUV
+
+#endif//VIEWDIR
+
+
+#ifdef SKINTEX
+
+  fixed4 mask0 : TEXCOORD5;
+#ifdef SKINTEX8
+
+  fixed4 mask1 : TEXCOORD6;
+#endif//SKINTEX8
+
+#endif//SKINTEX
+
+
+#ifndef NONORMAL
+
+#ifdef MATCAP
+
+	half2 cap : TEXCOORD7;
+#endif
+
+#endif
+
+};
+{% endhighlight %}
+
+### 第二步 c#动态拼接
+- 收集部件
+- 合并skinmesh
+- 设置材质
+- 设置texture
+
+{% highlight csharp %}
+SkinnedMeshRenderer skin = null;
+MaterialPropertyBlock mpb = null
+
+//1.mesh collection
+int index = 0;
+for (int i = (int)EPartType.ECombinePartStart; i < (int)EPartType.ECombinePartEnd; ++i)
+{
+    PartLoadTask part = parts[i] as PartLoadTask;
+    if (part.HasMesh())
+    {
+        CombineInstance ci = new CombineInstance();
+        if (part.mesh != null)
+        {
+            ci.mesh = part.mesh;
+        }
+        ci.subMeshIndex = 0;
+        combineArray[index++] = ci;
+    }
+}
+//2.combine
+if (skin.sharedMesh == null)
+{
+    skin.sharedMesh = new Mesh();
+}
+else
+{
+    skin.sharedMesh.Clear(true);
+}
+skin.gameObject.SetActive(false);
+skin.sharedMesh.CombineMeshes(combineArray, true, false);
+skin.gameObject.SetActive(true);
+
+//3.set material
+if (skin != null)
+{
+    XEquipUtil.ReturnMaterial(skin.sharedMaterial);
+}
+skin.sharedMaterial = XEquipUtil.GetRoleMat();
+skin.GetPropertyBlock(mpb);
+
+//4. postload - set texture
+for (EPartType part = EPartType.ECombinePartStart; part < EPartType.EMountEnd; ++part)
+{
+  mpb.SetTexture(ShaderMgr.GetPartOffset(part), tex);
+  skin.SetPropertyBlock(mpb);
+}
+{% endhighlight %}
+
+在设置texture的时候我们使用MaterialPropertyBlock做了优化，更多关于MaterialPropertyBlock的知识，可以参考下面一篇文章：
+[使用MaterialPropertyBlock来替换Material属性操作][i1]
+
+还要说明的是部件的骨骼，再合成新的skinmesh之后，骨骼节点还是对动画animation保留的，对于网上很多教程在合并前保存部件的骨骼节点，合成之后再赋值给skinmesh完全是没必要的，以免带来不必要的计算和内存开销。
+
+
+[i1]: http://www.sohu.com/a/164943889_726639

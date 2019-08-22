@@ -1,0 +1,98 @@
+/*!
+ * end2end - jekyll theme free
+ * https://github.com/nandomoreirame/end2end
+ * MIT License
+ */
+
+@import "bourbon/bourbon";
+@import "neat/neat";
+
+@import "variables";
+@import "normalize";
+@import "base/reset";
+@import "base/base";
+@import "grid-settings";
+@import "layout";
+@import "icons";
+@import "syntax";
+
+@mixin large {
+    @media screen and (min-width: #{$large-breakpoint}) {
+      @content;
+    }
+  }
+  
+  @mixin medium {
+    @media screen and (min-width: #{$medium-breakpoint}) and (max-width: #{$large-breakpoint}) {
+      @content;
+    }
+  }
+  
+  @mixin small {
+    @media screen and (max-width: #{$medium-breakpoint}) {
+      @content;
+    }
+  }
+
+@include large {
+    max-width: 64rem;
+    padding: 2rem 6rem;
+    margin: 0 auto;
+    font-size: 1.1rem;
+}
+
+@include medium {
+    padding: 2rem 4rem;
+    font-size: 1.1rem;
+}
+
+@include small {
+    padding: 2rem 1rem;
+    font-size: 1rem;
+}
+
+
+img {
+    max-width: 100%;
+}
+
+
+h2,
+h3 {
+  margin-top: 2rem;
+  margin-bottom: 1rem;
+  font-weight: normal;
+  color: $section-headings-color;
+}
+
+
+h4,
+h5,
+h6 {
+  margin-top: 1.0rem;
+  margin-bottom: 0.4rem;
+  font-weight: normal;
+  color: $section-headings-color;
+}
+
+h1 {
+    font-size: 1.8rem;
+}
+
+h2 {
+    font-size: 1.6rem;
+}
+
+h3 {
+    font-size: 1.3rem;
+}
+
+h4 {
+    font-size: 1.2rem;
+}
+
+h5,
+h6 {
+    font-size: 1.1rem;
+}
+

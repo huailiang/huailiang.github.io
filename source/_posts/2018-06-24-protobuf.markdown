@@ -1,0 +1,186 @@
+---
+layout:     post
+title:      "Unity 植入 c++版protobuf"
+date:       2018-06-24 03:00:00
+author:     "Huailiang"
+header-img: "img/post-bg-kuaidi.jpg"
+header-mask: 0.3
+
+catalog:    false
+tags:
+    - Unity
+    - C++
+    - 前端开发
+---
+
+
+> 现在使用Unity引擎开发游戏使用的脚本语言越来越灵活了。就拿《王者荣耀》来说吧，战斗的核心都采取 c++的语言来实现，外围系统都是采用 csharp的开发的。使用 c++指针操作不断有更高的执行效率，作为 native 语言也不会有 mono 内存的开销。使用 csharp 语言语法简单，对面向对象的支持也比较好，适合快速开发和版本迭代。还有使用 lua 脚本来做游戏的热更新。这样问题来了，解析数据就需要三个版本的 protobuf 集成在游戏里了。这个暂且只讨论unity里集成c++版本 protobuf 的流程。
+
+
+首先去 google 的 github 网站下载稳定版本的 protobuf。读者需要的话，点击[这里][i1]。这里我们选择3.5.1版本，完整的 protobuf 包含了大量的测试的代码，这里我们只需要一个完整的 lib 项目就可以了，没有用的测试代码如果不想编进库里，可以删去测试代码部分。
+
+
+先看下，c#与 c++交互的部分。我们传给 c++ protobuf 序列化的二进制数组，在 c++里解析二进制。所以传递参数是 char* 指针和 bytes数组对应的长度，csharp 里我们把二进制数组转换成可以 c++交互的Intptr 指针。定义如下：
+
+csharp 与 c++交互接口定义如下：
+
+``` csharp
+#if UNITY_IPHONE || UNITY_XBOX360
+    [DllImport("__Internal")]
+#else
+    [DllImport("ptotobuf-lib")]
+#endif
+
+    public static extern int iDeserial(IntPtr pb, int length);
+
+```
+
+
+csharp 获取 bytes 数组的首地址可以通过GCHandle来获取：
+
+{% highlight csharp %}
+ GCHandle hObject = GCHandle.Alloc(bytes, GCHandleType.Pinned);
+IntPtr pObject = hObject.AddrOfPinnedObject();
+{% endhighlight %}
+
+c++部分与 c#交互的部分需要写在 extern里, 参数传递指针和 bytes 数组的长度：
+
+``` cpp
+extern "C"
+{
+	int iDeserial(const char* pb, int length)
+	{
+		XNet::Student student;
+		if (!student.ParseFromArray(pb, length))
+		{
+			printf("parse student error");
+		}
+		else
+		{
+			int age = student.age();
+			int num = student.num();
+			std::cout << "age: " << age << std::endl;
+			std::cout << "num:" << num << std::endl;
+			return age + num;
+		}
+		return 0;
+	}
+}
+``` 
+
+
+下面就是不同平台部分的编译 dll 部分
+
+打进 dll里的内容包含两部分：1.google protobuf 的c++代码 2.与 c#交互的代码和游戏逻辑代码
+
+1. Windows 部分
+
+首先编出来的 dll 得指定到 x64平台， c/c++附加包含目录指定到 google文件夹所在你的目录。SDL 检查选择否。
+
+![](/img/post-cpp/1.jpg)
+
+在 vs 工程点击生成即可以生成 64位 的 dll，把编译好的 dll copy 到unity plugins 目录里，就可以调试看到结果了。
+
+2. Android 部分
+
+手机平台比较复杂，特别是 Android 机型众多，区分 arm 和 x86。而 arm 还有各种细分的架构，不过通过解压 unity 生成的 apk 可以发现，libs的目录只有 armv7和 x86两种平台，其他高阶的构架兼容低阶架构，就不需要我们再去编了。
+
+编译 android 的 c++代码，我们使用 android 原生支持的 NDK，我们只需要配置好Android.mk和Application.mk两个文件就好了。
+
+所以在编译 so 之前，需要里下载好 ndk，google官方的下载地址点击[这里][i3].
+
+在Application.mk 中声明编译的平台，使用的 Android 版本：
+
+``` cpp
+APP_ABI          := armeabi-v7a x86
+APP_OPTIM         := release
+APP_PLATFORM      := android-14
+#APP_BUILD_SCRIPT := Android.mk
+APP_STL       := c++_static
+``` 
+
+ 在Android.mk中配置所要编译的 c++文件，编译使用的宏。使用方式跟 linux 使用 gcc编译c++很类似。
+
+``` cpp
+
+LOCAL_PATH := $(call my-dir)  
+
+include $(CLEAR_VARS)
+
+LOCAL_CFLAGS:= -DHAVE_PTHREAD=1
+
+#  c++目录的相对路径
+MY_FILES_PATH  :=  $(LOCAL_PATH)/
+
+# c++后缀
+MY_FILES_SUFFIX := %.cpp %.cc %.c
+
+# 递归遍历目录下的所有的文件
+rwildcard=$(wildcard $1$2) $(foreach d,$(wildcard $1*),$(call rwildcard,$d/,$2))
+
+# 获取相应的源文件
+MY_ALL_FILES := $(foreach src_path,$(MY_FILES_PATH), $(call rwildcard,$(src_path),*.*) ) 
+MY_ALL_FILES := $(MY_ALL_FILES:$(MY_CPP_PATH)/./%=$(MY_CPP_PATH)%)
+MY_SRC_LIST  := $(filter $(MY_FILES_SUFFIX),$(MY_ALL_FILES)) 
+MY_SRC_LIST  := $(MY_SRC_LIST:$(LOCAL_PATH)/%=%)
+
+# 去除字串的重复单词
+define uniq =
+  $(eval seen :=)
+  $(foreach _,$1,$(if $(filter $_,${seen}),,$(eval seen += $_)))
+  ${seen}
+endef
+
+# 递归遍历获取所有目录
+MY_ALL_DIRS := $(dir $(foreach src_path,$(MY_FILES_PATH), $(call rwildcard,$(src_path),*/) ) )
+MY_ALL_DIRS := $(call uniq,$(MY_ALL_DIRS))
+
+# 赋值给NDK编译系统
+LOCAL_SRC_FILES  := $(MY_SRC_LIST)
+LOCAL_C_INCLUDES:= $(LOCAL_PATH)/
+
+LOCAL_SHARED_LIBRARIES:= 
+LOCAL_MODULE:= libprotobuf-lib
+LOCAL_MODULE_TAGS := optional
+LOCAL_LDLIBS += -llog
+include $(BUILD_SHARED_LIBRARY)
+
+```
+
+ 下载好 ndk，把路径配置到环境变量中，就可以使用了 ndk-build 来编译 so 了。
+
+
+3. osx 部分
+
+osx 需要把 c++代码编译成 bundle格式的库文件，需要新建一个 xcode 工程，选项如下图如下所示：
+![](/img/post-cpp/5.jpg)
+
+我们把 c++引用到 xcode 工程， 然后设置好需要的宏：
+![](/img/post-cpp/2.jpg)
+
+设置文件搜索路径：
+![](/img/post-cpp/3.jpg)
+
+点击 build，bundle 文件就可以生成了。
+
+4. ios 部分
+osx 需要把 c++代码编译成 bundle格式的库文件，需要新建一个 xcode 工程，选项如下图如下所示：
+![](/img/post-cpp/6.jpg)
+
+ios 设置部分基本上和 osx 是一样的，记得一处地方要设置好，build 的对象要选择真机而不是模拟器，否则在真机上无法运行：
+
+![](/img/post-cpp/4.jpg)
+
+
+当所有平台的 c++库都编译完成之后，对应到 unity 的目录如下图所示：
+
+![](/img/post-cpp/7.jpg)
+
+可能介绍的语言比较简洁，不过对应的完整的工程我都上传到 github 去了，大家可以去下载下来，跑一遍流程之后，就一切都清楚了。
+
+**github 对应的地址，点击[这里][i4].
+
+[i1]:https://github.com/google/protobuf
+[i2]:https://github.com/huailiang/game_pb/blob/master/image/1.jpg
+[i3]:https://developer.android.google.cn/ndk/downloads/
+[i4]:https://github.com/huailiang/game_pb

@@ -1,0 +1,24 @@
+---
+layout: home
+---
+
+<section class="hero">
+
+  <div class="hero-inner container">
+
+    <img src="{{ site.author.thumb | prepend: site.baseurl }}" alt="author thumb" class="dot">
+
+    <br> <br>
+    <h6>Hey，我是彭怀亮，病毒种</h6>
+    <br>
+    <p>进化程度不明，多出没于博客、微博、知乎、Facebook、Github、UWA 等地带，绝招尚在开发中</p>
+    <br>
+
+    <a href="{{ '/about' | prepend: site.baseurl }}" class="btn btn-ghost">about</a>&nbsp;&nbsp;
+    <a href="{{ '/blog' | prepend: site.baseurl }}" class="btn btn-ghost">blog</a>
+
+    {% include social.html %}
+
+  </div>
+
+</section>

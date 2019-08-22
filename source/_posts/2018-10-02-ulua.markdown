@@ -1,0 +1,209 @@
+---
+layout:     post
+title:      "为你的游戏定制lua"
+date:       2018-10-02 03:00:00
+author:     "Huailiang"
+tags:
+    - Unity
+    - Lua
+    - 工具
+---
+
+
+> 由于lua解释执行，且是一款轻量级的脚本语言，所以作为脚本无数次被广大游戏项目采用。市面上lua插件多如牛毛，像nlua,ulua,slua,xlua,tolua。 每一款插件或多或少有这样或那样的优点缺点。 我觉得王道就是自己写一个lua插件，定制给游戏，游戏需要什么功能，就加入什么功能，移除不必要的模块，加入自己需要的模块。
+
+
+本文对应到github工程代码地址：[https://github.com/huailiang/ulua_proj][i4]
+
+## 为什么要定制
+
+
+1. 移除不必要的模块，比如说luasocket，qllite这些，加入些新的特性，比如说lua protobuf3.x
+
+
+2. 主流的lua插件都是针对c#的代码修复，越来越多的游戏逻辑移植到c++里，定制就意味着可以和引擎逻辑编入同一个库中，自然可以用来修复c++里的模块
+
+
+## 为什么选择lua53 
+
+为什么选择lua53, 而不是效率更高的luajit。 主要是考虑到项目�使用lua来修复既有的逻辑模块，而不是使用lua来开发新的模块。（不是绝对的使用lua不开发新功能，比如说活动系统�这种频繁更新的模块可以使用lua�来开发，只是这种需求比较少，而且对性能要求不高）
+
+还有一个原因是使用lua53，是因为lua53天然支持int64，游戏逻辑使用c#,c++这种高阶语言编写的，很容易用到int64这种数据格式。
+
+## 编译lua源码踩的坑
+
+* ios build error: 'system' is unavailable: not available on iOS
+iOS11废除了system之后,rug如果使用xcode9以上的版本编译都会报此错误，解决方法就是：
+将loslib.c中
+
+{% highlight cpp %}
+int stat = system(cmd);
+{% endhighlight %}
+
+改为:
+
+{% highlight cpp %}
+int stat = nftw(cmd, unlink_cb, 64, FTW_DEPTH | FTW_PHYS);
+{% endhighlight %}
+引入头文件
+
+{% highlight cpp %}
+#include <ftw.h>
+{% endhighlight %}
+
+添加方法:
+
+{% highlight cpp %}
+int unlink_cb(const char *fpath, const struct stat *sb, int typeflag, struct FTW     *ftwbuf)
+{
+    int rv = remove(fpath);
+    
+    if (rv)
+        perror(fpath);
+    
+    return rv;
+}
+
+{% endhighlight %}
+
+ftw.h当然这是ios平台才有的头文件，所以你使用同一份代码编译编译Android的时候又会发现此文件找不到，所以可以使用#ifdef IOS 这样的宏区分开来。
+
+* Android build error: struct lconv has no...'decimal_point'
+
+查询msdn，后知道：char *decimal_point, wchar_t *_W_decimal_point, Decimal-point character for nonmonetary quantities.对于非货币数量的小数点字符。
+
+![](/img/post-lua/lua5.jpg)
+
+
+于是将错误的地址进行如下修改：
+{% highlight cpp %}
+#ifdef WIN32
+
+       lcc = localeconv();   /* set structure containing local decimal point symbol */
+       decimalpt = *(lcc->decimal_point);
+#else
+
+       decimalpt = '.';
+#endif
+{% endhighlight %}
+
+效果如下：
+
+![](/img/post-lua/lua4.jpg)
+
+
+* 当然还有很多android还有类似log2的build error错误，后来我们决定采用类似xlua的套路：
+
+把差异化的东西编译到link文件，然后cmakelist这样配置：
+
+{% highlight r %}
+configure_file ( ${LUA_SRC_PATH}/luaconf.h.in ${CMAKE_CURRENT_BINARY_DIR}/luaconf.h )
+{% endhighlight %}
+
+
+## Protobuf
+
+最让我抓狂的是google官方居然不支持Lua版的protobuf。ulua,tolua使用的都是云风的gen_lua_protoc这款插件。但是�gen_lua_protoc虽然支持protobuf, 但是只支持到�protobuf 2.x版本。而且对应的lua版本也是lua5.1。 
+
+ xlua官方的github 工程中并没有支持到protobuf，  不过xlua的作者在自己的blog 集成了�第三方protobuf3.x, , 然并没有发布到腾讯官方的公布的�工程中。 xlua作者提供的xlua扩展工程叫build_xlua_with_libs，如果读者感兴趣，可以点击这里，[查看源码][i1]。
+
+![i2](/img/post-lua/xLua.png)
+
+
+lua虽然支持了protobuf, 而且同时支持了2.x和3.x两个版本。但是依旧解决不了我项目的问题。 首先socket的收发协议都在c#。 c++ 和lua 模块中�如果需要处理网络消息，都需要bytes来中转。xlua 就没有像ulua,tolua那样提供类似的功能。（其实ulua和tolua的处理归根结底还是gen_lua_protoc处理的）。
+
+�于是我使用ulua的方式导出LuaStringBuf的方式，把LuaStringBuf传递给lua,lua接受到参数后，作为data使用pb.decode去反序列化，居然成功了。
+
+类似的我想把lua中序列化的对象传递给c#, c#却不认了。c#识别的是string对象。于是我不得转变思路。通过查看[lua-protobuf源码][i3]，我了解到lua在序列化的时候(pb.encode),是向堆栈上lua_pushlstring，这个字符串是不随'\0' 来结束的，说白了就是一串指定长度的unsigned char,对应到c#的byte�[]。 �我使用的方式的就是把string每个字符�转成byte存到table中，然后传递到c#中对应的类型是LuaTable。 c#拿到�之后再转换为byte[]。 最后使用此byte[]在c#反序列化。从[例子][i4]里可以看到�反序列化的结果。
+
+
+## ByteCode
+
+
+Lua 导出bytecode
+
+lua使用bytecode 的好处主要有两点：
+
+{% highlight c %}
+ a. 二进制文件，为了加密
+ b. 编译后的中间件，提升效率
+{% endhighlight %}
+
+那么如何导出bytecode呢？
+
+*  luajit
+
+{% highlight c %}
+a. 进入luajit\LuaJIT-2.0.1\src 目录
+
+b. uajit -b 需要编译的lua文件路径 编译输出文件保存路径
+
+{% endhighlight %}
+
+
+
+{% highlight bash %}
+# luajit -b d:\src.lua d:\des.lua
+luajit -b d:\src.lua d:\des.lua
+{% endhighlight %}
+
+* luac (mac下)
+
+
+运行下面命令
+
+{% highlight bash %}
+curl -R -O http://www.lua.org/ftp/lua-5.3.1.tar.gz 
+tar zxf lua-5.3.1.tar.gz 
+cd lua-5.3.1 
+make macosx test
+{% endhighlight %}
+
+ 安装, 输入以下命令，会要求输入Password: 输入相应密码（你的密码），然后回车就自动安装了
+
+{% highlight bash %}
+sudo make install
+{% endhighlight %}
+
+ 配置编译器 sublime下执行Tools->Build System->New Build System 输入：
+
+{ 
+"cmd": ["/usr/local/bin/lua", "$file"], 
+"file_regex": "^(…?):([0-9]):?([0-9]*)", 
+"selector": "source.lua"
+} 
+保存为Lua.sublime-build，然后Tools-Build System上就能选择lua来编译脚本了
+
+
+luac生成bytecode, 使用如下命令：
+{% highlight bash %}
+luac -o test.luac test.lua
+{% endhighlight %}
+
+注意：
+
+如果项目在PC下正常运行，但是安装到Android手机就报错：ulua.lua: cannot load incompatible bytecode，那么说明你的运行时luajit和编译时luajit版本不一致，你需要删除LuaEncoder文件夹下的luajit，然后，把LuaFramework下的luajit拷贝过来，然后在运行就可以了。
+
+如果运行时候出现这个报错
+
+LuaException: error loading module Main from CustomLoader,
+Main: size_t size mismatch in precompiled chunk
+解决： 所使用的luac编译工具得区分32、64位 , 安卓需在32位的编译文件
+
+https://github.com/Tencent/xLua/issues/356
+
+https://www.jianshu.com/p/3c49cf454502
+
+
+
+
+## 结语
+
+好久没有更新博客了，最近的项目工作量上来了，之后相信会越来越忙了，祝大家工作顺利。
+
+
+
+[i1]: https://github.com/chexiongsheng/build_xlua_with_libs
+[i2]: https://github.com/Tencent/xLua
+[i3]: https://github.com/starwing/lua-protobuf
+[i4]: https://github.com/huailiang/ulua_proj

@@ -1,0 +1,187 @@
+---
+layout:     post
+title:      "Mac上用VS Code调试 Unity程序"
+date:       2018-03-06 11:00:00
+author:     "Huailiang"
+tags:
+    - Unity
+    - OSX
+---
+
+
+> 相信很多人，在做Unity 游戏开发的时候，是喜欢用 visual studio 来写代码了。可惜的是，如果你在 mac 上开发就没有 Windows 那样便利了。别跟我说 mac 版的 visual studio，在我看来就像阉割版。
+
+vs code 像 sublime、notepad++、atom 等编辑器一样，轻量级，插件多。今天笔者就在开发的时候 monoDevelop 莫名的打不开，所以就决定用 vs code+插件的方式来开发调试程序。
+
+vs code 还有一个好处是，很多快捷键跟 windows 上的 visual studio一样，这样熟悉 windows 上开发的话，很快就能上手了。
+
+首先介绍一个网址:[vs code官方介绍][i1]  
+
+ vs code 下载网址：
+[https://code.visualstudio.com/Download][i3]
+
+![](/img/post-vscode/vs1.jpg)
+
+
+## .NET 本地安装
+
+ 首先的确保你的 mac 安装了 .net 的 sdk，如果没有的话，请先去下载，下载网址[https://www.microsoft.com/net/learn/get-started/macos][i2]
+
+如果安装成功的话，你在 terminal 上敲下面命令行：
+
+{% highlight bash %}
+dotnet --version
+{% endhighlight %}
+
+运行结果出现下面的提示，证明你的 dotnet 安装成功了。
+
+![](/img/post-vscode/vs2.jpg)
+
+
+## Unity 设置
+
+打开你的 unity ,选择 Unity->Prefences->External Tools，做如下图的设置，使你的 unity 默认代码编辑器是 vs code。
+
+![](/img/post-vscode/vs3.gif)
+
+关联成功之后，你双击 unity 项目中的 代码默认就打开 vscode了。到这里就成功了一半。
+
+
+## 断点调试
+
+打开 vs code 之后，点击 Debug->Install Additional Debuger..
+
+在出来的列表中，定位到 Debugger for Unity, 点击安装，等待安装完成。
+
+
+![](/img/post-vscode/vs4.jpg)
+
+
+如果你点击调试按钮，vs code 右下角出现如下图示的错误：
+
+![](/img/post-vscode/vs7.jpg)
+
+
+
+这是因为你电脑没有安装mac mono 所造成的，这里说所的mono 并不是unity安装自带的monoDeveloper, 你可以下载mac mono 在如下地址：
+[http://www.mono-project.com/download/][i4]
+
+点击左上角调试按钮，Attach 到 Unity。如果没有出现 Unity-Editor 的选择，先删除本地的 .vscode/Launch.json, 然后重启vscode.
+
+
+![](/img/post-vscode/vs5.jpg)
+
+
+
+
+我试了一下，按 F5快捷键 也可以直接开启调试的，这点跟 Windows 相同，还有 F12跳到函数定义，都是一样的。哈哈。。
+
+
+![](/img/post-vscode/vs6.jpg)
+
+## 生成 DLL
+
+有时候我们的代码不一定写在 unity一侧，而是一个 lib工程。作为类库，导入到 unity 项目中，而 vs code 如何编译生成 dll 呢。
+
+这里我们使用dotnet new 命令来生成一个空的 lib 工程，名字叫 helloworld.
+
+{% highlight bash %}
+dotnet new classlib -n "helloworld"
+{% endhighlight %}
+
+然后编译生成 dll 。
+
+{% highlight bash %}
+dotnet restore
+dotnet build
+{% endhighlight %}
+
+运行结果如下所示：
+
+![](/img/post-vscode/vs8.jpg)
+
+生成的 dll 保存路径都有放在/bin/Debug/目录下。默认生成的 Debug 模式的，如果想生成Release 和更改生成的路径等可以用参数指定
+
+![](/img/post-vscode/vs9.jpg)
+
+
+除了使用dotnet命令， 我们还可以使用msbuild来编dll,  如果我们的sln里包含了多个.csproj 就非常适合使用MSBuild了。
+
+首先安装，可以去mono官网去下载最新版本， 下载地址：https://download.mono-project.com/archive/
+
+{% highlight bash %}
+msbuild /vershion
+{% endhighlight %}
+运行结果如下所示：
+
+![](/img/post-vscode/vs12.jpg)
+
+cd到sln所在的目录，清除历史编译生成的dll,可以使用：
+
+{% highlight bash %}
+MSBuild CFClient.sln /t:Clean
+{% endhighlight %}
+
+上面CFClient.sln 是sln的文件名
+
+重新生成新的dll可以使用如下命令：
+
+{% highlight bash %}
+
+MSBuild CFClient.sln /t:Rebuild /p:TargetFrameworkVersion=v4.0 /p:Configuration=Debug /p:PostBuildEvent="" /p:TargetFrameworkProfile="Client"
+
+{% endhighlight %}
+
+![](/img/post-vscode/vs13.jpg)
+
+更多的使用可以使用命令查看：
+
+{% highlight bash %}
+MSBuild /?
+
+{% endhighlight %}
+
+![](/img/post-vscode/vs14.jpg)
+
+
+## vs code 插件
+
+Unity Shanderlab 代码高亮提示
+
+![](/img/post-vscode/vs11.jpg)
+
+
+注释功能，键入"///"或者"/**/" 自动帮你生成注释,风格跟 vs 一样的。
+
+
+![](/img/post-vscode/vs10.jpg)
+
+
+配置代码自动换行和保存格式化可以通过点击 Code->Prefences->Settings,
+在右侧栏配置相关的选项，左边是所有可配置选项的说明，下面是我的配置选项。
+
+{% highlight json %}
+{
+    "workbench.activityBar.visible": false,
+    "window.zoomLevel": -1,
+    "workbench.statusBar.visible": true,
+    "editor.minimap.enabled": false,
+    "editor.formatOnSave": true,
+    "csharpfixformat.style.braces.onSameLine": false,
+    "csharp.format.enable": true
+}
+{% endhighlight %}
+
+正所谓好刀不误砍柴功，有了更加强大的编辑器，我们写代码的效率也会相应的提升。
+
+好了，今天的文章就到这里了，祝大家工作顺利。
+
+
+
+[i1]: https://code.visualstudio.com/docs/other/unity
+
+[i2]:https://www.microsoft.com/net/learn/get-started/macos
+
+[i3]:https://code.visualstudio.com/Download
+
+[i4]:http://www.mono-project.com/download/

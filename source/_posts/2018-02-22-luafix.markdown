@@ -1,0 +1,249 @@
+---
+layout:     post
+title:      "龙之谷如何使用lua做热更新的"
+date:       2018-02-22 12:00:00
+author:     "Huailiang"
+tags:
+    - Lua
+    - Unity
+---
+
+
+> Unity引擎如何热更新了，现在可以选择的方案可是越来越多了。笔者收集到一下几个解决solution:
+
+- [ILRuntime][i1]
+- [ULua][i2]
+- [SLua][i3]
+- [ToLua][i4]
+- [XLua][i5]
+
+ILRuntime项目为基于C#的平台（例如Unity）提供了一个纯C#实现的，快速、方便并且可靠的IL运行时，使得能够在不支持JIT的硬件环境（如iOS）能够实现代码的热更新。
+
+tolua# 不支持动态反射。动态反射对于重载函数有参数匹配问题，函数排序问题，ref,out 参数问题等等。
+
+slua 偏向面向对象， 腾讯内部有个潘多拉的SDK项目组热更新采用的就是slua架构。
+
+xlua是由腾讯维护的一个开源项目，除了常规的Lua绑定之外，还有一个比较有特色的功能就是代码热补丁。非常适合前期没有规划使用Lua进行逻辑开发，后期又需要在iOS这种平台获得代码热更新能力的项目。
+下图给出ulua官网给出的性能对比：
+
+![](/img/post-lua/lua1.jpg)
+
+详细对比各个solution效率测试， 参考下面这篇文章：[Unity中SLua、Tolua、XLua和ILRuntime效率评测][i6]
+
+龙之谷使用的是基于ulua的热更方案，就目前手游市场使用的情况来看，《王者荣耀》apk包破解之后，也是基于此方案。
+
+## lua 做热修和开发小功能
+
+龙之谷使用ulua做了哪些事：
+- 热修线上功能
+- 开发小功能
+
+所有上面的实现都是基于埋点来实现的。比如说我们在发布前在每个view的显示函数（基类的虚函数）或者隐藏的地方，埋下如下所示的点：
+
+{% highlight csharp %}
+ILuaEngine luaEngine = XUpdater.XUpdater.singleton.XLuaEngine;
+if (!luaEngine.hotfixMgr.TryFixRefresh(Mode.BEFORE, luaFileName, uiBehaviour.gameObject))
+{
+  OnShow();
+  luaEngine.hotfixMgr.TryFixRefresh(Mode.AFTER, luaFileName, uiBehaviour.gameObject);
+}
+else
+{
+    OnHide();
+    UIManager.singleton.OnDlgHide(s_instance);
+    ILuaEngine luaEngine = XUpdater.XUpdater.singleton.XLuaEngine;
+    luaEngine.hotfixMgr.TryFixRefresh(Mode.HIDE, luaFileName, uiBehaviour.gameObject);
+}
+{% endhighlight %}
+
+OnShow和OnHide是每个界面的显示、隐藏函数。这样的话，每次刷新的UI都先去检查是否存在相应的lua热更文件，如果存在的话，则跳入对应lua的函数入口。具体的实现如下：
+{% highlight csharp %}
+public bool TryFixRefresh(Mode _mode, string _pageName, GameObject go)
+{
+    if (useHotfix && init)
+    {
+        string filename = "Hotfix" + _pageName + ".lua";
+        bool dolua = DoLuaFile(filename);
+        if (dolua)
+        {
+            _refresh = null;
+            if (_mode == Mode.BEFORE) _refresh = hot.lua.GetFunction(_pageName + ".BeforeRefresh");// : _pageName + ".AfterRefresh");
+            else if (_mode == Mode.AFTER) _refresh = hot.lua.GetFunction(_pageName + ".AfterRefresh");
+            else if (_mode == Mode.HIDE) _refresh = hot.lua.GetFunction(_pageName + ".Hide");
+            else if (_mode == Mode.UNLOAD) _refresh = hot.lua.GetFunction(_pageName + ".Unload");
+            if (_refresh != null)
+            {
+                object[] r = _refresh.Call(go);
+                _refresh.Release();
+                return r != null && r.Length > 0 ? (bool)r[0] : false;
+            }
+            else
+            {
+                Debug.Log("func is null!" + _pageName + " mode: " + _mode);
+            }
+        }
+    }
+    return false;
+}
+{% endhighlight %}
+而如果有新的lua文件，则会跳入相应的lua函数中，lua的实现如下：
+{% highlight lua %}
+TestDlg = {}
+local this = TestDlg
+local m_go
+
+function TestDlg.BeforeRefresh(go)
+	return false
+end
+
+function TestDlg.AfterRefresh(go)
+	 if not IsNil(go) then
+	 	m_go = go;
+	 	print(str)
+	else
+		print("AfterRefresh: TestDlg.AfterRefresh is nil lua script ")
+	end
+	return false
+end
+
+function TestDlg.Hide(go)
+	return false
+end
+
+function TestDlg.Unload(go)
+	return false
+end
+
+{% endhighlight %}
+
+lua 模板内置的函数诸如BeforeRefresh，AfterRefresh，Unload这些函数都会带有返回值，如果返回false，则是不覆盖之前的c#的逻辑，如果返回true，则是覆盖原来c#写的代码。类似的原理，我们还可以重载掉所有的c#里的click事件，覆盖所有的c#里网络协议。
+
+### Lua做新功能
+用lua去实现一个新的系统
+原理：
+LuaUIManager:Load("UI/GameSystem/Prefab")
+
+LuaUIManager:Destroy("UI/GameSystem/Prefab")
+
+会加载一个通用的LuaDlg, 这样就实现了lua脚本和monobehaviour一样的生命周期和调用方式
+
+脚本命名Lua+Prefab名字 (Prefab的首字母要大些)
+
+脚本里有一个table， table的名字跟脚本名要相同 所有方法放在table中
+
+有Awake、Start、OnEnable、OnDisable、OnShow、OnDestroy等接口
+
+实现跟c#的类似,luadlg.cs 实现如下：
+
+{% highlight csharp %}
+using LuaInterface;
+using System.Text;
+using UnityEngine;
+
+public class LuaDlg : MonoBehaviour
+{
+    private LuaScriptMgr mgr;
+    private string m_name { get { return name.Substring(0, 1).ToUpper() + name.Substring(1); } }
+    private const string AWAKE = "Awake";
+    private const string START = "Start";
+    private const string ENABLE = "OnEnable";
+    private const string DISABLE = "OnDisable";
+    private const string DESTROY = "OnDestroy";
+
+    void Awake()
+    {
+        mgr = HotfixManager.GetLuaScriptMgr();
+        mgr.DoFile("Lua" + m_name + ".lua");
+        LuaFunction func = mgr.GetLuaFunction(SPend(AWAKE));
+        if (func != null) func.Call(gameObject);
+    }
+
+    void Start()
+    {
+        if (mgr != null)
+        {
+            LuaFunction func = mgr.GetLuaFunction(SPend(START));
+            if (func != null) func.Call();
+        }
+    }
+
+    void OnEnable()
+    {
+        if (mgr != null)
+        {
+            LuaFunction func = mgr.GetLuaFunction(SPend(ENABLE));
+            if (func != null) func.Call();
+        }
+    }
+
+    void OnDisable()
+    {
+        if (mgr != null)
+        {
+            LuaFunction func = mgr.GetLuaFunction(SPend(DISABLE));
+            if (func != null) func.Call();
+        }
+    }
+
+    public void OnDestroy()
+    {
+        if (mgr != null)
+        {
+            try
+            {
+                LuaFunction func = mgr.GetLuaFunction(SPend(DESTROY));
+                if (func != null) func.Call();
+            }catch { }
+        }
+    }
+
+    private string SPend(string func)
+    {
+        StringBuilder sb = new StringBuilder("Lua");
+        sb.Append(m_name);
+        sb.Append(".");
+        sb.Append(func);
+        return sb.ToString();
+    }
+}
+
+
+{% endhighlight %}
+
+### xxxx_pb协议解析
+协议解析文件 由protoc-gen-lua生成（不要手动编辑）
+Protobuff不能解析ulong long 请转成string
+
+PTC在LuaNotifyRoute里的PTC、PtcCB、NetworkOverideCSharp 注册（区别请去看注释） 注册一条协议包括 协议号、回调方法、协议名
+
+RPC的发送：Hotfix.SendLuaRPC(46227, TestProtol.data, this.CB1, this.CB2)
+	CB1是网络回调 CB2是超时回调
+
+
+## IL注入，重写c#逻辑
+借鉴于xlua可以利用IL注入的方式实现原c#代码覆盖，既不污染c#代码，也不需要埋点。现已在游戏中实现类似的功能。
+
+使用方式：
+在新的功能模块中的类名或者方法名加上[Hotfix]标签 而如果忽略某个函数可以使用[HotfixIgnore]
+如果线上对应的代码出现问题，可以在HotfixPatch.lua 的Regist函数注册你要重载的函数，在HotfixCallback.lua实现要重载的函数
+
+注意事项：
+- 构造函数不能被热修
+- 参数含有ref、out的不能被热修
+- 加入[Hotfix]标签后执行LuaTools->Injector->Inject来注入，然后在编辑器里运行，确保注入成功没有错误后再执行LuaTools->Injector->Clean来清除IL注入。切记注入之后，不要上传dll，上传之前一定要清掉，避免污染代码
+- 原先已经成熟的模块就不要在注入了 因为注入会增加额外的代码量
+- 考虑到性能的问题 最好Update方法都主动加一个[HotfixIgnore] 不去热修
+
+![](/img/post-lua/lua2.jpg)
+
+![](/img/post-lua/lua3.jpg)
+
+*图片来源: [huailiang.github.io][i3]*
+
+
+[i1]: https://github.com/meta-42/ILRuntime
+[i2]: http://www.ulua.org
+[i3]: http://www.slua.net/
+[i4]: https://github.com/topameng/
+[i5]: https://github.com/Tencent/xLua
+[i6]: http://blog.csdn.net/u011467512/article/details/72716376
