@@ -258,35 +258,157 @@ MathJax.Hub.Config({
 
 <p>Unity默认显示Mark Context只在绑定gameobject或者component的track上， 比如说Control Track就不显示。</p>
 
-<p>有时候有些自定义的signal emitter并不想出现在某些track里， 比如说一些用来控制全局的signal并不想出现在Animation Track里。一种最直接的方法直接修改TypeUtility.cs的方法:</p>
+<p>有时候有些自定义的signal emitter并不想出现在某些track里， 比如说一些用来控制全局的signal并不想出现在Animation Track里。一种最直接的方法针对对应的track添加一个Attribute, 并在中指定对应的TrackType:</p>
 
-<div class="language-cs highlighter-rouge"><pre class="highlight"><code><span class="k">public</span> <span class="k">static</span> <span class="kt">bool</span> <span class="nf">DoesTrackSupportTrackType</span><span class="p">(</span><span class="n">TrackAsset</span> <span class="n">track</span><span class="p">,</span> <span class="n">Type</span> <span class="n">type</span><span class="p">)</span>
+<div class="language-cs highlighter-rouge"><pre class="highlight"><code><span class="k">public</span> <span class="k">enum</span> <span class="n">TrackType</span>
+<span class="p">{</span>
+    <span class="n">NONE</span> <span class="p">=</span> <span class="m">0</span><span class="p">,</span>
+    <span class="n">MARKER</span> <span class="p">=</span> <span class="m">1</span><span class="p">,</span>
+    <span class="n">ANIMTION</span> <span class="p">=</span> <span class="m">1</span> <span class="p">&lt;&lt;</span> <span class="m">1</span><span class="p">,</span>
+    <span class="n">CONTROL</span> <span class="p">=</span> <span class="m">1</span> <span class="p">&lt;&lt;</span> <span class="m">2</span><span class="p">,</span>
+    <span class="n">ANCHOR</span> <span class="p">=</span> <span class="m">1</span> <span class="p">&lt;&lt;</span> <span class="m">3</span><span class="p">,</span>
+    <span class="n">OTHER</span> <span class="p">=</span> <span class="m">1</span> <span class="p">&lt;&lt;</span> <span class="m">7</span> <span class="c1">// put other at last
+</span><span class="p">}</span>
+
+
+<span class="na">[AttributeUsage(AttributeTargets.Class)]</span>
+
+<span class="k">public</span> <span class="k">class</span> <span class="nc">MarkerAttribute</span> <span class="p">:</span> <span class="n">Attribute</span>
+<span class="p">{</span>
+    <span class="k">public</span> <span class="n">TrackType</span> <span class="n">supportType</span> <span class="p">=</span> <span class="k">default</span><span class="p">(</span><span class="n">TrackType</span><span class="p">);</span>
+
+
+    <span class="k">public</span> <span class="nf">MarkerAttribute</span><span class="p">(</span><span class="n">TrackType</span> <span class="n">type</span><span class="p">)</span>
+    <span class="p">{</span>
+        <span class="n">supportType</span> <span class="p">=</span> <span class="n">type</span><span class="p">;</span>
+    <span class="p">}</span>
+
+    <span class="k">public</span> <span class="k">void</span> <span class="nf">AddType</span><span class="p">(</span><span class="n">TrackType</span> <span class="n">type</span><span class="p">)</span>
+    <span class="p">{</span>
+        <span class="n">supportType</span> <span class="p">|=</span> <span class="n">type</span><span class="p">;</span>
+    <span class="p">}</span>
+
+    <span class="k">public</span> <span class="kt">bool</span> <span class="nf">SupportTrackType</span><span class="p">(</span><span class="n">TrackAsset</span> <span class="n">track</span><span class="p">,</span> <span class="n">Type</span> <span class="n">type</span><span class="p">)</span>
+    <span class="p">{</span>
+        <span class="kt">bool</span> <span class="n">rst</span> <span class="p">=</span> <span class="k">false</span><span class="p">;</span>
+        <span class="k">if</span> <span class="p">(</span><span class="n">track</span> <span class="k">is</span> <span class="n">MarkerTrack</span><span class="p">)</span>
+        <span class="p">{</span>
+            <span class="n">rst</span> <span class="p">=</span> <span class="p">(</span><span class="n">supportType</span> <span class="p">&amp;</span> <span class="n">TrackType</span><span class="p">.</span><span class="n">MARKER</span><span class="p">)</span> <span class="p">&gt;</span> <span class="m">0</span><span class="p">;</span>
+        <span class="p">}</span>
+        <span class="k">else</span> <span class="k">if</span> <span class="p">(</span><span class="n">track</span> <span class="k">is</span> <span class="n">AnimationTrack</span><span class="p">)</span>
+        <span class="p">{</span>
+            <span class="n">rst</span> <span class="p">=</span> <span class="p">(</span><span class="n">supportType</span> <span class="p">&amp;</span> <span class="n">TrackType</span><span class="p">.</span><span class="n">ANIMTION</span><span class="p">)</span> <span class="p">&gt;</span> <span class="m">0</span><span class="p">;</span>
+        <span class="p">}</span>
+        <span class="k">else</span> <span class="k">if</span> <span class="p">(</span><span class="n">track</span> <span class="k">is</span> <span class="n">AnchorTrack</span><span class="p">)</span>
+        <span class="p">{</span>
+            <span class="n">rst</span> <span class="p">=</span> <span class="p">(</span><span class="n">supportType</span> <span class="p">&amp;</span> <span class="n">TrackType</span><span class="p">.</span><span class="n">ANCHOR</span><span class="p">)</span> <span class="p">&gt;</span> <span class="m">0</span><span class="p">;</span>
+        <span class="p">}</span>
+        <span class="k">else</span> <span class="k">if</span> <span class="p">(</span><span class="n">track</span> <span class="k">is</span> <span class="n">ControlTrack</span><span class="p">)</span>
+        <span class="p">{</span>
+            <span class="n">rst</span> <span class="p">=</span> <span class="p">(</span><span class="n">supportType</span> <span class="p">&amp;</span> <span class="n">TrackType</span><span class="p">.</span><span class="n">CONTROL</span><span class="p">)</span> <span class="p">&gt;</span> <span class="m">0</span><span class="p">;</span>
+        <span class="p">}</span>
+        <span class="k">return</span> <span class="n">rst</span><span class="p">;</span>
+    <span class="p">}</span>
+
+<span class="p">}</span>
+</code></pre>
+</div>
+
+<p>针对每个Track设置好对应的track类型， 然后再TimelineContextMenu.cs 调用的地方制定特定的track：</p>
+<div class="language-cs highlighter-rouge"><pre class="highlight"><code> <span class="k">public</span> <span class="k">static</span> <span class="kt">bool</span> <span class="nf">DoesTrackSupportMarkerType</span><span class="p">(</span><span class="n">TrackAsset</span> <span class="n">track</span><span class="p">,</span> <span class="n">Type</span> <span class="n">type</span><span class="p">)</span>
 <span class="p">{</span>
     <span class="k">if</span> <span class="p">(</span><span class="n">track</span><span class="p">.</span><span class="n">supportsNotifications</span><span class="p">)</span>
     <span class="p">{</span>
-        <span class="k">return</span> <span class="n">type</span> <span class="p">!=</span> <span class="k">typeof</span><span class="p">(</span><span class="n">JumpSignalEmmiter</span><span class="p">)</span> <span class="p">&amp;&amp;</span> <span class="n">type</span> <span class="p">!=</span> <span class="k">typeof</span><span class="p">(</span><span class="n">SlowSignalEmitter</span><span class="p">);</span>
+        <span class="kt">bool</span> <span class="n">rst</span> <span class="p">=</span> <span class="k">true</span><span class="p">;</span>
+        <span class="kt">var</span> <span class="n">attr</span> <span class="p">=</span> <span class="n">Attribute</span><span class="p">.</span><span class="nf">GetCustomAttribute</span><span class="p">(</span><span class="n">type</span><span class="p">,</span> <span class="k">typeof</span><span class="p">(</span><span class="n">MarkerAttribute</span><span class="p">))</span> <span class="k">as</span> <span class="n">MarkerAttribute</span><span class="p">;</span>
+        <span class="k">if</span> <span class="p">(</span><span class="n">attr</span> <span class="p">!=</span> <span class="k">null</span><span class="p">)</span> <span class="n">rst</span> <span class="p">=</span> <span class="n">attr</span><span class="p">.</span><span class="nf">SupportTrackType</span><span class="p">(</span><span class="n">track</span><span class="p">,</span><span class="n">type</span><span class="p">);</span>
+        <span class="k">return</span> <span class="n">rst</span><span class="p">;</span>
     <span class="p">}</span>
     <span class="k">return</span> <span class="p">!</span><span class="k">typeof</span><span class="p">(</span><span class="n">INotification</span><span class="p">).</span><span class="nf">IsAssignableFrom</span><span class="p">(</span><span class="n">type</span><span class="p">);</span>
 <span class="p">}</span>
 </code></pre>
 </div>
+<p>比如上述代码，自定义的JumpSignalEmmiter和SlowSignalEmitter， 就只会marker track里显示了。</p>
 
-<p>然后再TimelineContextMenu.cs 调用的地方制定特定的track：</p>
-<div class="language-cs highlighter-rouge"><pre class="highlight"><code><span class="k">public</span> <span class="k">static</span> <span class="k">void</span> <span class="nf">AddMarkerMenuCommands</span><span class="p">(</span><span class="n">GenericMenu</span> <span class="n">menu</span><span class="p">,</span> <span class="n">TrackAsset</span> <span class="n">track</span><span class="p">,</span> <span class="n">Func</span><span class="p">&lt;</span><span class="n">Type</span><span class="p">,</span> <span class="n">IMarker</span><span class="p">&gt;</span> <span class="n">command</span><span class="p">,</span> <span class="kt">bool</span> <span class="n">enabled</span><span class="p">)</span>
+<h5 id="3-利用marker生成曲线">3. 利用marker生成曲线</h5>
+
+<p>自定义的Emitter 继承Marker， 只要不实现INotification, 就不会生成在全局广播。 利用Marker可以标记的性质(即在track里可编辑的关键帧)， 生成AnimationCurve， 同时不广播事件，还可以节省消耗。</p>
+
+<p>比如在track里标记一些节点：</p>
+<div class="language-cs highlighter-rouge"><pre class="highlight"><code><span class="na">[Serializable]</span>
+<span class="na">[CustomStyle("TransforSignalmEmitter")]</span>
+<span class="na">[Marker(TrackType.ANCHOR | TrackType.MARKER)]</span>
+<span class="k">public</span> <span class="k">class</span> <span class="nc">AnchorSignalEmitter</span> <span class="p">:</span> <span class="n">Marker</span>
 <span class="p">{</span>
-    <span class="kt">var</span> <span class="n">markerTypes</span> <span class="p">=</span> <span class="n">TypeUtility</span><span class="p">.</span><span class="nf">GetBuiltInMarkerTypes</span><span class="p">().</span><span class="nf">Union</span><span class="p">(</span><span class="n">TypeUtility</span><span class="p">.</span><span class="nf">GetUserMarkerTypes</span><span class="p">());</span>
-    <span class="k">if</span> <span class="p">(</span><span class="n">track</span> <span class="p">!=</span> <span class="k">null</span><span class="p">)</span>
+    <span class="p">[</span><span class="n">SerializeField</span><span class="p">]</span> <span class="n">Vector3</span> <span class="n">m_Position</span> <span class="p">=</span> <span class="n">Vector3</span><span class="p">.</span><span class="n">zero</span><span class="p">;</span>
+
+    <span class="k">public</span> <span class="n">Vector3</span> <span class="n">position</span>
     <span class="p">{</span>
-        <span class="k">if</span> <span class="p">(</span><span class="n">track</span> <span class="k">is</span> <span class="n">MarkerTrack</span><span class="p">)</span>
-            <span class="n">markerTypes</span> <span class="p">=</span> <span class="n">markerTypes</span><span class="p">.</span><span class="nf">Where</span><span class="p">(</span><span class="n">x</span> <span class="p">=&gt;</span> <span class="n">TypeUtility</span><span class="p">.</span><span class="nf">DoesTrackSupportMarkerType</span><span class="p">(</span><span class="n">track</span><span class="p">,</span> <span class="n">x</span><span class="p">));</span>
-        <span class="k">else</span>
-            <span class="n">markerTypes</span> <span class="p">=</span> <span class="n">markerTypes</span><span class="p">.</span><span class="nf">Where</span><span class="p">(</span><span class="n">x</span> <span class="p">=&gt;</span> <span class="n">TypeUtility</span><span class="p">.</span><span class="nf">DoesTrackSupportTrackType</span><span class="p">(</span><span class="n">track</span><span class="p">,</span> <span class="n">x</span><span class="p">));</span>
+        <span class="k">get</span> <span class="p">{</span> <span class="k">return</span> <span class="n">m_Position</span><span class="p">;</span> <span class="p">}</span>
+        <span class="k">set</span> <span class="p">{</span> <span class="n">m_Position</span> <span class="p">=</span> <span class="k">value</span><span class="p">;</span> <span class="p">}</span>
     <span class="p">}</span>
-    <span class="c1">//...
-</span><span class="p">}</span>
+
+<span class="p">}</span>
 </code></pre>
 </div>
-<p>比如上述代码，自定义的JumpSignalEmmiter和SlowSignalEmitter， 就只会marker track里显示了。</p>
+
+<p>然后再对应的track clip中生成曲线, 然后还可以在Track Clip中画出曲线:</p>
+<div class="language-cs highlighter-rouge"><pre class="highlight"><code> <span class="k">const</span> <span class="kt">int</span> <span class="n">sample_cnt</span> <span class="p">=</span> <span class="m">20</span><span class="p">;</span>
+<span class="n">Vector3</span><span class="p">[]</span> <span class="n">sample_vtx</span> <span class="p">=</span> <span class="k">new</span> <span class="n">Vector3</span><span class="p">[</span><span class="n">sample_cnt</span><span class="p">];</span>
+
+<span class="k">private</span> <span class="k">void</span> <span class="nf">DrawAnchorAsset</span><span class="p">(</span><span class="n">AnchorAsset</span> <span class="n">asset</span><span class="p">,</span> <span class="kt">double</span> <span class="n">start</span><span class="p">,</span> <span class="kt">double</span> <span class="n">end</span><span class="p">,</span> <span class="kt">int</span> <span class="n">idx</span><span class="p">)</span>
+<span class="p">{</span>
+    <span class="nf">FetchKeys</span><span class="p">(</span><span class="n">asset</span><span class="p">,</span> <span class="n">start</span><span class="p">,</span> <span class="n">end</span><span class="p">);</span>
+    <span class="k">if</span> <span class="p">(</span><span class="n">sample_vtx</span> <span class="p">!=</span> <span class="k">null</span><span class="p">)</span>
+    <span class="p">{</span>
+        <span class="n">Handles</span><span class="p">.</span><span class="n">color</span> <span class="p">=</span> <span class="n">gizColors</span><span class="p">[</span><span class="n">idx</span> <span class="p">%</span> <span class="m">3</span><span class="p">];</span>
+        <span class="k">for</span> <span class="p">(</span><span class="kt">int</span> <span class="n">i</span> <span class="p">=</span> <span class="m">0</span><span class="p">;</span> <span class="n">i</span> <span class="p">&lt;</span> <span class="n">sample_cnt</span> <span class="p">-</span> <span class="m">1</span><span class="p">;</span> <span class="n">i</span><span class="p">++)</span>
+        <span class="p">{</span>
+            <span class="n">Handles</span><span class="p">.</span><span class="nf">DrawLine</span><span class="p">(</span><span class="n">sample_vtx</span><span class="p">[</span><span class="n">i</span><span class="p">],</span> <span class="n">sample_vtx</span><span class="p">[</span><span class="n">i</span> <span class="p">+</span> <span class="m">1</span><span class="p">]);</span>
+        <span class="p">}</span>
+    <span class="p">}</span>
+<span class="p">}</span>
+
+<span class="k">private</span> <span class="k">void</span> <span class="nf">FetchKeys</span><span class="p">(</span><span class="n">AnchorAsset</span> <span class="n">asset</span><span class="p">,</span> <span class="kt">double</span> <span class="n">start</span><span class="p">,</span> <span class="kt">double</span> <span class="n">end</span><span class="p">)</span>
+<span class="p">{</span>
+    <span class="kt">double</span> <span class="n">dur</span> <span class="p">=</span> <span class="n">end</span> <span class="p">-</span> <span class="n">start</span><span class="p">;</span>
+    <span class="kt">double</span> <span class="n">delta</span> <span class="p">=</span> <span class="n">dur</span> <span class="p">/</span> <span class="n">sample_cnt</span><span class="p">;</span>
+    <span class="k">if</span> <span class="p">(</span><span class="n">asset</span><span class="p">.</span><span class="nf">IsValid</span><span class="p">())</span>
+    <span class="p">{</span>
+        <span class="k">for</span> <span class="p">(</span><span class="kt">int</span> <span class="n">i</span> <span class="p">=</span> <span class="m">0</span><span class="p">;</span> <span class="n">i</span> <span class="p">&lt;</span> <span class="n">sample_cnt</span><span class="p">;</span> <span class="n">i</span><span class="p">++)</span>
+        <span class="p">{</span>
+            <span class="kt">float</span> <span class="n">time</span> <span class="p">=</span> <span class="p">(</span><span class="kt">float</span><span class="p">)(</span><span class="n">start</span> <span class="p">+</span> <span class="n">delta</span> <span class="p">*</span> <span class="n">i</span><span class="p">);</span>
+            <span class="kt">float</span> <span class="n">x</span> <span class="p">=</span> <span class="n">asset</span><span class="p">.</span><span class="n">clip_pos</span><span class="p">[</span><span class="m">0</span><span class="p">].</span><span class="nf">Evaluate</span><span class="p">(</span><span class="n">time</span><span class="p">);</span>
+            <span class="kt">float</span> <span class="n">y</span> <span class="p">=</span> <span class="n">asset</span><span class="p">.</span><span class="n">clip_pos</span><span class="p">[</span><span class="m">1</span><span class="p">].</span><span class="nf">Evaluate</span><span class="p">(</span><span class="n">time</span><span class="p">);</span>
+            <span class="kt">float</span> <span class="n">z</span> <span class="p">=</span> <span class="n">asset</span><span class="p">.</span><span class="n">clip_pos</span><span class="p">[</span><span class="m">2</span><span class="p">].</span><span class="nf">Evaluate</span><span class="p">(</span><span class="n">time</span><span class="p">);</span>
+            <span class="n">sample_vtx</span><span class="p">[</span><span class="n">i</span><span class="p">]</span> <span class="p">=</span> <span class="k">new</span> <span class="nf">Vector3</span><span class="p">(</span><span class="n">x</span><span class="p">,</span> <span class="n">y</span><span class="p">,</span> <span class="n">z</span><span class="p">);</span>
+        <span class="p">}</span>
+    <span class="p">}</span>
+<span class="p">}</span>
+
+ <span class="k">private</span> <span class="k">void</span> <span class="nf">CreateClips</span><span class="p">()</span>
+<span class="p">{</span>
+    <span class="k">if</span> <span class="p">(</span><span class="n">signals</span> <span class="p">!=</span> <span class="k">null</span> <span class="p">&amp;&amp;</span> <span class="n">signals</span><span class="p">.</span><span class="n">Count</span> <span class="p">&gt;</span> <span class="m">0</span><span class="p">)</span>
+    <span class="p">{</span>
+        <span class="n">AnimationCurve</span><span class="p">[]</span> <span class="n">m_curves_pos</span><span class="p">=</span><span class="k">new</span> <span class="n">AnimationCurve</span><span class="p">[</span><span class="m">3</span><span class="p">];</span>
+        <span class="k">for</span> <span class="p">(</span><span class="kt">int</span> <span class="n">i</span> <span class="p">=</span> <span class="m">0</span><span class="p">;</span> <span class="n">i</span> <span class="p">&lt;</span> <span class="n">signals</span><span class="p">.</span><span class="n">Count</span><span class="p">;</span> <span class="n">i</span><span class="p">++)</span>
+        <span class="p">{</span>
+            <span class="n">AnchorSignalEmitter</span> <span class="n">sign</span> <span class="p">=</span> <span class="n">signals</span><span class="p">[</span><span class="n">i</span><span class="p">];</span>
+            <span class="kt">float</span> <span class="n">time</span> <span class="p">=</span> <span class="p">(</span><span class="kt">float</span><span class="p">)</span><span class="n">sign</span><span class="p">.</span><span class="n">time</span><span class="p">;</span>
+            <span class="n">m_curves_pos</span><span class="p">[</span><span class="m">0</span><span class="p">].</span><span class="nf">AddKey</span><span class="p">(</span><span class="n">time</span><span class="p">,</span> <span class="n">sign</span><span class="p">.</span><span class="n">position</span><span class="p">.</span><span class="n">x</span><span class="p">);</span>
+            <span class="n">m_curves_pos</span><span class="p">[</span><span class="m">1</span><span class="p">].</span><span class="nf">AddKey</span><span class="p">(</span><span class="n">time</span><span class="p">,</span> <span class="n">sign</span><span class="p">.</span><span class="n">position</span><span class="p">.</span><span class="n">y</span><span class="p">);</span>
+            <span class="n">m_curves_pos</span><span class="p">[</span><span class="m">2</span><span class="p">].</span><span class="nf">AddKey</span><span class="p">(</span><span class="n">time</span><span class="p">,</span> <span class="n">sign</span><span class="p">.</span><span class="n">position</span><span class="p">.</span><span class="n">z</span><span class="p">);</span>
+        <span class="p">}</span>
+    <span class="p">}</span>
+<span class="p">}</span>
+</code></pre>
+</div>
+
+<p>最后效果如图所示, 不但在track里画出了曲线， 而且在场景里还可以画出轨迹：</p>
+
+<p><img src="/img/post-unity/cs9.jpg" alt="" /></p>
+
+<p>对应的代码都上传到github上了， 欢迎点击<a href="https://github.com/huailiang/timeline">查阅</a>。</p>
 
 <p>参考:</p>
 
