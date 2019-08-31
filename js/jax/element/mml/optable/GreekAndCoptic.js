@@ -4,7 +4,7 @@
   MathJax.Hub.Insert(MML.mo.prototype, {
     OPTABLE: {
       infix: {
-        '\u03F6': MO.REL       // greek reversed lunate epsilon symbol
+        '\u03F6': MO.REL       
       }
     }
   });

@@ -4,8 +4,8 @@
   MathJax.Hub.Insert(MML.mo.prototype, {
     OPTABLE: {
       infix: {
-        '\u2B45': MO.RELSTRETCH, // leftwards quadruple arrow
-        '\u2B46': MO.RELSTRETCH  // rightwards quadruple arrow
+        '\u2B45': MO.RELSTRETCH, 
+        '\u2B46': MO.RELSTRETCH  
       }
     }
   });

@@ -4,8 +4,8 @@
   MathJax.Hub.Insert(MML.mo.prototype, {
     OPTABLE: {
       prefix: {
-        '\u2145': MO.ORD21,    // double-struck italic capital d
-        '\u2146': [2, 0, TEXCLASS.ORD]  // double-struck italic small d
+        '\u2145': MO.ORD21,    
+        '\u2146': [2, 0, TEXCLASS.ORD]  
       }
     }
   });
