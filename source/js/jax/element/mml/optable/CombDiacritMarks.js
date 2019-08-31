@@ -4,7 +4,7 @@
   MathJax.Hub.Insert(MML.mo.prototype, {
     OPTABLE: {
       postfix: {
-        '\u0311': MO.ACCENT    // combining inverted breve
+        '\u0311': MO.ACCENT    
       }
     }
   });

@@ -4,9 +4,9 @@
   MathJax.Hub.Insert(MML.mo.prototype, {
     OPTABLE: {
       postfix: {
-        '\u00B0': MO.ORD,      // degree sign
-        '\u00B4': MO.ACCENT,   // acute accent
-        '\u00B8': MO.ACCENT    // cedilla
+        '\u00B0': MO.ORD,      
+        '\u00B4': MO.ACCENT,   
+        '\u00B8': MO.ACCENT    
       }
     }
   });

@@ -4,10 +4,10 @@
   MathJax.Hub.Insert(MML.mo.prototype, {
     OPTABLE: {
       prefix: {
-        '\u2772': MO.OPEN      // light left tortoise shell bracket ornament
+        '\u2772': MO.OPEN      
       },
       postfix: {
-        '\u2773': MO.CLOSE     // light right tortoise shell bracket ornament
+        '\u2773': MO.CLOSE     
       }
     }
   });
