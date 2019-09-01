@@ -23,11 +23,11 @@ AssetBundle文件的layout为：header [ blocks directory ] [ data ]
 
 <table border="1" style="font-size:12px">
  <tr>
-    <th width="62">类型</th>
+    <th width="9%">类型</th>
     <th>标记</th>
     <th>HEAD</th>
-    <th width="184">二进制</th>
-    <th  width="84">字符串</th>
+    <th width="20%">二进制</th>
+    <th  width="11%">字符串</th>
 </tr>
 <tr>
     <td>string</td>

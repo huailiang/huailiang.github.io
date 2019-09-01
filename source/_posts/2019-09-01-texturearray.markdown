@@ -181,7 +181,7 @@ Shader "Custom/Texture2DArray"
 
 ## OpenGL中使用TextureArray
 
-在c++中绑定TextureArray
+关于TextureArray的介绍，[参考官网][i11]。这里简单介绍下其用法，在c++中绑定TextureArray
 
 ```c++
 // texture object and texture 2d array 
@@ -202,7 +202,7 @@ glsl中采样颜色，需要定义2darray的sampler，然后还是调用texture�
 precision mediump sampler2DArray;
 uniform sampler2DArray texture_array;
 
-color = texture(texture_array, vec3(fs_in.tc, layer));
+color = texture(texture_array, vec3(fs_in.uv, layer));
 ```
 
 TextureArray在使用的时候只需要绑定一次，就可以采样多个2D Texture。采样的时候还是一次只能采样一个指定的slice，blend也需要另外的Shader代码来完成。
@@ -217,7 +217,7 @@ TextureArray在使用的时候只需要绑定一次，就可以采样多个2D Te
 
  三. 从文档（https://docs.unity3d.com/Manual/SL-TextureArrays.html）上来看，GLES3 Metal 已经可以支持了。最容易想到的就是地形的splat层，如果是四层splat，那么就可以用一个Texture2DArray来代替，好处是减少了bind消耗(glBindTexture)。如果单从性能上看，Texture2DArray比Texture2D的确只是减少纹理绑定的开销，然后在游戏引擎中可能会对合批产生影响。bind texture对于api是非常费cpu的操作。 有了texture array,一个绑定操作就可以了。对于dx12 或者 Vulkan。没有绑定texture的概念。一个texture 已经很像cpu的一个内存指针。想用多少都可以。
 
-四. 关于Texture2DArray的性能开销和测试， 可以参考[uwa的分析][i10]。
+四. 更多关于Texture2DArray的性能开销和测试， 可以参考[uwa的分析][i10]。
 
 <br>
 参考链接:
@@ -241,3 +241,4 @@ TextureArray在使用的时候只需要绑定一次，就可以采样多个2D Te
 [i8]: https://blog.csdn.net/h5502637/article/details/85065105
 [i9]: https://www.zhihu.com/question/56015505
 [i10]: https://baijiahao.baidu.com/s?id=1593107166928627425&wfr=spider&for=pc
+[i11]: https://www.khronos.org/opengl/wiki/Array_Texture
