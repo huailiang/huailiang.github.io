@@ -1,0 +1,432 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <meta http-equiv="X-UA-Compatible" content="IE=edge">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+
+  <title>TextureArray用法</title>
+  <meta name="description"
+    content="在使用GPU Instancing时，如果要给每个物体设置不同的贴图，直觉的想法是使用 MaterialPropertyBlock对象设置一个Texture对象数组。">
+
+  <link rel="shortcut icon" href="/img/favicon.ico">
+  <link rel="stylesheet" href="/css/main.css">
+  <link rel="canonical" href="https://huailiang.github.io/blog/2019/texturearray/">
+  <link rel="alternate" type="application/rss+xml" title="Huailiang Blog"
+    href="https://huailiang.github.io/feed.xml" />
+
+</head>
+
+<body>
+  <main>
+    <header class="site-header">
+  <div class="container">
+    <h1><a href="/">Hom<span>e</span></a></h1>
+
+    <button type="button" class="sliding-panel-button">
+      <span></span>
+      <span></span>
+      <span></span>
+    </button>
+
+    <nav class="navbar sliding-panel-content">
+      <ul>
+        
+        <li><a href="/about" title="About">About</a>
+        </li>
+        
+        <li><a href="/blog" title="Blog">Blog</a>
+        </li>
+        
+        <!-- <li><a href="/feed.xml" target="_blank"><i class="icon icon-feed"></i></a></li> -->
+        <li><a href="/category/" target="_blank"><i class="icon icon-feed"></i></a></li>
+      </ul>
+    </nav>
+  </div>
+</header>
+
+<div class="sliding-panel-fade-screen"></div>
+    <script type="text/javascript" src="/js/MathJax.js?config=TeX-AMS-MML_HTMLorMML"></script>
+
+<script type="text/x-mathjax-config">
+MathJax.Hub.Config({
+  tex2jax: {
+    inlineMath: [['$','$'], ['\\(','\\)']],
+    processEscapes: true
+  }
+});
+</script>
+
+<script type="text/x-mathjax-config">
+  MathJax.Hub.Config({
+    tex2jax: {
+      skipTags: ['script', 'noscript', 'style', 'textarea', 'pre', 'code']
+    }
+  });
+
+</script>
+    <div class="container">
+      <article role="article" class="post">
+
+  <div class="card">
+    <header class="post-header">
+      <h1 class="post-title">TextureArray用法</h1>
+      <p class="post-meta">Sep 1, 2019 •
+        Huailiang</p>
+    </header>
+
+    <div class="post-content">
+      <p>在使用GPU Instancing时，如果要给每个物体设置不同的贴图，直觉的想法是使用 MaterialPropertyBlock对象设置一个Texture对象数组。</p>
+
+<p>类似 <a href="https://blog.csdn.net/h5502637/article/details/85065105">GPU Instancing测试</a> 这篇里写给每个物体设置不同颜色的方式(MaterialPropertyBlock.SetVectorArray)，如果有一个MaterialPropertyBlock.SetTextureArray之类的方法就完美了，</p>
+
+<p>但是实际上并没有，所以需要用其他方式来实现，这时候应该让 Texture2DArray 来发挥作用。</p>
+
+<p>效果：每次点击按钮传递一个不同的Index到Shader，用来从Texture2DArray中读取不同的图片。</p>
+
+<p><img src="/img/post-unity/ta1.png" alt="" /></p>
+
+<p><img src="/img/post-unity/ta2.gif" alt="" /></p>
+
+<h2 id="texture2darray-类">Texture2DArray 类</h2>
+
+<p>看名字可以大概猜到这个类的对象可以包含多个Texture2D对象，类似Texture2D对象的数组。用Texture2DArray对象来实现给每个物体一个不同的贴图的思路是:</p>
+
+<p>在C#中定义一个Texture2D数组，再定义一个Texture2DArray对象，用Texture2D数组内容来初始化Texture2DArray对象。</p>
+
+<p>把Texture2DArray对象作为Texture传递给Shader，通过一个索引值(_Index)来控制Shader中读取Texture2DArray对象里的那一张图。思路清晰以后就直接上代码:</p>
+
+<div class="language-cs highlighter-rouge"><pre class="highlight"><code><span class="k">using</span> <span class="nn">UnityEngine</span><span class="p">;</span>
+<span class="k">using</span> <span class="nn">UnityEngine.Rendering</span><span class="p">;</span>
+
+<span class="k">public</span> <span class="k">class</span> <span class="nc">Tex2DArrayTest</span> <span class="p">:</span> <span class="n">MonoBehaviour</span>
+<span class="p">{</span>
+    <span class="k">public</span> <span class="n">MeshRenderer</span> <span class="n">render</span><span class="p">;</span>
+    <span class="k">public</span> <span class="n">Texture2D</span><span class="p">[]</span> <span class="n">textures</span><span class="p">;</span>
+    <span class="k">public</span> <span class="n">ECopyTexMethpd</span> <span class="n">copyTexMethod</span><span class="p">;</span>   <span class="c1">// 把Texrure2D信息拷贝到Texture2DArray对象中使用的方式 //
+</span>
+    <span class="k">public</span> <span class="k">enum</span> <span class="n">ECopyTexMethpd</span>
+    <span class="p">{</span>
+        <span class="n">CopyTexture</span> <span class="p">=</span> <span class="m">0</span><span class="p">,</span>     <span class="c1">// 使用 Graphics.CopyTexture 方法 //
+</span>        <span class="n">SetPexels</span> <span class="p">=</span> <span class="m">1</span><span class="p">,</span>       <span class="c1">// 使用 Texture2DArray.SetPixels 方法 //
+</span>    <span class="p">}</span>
+
+    <span class="k">private</span> <span class="n">Material</span> <span class="n">m_mat</span><span class="p">;</span>
+
+    <span class="k">void</span> <span class="nf">Start</span><span class="p">()</span>
+    <span class="p">{</span>
+        <span class="k">if</span> <span class="p">(</span><span class="n">textures</span> <span class="p">==</span> <span class="k">null</span> <span class="p">||</span> <span class="n">textures</span><span class="p">.</span><span class="n">Length</span> <span class="p">==</span> <span class="m">0</span><span class="p">)</span>
+        <span class="p">{</span>
+            <span class="n">enabled</span> <span class="p">=</span> <span class="k">false</span><span class="p">;</span>
+            <span class="k">return</span><span class="p">;</span>
+        <span class="p">}</span>
+
+        <span class="k">if</span> <span class="p">(</span><span class="n">SystemInfo</span><span class="p">.</span><span class="n">copyTextureSupport</span> <span class="p">==</span> <span class="n">CopyTextureSupport</span><span class="p">.</span><span class="n">None</span> <span class="p">||</span>
+            <span class="p">!</span><span class="n">SystemInfo</span><span class="p">.</span><span class="n">supports2DArrayTextures</span><span class="p">)</span>
+        <span class="p">{</span>
+            <span class="n">enabled</span> <span class="p">=</span> <span class="k">false</span><span class="p">;</span>
+            <span class="k">return</span><span class="p">;</span>
+        <span class="p">}</span>
+
+        <span class="n">Texture2DArray</span> <span class="n">texArr</span> <span class="p">=</span> <span class="k">new</span> <span class="nf">Texture2DArray</span><span class="p">(</span><span class="n">textures</span><span class="p">[</span><span class="m">0</span><span class="p">].</span><span class="n">width</span><span class="p">,</span> <span class="n">textures</span><span class="p">[</span><span class="m">0</span><span class="p">].</span><span class="n">width</span><span class="p">,</span> <span class="n">textures</span><span class="p">.</span><span class="n">Length</span><span class="p">,</span> <span class="n">textures</span><span class="p">[</span><span class="m">0</span><span class="p">].</span><span class="n">format</span><span class="p">,</span> <span class="k">false</span><span class="p">,</span> <span class="k">false</span><span class="p">);</span>
+
+        <span class="c1">// 结论 //
+</span>        <span class="c1">// Graphics.CopyTexture耗时(单位:Tick): 5914, 8092, 6807, 5706, 5993, 5865, 6104, 5780 //
+</span>        <span class="c1">// Texture2DArray.SetPixels耗时(单位:Tick): 253608, 255041, 225135, 256947, 260036, 295523, 250641, 266044 //
+</span>        <span class="c1">// Graphics.CopyTexture 明显快于 Texture2DArray.SetPixels 方法 //
+</span>        <span class="c1">// Texture2DArray.SetPixels 方法的耗时大约是 Graphics.CopyTexture 的50倍左右 //
+</span>        <span class="c1">// Texture2DArray.SetPixels 耗时的原因是需要把像素数据从cpu传到gpu, 原文: Call Apply to actually upload the changed pixels to the graphics card //
+</span>        <span class="c1">// 而Graphics.CopyTexture只在gpu端进行操作, 原文: operates on GPU-side data exclusively //
+</span>        <span class="c1">// 考虑使用Graphics.CopyTexture来复制Texture还有一个好处是可不勾选源纹理为可读写的也行。
+</span>
+        <span class="c1">//using (Timer timer = new Timer(Timer.ETimerLogType.Tick))
+</span>        <span class="c1">//{
+</span>            <span class="k">if</span> <span class="p">(</span><span class="n">copyTexMethod</span> <span class="p">==</span> <span class="n">ECopyTexMethpd</span><span class="p">.</span><span class="n">CopyTexture</span><span class="p">)</span>
+            <span class="p">{</span>
+                <span class="k">for</span> <span class="p">(</span><span class="kt">int</span> <span class="n">i</span> <span class="p">=</span> <span class="m">0</span><span class="p">;</span> <span class="n">i</span> <span class="p">&lt;</span> <span class="n">textures</span><span class="p">.</span><span class="n">Length</span><span class="p">;</span> <span class="n">i</span><span class="p">++)</span>
+                <span class="p">{</span>
+                    <span class="c1">// 以下两行都可以 //
+</span>                    <span class="c1">//Graphics.CopyTexture(textures[i], 0, texArr, i);
+</span>                    <span class="n">Graphics</span><span class="p">.</span><span class="nf">CopyTexture</span><span class="p">(</span><span class="n">textures</span><span class="p">[</span><span class="n">i</span><span class="p">],</span> <span class="m">0</span><span class="p">,</span> <span class="m">0</span><span class="p">,</span> <span class="n">texArr</span><span class="p">,</span> <span class="n">i</span><span class="p">,</span> <span class="m">0</span><span class="p">);</span>
+                <span class="p">}</span>
+            <span class="p">}</span>
+            <span class="k">else</span> <span class="k">if</span> <span class="p">(</span><span class="n">copyTexMethod</span> <span class="p">==</span> <span class="n">ECopyTexMethpd</span><span class="p">.</span><span class="n">SetPexels</span><span class="p">)</span>
+            <span class="p">{</span>
+                <span class="k">for</span> <span class="p">(</span><span class="kt">int</span> <span class="n">i</span> <span class="p">=</span> <span class="m">0</span><span class="p">;</span> <span class="n">i</span> <span class="p">&lt;</span> <span class="n">textures</span><span class="p">.</span><span class="n">Length</span><span class="p">;</span> <span class="n">i</span><span class="p">++)</span>
+                <span class="p">{</span>
+                    <span class="c1">// 以下两行都可以 //
+</span>                    <span class="c1">//texArr.SetPixels(textures[i].GetPixels(), i);
+</span>                    <span class="n">texArr</span><span class="p">.</span><span class="nf">SetPixels</span><span class="p">(</span><span class="n">textures</span><span class="p">[</span><span class="n">i</span><span class="p">].</span><span class="nf">GetPixels</span><span class="p">(),</span> <span class="n">i</span><span class="p">,</span> <span class="m">0</span><span class="p">);</span>
+                <span class="p">}</span>
+
+                <span class="n">texArr</span><span class="p">.</span><span class="nf">Apply</span><span class="p">();</span>
+            <span class="p">}</span>
+        <span class="c1">//}
+</span>
+        <span class="n">texArr</span><span class="p">.</span><span class="n">wrapMode</span> <span class="p">=</span> <span class="n">TextureWrapMode</span><span class="p">.</span><span class="n">Clamp</span><span class="p">;</span>
+        <span class="n">texArr</span><span class="p">.</span><span class="n">filterMode</span> <span class="p">=</span> <span class="n">FilterMode</span><span class="p">.</span><span class="n">Bilinear</span><span class="p">;</span>
+
+        <span class="n">m_mat</span> <span class="p">=</span> <span class="n">render</span><span class="p">.</span><span class="n">material</span><span class="p">;</span>
+
+        <span class="n">m_mat</span><span class="p">.</span><span class="nf">SetTexture</span><span class="p">(</span><span class="s">"_TexArr"</span><span class="p">,</span> <span class="n">texArr</span><span class="p">);</span>
+        <span class="n">m_mat</span><span class="p">.</span><span class="nf">SetFloat</span><span class="p">(</span><span class="s">"_Index"</span><span class="p">,</span> <span class="n">Random</span><span class="p">.</span><span class="nf">Range</span><span class="p">(</span><span class="m">0</span><span class="p">,</span> <span class="n">textures</span><span class="p">.</span><span class="n">Length</span><span class="p">));</span>
+    <span class="p">}</span>
+
+    <span class="k">void</span> <span class="nf">OnGUI</span><span class="p">()</span>
+    <span class="p">{</span>
+        <span class="k">if</span> <span class="p">(</span><span class="n">GUI</span><span class="p">.</span><span class="nf">Button</span><span class="p">(</span><span class="k">new</span> <span class="nf">Rect</span><span class="p">(</span><span class="m">0</span><span class="p">,</span> <span class="m">0</span><span class="p">,</span> <span class="m">200</span><span class="p">,</span> <span class="m">100</span><span class="p">),</span> <span class="s">"Change Texture"</span><span class="p">))</span>
+        <span class="p">{</span>
+            <span class="n">m_mat</span><span class="p">.</span><span class="nf">SetFloat</span><span class="p">(</span><span class="s">"_Index"</span><span class="p">,</span> <span class="n">Random</span><span class="p">.</span><span class="nf">Range</span><span class="p">(</span><span class="m">0</span><span class="p">,</span> <span class="n">textures</span><span class="p">.</span><span class="n">Length</span><span class="p">));</span>
+        <span class="p">}</span>
+    <span class="p">}</span>
+<span class="p">}</span>
+</code></pre>
+</div>
+
+<p>Shader部分:</p>
+
+<div class="language-c highlighter-rouge"><pre class="highlight"><code><span class="n">Shader</span> <span class="s">"Custom/Texture2DArray"</span>
+<span class="p">{</span>
+  <span class="n">Properties</span>
+  <span class="p">{</span>
+    <span class="n">_TexArr</span> <span class="p">(</span><span class="s">"Texture Array"</span><span class="p">,</span> <span class="mi">2</span><span class="n">DArray</span><span class="p">)</span> <span class="o">=</span> <span class="s">""</span> <span class="p">{}</span>
+    <span class="n">_Index</span><span class="p">(</span><span class="s">"Texture Array Index"</span><span class="p">,</span> <span class="n">Range</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span><span class="mi">4</span><span class="p">))</span> <span class="o">=</span> <span class="mi">0</span>
+  <span class="p">}</span>
+
+  <span class="n">SubShader</span>
+  <span class="p">{</span>
+    <span class="n">Tags</span> <span class="p">{</span> <span class="s">"Queue"</span><span class="o">=</span><span class="s">"Geometry"</span> <span class="s">"RenderType"</span><span class="o">=</span><span class="s">"Opaque"</span> <span class="p">}</span>
+    <span class="n">LOD</span> <span class="mi">100</span>
+
+    <span class="n">Pass</span>
+    <span class="p">{</span>
+        <span class="n">CGPROGRAM</span>
+        <span class="cp">#pragma vertex vert
+</span>        <span class="cp">#pragma fragment frag
+</span>        <span class="cp">#include "UnityCG.cginc"
+</span>
+        <span class="c1">// 会提示警告: Unrecognized #pragma directive: require at line 24
+</span>        <span class="c1">// #pragma require 2darray
+</span>
+        <span class="n">UNITY_DECLARE_TEX2DARRAY</span><span class="p">(</span><span class="n">_TexArr</span><span class="p">);</span>
+        <span class="kt">int</span> <span class="n">_Index</span><span class="p">;</span>
+
+        <span class="k">struct</span> <span class="n">appdata</span>
+        <span class="p">{</span>
+            <span class="n">float4</span> <span class="n">vertex</span> <span class="o">:</span> <span class="n">POSITION</span><span class="p">;</span>
+            <span class="n">float3</span> <span class="n">uv</span> <span class="o">:</span> <span class="n">TEXCOORD0</span><span class="p">;</span>
+        <span class="p">};</span>
+
+        <span class="k">struct</span> <span class="n">v2f</span>
+        <span class="p">{</span>
+            <span class="n">float4</span> <span class="n">pos</span> <span class="o">:</span> <span class="n">SV_POSITION</span><span class="p">;</span>
+            <span class="n">float3</span> <span class="n">uv</span> <span class="o">:</span> <span class="n">TEXCOORD0</span><span class="p">;</span>
+        <span class="p">};</span>
+
+        <span class="n">v2f</span> <span class="nf">vert</span> <span class="p">(</span><span class="n">appdata</span> <span class="n">v</span><span class="p">)</span>
+        <span class="p">{</span>
+            <span class="n">v2f</span> <span class="n">o</span><span class="p">;</span>
+            <span class="n">o</span><span class="p">.</span><span class="n">pos</span> <span class="o">=</span> <span class="n">UnityObjectToClipPos</span><span class="p">(</span><span class="n">v</span><span class="p">.</span><span class="n">vertex</span><span class="p">);</span>
+            <span class="n">o</span><span class="p">.</span><span class="n">uv</span> <span class="o">=</span> <span class="n">v</span><span class="p">.</span><span class="n">uv</span><span class="p">;</span>
+            <span class="k">return</span> <span class="n">o</span><span class="p">;</span>
+        <span class="p">}</span>
+
+        <span class="n">fixed4</span> <span class="n">frag</span> <span class="p">(</span><span class="n">v2f</span> <span class="n">i</span><span class="p">)</span> <span class="o">:</span> <span class="n">SV_Target</span>
+        <span class="p">{</span>
+            <span class="k">return</span> <span class="n">UNITY_SAMPLE_TEX2DARRAY</span><span class="p">(</span><span class="n">_TexArr</span><span class="p">,</span> <span class="n">float3</span><span class="p">(</span><span class="n">i</span><span class="p">.</span><span class="n">uv</span><span class="p">.</span><span class="n">xy</span><span class="p">,</span> <span class="n">_Index</span><span class="p">));</span>
+        <span class="p">}</span>
+        <span class="n">ENDCG</span>
+    <span class="p">}</span>
+  <span class="p">}</span>
+
+  <span class="n">Fallback</span> <span class="n">Off</span>
+<span class="p">}</span>
+
+</code></pre>
+</div>
+
+<h2 id="opengl中使用texturearray">OpenGL中使用TextureArray</h2>
+
+<p>在c++中绑定TextureArray</p>
+
+<div class="language-c++ highlighter-rouge"><pre class="highlight"><code><span class="c1">// texture object and texture 2d array 
+</span><span class="n">glGenTextures</span><span class="p">(</span><span class="mi">2</span><span class="p">,</span> <span class="n">textures</span><span class="p">);</span>
+<span class="n">glBindTexture</span><span class="p">(</span><span class="n">GL_TEXTURE_2D_ARRAY</span><span class="p">,</span> <span class="n">textures</span><span class="p">[</span><span class="mi">0</span><span class="p">]);</span>
+<span class="c1">//allocate memory: depth is the length of texture 2d array
+</span><span class="n">glTexStorage3D</span><span class="p">(</span><span class="n">GL_TEXTURE_2D_ARRAY</span><span class="p">,</span> <span class="mi">1</span><span class="p">,</span> <span class="n">GL_RGBA8</span><span class="p">,</span> <span class="mi">100</span><span class="p">,</span> <span class="mi">100</span><span class="p">,</span> <span class="mi">100</span><span class="p">);</span>
+<span class="c1">//wrap &amp; filter
+</span><span class="n">glTexParameteri</span><span class="p">(</span><span class="n">GL_TEXTURE_2D_ARRAY</span><span class="p">,</span> <span class="n">GL_TEXTURE_WRAP_S</span><span class="p">,</span> <span class="n">GL_CLAMP_TO_EDGE</span><span class="p">);</span>
+<span class="n">glTexParameteri</span><span class="p">(</span><span class="n">GL_TEXTURE_2D_ARRAY</span><span class="p">,</span> <span class="n">GL_TEXTURE_WRAP_T</span><span class="p">,</span> <span class="n">GL_CLAMP_TO_EDGE</span><span class="p">);</span>
+<span class="n">glTexParameteri</span><span class="p">(</span><span class="n">GL_TEXTURE_2D_ARRAY</span><span class="p">,</span> <span class="n">GL_TEXTURE_MIN_FILTER</span><span class="p">,</span> <span class="n">GL_LINEAR</span><span class="p">);</span>
+<span class="n">glTexParameteri</span><span class="p">(</span><span class="n">GL_TEXTURE_2D_ARRAY</span><span class="p">,</span> <span class="n">GL_TEXTURE_MAG_FILTER</span><span class="p">,</span> <span class="n">GL_LINEAR</span><span class="p">);</span>
+</code></pre>
+</div>
+
+<p>glsl中采样颜色，需要定义2darray的sampler，然后还是调用texture函数，但是第二个参数需要三维的纹理坐标，z值代表在第几张纹理上面取值，从 0 开始。</p>
+
+<div class="language-glsl highlighter-rouge"><pre class="highlight"><code><span class="k">precision</span> <span class="kt">mediump</span> <span class="kt">sampler2DArray</span><span class="p">;</span>
+<span class="k">uniform</span> <span class="kt">sampler2DArray</span> <span class="n">texture_array</span><span class="p">;</span>
+
+<span class="n">color</span> <span class="o">=</span> <span class="n">texture</span><span class="p">(</span><span class="n">texture_array</span><span class="p">,</span> <span class="kt">vec3</span><span class="p">(</span><span class="n">fs_in</span><span class="p">.</span><span class="n">tc</span><span class="p">,</span> <span class="n">layer</span><span class="p">));</span>
+</code></pre>
+</div>
+
+<p>TextureArray在使用的时候只需要绑定一次，就可以采样多个2D Texture。采样的时候还是一次只能采样一个指定的slice，blend也需要另外的Shader代码来完成。</p>
+
+<h2 id="需要注意的地方有">需要注意的地方有:</h2>
+
+<p>一. Texture2DArray使用的图片需要保证大小相同，格式一致，并且开启了 read/write enabled 选项。</p>
+
+<p>二. Graphics.CopyTexture和Texture2DArray.SetPixels，这两种方法都可以把图像信息传给Texture2DArray对象的每一个子Texture2D。</p>
+
+<p>整体上Graphics.CopyTexture 方法要比 Texture2DArray.SetPixels 快的多，大概是40到50倍的样子，原因大概是 Graphics.CopyTexture 只在GPU端进行操作，而Texture2DArray.SetPixels在CPU端操作，操作结束后需要调用Apply方法把图片数据传给GPU，所以比较耗时，<a href="https://docs.unity3d.com/ScriptReference/Texture2DArray.Apply.html">Texture2DArray.Apply文档</a> 中也建议如果不需要在CPU上读取像素信息的话建议使用更快的 Graphics.CopyTexture 方法。</p>
+
+<p>三. 从文档（https://docs.unity3d.com/Manual/SL-TextureArrays.html）上来看，GLES3 Metal 已经可以支持了。最容易想到的就是地形的splat层，如果是四层splat，那么就可以用一个Texture2DArray来代替，好处是减少了bind消耗(glBindTexture)。如果单从性能上看，Texture2DArray比Texture2D的确只是减少纹理绑定的开销，然后在游戏引擎中可能会对合批产生影响。bind texture对于api是非常费cpu的操作。 有了texture array,一个绑定操作就可以了。对于dx12 或者 Vulkan。没有绑定texture的概念。一个texture 已经很像cpu的一个内存指针。想用多少都可以。</p>
+
+<p>四. 关于Texture2DArray的性能开销和测试， 可以参考<a href="https://baijiahao.baidu.com/s?id=1593107166928627425&amp;wfr=spider&amp;for=pc">uwa的分析</a>。</p>
+
+<p><br /><br />
+参考链接:<br />
+ <a href="https://www.reddit.com/r/Unity3D/comments/6uueox/gpu_instancing_texture2darray/">https://www.reddit.com/r/Unity3D/comments/6uueox/gpu_instancing_texture2darray/</a><br />
+ <a href="https://forum.unity.com/threads/instance-of-texture.500408/">https://forum.unity.com/threads/instance-of-texture.500408/</a><br />
+ <a href="https://docs.unity3d.com/Manual/SL-TextureArrays.html">https://docs.unity3d.com/Manual/SL-TextureArrays.html</a><br />
+ <a href="https://docs.unity3d.com/Manual/SL-TextureArrays.html">https://docs.unity3d.com/ScriptReference/Texture2DArray.Apply.html</a><br />
+ <a href="https://docs.unity3d.com/ScriptReference/Texture2DArray.Apply.html">https://docs.unity3d.com/ScriptReference/Graphics.CopyTexture.html</a><br />
+ <a href="https://docs.unity3d.com/ScriptReference/Graphics.CopyTexture.html">https://blog.csdn.net/aa20274270/article/details/64923942</a><br />
+ <a href="https://blog.csdn.net/aa20274270/article/details/64923942">https://www.cnblogs.com/hont/p/7258615.html</a></p>
+
+
+    </div>
+  </div>
+
+  <style>
+  .post-nav {
+    overflow: hidden;
+    /* margin-top: 60px; */
+    padding: 12px;
+    white-space: nowrap;
+    /* border-top: 1px solid #eee; */
+  }
+
+  .post-nav-item {
+    display: inline-block;
+    width: 50%;
+    white-space: normal;
+  }
+
+  .post-nav-item a {
+    position: relative;
+    display: inline-block;
+    line-height: 25px;
+    font-size: 14px;
+    color: #555;
+    border-bottom: none;
+  }
+
+  .post-nav-item a:hover {
+    color: #222;
+    font-weight: bold;
+    border-bottom: none;
+  }
+
+  .post-nav-item a:active {
+    top: 2px;
+  }
+
+  .post-nav-item a:before,
+  .post-nav-item a:after {
+    display: inline-block;
+    width: 16px;
+    height: 25px;
+    vertical-align: top;
+    opacity: 0.4;
+    background-size: 16px;
+  }
+
+  .post-nav-none a:none {
+    content: ' ';
+    background-size: 8px;
+  }
+
+  .post-nav-none a:hover:none {
+    opacity: 1;
+  }
+
+  .post-nav-prev a:before {
+    content: ' ';
+    background: url("data:image/svg+xml;base64,PD94bWwgdmVyc2lvbj0iMS4wIiA/PjxzdmcgaGVpZ2h0PSIxMnB4IiB2ZXJzaW9uPSIxLjEiIHZpZXdCb3g9IjAgMCA5IDEyIiB3aWR0aD0iOXB4IiB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHhtbG5zOnNrZXRjaD0iaHR0cDovL3d3dy5ib2hlbWlhbmNvZGluZy5jb20vc2tldGNoL25zIiB4bWxuczp4bGluaz0iaHR0cDovL3d3dy53My5vcmcvMTk5OS94bGluayI+PHRpdGxlLz48ZGVzYy8+PGRlZnMvPjxnIGZpbGw9Im5vbmUiIGZpbGwtcnVsZT0iZXZlbm9kZCIgaWQ9IlBhZ2UtMSIgc3Ryb2tlPSJub25lIiBzdHJva2Utd2lkdGg9IjEiPjxnIGZpbGw9IiMwMDAwMDAiIGlkPSJDb3JlIiB0cmFuc2Zvcm09InRyYW5zbGF0ZSgtMjE4LjAwMDAwMCwgLTkwLjAwMDAwMCkiPjxnIGlkPSJjaGV2cm9uLWxlZnQiIHRyYW5zZm9ybT0idHJhbnNsYXRlKDIxOC41MDAwMDAsIDkwLjAwMDAwMCkiPjxwYXRoIGQ9Ik03LjQsMS40IEw2LDAgTC04Ljg4MTc4NDJlLTE2LDYgTDYsMTIgTDcuNCwxMC42IEwyLjgsNiBMNy40LDEuNCBaIiBpZD0iU2hhcGUiLz48L2c+PC9nPjwvZz48L3N2Zz4=") no-repeat 0 50%;
+    background-size: 8px;
+  }
+
+  .post-nav-prev a:hover:before {
+    opacity: 1;
+  }
+
+  .post-nav-next {
+    text-align: right;
+  }
+
+  .post-nav-next a:after {
+    content: ' ';
+    background: url("data:image/svg+xml;base64,PD94bWwgdmVyc2lvbj0iMS4wIiA/PjxzdmcgaGVpZ2h0PSIxMnB4IiB2ZXJzaW9uPSIxLjEiIHZpZXdCb3g9IjAgMCA5IDEyIiB3aWR0aD0iOXB4IiB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHhtbG5zOnNrZXRjaD0iaHR0cDovL3d3dy5ib2hlbWlhbmNvZGluZy5jb20vc2tldGNoL25zIiB4bWxuczp4bGluaz0iaHR0cDovL3d3dy53My5vcmcvMTk5OS94bGluayI+PHRpdGxlLz48ZGVzYy8+PGRlZnMvPjxnIGZpbGw9Im5vbmUiIGZpbGwtcnVsZT0iZXZlbm9kZCIgaWQ9IlBhZ2UtMSIgc3Ryb2tlPSJub25lIiBzdHJva2Utd2lkdGg9IjEiPjxnIGZpbGw9IiMwMDAwMDAiIGlkPSJDb3JlIiB0cmFuc2Zvcm09InRyYW5zbGF0ZSgtMjYwLjAwMDAwMCwgLTkwLjAwMDAwMCkiPjxnIGlkPSJjaGV2cm9uLXJpZ2h0IiB0cmFuc2Zvcm09InRyYW5zbGF0ZSgyNjAuNTAwMDAwLCA5MC4wMDAwMDApIj48cGF0aCBkPSJNMSwwIEwtMC40LDEuNCBMNC4yLDYgTC0wLjQsMTAuNiBMMSwxMiBMNyw2IEwxLDAgWiIgaWQ9IlNoYXBlIi8+PC9nPjwvZz48L2c+PC9zdmc+") no-repeat 100% 50%;
+    background-size: 8px;
+  }
+
+  .post-nav-next a:hover:after {
+    opacity: 1;
+  }
+</style>
+
+
+
+<div class="post-nav">
+
+  
+  <div class="post-nav-none post-nav-item">
+    <a href=""> </a>
+  </div>
+  
+
+  
+  <div class="post-nav-next post-nav-item">
+    
+    <a href="/blog/2019/assetbundle/"> Assetbundle 加密</a>
+  </div>
+  
+
+</div>
+
+</article>
+    </div>
+
+    <footer class="site-footer">
+  <div class="container">
+    <ul class="social">
+  <li><a href="https://twitter.com/penghuailiang" target="_blank"><i class="icon icon-twitter"></i></a></li>
+  <li><a href="https://www.zhihu.com/people/huailiangpenguin" target="_blank"><i class="icon icon-zhihu"></i></a></li>
+  <li><a href="https://www.facebook.com/profile.php?id=100004290725320" target="_blank"><i class="icon icon-facebook"></i></a></li>
+  <li><a href="https://weibo.com/6212299692/profile?topnav=1&wvr=6" target="_blank"><i class="icon icon-sina"></i></a></li>
+  <li><a href="https://www.linkedin.com/in/penghuailiang/" target="_blank"><i class="icon icon-linkedin"></i></a></li>
+  <li><a href="https://github.com/huailiang" target="_blank"><i class="icon icon-github"></i></a></li>
+</ul>
+    <p class="txt-medium-gray">
+      <small>&copy;2019 All rights reserved. </small>
+    </p>
+  </div>
+</footer>
+    <a href="https://github.com/huailiang" target="_blank" class="github-corner"><svg width="80" height="80" viewBox="0 0 250 250" style="fill:#337ab7; color:#fff; position: absolute; top: 0; border: 0; right: 0;"><path d="M0,0 L115,115 L130,115 L142,142 L250,250 L250,0 Z"></path><path d="M128.3,109.0 C113.8,99.7 119.0,89.6 119.0,89.6 C122.0,82.7 120.5,78.6 120.5,78.6 C119.2,72.0 123.4,76.3 123.4,76.3 C127.3,80.9 125.5,87.3 125.5,87.3 C122.9,97.6 130.6,101.9 134.4,103.2" fill="currentColor" style="transform-origin: 130px 106px;" class="octo-arm"></path><path d="M115.0,115.0 C114.9,115.1 118.7,116.5 119.8,115.4 L133.7,101.6 C136.9,99.2 139.9,98.4 142.2,98.6 C133.8,88.0 127.5,74.4 143.8,58.0 C148.5,53.4 154.0,51.2 159.7,51.0 C160.3,49.4 163.2,43.6 171.4,40.1 C171.4,40.1 176.1,42.5 178.8,56.2 C183.1,58.6 187.2,61.8 190.9,65.4 C194.5,69.0 197.7,73.2 200.1,77.6 C213.8,80.2 216.3,84.9 216.3,84.9 C212.7,93.1 206.9,96.0 205.4,96.6 C205.1,102.4 203.0,107.8 198.3,112.5 C181.9,128.9 168.3,122.5 157.7,114.1 C157.9,116.9 156.7,120.9 152.7,124.9 L141.0,136.5 C139.8,137.7 141.6,141.9 141.8,141.8 Z" fill="currentColor" class="octo-body"></path></svg></a>
+
+
+    <script src="//code.jquery.com/jquery-1.11.3.min.js"></script>
+    <script>
+      $(document).ready(function () {
+        $('.sliding-panel-button,.sliding-panel-fade-screen,.sliding-panel-close').on('click touchstart', function (e) {
+          $('.sliding-panel-content,.sliding-panel-fade-screen').toggleClass('is-visible');
+          e.preventDefault();
+        });
+      });
+    </script>
+  </main>
+</body>
+
+</html>
