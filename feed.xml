@@ -5,8 +5,8 @@
     <description>关于前端与设计、黑客与画家 | 怀亮，Web &amp; Mobile Lover，Software Engineer，Game Designer | 这里是 @Huailiang怀亮 的个人博客，与你一起发现更大的世界。</description>
     <link>https://huailiang.github.io/</link>
     <atom:link href="https://huailiang.github.io/feed.xml" rel="self" type="application/rss+xml"/>
-    <pubDate>Sun, 01 Sep 2019 21:33:55 +0800</pubDate>
-    <lastBuildDate>Sun, 01 Sep 2019 21:33:55 +0800</lastBuildDate>
+    <pubDate>Sun, 01 Sep 2019 21:54:32 +0800</pubDate>
+    <lastBuildDate>Sun, 01 Sep 2019 21:54:32 +0800</lastBuildDate>
     <generator>Jekyll v3.0.5</generator>
     
       <item>
@@ -182,7 +182,7 @@
 
 &lt;h2 id=&quot;opengl中使用texturearray&quot;&gt;OpenGL中使用TextureArray&lt;/h2&gt;
 
-&lt;p&gt;在c++中绑定TextureArray&lt;/p&gt;
+&lt;p&gt;关于TextureArray的介绍，&lt;a href=&quot;https://www.khronos.org/opengl/wiki/Array_Texture&quot;&gt;参考官网&lt;/a&gt;。这里简单介绍下其用法，在c++中绑定TextureArray&lt;/p&gt;
 
 &lt;div class=&quot;language-c++ highlighter-rouge&quot;&gt;&lt;pre class=&quot;highlight&quot;&gt;&lt;code&gt;&lt;span class=&quot;c1&quot;&gt;// texture object and texture 2d array 
 &lt;/span&gt;&lt;span class=&quot;n&quot;&gt;glGenTextures&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;mi&quot;&gt;2&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;textures&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;);&lt;/span&gt;
@@ -202,7 +202,7 @@
 &lt;div class=&quot;language-glsl highlighter-rouge&quot;&gt;&lt;pre class=&quot;highlight&quot;&gt;&lt;code&gt;&lt;span class=&quot;k&quot;&gt;precision&lt;/span&gt; &lt;span class=&quot;kt&quot;&gt;mediump&lt;/span&gt; &lt;span class=&quot;kt&quot;&gt;sampler2DArray&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;;&lt;/span&gt;
 &lt;span class=&quot;k&quot;&gt;uniform&lt;/span&gt; &lt;span class=&quot;kt&quot;&gt;sampler2DArray&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;texture_array&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;;&lt;/span&gt;
 
-&lt;span class=&quot;n&quot;&gt;color&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;=&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;texture&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;texture_array&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,&lt;/span&gt; &lt;span class=&quot;kt&quot;&gt;vec3&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;fs_in&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;tc&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;layer&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;));&lt;/span&gt;
+&lt;span class=&quot;n&quot;&gt;color&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;=&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;texture&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;texture_array&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,&lt;/span&gt; &lt;span class=&quot;kt&quot;&gt;vec3&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;fs_in&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;uv&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;layer&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;));&lt;/span&gt;
 &lt;/code&gt;&lt;/pre&gt;
 &lt;/div&gt;
 
@@ -218,7 +218,7 @@
 
 &lt;p&gt;三. 从文档（https://docs.unity3d.com/Manual/SL-TextureArrays.html）上来看，GLES3 Metal 已经可以支持了。最容易想到的就是地形的splat层，如果是四层splat，那么就可以用一个Texture2DArray来代替，好处是减少了bind消耗(glBindTexture)。如果单从性能上看，Texture2DArray比Texture2D的确只是减少纹理绑定的开销，然后在游戏引擎中可能会对合批产生影响。bind texture对于api是非常费cpu的操作。 有了texture array,一个绑定操作就可以了。对于dx12 或者 Vulkan。没有绑定texture的概念。一个texture 已经很像cpu的一个内存指针。想用多少都可以。&lt;/p&gt;
 
-&lt;p&gt;四. 关于Texture2DArray的性能开销和测试， 可以参考&lt;a href=&quot;https://baijiahao.baidu.com/s?id=1593107166928627425&amp;amp;wfr=spider&amp;amp;for=pc&quot;&gt;uwa的分析&lt;/a&gt;。&lt;/p&gt;
+&lt;p&gt;四. 更多关于Texture2DArray的性能开销和测试， 可以参考&lt;a href=&quot;https://baijiahao.baidu.com/s?id=1593107166928627425&amp;amp;wfr=spider&amp;amp;for=pc&quot;&gt;uwa的分析&lt;/a&gt;。&lt;/p&gt;
 
 &lt;p&gt;&lt;br /&gt;&lt;br /&gt;
 参考链接:&lt;br /&gt;
@@ -258,11 +258,11 @@
 
 &lt;table border=&quot;1&quot; style=&quot;font-size:12px&quot;&gt;
  &lt;tr&gt;
-    &lt;th width=&quot;62&quot;&gt;类型&lt;/th&gt;
+    &lt;th width=&quot;9%&quot;&gt;类型&lt;/th&gt;
     &lt;th&gt;标记&lt;/th&gt;
     &lt;th&gt;HEAD&lt;/th&gt;
-    &lt;th width=&quot;184&quot;&gt;二进制&lt;/th&gt;
-    &lt;th width=&quot;84&quot;&gt;字符串&lt;/th&gt;
+    &lt;th width=&quot;20%&quot;&gt;二进制&lt;/th&gt;
+    &lt;th width=&quot;11%&quot;&gt;字符串&lt;/th&gt;
 &lt;/tr&gt;
 &lt;tr&gt;
     &lt;td&gt;string&lt;/td&gt;
@@ -1032,7 +1032,7 @@ python parse_texture.py &lt;span class=&quot;se&quot;&gt;\&lt;/span&gt;
       </item>
     
       <item>
-        <title>camera动态图像识别</title>
+        <title>AR探索-camera动态图像识别</title>
         <description>&lt;blockquote&gt;
   &lt;p&gt;接着上节继续， 上节使用了一个特制的maker（印有方块的标记）。 现实生活中，这种标记都是不存在的，这里通过算法对现实世界的图像进行特征提取，生成特有的标记， 从而实现了从基于标记到AR转移到无标记的AR。可采用无标记AR的几个例子： 杂志封面，公司标志、玩具等。无标记AR计算量很大， 所以移动设备往往不能确保流畅的FPS。&lt;/p&gt;
 &lt;/blockquote&gt;
@@ -1231,7 +1231,7 @@ B：10101010&lt;br /&gt;
       </item>
     
       <item>
-        <title>AR探索</title>
+        <title>AR探索-固定标记识别</title>
         <description>&lt;blockquote&gt;
   &lt;p&gt;程序通过OpenCV实现对Marker的识别和定位，然后通过OpenGL将虚拟物体叠加到摄像头图像下，实现增强现实。这里以参考《&lt;a href=&quot;https://item.jd.com/32565591095.html&quot;&gt;深入理解OpenCV&lt;/a&gt;》这本书第二章节的例子，实现基于标记的的虚拟现实实现。看到网上很多的例子都是基于固定渲染管线来画虚拟物体的， 而且很多地方都经不起推敲。 本例使用现代OpenGL实现的整个绘制过程。&lt;/p&gt;
 &lt;/blockquote&gt;

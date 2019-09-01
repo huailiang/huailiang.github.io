@@ -247,7 +247,7 @@ MathJax.Hub.Config({
 
 <h2 id="opengl中使用texturearray">OpenGL中使用TextureArray</h2>
 
-<p>在c++中绑定TextureArray</p>
+<p>关于TextureArray的介绍，<a href="https://www.khronos.org/opengl/wiki/Array_Texture">参考官网</a>。这里简单介绍下其用法，在c++中绑定TextureArray</p>
 
 <div class="language-c++ highlighter-rouge"><pre class="highlight"><code><span class="c1">// texture object and texture 2d array 
 </span><span class="n">glGenTextures</span><span class="p">(</span><span class="mi">2</span><span class="p">,</span> <span class="n">textures</span><span class="p">);</span>
@@ -267,7 +267,7 @@ MathJax.Hub.Config({
 <div class="language-glsl highlighter-rouge"><pre class="highlight"><code><span class="k">precision</span> <span class="kt">mediump</span> <span class="kt">sampler2DArray</span><span class="p">;</span>
 <span class="k">uniform</span> <span class="kt">sampler2DArray</span> <span class="n">texture_array</span><span class="p">;</span>
 
-<span class="n">color</span> <span class="o">=</span> <span class="n">texture</span><span class="p">(</span><span class="n">texture_array</span><span class="p">,</span> <span class="kt">vec3</span><span class="p">(</span><span class="n">fs_in</span><span class="p">.</span><span class="n">tc</span><span class="p">,</span> <span class="n">layer</span><span class="p">));</span>
+<span class="n">color</span> <span class="o">=</span> <span class="n">texture</span><span class="p">(</span><span class="n">texture_array</span><span class="p">,</span> <span class="kt">vec3</span><span class="p">(</span><span class="n">fs_in</span><span class="p">.</span><span class="n">uv</span><span class="p">,</span> <span class="n">layer</span><span class="p">));</span>
 </code></pre>
 </div>
 
@@ -283,7 +283,7 @@ MathJax.Hub.Config({
 
 <p>三. 从文档（https://docs.unity3d.com/Manual/SL-TextureArrays.html）上来看，GLES3 Metal 已经可以支持了。最容易想到的就是地形的splat层，如果是四层splat，那么就可以用一个Texture2DArray来代替，好处是减少了bind消耗(glBindTexture)。如果单从性能上看，Texture2DArray比Texture2D的确只是减少纹理绑定的开销，然后在游戏引擎中可能会对合批产生影响。bind texture对于api是非常费cpu的操作。 有了texture array,一个绑定操作就可以了。对于dx12 或者 Vulkan。没有绑定texture的概念。一个texture 已经很像cpu的一个内存指针。想用多少都可以。</p>
 
-<p>四. 关于Texture2DArray的性能开销和测试， 可以参考<a href="https://baijiahao.baidu.com/s?id=1593107166928627425&amp;wfr=spider&amp;for=pc">uwa的分析</a>。</p>
+<p>四. 更多关于Texture2DArray的性能开销和测试， 可以参考<a href="https://baijiahao.baidu.com/s?id=1593107166928627425&amp;wfr=spider&amp;for=pc">uwa的分析</a>。</p>
 
 <p><br /><br />
 参考链接:<br />
