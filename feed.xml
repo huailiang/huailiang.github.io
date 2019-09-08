@@ -5,8 +5,8 @@
     <description>关于前端与设计、黑客与画家 | 怀亮，Web &amp; Mobile Lover，Software Engineer，Game Designer | 这里是 @Huailiang怀亮 的个人博客，与你一起发现更大的世界。</description>
     <link>https://huailiang.github.io/</link>
     <atom:link href="https://huailiang.github.io/feed.xml" rel="self" type="application/rss+xml"/>
-    <pubDate>Sun, 08 Sep 2019 17:07:04 +0800</pubDate>
-    <lastBuildDate>Sun, 08 Sep 2019 17:07:04 +0800</lastBuildDate>
+    <pubDate>Sun, 08 Sep 2019 17:56:43 +0800</pubDate>
+    <lastBuildDate>Sun, 08 Sep 2019 17:56:43 +0800</lastBuildDate>
     <generator>Jekyll v3.0.5</generator>
     
       <item>
@@ -533,7 +533,7 @@ Semaphore 和 Fence 有相同之处，但是使用场景却不一样，就如图
         <link>https://huailiang.github.io/blog/2019/vulkan/</link>
         <guid isPermaLink="true">https://huailiang.github.io/blog/2019/vulkan/</guid>
         
-        <category>前端开发</category>
+        <category>引擎</category>
         
         
       </item>
@@ -764,7 +764,7 @@ Semaphore 和 Fence 有相同之处，但是使用场景却不一样，就如图
         <link>https://huailiang.github.io/blog/2019/texturearray/</link>
         <guid isPermaLink="true">https://huailiang.github.io/blog/2019/texturearray/</guid>
         
-        <category>Unity</category>
+        <category>引擎</category>
         
         
       </item>
@@ -1551,10 +1551,6 @@ python parse_texture.py &lt;span class=&quot;se&quot;&gt;\&lt;/span&gt;
         <link>https://huailiang.github.io/blog/2019/reverse/</link>
         <guid isPermaLink="true">https://huailiang.github.io/blog/2019/reverse/</guid>
         
-        <category>前端开发</category>
-        
-        <category>Python</category>
-        
         <category>工具</category>
         
         
@@ -1748,13 +1744,9 @@ B：10101010&lt;br /&gt;
         <link>https://huailiang.github.io/blog/2019/recog/</link>
         <guid isPermaLink="true">https://huailiang.github.io/blog/2019/recog/</guid>
         
-        <category>前端开发</category>
-        
-        <category>OpenGL</category>
+        <category>引擎</category>
         
         <category>OpenCV</category>
-        
-        <category>C++</category>
         
         
       </item>
@@ -2032,11 +2024,9 @@ P =
         <link>https://huailiang.github.io/blog/2019/vr/</link>
         <guid isPermaLink="true">https://huailiang.github.io/blog/2019/vr/</guid>
         
-        <category>OpenGL</category>
-        
         <category>OpenCV</category>
         
-        <category>C++</category>
+        <category>引擎</category>
         
         
       </item>
@@ -2385,9 +2375,9 @@ z &amp; = r\cos\phi
         <link>https://huailiang.github.io/blog/2019/harmonics/</link>
         <guid isPermaLink="true">https://huailiang.github.io/blog/2019/harmonics/</guid>
         
-        <category>OpenGL</category>
-        
         <category>Unity</category>
+        
+        <category>引擎</category>
         
         
       </item>
@@ -2712,9 +2702,7 @@ Epic Games的split sum approximation 通过将方程分成两部分，分别计�
         <link>https://huailiang.github.io/blog/2019/ibl2/</link>
         <guid isPermaLink="true">https://huailiang.github.io/blog/2019/ibl2/</guid>
         
-        <category>前端开发</category>
-        
-        <category>OpenGL</category>
+        <category>引擎</category>
         
         
       </item>
@@ -2873,9 +2861,7 @@ $$e^{i\theta}=cos\theta+\sin\theta i\tag{1}$$  --&gt;
         <link>https://huailiang.github.io/blog/2019/ibl/</link>
         <guid isPermaLink="true">https://huailiang.github.io/blog/2019/ibl/</guid>
         
-        <category>前端开发</category>
-        
-        <category>OpenGL</category>
+        <category>引擎</category>
         
         
       </item>

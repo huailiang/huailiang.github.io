@@ -14,6 +14,17 @@ Hey，我是彭怀亮，病毒种，进化程度不明，多出没于博客、�
 
 离开世界之前，一切都是过程 
 
+
+编译-运行-上传
+
+```sh
+cd huailiang.github.io
+# 本地生成_site 并运行
+bundle exec jekyll s 
+# 在/tmp 切换到master 并上传到github
+sh deploy.sh
+```
+
 Email:peng_huailiang@qq.com
 
 
