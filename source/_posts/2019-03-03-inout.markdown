@@ -4,7 +4,7 @@ title:      "CG中修饰符in out inout的使用"
 date:       2019-03-03 03:00:00
 author:     "Huailiang"
 tags:
-    - OpenGL
+    - 引擎
 ---
 
 

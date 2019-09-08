@@ -4,7 +4,7 @@ title:      "强化学习-游戏AI Trainning (一)"
 date:       2018-03-19 02:00:00
 author:     "Huailiang"
 tags:
-    - 强化学习
+    - 人工智能
     - Unity
 ---
 

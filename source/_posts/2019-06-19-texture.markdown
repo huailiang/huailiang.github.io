@@ -4,8 +4,7 @@ title:      "各种移动GPU压缩纹理的使用方法"
 date:       2019-06-19 03:00:00
 author:     "Huailiang"
 tags:
-    - 前端开发
-    - OpenGL
+    - 引擎
     - 工具
 ---
 

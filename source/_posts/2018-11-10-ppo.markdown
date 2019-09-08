@@ -5,9 +5,7 @@ date:       2018-11-10 03:00:00
 author:     "Huailiang"
 tags:
     - Unity
-    - 前端开发
     - 人工智能
-    - 强化学习
 ---
 
 

@@ -4,10 +4,8 @@ title:      "强化学习-游戏AI Trainning (三)"
 date:       2018-03-23 03:00:00
 author:     "Huailiang"
 tags:
-    - 强化学习
+    - 人工智能
     - Unity
-    - Python
-    - Tensorflow
 ---
 
 

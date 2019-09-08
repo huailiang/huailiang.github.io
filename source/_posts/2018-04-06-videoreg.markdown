@@ -7,7 +7,6 @@ header-mask: 0.3
 tags:
     - 工具
     - 人工智能
-    - 强化学习
     - OpenCV
 ---
 

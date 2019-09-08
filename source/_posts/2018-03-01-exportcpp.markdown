@@ -4,7 +4,6 @@ title:      "自动化导出c++各个平台库"
 date:       2018-03-01 12:00:00
 author:     "Huailiang"
 tags:
-    - C++
     - Unity
 ---
 

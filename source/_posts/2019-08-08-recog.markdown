@@ -4,10 +4,8 @@ title:      "AR探索-camera动态图像识别"
 date:       2019-08-08 03:00:00
 author:     "Huailiang"
 tags:
-    - 前端开发
-    - OpenGL
+    - 引擎
     - OpenCV
-    - C++
 ---
 
 

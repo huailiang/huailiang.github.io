@@ -4,9 +4,7 @@ title:      "TensorFlow-神经网络"
 date:       2018-03-09 06:00:00
 author:     "Huailiang"
 tags:
-    - Python
     - 人工智能
-    - Tensorflow
 ---
 
 

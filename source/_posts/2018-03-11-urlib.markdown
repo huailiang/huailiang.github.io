@@ -4,7 +4,6 @@ title:      "Python扒取网络图片"
 date:       2018-03-11 12:00:00
 author:     "Huailiang"
 tags:
-    - Python
     - 工具
 ---
 

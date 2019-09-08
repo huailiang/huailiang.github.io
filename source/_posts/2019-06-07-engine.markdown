@@ -4,8 +4,7 @@ title:      "矢量字是如何画出来的"
 date:       2019-06-07 03:00:00
 author:     "Huailiang"
 tags:
-    - 前端开发
-    - OpenGL
+    - 引擎
 ---
 
 

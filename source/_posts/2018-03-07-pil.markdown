@@ -4,7 +4,6 @@ title:      "Python Pillow做一个强大的图形工具"
 date:       2018-03-07 12:00:00
 author:     "Huailiang"
 tags:
-    - Python
     - 工具
 ---
 

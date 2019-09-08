@@ -1,10 +1,9 @@
 ---
 layout:     post
 title:      "机器学习-Unity 3D平衡球[转载]"
-date:       2018-03-02 16:00:00
+date:       2018-03-02 03:00:00
 author:     "Huailiang"
 tags:
-    - Tensorflow
     - Unity
     - 人工智能
 ---

@@ -4,8 +4,6 @@ title:      "破解《航海王-燃烧之血》"
 date:       2019-08-16 03:00:00
 author:     "Huailiang"
 tags:
-    - 前端开发
-    - Python
     - 工具
 ---
 

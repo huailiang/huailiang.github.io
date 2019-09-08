@@ -4,9 +4,8 @@ title:      "AR探索-固定标记识别"
 date:       2019-07-18 03:00:00
 author:     "Huailiang"
 tags:
-    - OpenGL
     - OpenCV
-    - C++
+    - 引擎
 ---
 
 
