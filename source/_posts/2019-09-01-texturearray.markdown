@@ -221,13 +221,13 @@ TextureArray在使用的时候只需要绑定一次，就可以采样多个2D Te
 
 <br>
 参考链接:
- [https://www.reddit.com/r/Unity3D/comments/6uueox/gpu_instancing_texture2darray/][i1]
- [https://forum.unity.com/threads/instance-of-texture.500408/][i2]
- [https://docs.unity3d.com/Manual/SL-TextureArrays.html][i3]
- [https://docs.unity3d.com/ScriptReference/Texture2DArray.Apply.html][i3]
- [https://docs.unity3d.com/ScriptReference/Graphics.CopyTexture.html][i4]
- [https://blog.csdn.net/aa20274270/article/details/64923942][i5]
- [https://www.cnblogs.com/hont/p/7258615.html][i6]
+ [https://www.reddit.com/r/Unity3D/gpu_instancing_texture2darray][i1]
+ [https://forum.unity.com/threads/instance-of-texture][i2]
+ [https://docs.unity3d.com/Manual/SL-TextureArrays][i3]
+ [https://docs.unity3d.com/ScriptReference/Texture2DArray][i3]
+ [https://docs.unity3d.com/ScriptReference/Graphics.CopyTexture][i4]
+ [https://blog.csdn.net/aa20274270][i5]
+ [https://www.cnblogs.com/hont][i6]
 
 
 
