@@ -5,9 +5,538 @@
     <description>关于前端与设计、黑客与画家 | 怀亮，Web &amp; Mobile Lover，Software Engineer，Game Designer | 这里是 @Huailiang怀亮 的个人博客，与你一起发现更大的世界。</description>
     <link>https://huailiang.github.io/</link>
     <atom:link href="https://huailiang.github.io/feed.xml" rel="self" type="application/rss+xml"/>
-    <pubDate>Sun, 01 Sep 2019 21:54:32 +0800</pubDate>
-    <lastBuildDate>Sun, 01 Sep 2019 21:54:32 +0800</lastBuildDate>
+    <pubDate>Sun, 08 Sep 2019 17:07:04 +0800</pubDate>
+    <lastBuildDate>Sun, 08 Sep 2019 17:07:04 +0800</lastBuildDate>
     <generator>Jekyll v3.0.5</generator>
+    
+      <item>
+        <title>Valkan 基础渲染流程</title>
+        <description>&lt;h2 id=&quot;vulkan-render&quot;&gt;Vulkan Render&lt;/h2&gt;
+
+&lt;p&gt;Vulkan 中的重要组件以及它们的工作流程如下图所示，接下来的文章中会针对每个组件进行学习讲解并配上相关的示例代码，首先是 Instance、Device 和 Queue 组件。&lt;/p&gt;
+
+&lt;p&gt;&lt;img src=&quot;/img/post-unity/cmd4.jpeg&quot; alt=&quot;&quot; /&gt;&lt;/p&gt;
+
+&lt;h3 id=&quot;instance-组件&quot;&gt;Instance 组件&lt;/h3&gt;
+
+&lt;p&gt;在开始创建Device等组件之前，需要创建一个VkInstance对象。&lt;/p&gt;
+
+&lt;p&gt;通过vkCreateInstance方法创建VKInstance对象，以下是函数原型，在 &lt;vulkan.h&gt; 头文件中。&lt;/vulkan.h&gt;&lt;/p&gt;
+
+&lt;div class=&quot;language-c++ highlighter-rouge&quot;&gt;&lt;pre class=&quot;highlight&quot;&gt;&lt;code&gt;&lt;span class=&quot;c1&quot;&gt;// 声明的函数指针的形式
+&lt;/span&gt;&lt;span class=&quot;k&quot;&gt;typedef&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;VkResult&lt;/span&gt; &lt;span class=&quot;p&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;VKAPI_PTR&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;*&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;PFN_vkCreateInstance&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;)&lt;/span&gt;
+&lt;span class=&quot;p&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;k&quot;&gt;const&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;VkInstanceCreateInfo&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;*&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;pCreateInfo&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,&lt;/span&gt; &lt;span class=&quot;c1&quot;&gt;// 提供创建的信息
+&lt;/span&gt;&lt;span class=&quot;k&quot;&gt;const&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;VkAllocationCallbacks&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;*&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;pAllocator&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,&lt;/span&gt; &lt;span class=&quot;c1&quot;&gt;// 创建时的回调函数
+&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;VkInstance&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;*&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;pInstance&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;);&lt;/span&gt;                &lt;span class=&quot;c1&quot;&gt;// 创建的实例
+&lt;/span&gt;&lt;/code&gt;&lt;/pre&gt;
+&lt;/div&gt;
+
+&lt;p&gt;Queue组件是用来和物理设备沟通的桥梁，而具体的沟通过程就需要Command-Buffer（命令缓冲区）组件，它是若干命令的集合，我们向 Queue提交Command-Buffer，然后才交由物理设备 GPU 进行处理。&lt;/p&gt;
+
+&lt;p&gt;在 vkCreateInstance 函数中看到有个名为 VkInstanceCreateInfo 类型的参数，这就是包含了 VKInstance 要创建的信息。&lt;/p&gt;
+
+&lt;p&gt;它的参数信息有点多：&lt;/p&gt;
+&lt;div class=&quot;language-c++ highlighter-rouge&quot;&gt;&lt;pre class=&quot;highlight&quot;&gt;&lt;code&gt;&lt;span class=&quot;k&quot;&gt;typedef&lt;/span&gt; &lt;span class=&quot;k&quot;&gt;struct&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;VkInstanceCreateInfo&lt;/span&gt; &lt;span class=&quot;p&quot;&gt;{&lt;/span&gt;
+    &lt;span class=&quot;n&quot;&gt;VkStructureType&lt;/span&gt;             &lt;span class=&quot;n&quot;&gt;sType&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;;&lt;/span&gt;  &lt;span class=&quot;c1&quot;&gt;// 一般为方法对应的类型
+&lt;/span&gt;    &lt;span class=&quot;k&quot;&gt;const&lt;/span&gt; &lt;span class=&quot;kt&quot;&gt;void&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;*&lt;/span&gt;                 &lt;span class=&quot;n&quot;&gt;pNext&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;;&lt;/span&gt; &lt;span class=&quot;c1&quot;&gt;// 一般为 null 就好了
+&lt;/span&gt;    &lt;span class=&quot;n&quot;&gt;VkInstanceCreateFlags&lt;/span&gt;       &lt;span class=&quot;n&quot;&gt;flags&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;;&lt;/span&gt;  &lt;span class=&quot;c1&quot;&gt;// 留着以后用的，设为 0 就好了
+&lt;/span&gt;    &lt;span class=&quot;k&quot;&gt;const&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;VkApplicationInfo&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;*&lt;/span&gt;    &lt;span class=&quot;n&quot;&gt;pApplicationInfo&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;;&lt;/span&gt; &lt;span class=&quot;c1&quot;&gt;// 对应新的一个结构体 VkApplicationInfo
+&lt;/span&gt;    &lt;span class=&quot;kt&quot;&gt;uint32_t&lt;/span&gt;                    &lt;span class=&quot;n&quot;&gt;enabledLayerCount&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;;&lt;/span&gt; &lt;span class=&quot;c1&quot;&gt;// layer 和 extension 用于调试和拓展
+&lt;/span&gt;    &lt;span class=&quot;k&quot;&gt;const&lt;/span&gt; &lt;span class=&quot;kt&quot;&gt;char&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;*&lt;/span&gt; &lt;span class=&quot;k&quot;&gt;const&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;*&lt;/span&gt;          &lt;span class=&quot;n&quot;&gt;ppEnabledLayerNames&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;;&lt;/span&gt;
+    &lt;span class=&quot;kt&quot;&gt;uint32_t&lt;/span&gt;                    &lt;span class=&quot;n&quot;&gt;enabledExtensionCount&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;;&lt;/span&gt;
+    &lt;span class=&quot;k&quot;&gt;const&lt;/span&gt; &lt;span class=&quot;kt&quot;&gt;char&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;*&lt;/span&gt; &lt;span class=&quot;k&quot;&gt;const&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;*&lt;/span&gt;          &lt;span class=&quot;n&quot;&gt;ppEnabledExtensionNames&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;;&lt;/span&gt;
+&lt;span class=&quot;p&quot;&gt;}&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;VkInstanceCreateInfo&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;;&lt;/span&gt;
+&lt;/code&gt;&lt;/pre&gt;
+&lt;/div&gt;
+
+&lt;p&gt;除了还需要创建一个VkApplicationInfo对象，还可以设置Layer和Extension。&lt;br /&gt;
+其中：Layer 是用来错误校验、调试输出的。为了提供性能，其中的方法之一就是减少驱动进行状态、错误校验，而 Vulkan 就把这一层单独抽出来了。&lt;/p&gt;
+
+&lt;center&gt;&lt;img src=&quot;/img/post-unity/cmd3.jpg&quot; /&gt;&lt;/center&gt;
+&lt;p&gt;&lt;br /&gt;&lt;/p&gt;
+
+&lt;p&gt;Layer 在整个架构中的位置如上图，Vulkan API直接和驱动对话，而Layer处于应用和Vulkan API之间，供开发者进行调试。&lt;/p&gt;
+
+&lt;p&gt;另外，Extension就是Vulkan支持的拓展，最典型的就是Vulkan的跨平台渲染显示，就是通过拓展来完成的，比如在Android、Windows上使用Vulkan都需要使用不同的拓展才可以把内容显示到屏幕上。&lt;/p&gt;
+
+&lt;p&gt;VkApplicationInfo 结构体，也是创建 Instance 的必要参数之一&lt;/p&gt;
+
+&lt;div class=&quot;language-c++ highlighter-rouge&quot;&gt;&lt;pre class=&quot;highlight&quot;&gt;&lt;code&gt;&lt;span class=&quot;k&quot;&gt;typedef&lt;/span&gt; &lt;span class=&quot;k&quot;&gt;struct&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;VkApplicationInfo&lt;/span&gt; &lt;span class=&quot;p&quot;&gt;{&lt;/span&gt;
+    &lt;span class=&quot;n&quot;&gt;VkStructureType&lt;/span&gt;    &lt;span class=&quot;n&quot;&gt;sType&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;;&lt;/span&gt;
+    &lt;span class=&quot;k&quot;&gt;const&lt;/span&gt; &lt;span class=&quot;kt&quot;&gt;void&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;*&lt;/span&gt;        &lt;span class=&quot;n&quot;&gt;pNext&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;;&lt;/span&gt;
+    &lt;span class=&quot;k&quot;&gt;const&lt;/span&gt; &lt;span class=&quot;kt&quot;&gt;char&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;*&lt;/span&gt;        &lt;span class=&quot;n&quot;&gt;pApplicationName&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;;&lt;/span&gt;
+    &lt;span class=&quot;kt&quot;&gt;uint32_t&lt;/span&gt;           &lt;span class=&quot;n&quot;&gt;applicationVersion&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;;&lt;/span&gt;
+    &lt;span class=&quot;k&quot;&gt;const&lt;/span&gt; &lt;span class=&quot;kt&quot;&gt;char&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;*&lt;/span&gt;        &lt;span class=&quot;n&quot;&gt;pEngineName&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;;&lt;/span&gt;
+    &lt;span class=&quot;kt&quot;&gt;uint32_t&lt;/span&gt;           &lt;span class=&quot;n&quot;&gt;engineVersion&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;;&lt;/span&gt;
+    &lt;span class=&quot;kt&quot;&gt;uint32_t&lt;/span&gt;           &lt;span class=&quot;n&quot;&gt;apiVersion&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;;&lt;/span&gt;
+&lt;span class=&quot;p&quot;&gt;}&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;VkApplicationInfo&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;;&lt;/span&gt;
+&lt;/code&gt;&lt;/pre&gt;
+&lt;/div&gt;
+
+&lt;p&gt;参数释义就比较容易理解了，设置应用的名称、版本号等，有了它们就可以创建Instance对象了 。&lt;/p&gt;
+
+&lt;div class=&quot;language-c++ highlighter-rouge&quot;&gt;&lt;pre class=&quot;highlight&quot;&gt;&lt;code&gt;&lt;span class=&quot;n&quot;&gt;VkApplicationInfo&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;app_info&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;=&lt;/span&gt; &lt;span class=&quot;p&quot;&gt;{};&lt;/span&gt;
+
+&lt;span class=&quot;n&quot;&gt;app_info&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;apiVersion&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;=&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;VK_API_VERSION_1_0&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;;&lt;/span&gt;
+&lt;span class=&quot;n&quot;&gt;app_info&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;applicationVersion&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;=&lt;/span&gt; &lt;span class=&quot;mi&quot;&gt;1&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;;&lt;/span&gt;
+&lt;span class=&quot;n&quot;&gt;app_info&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;engineVersion&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;=&lt;/span&gt; &lt;span class=&quot;mi&quot;&gt;1&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;;&lt;/span&gt;
+&lt;span class=&quot;n&quot;&gt;app_info&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;pNext&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;=&lt;/span&gt; &lt;span class=&quot;nb&quot;&gt;nullptr&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;;&lt;/span&gt;
+&lt;span class=&quot;n&quot;&gt;app_info&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;sType&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;=&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;VK_STRUCTURE_TYPE_APPLICATION_INFO&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;;&lt;/span&gt;
+&lt;span class=&quot;n&quot;&gt;app_info&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;pEngineName&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;=&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;APPLICATION_NAME&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;;&lt;/span&gt;
+&lt;span class=&quot;n&quot;&gt;app_info&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;pApplicationName&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;=&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;APPLICATION_NAME&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;;&lt;/span&gt;
+
+&lt;span class=&quot;n&quot;&gt;VkInstanceCreateInfo&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;instance_info&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;=&lt;/span&gt; &lt;span class=&quot;p&quot;&gt;{};&lt;/span&gt;
+&lt;span class=&quot;c1&quot;&gt;// type 就是结构体的类型
+&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;instance_info&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;sType&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;=&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;VK_STRUCTURE_TYPE_INSTANCE_CREATE_INFO&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;;&lt;/span&gt;
+&lt;span class=&quot;n&quot;&gt;instance_info&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;pNext&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;=&lt;/span&gt; &lt;span class=&quot;nb&quot;&gt;nullptr&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;;&lt;/span&gt;
+&lt;span class=&quot;n&quot;&gt;instance_info&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;pApplicationInfo&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;=&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;&amp;amp;&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;app_info&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;;&lt;/span&gt;
+&lt;span class=&quot;n&quot;&gt;instance_info&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;flags&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;=&lt;/span&gt; &lt;span class=&quot;mi&quot;&gt;0&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;;&lt;/span&gt;
+&lt;span class=&quot;c1&quot;&gt;// Extension and Layer 暂时不用,可空
+&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;instance_info&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;enabledExtensionCount&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;=&lt;/span&gt; &lt;span class=&quot;mi&quot;&gt;0&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;;&lt;/span&gt;
+&lt;span class=&quot;n&quot;&gt;instance_info&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;ppEnabledExtensionNames&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;=&lt;/span&gt; &lt;span class=&quot;nb&quot;&gt;nullptr&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;;&lt;/span&gt;
+&lt;span class=&quot;n&quot;&gt;instance_info&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;ppEnabledLayerNames&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;=&lt;/span&gt; &lt;span class=&quot;nb&quot;&gt;nullptr&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;;&lt;/span&gt;
+&lt;span class=&quot;n&quot;&gt;instance_info&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;enabledLayerCount&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;=&lt;/span&gt; &lt;span class=&quot;mi&quot;&gt;0&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;;&lt;/span&gt;
+
+&lt;span class=&quot;n&quot;&gt;VkResult&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;result&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;=&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;vkCreateInstance&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;&amp;amp;&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;instance_info&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,&lt;/span&gt; &lt;span class=&quot;nb&quot;&gt;nullptr&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;&amp;amp;&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;instance&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;);&lt;/span&gt;
+&lt;/code&gt;&lt;/pre&gt;
+&lt;/div&gt;
+
+&lt;p&gt;当每调用一个创建函数后，返回的类型都是VkResult，只要VkResult大于0，那么执行就是成功的。&lt;/p&gt;
+
+&lt;p&gt;另外还有个参数是VkAllocationCallbacks，表示函数调用时的回调，需要传递一个函数指针，在后面的各种调用中都会看到它的身影，如果有用到可以传参，一般为nullptr就好了。&lt;/p&gt;
+
+&lt;p&gt;关于每个结构体，它每个参数的具体释义，参考&lt;a href=&quot;https://www.khronos.org/registry/vulkan/specs/1.0/pdf/vkspec.pdf&quot;&gt;vkspec.pdf&lt;/a&gt; ，里面有对每个参数、结构体的详细释义。&lt;/p&gt;
+
+&lt;h2 id=&quot;device-组件&quot;&gt;Device 组件&lt;/h2&gt;
+
+&lt;p&gt;有了Instance组件，就可以创建Device组件了，创建一个VkDeviceCreateInfo的结构体表示Device的创建信息。而Device具体指的是逻辑上的设备，可以说是对物理设备的一个逻辑上的封装，而物理设备就是VkPhysicalDevice对象。在某些情况下，可能会具有多个物理设备，如下图所示，因此要先枚举一下所有的物理设备：&lt;/p&gt;
+
+&lt;center&gt;&lt;img src=&quot;/img/post-unity/cmd2.jpg&quot; /&gt;&lt;/center&gt;
+&lt;p&gt;&lt;br /&gt;&lt;/p&gt;
+
+&lt;div class=&quot;language-c++ highlighter-rouge&quot;&gt;&lt;pre class=&quot;highlight&quot;&gt;&lt;code&gt;&lt;span class=&quot;kt&quot;&gt;uint32_t&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;gpu_size&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;=&lt;/span&gt; &lt;span class=&quot;mi&quot;&gt;0&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;;&lt;/span&gt;
+&lt;span class=&quot;c1&quot;&gt;// 第一次调用只为了获得个数
+&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;VkResult&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;res&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;=&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;vkEnumeratePhysicalDevices&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;instance&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;&amp;amp;&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;gpu_size&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,&lt;/span&gt; &lt;span class=&quot;nb&quot;&gt;nullptr&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;);&lt;/span&gt;
+&lt;/code&gt;&lt;/pre&gt;
+&lt;/div&gt;
+
+&lt;p&gt;在 vkEnumeratePhysicalDevices方法中，传入的第二个参数为gpu的个数，第三个参数为null，这样的一次调用会返回gpu的个数到gpu_size变量。&lt;/p&gt;
+&lt;div class=&quot;language-c++ highlighter-rouge&quot;&gt;&lt;pre class=&quot;highlight&quot;&gt;&lt;code&gt;&lt;span class=&quot;n&quot;&gt;vector&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;&amp;lt;&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;VkPhysicalDevice&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;&amp;gt;&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;gpus&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;;&lt;/span&gt;
+&lt;span class=&quot;n&quot;&gt;gpus&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;resize&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;gpu_size&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;);&lt;/span&gt;
+&lt;span class=&quot;c1&quot;&gt;// vector.data() 方法转换成指针类型
+// 第二次调用获得所有的数据
+&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;res&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;=&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;vkEnumeratePhysicalDevices&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;instance&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;&amp;amp;&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;gpu_size&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;gpus&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;data&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;());&lt;/span&gt;
+&lt;/code&gt;&lt;/pre&gt;
+&lt;/div&gt;
+&lt;p&gt;当再一次调用vkEnumeratePhysicalDevices函数时，第三个参数不为null，而是相应的VkPhysicalDevice容器，那么gpus会填充 gpu_size个的VkPhysicalDevice对象。&lt;/p&gt;
+
+&lt;p&gt;这也算是Vulkan API调用的一个固定套路了，调用两次来获得数据，在后面的代码中也会经常看到这种方式。有了VkPhysicalDevice对象之后，可以查询VkPhysicalDevice上的一些属性，以下函数都可以查询相关信息：&lt;/p&gt;
+
+&lt;ul&gt;
+  &lt;li&gt;vkGetPhysicalDeviceQueueFamilyProperties&lt;/li&gt;
+  &lt;li&gt;vkGetPhysicalDeviceMemoryProperties&lt;/li&gt;
+  &lt;li&gt;vkGetPhysicalDeviceProperties&lt;/li&gt;
+  &lt;li&gt;vkGetPhysicalDeviceImageFormatProperties&lt;/li&gt;
+  &lt;li&gt;vkGetPhysicalDeviceFormatProperties&lt;/li&gt;
+&lt;/ul&gt;
+
+&lt;p&gt;在这里需要用到的属性是QueueFamilyProperties，获得该属性的方法调用方式和获得VkPhysicalDevice数据方式一样，也是一个两次调用。如果有设备有多个GPU，那么这里取第一个来获取它的相关属性：&lt;/p&gt;
+
+&lt;div class=&quot;language-c++ highlighter-rouge&quot;&gt;&lt;pre class=&quot;highlight&quot;&gt;&lt;code&gt;&lt;span class=&quot;c1&quot;&gt;// 第一次调用，获得个数
+&lt;/span&gt;&lt;span class=&quot;kt&quot;&gt;uint32_t&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;queue_family_count&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;=&lt;/span&gt; &lt;span class=&quot;mi&quot;&gt;0&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;;&lt;/span&gt;
+&lt;span class=&quot;n&quot;&gt;vkGetPhysicalDeviceQueueFamilyProperties&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;gpus&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;[&lt;/span&gt;&lt;span class=&quot;mi&quot;&gt;0&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;],&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;&amp;amp;&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;queue_family_count&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,&lt;/span&gt; &lt;span class=&quot;nb&quot;&gt;nullptr&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;);&lt;/span&gt;
+&lt;span class=&quot;n&quot;&gt;assert&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;queue_family_count&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;!=&lt;/span&gt; &lt;span class=&quot;mi&quot;&gt;0&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;);&lt;/span&gt;
+
+&lt;span class=&quot;c1&quot;&gt;// 第二次调用，获得实际数据
+&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;vector&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;&amp;lt;&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;VkQueueFamilyProperties&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;&amp;gt;&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;queue_family_props&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;;&lt;/span&gt;
+&lt;span class=&quot;n&quot;&gt;queue_family_props&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;resize&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;queue_family_count&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;);&lt;/span&gt;
+&lt;span class=&quot;n&quot;&gt;vkGetPhysicalDeviceQueueFamilyProperties&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;gpus&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;[&lt;/span&gt;&lt;span class=&quot;mi&quot;&gt;0&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;],&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;&amp;amp;&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;queue_family_count&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;queue_family_props&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;data&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;());&lt;/span&gt;
+&lt;span class=&quot;n&quot;&gt;assert&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;queue_family_count&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;!=&lt;/span&gt; &lt;span class=&quot;mi&quot;&gt;0&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;);&lt;/span&gt;
+&lt;/code&gt;&lt;/pre&gt;
+&lt;/div&gt;
+
+&lt;p&gt;QueueFamilyProperties 的结构体含义如下：&lt;/p&gt;
+&lt;div class=&quot;language-c++ highlighter-rouge&quot;&gt;&lt;pre class=&quot;highlight&quot;&gt;&lt;code&gt;&lt;span class=&quot;k&quot;&gt;typedef&lt;/span&gt; &lt;span class=&quot;k&quot;&gt;struct&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;VkQueueFamilyProperties&lt;/span&gt; &lt;span class=&quot;p&quot;&gt;{&lt;/span&gt;
+    &lt;span class=&quot;n&quot;&gt;VkQueueFlags&lt;/span&gt;    &lt;span class=&quot;n&quot;&gt;queueFlags&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;;&lt;/span&gt;      &lt;span class=&quot;c1&quot;&gt;// 标识位：表示 Queue 的功能
+&lt;/span&gt;    &lt;span class=&quot;kt&quot;&gt;uint32_t&lt;/span&gt;        &lt;span class=&quot;n&quot;&gt;queueCount&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;;&lt;/span&gt;         
+    &lt;span class=&quot;kt&quot;&gt;uint32_t&lt;/span&gt;        &lt;span class=&quot;n&quot;&gt;timestampValidBits&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;;&lt;/span&gt;
+    &lt;span class=&quot;n&quot;&gt;VkExtent3D&lt;/span&gt;      &lt;span class=&quot;n&quot;&gt;minImageTransferGranularity&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;;&lt;/span&gt;
+&lt;span class=&quot;p&quot;&gt;}&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;VkQueueFamilyProperties&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;;&lt;/span&gt;
+&lt;/code&gt;&lt;/pre&gt;
+&lt;/div&gt;
+
+&lt;p&gt;其中：queueFlags表示该Queue的能力，有的Queue是用来渲染图像的，这个和我们的使用最为密切，还有的Queue是用来计算的。&lt;/p&gt;
+
+&lt;p&gt;具体的 Flag 标识如下：&lt;/p&gt;
+&lt;div class=&quot;language-c++ highlighter-rouge&quot;&gt;&lt;pre class=&quot;highlight&quot;&gt;&lt;code&gt;&lt;span class=&quot;k&quot;&gt;typedef&lt;/span&gt; &lt;span class=&quot;k&quot;&gt;enum&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;VkQueueFlagBits&lt;/span&gt; &lt;span class=&quot;p&quot;&gt;{&lt;/span&gt;
+    &lt;span class=&quot;n&quot;&gt;VK_QUEUE_GRAPHICS_BIT&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;=&lt;/span&gt; &lt;span class=&quot;mh&quot;&gt;0x00000001&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,&lt;/span&gt;         &lt;span class=&quot;c1&quot;&gt;// 图像相关
+&lt;/span&gt;    &lt;span class=&quot;n&quot;&gt;VK_QUEUE_COMPUTE_BIT&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;=&lt;/span&gt; &lt;span class=&quot;mh&quot;&gt;0x00000002&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,&lt;/span&gt;          &lt;span class=&quot;c1&quot;&gt;// 计算相关
+&lt;/span&gt;    &lt;span class=&quot;n&quot;&gt;VK_QUEUE_TRANSFER_BIT&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;=&lt;/span&gt; &lt;span class=&quot;mh&quot;&gt;0x00000004&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,&lt;/span&gt;
+    &lt;span class=&quot;n&quot;&gt;VK_QUEUE_SPARSE_BINDING_BIT&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;=&lt;/span&gt; &lt;span class=&quot;mh&quot;&gt;0x00000008&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,&lt;/span&gt;
+    &lt;span class=&quot;n&quot;&gt;VK_QUEUE_FLAG_BITS_MAX_ENUM&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;=&lt;/span&gt; &lt;span class=&quot;mh&quot;&gt;0x7FFFFFFF&lt;/span&gt;
+&lt;span class=&quot;p&quot;&gt;}&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;VkQueueFlagBits&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;;&lt;/span&gt;
+&lt;span class=&quot;k&quot;&gt;typedef&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;VkFlags&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;VkQueueFlags&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;;&lt;/span&gt;
+&lt;/code&gt;&lt;/pre&gt;
+&lt;/div&gt;
+
+&lt;p&gt;一般来说，我们用的是queueFlags为VK_QUEUE_GRAPHICS_BIT标识位的Queue。那么Queue究竟是什么？物理设备可能会有多个 Queue，不同的 Queue 对应不同的特性。&lt;/p&gt;
+
+&lt;p&gt;在文章最开始的图中可以看到，Command-buffer是提交到了Queue，Queue再提交给Device去执行。Queue可以看成是应用程序和物理设备沟通的桥梁，我们在Queue上提交命令，然后再交由GPU去执行。&lt;/p&gt;
+
+&lt;h2 id=&quot;device-组件-1&quot;&gt;Device 组件&lt;/h2&gt;
+
+&lt;p&gt;创建一个Device对象，不仅需要指定具体的物理设备VkPhysicalDevice，另外还需要该物理设备上的Queue相关信息。在VkDeviceCreateInfo结构体中需要一个参数是VkDeviceQueueCreateInfo，它的创建如下：&lt;/p&gt;
+
+&lt;div class=&quot;language-c++ highlighter-rouge&quot;&gt;&lt;pre class=&quot;highlight&quot;&gt;&lt;code&gt;&lt;span class=&quot;c1&quot;&gt;// 创建 Queue 所需的相关信息
+&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;VkDeviceQueueCreateInfo&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;queue_info&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;=&lt;/span&gt; &lt;span class=&quot;p&quot;&gt;{};&lt;/span&gt;
+&lt;span class=&quot;c1&quot;&gt;// 找到属性为 VK_QUEUE_GRAPHICS_BIT 的索引
+&lt;/span&gt;&lt;span class=&quot;kt&quot;&gt;bool&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;found&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;=&lt;/span&gt; &lt;span class=&quot;nb&quot;&gt;false&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;;&lt;/span&gt; 
+&lt;span class=&quot;k&quot;&gt;for&lt;/span&gt; &lt;span class=&quot;p&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;kt&quot;&gt;unsigned&lt;/span&gt; &lt;span class=&quot;kt&quot;&gt;int&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;i&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;=&lt;/span&gt; &lt;span class=&quot;mi&quot;&gt;0&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;;&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;i&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;&amp;lt;&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;queue_family_count&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;;&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;++&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;i&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;)&lt;/span&gt; &lt;span class=&quot;p&quot;&gt;{&lt;/span&gt;
+    &lt;span class=&quot;k&quot;&gt;if&lt;/span&gt; &lt;span class=&quot;p&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;queue_family_props&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;[&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;i&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;].&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;queueFlags&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;&amp;amp;&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;VK_QUEUE_GRAPHICS_BIT&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;)&lt;/span&gt; &lt;span class=&quot;p&quot;&gt;{&lt;/span&gt;
+        &lt;span class=&quot;n&quot;&gt;queue_info&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;queueFamilyIndex&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;=&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;i&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;;&lt;/span&gt;
+        &lt;span class=&quot;n&quot;&gt;found&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;=&lt;/span&gt; &lt;span class=&quot;nb&quot;&gt;true&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;;&lt;/span&gt;
+        &lt;span class=&quot;k&quot;&gt;break&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;;&lt;/span&gt;
+    &lt;span class=&quot;p&quot;&gt;}&lt;/span&gt;
+&lt;span class=&quot;p&quot;&gt;}&lt;/span&gt;
+
+&lt;span class=&quot;kt&quot;&gt;float&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;queue_priorities&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;[&lt;/span&gt;&lt;span class=&quot;mi&quot;&gt;1&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;]&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;=&lt;/span&gt; &lt;span class=&quot;p&quot;&gt;{&lt;/span&gt;&lt;span class=&quot;mf&quot;&gt;0.0&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;};&lt;/span&gt;
+&lt;span class=&quot;c1&quot;&gt;// 结构体的类型
+&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;queue_info&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;sType&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;=&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;VK_STRUCTURE_TYPE_DEVICE_QUEUE_CREATE_INFO&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;;&lt;/span&gt;
+&lt;span class=&quot;n&quot;&gt;queue_info&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;pNext&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;=&lt;/span&gt; &lt;span class=&quot;nb&quot;&gt;nullptr&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;;&lt;/span&gt;
+&lt;span class=&quot;n&quot;&gt;queue_info&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;queueCount&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;=&lt;/span&gt; &lt;span class=&quot;mi&quot;&gt;1&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;;&lt;/span&gt;
+&lt;span class=&quot;c1&quot;&gt;// Queue 的优先级
+&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;queue_info&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;pQueuePriorities&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;=&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;queue_priorities&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;;&lt;/span&gt;
+&lt;/code&gt;&lt;/pre&gt;
+&lt;/div&gt;
+
+&lt;p&gt;接下来就可以完成Queue的创建：&lt;/p&gt;
+
+&lt;div class=&quot;language-c++ highlighter-rouge&quot;&gt;&lt;pre class=&quot;highlight&quot;&gt;&lt;code&gt;&lt;span class=&quot;c1&quot;&gt;// 创建 Device 所需的相关信息类
+&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;VkDeviceCreateInfo&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;device_info&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;=&lt;/span&gt; &lt;span class=&quot;p&quot;&gt;{};&lt;/span&gt;
+
+&lt;span class=&quot;n&quot;&gt;device_info&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;sType&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;=&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;VK_STRUCTURE_TYPE_DEVICE_CREATE_INFO&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;;&lt;/span&gt;
+&lt;span class=&quot;n&quot;&gt;device_info&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;pNext&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;=&lt;/span&gt; &lt;span class=&quot;nb&quot;&gt;nullptr&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;;&lt;/span&gt;
+&lt;span class=&quot;c1&quot;&gt;// Device 所需的 Queue 相关信息
+&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;device_info&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;queueCreateInfoCount&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;=&lt;/span&gt; &lt;span class=&quot;mi&quot;&gt;1&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;;&lt;/span&gt;   &lt;span class=&quot;c1&quot;&gt;// Queue 个数
+&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;device_info&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;pQueueCreateInfos&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;=&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;&amp;amp;&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;queue_info&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;;&lt;/span&gt;    &lt;span class=&quot;c1&quot;&gt;// Queue 相关信息
+// Layer 和 Extension 暂时为空，不影响运行，后续再补上
+&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;device_info&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;enabledExtensionCount&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;=&lt;/span&gt; &lt;span class=&quot;mi&quot;&gt;0&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;;&lt;/span&gt;
+&lt;span class=&quot;n&quot;&gt;device_info&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;ppEnabledExtensionNames&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;=&lt;/span&gt; &lt;span class=&quot;nb&quot;&gt;NULL&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;;&lt;/span&gt;
+&lt;span class=&quot;n&quot;&gt;device_info&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;enabledLayerCount&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;=&lt;/span&gt; &lt;span class=&quot;mi&quot;&gt;0&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;;&lt;/span&gt;
+&lt;span class=&quot;n&quot;&gt;device_info&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;ppEnabledLayerNames&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;=&lt;/span&gt; &lt;span class=&quot;nb&quot;&gt;NULL&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;;&lt;/span&gt;
+&lt;span class=&quot;n&quot;&gt;device_info&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;pEnabledFeatures&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;=&lt;/span&gt; &lt;span class=&quot;nb&quot;&gt;NULL&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;;&lt;/span&gt;
+
+&lt;span class=&quot;n&quot;&gt;res&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;=&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;vkCreateDevice&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;gpus&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;[&lt;/span&gt;&lt;span class=&quot;mi&quot;&gt;0&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;],&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;&amp;amp;&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;device_info&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,&lt;/span&gt; &lt;span class=&quot;nb&quot;&gt;nullptr&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;&amp;amp;&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;device&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;);&lt;/span&gt;
+&lt;/code&gt;&lt;/pre&gt;
+&lt;/div&gt;
+
+&lt;h2 id=&quot;queue-组件&quot;&gt;Queue 组件&lt;/h2&gt;
+
+&lt;p&gt;完成了Device创建之后，Queue的创建也简单多了，直接调用如下函数就好了：&lt;/p&gt;
+&lt;div class=&quot;language-c++ highlighter-rouge&quot;&gt;&lt;pre class=&quot;highlight&quot;&gt;&lt;code&gt;&lt;span class=&quot;k&quot;&gt;typedef&lt;/span&gt; &lt;span class=&quot;kt&quot;&gt;void&lt;/span&gt; &lt;span class=&quot;p&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;VKAPI_PTR&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;*&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;PFN_vkGetDeviceQueue&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;)&lt;/span&gt;
+&lt;span class=&quot;p&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;VkDevice&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;device&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,&lt;/span&gt;   &lt;span class=&quot;c1&quot;&gt;// 创建的 Device 对象
+&lt;/span&gt;&lt;span class=&quot;kt&quot;&gt;uint32_t&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;queueFamilyIndex&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,&lt;/span&gt; &lt;span class=&quot;c1&quot;&gt;// queueFlags 为 VK_QUEUE_GRAPHICS_BIT 的索引
+&lt;/span&gt;&lt;span class=&quot;kt&quot;&gt;uint32_t&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;queueIndex&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,&lt;/span&gt;        
+&lt;span class=&quot;n&quot;&gt;VkQueue&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;*&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;pQueue&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;);&lt;/span&gt;       &lt;span class=&quot;c1&quot;&gt;// 要创建的 Queue
+&lt;/span&gt;
+&lt;span class=&quot;c1&quot;&gt;// 代码示例
+&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;vkGetDeviceQueue&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;info&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;device&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;info&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;graphics_queue_family_index&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,&lt;/span&gt; &lt;span class=&quot;mi&quot;&gt;0&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;&amp;amp;&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;info&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;queue&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;);&lt;/span&gt;
+&lt;/code&gt;&lt;/pre&gt;
+&lt;/div&gt;
+&lt;p&gt;组件销毁&lt;/p&gt;
+
+&lt;p&gt;完成了 Instance、Device、Queue 组件的创建之后，还有一件要做的事情就是释放它们，销毁组件。&lt;/p&gt;
+
+&lt;p&gt;按照先进后出的方式进行销毁，Instance最先创建反而最后销毁，和Device相关联的Queue当Device销毁了，Queue也随之销毁了。&lt;/p&gt;
+&lt;div class=&quot;language-c++ highlighter-rouge&quot;&gt;&lt;pre class=&quot;highlight&quot;&gt;&lt;code&gt;&lt;span class=&quot;c1&quot;&gt;// 销毁 Device
+&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;vkDestroyDevice&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;info&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;device&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,&lt;/span&gt; &lt;span class=&quot;nb&quot;&gt;nullptr&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;);&lt;/span&gt;
+&lt;span class=&quot;c1&quot;&gt;// 销毁 Instance
+&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;vkDestroyInstance&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;info&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;instance&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,&lt;/span&gt; &lt;span class=&quot;nb&quot;&gt;nullptr&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;);&lt;/span&gt;
+&lt;/code&gt;&lt;/pre&gt;
+&lt;/div&gt;
+
+&lt;h2 id=&quot;vulkan-commandbuffer&quot;&gt;Vulkan Commandbuffer&lt;/h2&gt;
+
+&lt;h3 id=&quot;command-pool-组件&quot;&gt;Command-Pool 组件&lt;/h3&gt;
+
+&lt;p&gt;在创建 Command-Buffer之前，需要创建Command-Pool组件，从Command-Pool中去分配Command-Buffer. 先创建一个VkXXXXCreateInfo的结构体&lt;/p&gt;
+
+&lt;div class=&quot;language-c++ highlighter-rouge&quot;&gt;&lt;pre class=&quot;highlight&quot;&gt;&lt;code&gt;&lt;span class=&quot;c1&quot;&gt;// 创建 Command-Pool 组件
+&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;VkCommandPool&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;command_pool&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;;&lt;/span&gt;
+&lt;span class=&quot;n&quot;&gt;VkCommandPoolCreateInfo&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;poolCreateInfo&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;=&lt;/span&gt; &lt;span class=&quot;p&quot;&gt;{};&lt;/span&gt;
+&lt;span class=&quot;n&quot;&gt;poolCreateInfo&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;sType&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;=&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;VK_STRUCTURE_TYPE_COMMAND_POOL_CREATE_INFO&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;;&lt;/span&gt;
+&lt;span class=&quot;c1&quot;&gt;// 可以看到 Command-Pool 还和 Queue 相关联
+&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;poolCreateInfo&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;queueFamilyIndex&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;=&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;info&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;graphics_queue_family_index&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;;&lt;/span&gt;
+&lt;span class=&quot;c1&quot;&gt;// 标识命令缓冲区的一些行为
+&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;poolCreateInfo&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;flags&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;=&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;VK_COMMAND_POOL_CREATE_RESET_COMMAND_BUFFER_BIT&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;;&lt;/span&gt;
+&lt;span class=&quot;c1&quot;&gt;// 具体创建函数的调用
+&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;vkCreateCommandPool&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;info&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;device&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;&amp;amp;&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;poolCreateInfo&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,&lt;/span&gt; &lt;span class=&quot;nb&quot;&gt;nullptr&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;&amp;amp;&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;command_pool&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;);&lt;/span&gt;
+
+&lt;/code&gt;&lt;/pre&gt;
+&lt;/div&gt;
+
+&lt;p&gt;有几个参数需要注意：&lt;/p&gt;
+
+&lt;ol&gt;
+  &lt;li&gt;queueFamilyIndex参数为创建Queue时选择的那个queueFlags为VK_QUEUE_GRAPHICS_BIT 的索引，从Command-Pool中分配的的Command-Buffer必须提交到同一个Queue中。&lt;/li&gt;
+  &lt;li&gt;flags 有如下的选项，分别指定了 Command-Buffer 的不同特性：&lt;/li&gt;
+&lt;/ol&gt;
+
+&lt;div class=&quot;language-c++ highlighter-rouge&quot;&gt;&lt;pre class=&quot;highlight&quot;&gt;&lt;code&gt;&lt;span class=&quot;k&quot;&gt;typedef&lt;/span&gt; &lt;span class=&quot;k&quot;&gt;enum&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;VkCommandPoolCreateFlagBits&lt;/span&gt; &lt;span class=&quot;p&quot;&gt;{&lt;/span&gt;
+    &lt;span class=&quot;n&quot;&gt;VK_COMMAND_POOL_CREATE_TRANSIENT_BIT&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;=&lt;/span&gt; &lt;span class=&quot;mh&quot;&gt;0x00000001&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,&lt;/span&gt;
+    &lt;span class=&quot;n&quot;&gt;VK_COMMAND_POOL_CREATE_RESET_COMMAND_BUFFER_BIT&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;=&lt;/span&gt; &lt;span class=&quot;mh&quot;&gt;0x00000002&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,&lt;/span&gt;
+    &lt;span class=&quot;n&quot;&gt;VK_COMMAND_POOL_CREATE_FLAG_BITS_MAX_ENUM&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;=&lt;/span&gt; &lt;span class=&quot;mh&quot;&gt;0x7FFFFFFF&lt;/span&gt;
+&lt;span class=&quot;p&quot;&gt;}&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;VkCommandPoolCreateFlagBits&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;;&lt;/span&gt;
+&lt;/code&gt;&lt;/pre&gt;
+&lt;/div&gt;
+
+&lt;ul&gt;
+  &lt;li&gt;VK_COMMAND_POOL_CREATE_TRANSIENT_BIT&lt;/li&gt;
+&lt;/ul&gt;
+
+&lt;p&gt;表示该 Command-Buffer 的寿命很短，可能在短时间内被重置或释放&lt;/p&gt;
+
+&lt;ul&gt;
+  &lt;li&gt;VK_COMMAND_POOL_CREATE_RESET_COMMAND_BUFFER_BIT&lt;/li&gt;
+&lt;/ul&gt;
+
+&lt;p&gt;表示从Command-Pool中分配的Command-Buffer可以通过vkResetCommandBuffer或者vkBeginCommandBuffer方法进行重置，如果没有设置该标识位，就不能调用vkResetCommandBuffer方法进行重置。&lt;/p&gt;
+
+&lt;h3 id=&quot;command-buffer-组件&quot;&gt;Command-Buffer 组件&lt;/h3&gt;
+
+&lt;p&gt;接下来就是从Command-Pool中分配Command-Buffer，通过VkCommandBufferAllocateInfo函数。首先需要一个VkCommandBufferAllocateInfo结构体表示分配所需要的信息。&lt;/p&gt;
+
+&lt;div class=&quot;language-c++ highlighter-rouge&quot;&gt;&lt;pre class=&quot;highlight&quot;&gt;&lt;code&gt;&lt;span class=&quot;k&quot;&gt;typedef&lt;/span&gt; &lt;span class=&quot;k&quot;&gt;struct&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;VkCommandBufferAllocateInfo&lt;/span&gt; &lt;span class=&quot;p&quot;&gt;{&lt;/span&gt;
+    &lt;span class=&quot;n&quot;&gt;VkStructureType&lt;/span&gt;         &lt;span class=&quot;n&quot;&gt;sType&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;;&lt;/span&gt;
+    &lt;span class=&quot;k&quot;&gt;const&lt;/span&gt; &lt;span class=&quot;kt&quot;&gt;void&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;*&lt;/span&gt;             &lt;span class=&quot;n&quot;&gt;pNext&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;;&lt;/span&gt;
+    &lt;span class=&quot;n&quot;&gt;VkCommandPool&lt;/span&gt;           &lt;span class=&quot;n&quot;&gt;commandPool&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;;&lt;/span&gt;    &lt;span class=&quot;c1&quot;&gt;// 对应上面创建的 command-pool
+&lt;/span&gt;    &lt;span class=&quot;n&quot;&gt;VkCommandBufferLevel&lt;/span&gt;    &lt;span class=&quot;n&quot;&gt;level&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;;&lt;/span&gt;
+    &lt;span class=&quot;kt&quot;&gt;uint32_t&lt;/span&gt;                &lt;span class=&quot;n&quot;&gt;commandBufferCount&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;;&lt;/span&gt; &lt;span class=&quot;c1&quot;&gt;// 创建的个数
+&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;}&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;VkCommandBufferAllocateInfo&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;;&lt;/span&gt;
+&lt;/code&gt;&lt;/pre&gt;
+&lt;/div&gt;
+
+&lt;p&gt;其中VkCommandBufferLevel指定Command-Buffer 的级别。&lt;/p&gt;
+
+&lt;div class=&quot;language-c++ highlighter-rouge&quot;&gt;&lt;pre class=&quot;highlight&quot;&gt;&lt;code&gt;&lt;span class=&quot;k&quot;&gt;typedef&lt;/span&gt; &lt;span class=&quot;k&quot;&gt;enum&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;VkCommandBufferLevel&lt;/span&gt; &lt;span class=&quot;p&quot;&gt;{&lt;/span&gt;
+    &lt;span class=&quot;n&quot;&gt;VK_COMMAND_BUFFER_LEVEL_PRIMARY&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;=&lt;/span&gt; &lt;span class=&quot;mi&quot;&gt;0&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,&lt;/span&gt;
+    &lt;span class=&quot;n&quot;&gt;VK_COMMAND_BUFFER_LEVEL_SECONDARY&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;=&lt;/span&gt; &lt;span class=&quot;mi&quot;&gt;1&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,&lt;/span&gt;
+    &lt;span class=&quot;n&quot;&gt;VK_COMMAND_BUFFER_LEVEL_BEGIN_RANGE&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;=&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;VK_COMMAND_BUFFER_LEVEL_PRIMARY&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,&lt;/span&gt;
+    &lt;span class=&quot;n&quot;&gt;VK_COMMAND_BUFFER_LEVEL_END_RANGE&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;=&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;VK_COMMAND_BUFFER_LEVEL_SECONDARY&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,&lt;/span&gt;
+    &lt;span class=&quot;n&quot;&gt;VK_COMMAND_BUFFER_LEVEL_RANGE_SIZE&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;=&lt;/span&gt; &lt;span class=&quot;p&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;VK_COMMAND_BUFFER_LEVEL_SECONDARY&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;-&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;VK_COMMAND_BUFFER_LEVEL_PRIMARY&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;+&lt;/span&gt; &lt;span class=&quot;mi&quot;&gt;1&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;),&lt;/span&gt;
+    &lt;span class=&quot;n&quot;&gt;VK_COMMAND_BUFFER_LEVEL_MAX_ENUM&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;=&lt;/span&gt; &lt;span class=&quot;mh&quot;&gt;0x7FFFFFFF&lt;/span&gt;
+&lt;span class=&quot;p&quot;&gt;}&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;VkCommandBufferLevel&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;;&lt;/span&gt;
+
+&lt;/code&gt;&lt;/pre&gt;
+&lt;/div&gt;
+&lt;p&gt;一般来说，使用 VK_COMMAND_BUFFER_LEVEL_PRIMARY 就好了。&lt;/p&gt;
+
+&lt;p&gt;具体创建代码如下：&lt;/p&gt;
+
+&lt;div class=&quot;language-c++ highlighter-rouge&quot;&gt;&lt;pre class=&quot;highlight&quot;&gt;&lt;code&gt;&lt;span class=&quot;n&quot;&gt;VkCommandBuffer&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;commandBuffer&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;[&lt;/span&gt;&lt;span class=&quot;mi&quot;&gt;2&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;];&lt;/span&gt;
+&lt;span class=&quot;n&quot;&gt;VkCommandBufferAllocateInfo&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;command_buffer_allocate_info&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;{};&lt;/span&gt;
+&lt;span class=&quot;n&quot;&gt;command_buffer_allocate_info&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;sType&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;=&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;;&lt;/span&gt;
+&lt;span class=&quot;n&quot;&gt;command_buffer_allocate_info&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;commandPool&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;=&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;command_pool&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;;&lt;/span&gt;
+&lt;span class=&quot;n&quot;&gt;command_buffer_allocate_info&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;commandBufferCount&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;=&lt;/span&gt; &lt;span class=&quot;mi&quot;&gt;2&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;;&lt;/span&gt;
+&lt;span class=&quot;n&quot;&gt;command_buffer_allocate_info&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;level&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;=&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;VK_COMMAND_BUFFER_LEVEL_PRIMARY&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;;&lt;/span&gt;
+&lt;span class=&quot;n&quot;&gt;vkAllocateCommandBuffers&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;info&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;device&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;&amp;amp;&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;command_buffer_allocate_info&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;commandBuffer&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;);&lt;/span&gt;
+&lt;/code&gt;&lt;/pre&gt;
+&lt;/div&gt;
+&lt;h3 id=&quot;command-buffer-的生命周期&quot;&gt;Command-Buffer 的生命周期&lt;/h3&gt;
+
+&lt;p&gt;创建了 Command-Buffer 之后，它的生命周期，如下图：&lt;/p&gt;
+
+&lt;p&gt;&lt;img src=&quot;/img/post-unity/cmd5.jpeg&quot; alt=&quot;&quot; /&gt;&lt;/p&gt;
+
+&lt;ul&gt;
+  &lt;li&gt;
+    &lt;p&gt;Initial 状态&lt;br /&gt;
+在 Command-Buffer 刚刚创建时，它就是处于初始化的状态。从此状态，可以达到Recording状态，另外，如果重置之后，也会回到该状态。&lt;/p&gt;
+  &lt;/li&gt;
+  &lt;li&gt;
+    &lt;p&gt;Recording 状态&lt;br /&gt;
+调用 vkBeginCommandBuffer 方法从Initial状态进入到该状态。一旦进入该状态后，就可以调用vkCmd*等系列方法记录命令。&lt;/p&gt;
+  &lt;/li&gt;
+  &lt;li&gt;
+    &lt;p&gt;Executable 状态&lt;br /&gt;
+调用vkEndCommandBuffer方法从Recording状态进入到该状态，此状态下，Command-Buffer可以提交或者重置。&lt;/p&gt;
+  &lt;/li&gt;
+  &lt;li&gt;
+    &lt;p&gt;Pending 状态&lt;br /&gt;
+把Command-Buffer提交到 Queue之后，就会进入到该状态。此状态下，物理设备可能正在处理记录的命令，因此不要在此时更改 Command-Buffer，当处理结束后，Command-Buffer可能会回到Executable状态或者Invalid状态。&lt;/p&gt;
+  &lt;/li&gt;
+  &lt;li&gt;
+    &lt;p&gt;Invalid 状态&lt;br /&gt;
+一些操作会使得Command-Buffer进入到此状态，该状态下，Command-Buffer只能重置、或者释放。&lt;/p&gt;
+  &lt;/li&gt;
+&lt;/ul&gt;
+
+&lt;h3 id=&quot;command-buffer-的记录与提交&quot;&gt;Command-Buffer 的记录与提交&lt;/h3&gt;
+
+&lt;p&gt;现在可以尝试着记录一些命令，提交到Queue上了，命令记录的调用过程如下图：&lt;/p&gt;
+
+&lt;p&gt;&lt;img src=&quot;/img/post-unity/cmd6.jpeg&quot; alt=&quot;&quot; /&gt;&lt;/p&gt;
+
+&lt;p&gt;在vkBeginCommandBuffer和vkEndCommandBuffer方法之间可以记录和渲染相关的命令，这里先不考虑中间的过程，直接创建提交。&lt;/p&gt;
+
+&lt;h4 id=&quot;begin-阶段&quot;&gt;begin 阶段&lt;/h4&gt;
+
+&lt;div class=&quot;language-c++ highlighter-rouge&quot;&gt;&lt;pre class=&quot;highlight&quot;&gt;&lt;code&gt;&lt;span class=&quot;n&quot;&gt;VkCommandBufferBeginInfo&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;beginInfo&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;=&lt;/span&gt; &lt;span class=&quot;p&quot;&gt;{};&lt;/span&gt;
+&lt;span class=&quot;n&quot;&gt;beginInfo&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;sType&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;=&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;;&lt;/span&gt;
+&lt;span class=&quot;n&quot;&gt;beginInfo&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;flags&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;=&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;;&lt;/span&gt;
+&lt;span class=&quot;n&quot;&gt;vkBeginCommandBuffer&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;commandBuffer&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;[&lt;/span&gt;&lt;span class=&quot;mi&quot;&gt;0&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;],&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;&amp;amp;&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;beginInfo&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;);&lt;/span&gt;
+&lt;/code&gt;&lt;/pre&gt;
+&lt;/div&gt;
+
+&lt;p&gt;首先，还是需要创建一个 VkCommandBufferBeginInfo 结构体用来表示 Command-Buffer 开始的信息。&lt;br /&gt;
+这里要注意的参数是 flags ，表示 Command-Buffer 的用途，&lt;/p&gt;
+
+&lt;div class=&quot;language-c++ highlighter-rouge&quot;&gt;&lt;pre class=&quot;highlight&quot;&gt;&lt;code&gt;&lt;span class=&quot;k&quot;&gt;typedef&lt;/span&gt; &lt;span class=&quot;k&quot;&gt;enum&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;VkCommandBufferUsageFlagBits&lt;/span&gt; &lt;span class=&quot;p&quot;&gt;{&lt;/span&gt;
+    &lt;span class=&quot;n&quot;&gt;VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;=&lt;/span&gt; &lt;span class=&quot;mh&quot;&gt;0x00000001&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,&lt;/span&gt;
+    &lt;span class=&quot;n&quot;&gt;VK_COMMAND_BUFFER_USAGE_RENDER_PASS_CONTINUE_BIT&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;=&lt;/span&gt; &lt;span class=&quot;mh&quot;&gt;0x00000002&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,&lt;/span&gt;
+    &lt;span class=&quot;n&quot;&gt;VK_COMMAND_BUFFER_USAGE_SIMULTANEOUS_USE_BIT&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;=&lt;/span&gt; &lt;span class=&quot;mh&quot;&gt;0x00000004&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,&lt;/span&gt;
+    &lt;span class=&quot;n&quot;&gt;VK_COMMAND_BUFFER_USAGE_FLAG_BITS_MAX_ENUM&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;=&lt;/span&gt; &lt;span class=&quot;mh&quot;&gt;0x7FFFFFFF&lt;/span&gt;
+&lt;span class=&quot;p&quot;&gt;}&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;VkCommandBufferUsageFlagBits&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;;&lt;/span&gt;
+&lt;/code&gt;&lt;/pre&gt;
+&lt;/div&gt;
+
+&lt;ul&gt;
+  &lt;li&gt;VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT&lt;br /&gt;
+表示该 Command-Buffer 只使用提交一次，用完之后就会被重置，并且每次提交时都需要重新记录&lt;/li&gt;
+&lt;/ul&gt;
+
+&lt;h4 id=&quot;end-阶段&quot;&gt;end 阶段&lt;/h4&gt;
+
+&lt;p&gt;直接调用 vkEndCommandBuffer 方法就可以结束记录，此时就可以提交了。&lt;/p&gt;
+
+&lt;div class=&quot;language-c++ highlighter-rouge&quot;&gt;&lt;pre class=&quot;highlight&quot;&gt;&lt;code&gt;&lt;span class=&quot;n&quot;&gt;vkEndCommandBuffer&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;commandBuffer&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;[&lt;/span&gt;&lt;span class=&quot;mi&quot;&gt;0&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;]);&lt;/span&gt;
+&lt;/code&gt;&lt;/pre&gt;
+&lt;/div&gt;
+
+&lt;h3 id=&quot;buffer-提交&quot;&gt;buffer 提交&lt;/h3&gt;
+
+&lt;p&gt;通过 vkQueueSubmit 方法将 Command-Buffer 提交到 Queue 上。&lt;/p&gt;
+
+&lt;p&gt;同样的还是需要创建一个 VkSubmitInfo 结构体：&lt;/p&gt;
+
+&lt;div class=&quot;language-c++ highlighter-rouge&quot;&gt;&lt;pre class=&quot;highlight&quot;&gt;&lt;code&gt;&lt;span class=&quot;k&quot;&gt;typedef&lt;/span&gt; &lt;span class=&quot;k&quot;&gt;struct&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;VkSubmitInfo&lt;/span&gt; &lt;span class=&quot;p&quot;&gt;{&lt;/span&gt;
+    &lt;span class=&quot;n&quot;&gt;VkStructureType&lt;/span&gt;                &lt;span class=&quot;n&quot;&gt;sType&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;;&lt;/span&gt;
+    &lt;span class=&quot;k&quot;&gt;const&lt;/span&gt; &lt;span class=&quot;kt&quot;&gt;void&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;*&lt;/span&gt;                    &lt;span class=&quot;n&quot;&gt;pNext&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;;&lt;/span&gt;
+    &lt;span class=&quot;kt&quot;&gt;uint32_t&lt;/span&gt;                       &lt;span class=&quot;n&quot;&gt;waitSemaphoreCount&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;;&lt;/span&gt;  &lt;span class=&quot;c1&quot;&gt;// 等待的 Semaphore 数量
+&lt;/span&gt;    &lt;span class=&quot;k&quot;&gt;const&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;VkSemaphore&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;*&lt;/span&gt;             &lt;span class=&quot;n&quot;&gt;pWaitSemaphores&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;;&lt;/span&gt;     &lt;span class=&quot;c1&quot;&gt;// 等待的 Semaphore 数组指针
+&lt;/span&gt;    &lt;span class=&quot;k&quot;&gt;const&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;VkPipelineStageFlags&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;*&lt;/span&gt;    &lt;span class=&quot;n&quot;&gt;pWaitDstStageMask&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;;&lt;/span&gt;       &lt;span class=&quot;c1&quot;&gt;// 在哪个阶段进行等待
+&lt;/span&gt;    &lt;span class=&quot;kt&quot;&gt;uint32_t&lt;/span&gt;                       &lt;span class=&quot;n&quot;&gt;commandBufferCount&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;;&lt;/span&gt;  &lt;span class=&quot;c1&quot;&gt;// 提交的 Command-Buffer 数量
+&lt;/span&gt;    &lt;span class=&quot;k&quot;&gt;const&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;VkCommandBuffer&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;*&lt;/span&gt;         &lt;span class=&quot;n&quot;&gt;pCommandBuffers&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;;&lt;/span&gt;      &lt;span class=&quot;c1&quot;&gt;// 具体的 Command-Buffer 数组指针
+&lt;/span&gt;    &lt;span class=&quot;kt&quot;&gt;uint32_t&lt;/span&gt;                       &lt;span class=&quot;n&quot;&gt;signalSemaphoreCount&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;;&lt;/span&gt;    &lt;span class=&quot;c1&quot;&gt;//执行结束后通知的 Semaphore 数量
+&lt;/span&gt;    &lt;span class=&quot;k&quot;&gt;const&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;VkSemaphore&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;*&lt;/span&gt;             &lt;span class=&quot;n&quot;&gt;pSignalSemaphores&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;;&lt;/span&gt;       &lt;span class=&quot;c1&quot;&gt;//执行结束后通知的 Semaphore 数组指针
+&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;}&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;VkSubmitInfo&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;;&lt;/span&gt;
+&lt;/code&gt;&lt;/pre&gt;
+&lt;/div&gt;
+&lt;p&gt;它的参数比较多，并且涉及到Command-Buffer之间的同步关系了，这里简单说一下，后面再细说这一块。&lt;/p&gt;
+
+&lt;p&gt;如下图，Vulkan 中有Semaphore、Fences、Event、Barrier四种机制来保证同步。&lt;/p&gt;
+
+&lt;p&gt;&lt;img src=&quot;/img/post-unity/cmd7.jpeg&quot; alt=&quot;&quot; /&gt;&lt;/p&gt;
+
+&lt;h3 id=&quot;semaphore-和-fence&quot;&gt;Semaphore 和 Fence&lt;/h3&gt;
+
+&lt;h4 id=&quot;semaphore&quot;&gt;Semaphore&lt;/h4&gt;
+
+&lt;p&gt;Semaphore 的作用主要是用来向 Queue 中提交 Command-Buffer 时实现同步。比如说某个 Command-Buffer-B 在执行的某个阶段中需要等待另一个 Command-Buffer-A 执行成功后的结果，同时 Command-Buffer-C 在某阶段又要要等待 Command-Buffer-B 的执行结果，那么就应该使用 Semaphore 机制实现同步；&lt;br /&gt;
+此时 Command-Buffer-B 提交到 Queue 时就需要两个 VkSemaphor ，一个表示它需要等待的 Semaphore，并且指定在哪个阶段等待；一个是它执行结束后发出通知的 Semaphore。&lt;/p&gt;
+
+&lt;h4 id=&quot;fence&quot;&gt;Fence&lt;/h4&gt;
+
+&lt;p&gt;Fence 的作用主要是用来保证物理设备和应用程序之间的同步，比如说向 Queue 中提交了 Command-Buffer 后，具体的执行交由物理设备去完成了，这是一个异步的过程，而应用程序如果要等待执行结束，就要使用 Fence 机制。&lt;br /&gt;
+Semaphore 和 Fence 有相同之处，但是使用场景却不一样，就如图所示。&lt;/p&gt;
+
+&lt;p&gt;Semaphore 和 Fence 的创建过程如下，和以往的 Vulkan 创建对象的调用方式没有太大区别：&lt;/p&gt;
+
+&lt;div class=&quot;language-c++ highlighter-rouge&quot;&gt;&lt;pre class=&quot;highlight&quot;&gt;&lt;code&gt;&lt;span class=&quot;c1&quot;&gt;// 创建 Semaphore
+&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;VkSemaphore&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;imageAcquiredSemaphore&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;;&lt;/span&gt;
+&lt;span class=&quot;n&quot;&gt;VkSemaphoreCreateInfo&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;semaphoreCreateInfo&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;=&lt;/span&gt; &lt;span class=&quot;p&quot;&gt;{};&lt;/span&gt;
+&lt;span class=&quot;n&quot;&gt;semaphoreCreateInfo&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;sType&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;=&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;VK_STRUCTURE_TYPE_SEMAPHORE_CREATE_INFO&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;;&lt;/span&gt;
+&lt;span class=&quot;n&quot;&gt;vkCreateSemaphore&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;info&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;device&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;&amp;amp;&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;semaphoreCreateInfo&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,&lt;/span&gt; &lt;span class=&quot;nb&quot;&gt;nullptr&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;&amp;amp;&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;imageAcquiredSemaphore&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;);&lt;/span&gt;
+
+&lt;span class=&quot;c1&quot;&gt;// 创建 Fence
+&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;VkFence&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;drawFence&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;;&lt;/span&gt;
+&lt;span class=&quot;n&quot;&gt;VkFenceCreateInfo&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;fenceCreateInfo&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;=&lt;/span&gt; &lt;span class=&quot;p&quot;&gt;{};&lt;/span&gt;
+&lt;span class=&quot;n&quot;&gt;fenceCreateInfo&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;sType&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;=&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;VK_STRUCTURE_TYPE_FENCE_CREATE_INFO&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;;&lt;/span&gt;
+&lt;span class=&quot;c1&quot;&gt;// 该参数表示 Fence 的状态，如果不设置或者为 0 表示 unsignaled state
+&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;fence_info&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;flags&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;=&lt;/span&gt; &lt;span class=&quot;mi&quot;&gt;0&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;;&lt;/span&gt; 
+&lt;span class=&quot;n&quot;&gt;vkCreateFence&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;info&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;device&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;&amp;amp;&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;fenceCreateInfo&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,&lt;/span&gt; &lt;span class=&quot;nb&quot;&gt;nullptr&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;&amp;amp;&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;drawFence&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;);&lt;/span&gt;
+&lt;/code&gt;&lt;/pre&gt;
+&lt;/div&gt;
+
+&lt;p&gt;继续回到 VkSubmitInfo 结构体中，如果只是简单的提交 Command-Buffer，那就不需要考虑 Semaphore 这些同步机制了，把相应的参数都设置为 nullptr，或者直接不设置也行，最后提交就好了，代码如下:&lt;/p&gt;
+
+&lt;div class=&quot;language-c++ highlighter-rouge&quot;&gt;&lt;pre class=&quot;highlight&quot;&gt;&lt;code&gt;&lt;span class=&quot;c1&quot;&gt;// 简单的提交过程
+// 开始记录
+&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;VkCommandBufferBeginInfo&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;beginInfo1&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;=&lt;/span&gt; &lt;span class=&quot;p&quot;&gt;{};&lt;/span&gt;
+&lt;span class=&quot;n&quot;&gt;beginInfo1&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;sType&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;=&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;;&lt;/span&gt;
+&lt;span class=&quot;n&quot;&gt;beginInfo1&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;flags&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;=&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;;&lt;/span&gt;
+&lt;span class=&quot;n&quot;&gt;vkBeginCommandBuffer&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;commandBuffer&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;[&lt;/span&gt;&lt;span class=&quot;mi&quot;&gt;0&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;],&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;&amp;amp;&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;beginInfo1&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;);&lt;/span&gt;
+
+&lt;span class=&quot;c1&quot;&gt;// 省略中间的 vkCmdXXXX 系列方法
+// 结束记录
+&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;vkEndCommandBuffer&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;commandBuffer&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;[&lt;/span&gt;&lt;span class=&quot;mi&quot;&gt;0&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;]);&lt;/span&gt;
+
+&lt;span class=&quot;n&quot;&gt;VkSubmitInfo&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;submitInfo1&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;=&lt;/span&gt; &lt;span class=&quot;p&quot;&gt;{};&lt;/span&gt;
+&lt;span class=&quot;n&quot;&gt;submitInfo1&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;sType&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;=&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;VK_STRUCTURE_TYPE_SUBMIT_INFO&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;;&lt;/span&gt;
+&lt;span class=&quot;c1&quot;&gt;// pWaitSemaphores 和 pSignalSemaphores 都不设置，只是提交
+&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;submitInfo1&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;commandBufferCount&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;=&lt;/span&gt; &lt;span class=&quot;mi&quot;&gt;1&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;;&lt;/span&gt;
+&lt;span class=&quot;n&quot;&gt;submitInfo1&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;pCommandBuffers&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;=&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;&amp;amp;&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;commandBuffer&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;[&lt;/span&gt;&lt;span class=&quot;mi&quot;&gt;0&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;];&lt;/span&gt;
+
+&lt;span class=&quot;c1&quot;&gt;// 注意最后的参数 临时设置为 VK_NULL_HANDLE，也可以设置为  Fence 来同步
+&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;vkQueueSubmit&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;info&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;queue&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,&lt;/span&gt; &lt;span class=&quot;mi&quot;&gt;1&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;&amp;amp;&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;submitInfo1&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;VK_NULL_HANDLE&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;);&lt;/span&gt;
+&lt;/code&gt;&lt;/pre&gt;
+&lt;/div&gt;
+
+&lt;p&gt;以上就完成了 Command-Buffer 提交到 Queue 的过程，省略了 Semaphores 和 Fences 的同步机制，当然也可以把它们加上。&lt;/p&gt;
+
+&lt;p&gt;在 vkQueueSubmit 的最后一个参数设置为了 VK_NULL_HANDLE ，这是 Vulkan 中设置为 NULL 的一个方法（其实是设置了一个整数 0 ），也可以设置了 Fence ，表示我们要等待该 Command-Buffer 在 Queue 执行结束，虽说 Command-Buffer 也可以通过 Semaphore 来表示执行结束，但这两种方式的使用场景不一样。&lt;/p&gt;
+
+&lt;p&gt;回到 Fence 的创建过程，其中有一个 flags 参数表示 Fence 的状态，有如下两种状态：&lt;/p&gt;
+
+&lt;ul&gt;
+  &lt;li&gt;signaled state&lt;br /&gt;
+如果 flags 参数为 VK_FENCE_CREATE_SIGNALED_BIT 则表示创建后处于该状态。&lt;/li&gt;
+  &lt;li&gt;unsignaled state&lt;br /&gt;
+默认的状态。&lt;br /&gt;
+当 vkQueueSubmit 的最后参数传入 Fence 后，就可以通过 Fence 等待该 Command-Buffer 执行结束。&lt;/li&gt;
+&lt;/ul&gt;
+
+&lt;p&gt;当 vkQueueSubmit 的最后参数传入 Fence 后，就可以通过 Fence 等待该 Command-Buffer 执行结束。&lt;/p&gt;
+
+&lt;div class=&quot;language-c++ highlighter-rouge&quot;&gt;&lt;pre class=&quot;highlight&quot;&gt;&lt;code&gt;&lt;span class=&quot;c1&quot;&gt;// wait fence to enter the signaled state on the host
+//  错误的 waitForFences 使用，因为它并不是一个阻塞的方法
+//  VkResult res = vkWaitForFences(info.device, 1, &amp;amp;fence, VK_TRUE, UINT64_MAX);
+&lt;/span&gt;    &lt;span class=&quot;n&quot;&gt;VkResult&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;res&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;;&lt;/span&gt;
+    &lt;span class=&quot;k&quot;&gt;do&lt;/span&gt; &lt;span class=&quot;p&quot;&gt;{&lt;/span&gt;
+        &lt;span class=&quot;n&quot;&gt;res&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;=&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;vkWaitForFences&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;info&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;device&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,&lt;/span&gt; &lt;span class=&quot;mi&quot;&gt;1&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;&amp;amp;&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;fence&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;VK_TRUE&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;UINT64_MAX&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;);&lt;/span&gt;
+    &lt;span class=&quot;p&quot;&gt;}&lt;/span&gt; &lt;span class=&quot;k&quot;&gt;while&lt;/span&gt; &lt;span class=&quot;p&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;res&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;==&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;VK_TIMEOUT&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;);&lt;/span&gt;
+&lt;/code&gt;&lt;/pre&gt;
+&lt;/div&gt;
+
+&lt;p&gt;vkWaitForFences 方法会等待Fence进入signaled state状态，该方法的调用要放在while循环中，因为它并不是一个阻塞的方法，可以理解成一个状态查询，如果结果不对，返回的是VK_TIMEOUT，结果满足要求才返回 VK_SUCCESS 。&lt;/p&gt;
+
+&lt;p&gt;当  Command-Buffer 执行结束后，传入的 Fence 参数就会从 unsignaled state 进入到 signaled state，从而触发 vkWaitForFences 调用结束循环，表明执行结束了。&lt;/p&gt;
+
+&lt;p&gt;&lt;br /&gt;&lt;br /&gt;
+参考链接:&lt;br /&gt;
+ &lt;a href=&quot;https://docs.unity3d.com/Manual/GraphicsCommandBuffers.html&quot;&gt;Unity Command buffer API&lt;/a&gt;&lt;br /&gt;
+ &lt;a href=&quot;https://www.jianshu.com/p/9ee2adb26969&quot;&gt;Vulkan 移动开发之 Command Buffer&lt;/a&gt;&lt;br /&gt;
+ &lt;a href=&quot;https://www.khronos.org/registry/vulkan/specs/1.0/pdf/vkspec.pdf&quot;&gt;vkspec.pdf&lt;/a&gt;&lt;/p&gt;
+
+</description>
+        <pubDate>Sun, 08 Sep 2019 11:00:00 +0800</pubDate>
+        <link>https://huailiang.github.io/blog/2019/vulkan/</link>
+        <guid isPermaLink="true">https://huailiang.github.io/blog/2019/vulkan/</guid>
+        
+        <category>前端开发</category>
+        
+        
+      </item>
     
       <item>
         <title>TextureArray用法</title>
@@ -222,13 +751,13 @@
 
 &lt;p&gt;&lt;br /&gt;&lt;br /&gt;
 参考链接:&lt;br /&gt;
- &lt;a href=&quot;https://www.reddit.com/r/Unity3D/comments/6uueox/gpu_instancing_texture2darray/&quot;&gt;https://www.reddit.com/r/Unity3D/comments/6uueox/gpu_instancing_texture2darray/&lt;/a&gt;&lt;br /&gt;
- &lt;a href=&quot;https://forum.unity.com/threads/instance-of-texture.500408/&quot;&gt;https://forum.unity.com/threads/instance-of-texture.500408/&lt;/a&gt;&lt;br /&gt;
- &lt;a href=&quot;https://docs.unity3d.com/Manual/SL-TextureArrays.html&quot;&gt;https://docs.unity3d.com/Manual/SL-TextureArrays.html&lt;/a&gt;&lt;br /&gt;
- &lt;a href=&quot;https://docs.unity3d.com/Manual/SL-TextureArrays.html&quot;&gt;https://docs.unity3d.com/ScriptReference/Texture2DArray.Apply.html&lt;/a&gt;&lt;br /&gt;
- &lt;a href=&quot;https://docs.unity3d.com/ScriptReference/Texture2DArray.Apply.html&quot;&gt;https://docs.unity3d.com/ScriptReference/Graphics.CopyTexture.html&lt;/a&gt;&lt;br /&gt;
- &lt;a href=&quot;https://docs.unity3d.com/ScriptReference/Graphics.CopyTexture.html&quot;&gt;https://blog.csdn.net/aa20274270/article/details/64923942&lt;/a&gt;&lt;br /&gt;
- &lt;a href=&quot;https://blog.csdn.net/aa20274270/article/details/64923942&quot;&gt;https://www.cnblogs.com/hont/p/7258615.html&lt;/a&gt;&lt;/p&gt;
+ &lt;a href=&quot;https://www.reddit.com/r/Unity3D/comments/6uueox/gpu_instancing_texture2darray/&quot;&gt;https://www.reddit.com/r/Unity3D/gpu_instancing_texture2darray&lt;/a&gt;&lt;br /&gt;
+ &lt;a href=&quot;https://forum.unity.com/threads/instance-of-texture.500408/&quot;&gt;https://forum.unity.com/threads/instance-of-texture&lt;/a&gt;&lt;br /&gt;
+ &lt;a href=&quot;https://docs.unity3d.com/Manual/SL-TextureArrays.html&quot;&gt;https://docs.unity3d.com/Manual/SL-TextureArrays&lt;/a&gt;&lt;br /&gt;
+ &lt;a href=&quot;https://docs.unity3d.com/Manual/SL-TextureArrays.html&quot;&gt;https://docs.unity3d.com/ScriptReference/Texture2DArray&lt;/a&gt;&lt;br /&gt;
+ &lt;a href=&quot;https://docs.unity3d.com/ScriptReference/Texture2DArray.Apply.html&quot;&gt;https://docs.unity3d.com/ScriptReference/Graphics.CopyTexture&lt;/a&gt;&lt;br /&gt;
+ &lt;a href=&quot;https://docs.unity3d.com/ScriptReference/Graphics.CopyTexture.html&quot;&gt;https://blog.csdn.net/aa20274270&lt;/a&gt;&lt;br /&gt;
+ &lt;a href=&quot;https://blog.csdn.net/aa20274270/article/details/64923942&quot;&gt;https://www.cnblogs.com/hont&lt;/a&gt;&lt;/p&gt;
 
 </description>
         <pubDate>Sun, 01 Sep 2019 11:00:00 +0800</pubDate>
@@ -2347,287 +2876,6 @@ $$e^{i\theta}=cos\theta+\sin\theta i\tag{1}$$  --&gt;
         <category>前端开发</category>
         
         <category>OpenGL</category>
-        
-        
-      </item>
-    
-      <item>
-        <title>各种移动GPU压缩纹理的使用方法</title>
-        <description>&lt;blockquote&gt;
-  &lt;p&gt;介绍了各种移动设备所使用的GPU，以及各个GPU所支持的压缩纹理的格式和使用方法。&lt;/p&gt;
-&lt;/blockquote&gt;
-
-&lt;h2 id=&quot;1-移动gpu大全&quot;&gt;1. 移动GPU大全&lt;/h2&gt;
-
-&lt;p&gt;目前移动市场的GPU主要有四大厂商系列：&lt;/p&gt;
-
-&lt;h4 id=&quot;1imagination-technologies的powervr-sgx系列&quot;&gt;1）Imagination Technologies的PowerVR SGX系列&lt;/h4&gt;
-
-&lt;p&gt;&lt;img src=&quot;/img/post-engine/tex1.jpg&quot; alt=&quot;&quot; /&gt;&lt;/p&gt;
-
-&lt;p&gt;代表型号：PowerVR SGX 535、PowerVR SGX 540、PowerVR SGX 543MP、PowerVR SGX 554MP等&lt;br /&gt;
-代表作  ：Apple iPhone全系、iPad全系，三星I9000、P3100等&lt;/p&gt;
-
-&lt;h4 id=&quot;2qualcomm高通的adreno系列&quot;&gt;2）Qualcomm(高通)的Adreno系列&lt;/h4&gt;
-
-&lt;p&gt;&lt;img src=&quot;/img/post-engine/tex2.jpg&quot; alt=&quot;&quot; /&gt;&lt;/p&gt;
-
-&lt;p&gt;代表型号：Adreno 200、Adreno 205、Adreno 220、Adreno 320等&lt;br /&gt;
-代表作  ：HTC G10、G14，小米1、2等&lt;/p&gt;
-
-&lt;h4 id=&quot;3arm的mali系列&quot;&gt;3）ARM的Mali系列&lt;/h4&gt;
-
-&lt;p&gt;&lt;img src=&quot;/img/post-engine/tex3.jpg&quot; alt=&quot;&quot; /&gt;&lt;/p&gt;
-
-&lt;p&gt;代表型号：Mali-400、Mali-T604等&lt;br /&gt;
-代表作  ：三星Galaxy SII、Galaxy SIII、Galaxy Note1、Galaxy Note2(亚版)等&lt;/p&gt;
-
-&lt;h4 id=&quot;4nvidia英伟达的tegra系列&quot;&gt;4）nVIDIA(英伟达)的Tegra系列&lt;/h4&gt;
-
-&lt;p&gt;&lt;img src=&quot;/img/post-engine/tex4.jpg&quot; alt=&quot;&quot; /&gt;&lt;/p&gt;
-
-&lt;p&gt;代表型号：nVIDIA Tegra2、nVIDIA Tegra3等&lt;br /&gt;
-代表作  ：Google Nexus 7，HTC One X等&lt;/p&gt;
-
-&lt;h2 id=&quot;2-压缩纹理的必要性&quot;&gt;2. 压缩纹理的必要性&lt;/h2&gt;
-
-&lt;p&gt;1）首先要说一下图像文件格式和纹理格式的区别。&lt;br /&gt;
-常用的图像文件格式有BMP，TGA，JPG，GIF，PNG等；&lt;br /&gt;
-常用的纹理格式有R5G6B5，A4R4G4B4，A1R5G5B5，R8G8B8, A8R8G8B8等。&lt;/p&gt;
-
-&lt;p&gt;文件格式是图像为了存储信息而使用的对信息的特殊编码方式，它存储在磁盘中，或者内存中，但是并不能被GPU所识别，因为以向量计算见长的GPU对于这些复杂的计算无能为力。这些文件格式当被游戏读入后，还是需要经过CPU解压成R5G6B5，A4R4G4B4，A1R5G5B5，R8G8B8, A8R8G8B8等像素格式，再传送到GPU端进行使用。&lt;br /&gt;
-纹理格式是能被GPU所识别的像素格式，能被快速寻址并采样。&lt;br /&gt;
-举个例子，DDS文件是游戏开发中常用的文件格式，它内部可以包含A4R4G4B4的纹理格式，也可以包含A8R8G8B8的纹理格式，甚至可以包含DXT1的纹理格式。在这里DDS文件有点容器的意味。&lt;/p&gt;
-
-&lt;p&gt;OpenGL ES 2.0支持以上提到的R5G6B5，A4R4G4B4，A1R5G5B5，R8G8B8，A8R8G8B8等纹理格式，其中 R5G6B5，A4R4G4B4，A1R5G5B5每个像素占用2个字节(BYTE)，R8G8B8每个像素占用3个字节，A8R8G8B8每个像素占用 4个字节。&lt;/p&gt;
-
-&lt;p&gt;&lt;img src=&quot;/img/post-engine/tex5.jpg&quot; alt=&quot;&quot; /&gt;&lt;/p&gt;
-
-&lt;p&gt;对于一张512&lt;em&gt;512的纹理的话，R5G6B5格式的文件需要占用512KB的容量，A8R8G8B8格式的文件需要占用1MB的容量；如果是1024&lt;/em&gt;1024的纹理，则各需要2M和4M的容量，这对于动辄需要几十、几百张甚至更多纹理的游戏，上G容量的游戏在移动平台上是不容易被接受的(当然，还是有1、2G的大作的，里面包含了几千张的纹理)。&lt;/p&gt;
-
-&lt;p&gt;聪明的设计师们在想，有没有其他办法，既能表现丰富的色彩和细节，又能是最小失真的情况下，达到更小的纹理容量呢。压缩纹理格式应运而生(当然，并不是在移动平台后才有的产物)。&lt;/p&gt;
-
-&lt;h2 id=&quot;3-常见的压缩纹理格式&quot;&gt;3. 常见的压缩纹理格式&lt;/h2&gt;
-&lt;p&gt;基于OpenGL ES的压缩纹理有常见的如下几种实现：&lt;br /&gt;
-1）ETC1（Ericsson texture compression)&lt;br /&gt;
-2）PVRTC (PowerVR texture compression)&lt;br /&gt;
-3）ATITC (ATI texture compression)&lt;br /&gt;
-4）S3TC (S3 texture compression)&lt;/p&gt;
-
-&lt;h4 id=&quot;etc1&quot;&gt;ETC1&lt;/h4&gt;
-&lt;p&gt;ETC1格式是OpenGL ES图形标准的一部分，并且被所有的Android设备所支持。&lt;br /&gt;
-扩展名为: GL_OES_compressed_ETC1_RGB8_texture，不支持透明通道，所以仅能用于不透明纹理。&lt;br /&gt;
-当加载压缩纹理时，&lt;internal format=&quot;&quot;&gt;参数支持如下格式：
-GL_ETC1_RGB8_OES(RGB，每个像素0.5个字节)&lt;/internal&gt;&lt;/p&gt;
-
-&lt;h4 id=&quot;pvrtc&quot;&gt;PVRTC&lt;/h4&gt;
-&lt;p&gt;支持的GPU为Imagination Technologies的PowerVR SGX系列。&lt;br /&gt;
-OpenGL ES的扩展名为: GL_IMG_texture_compression_pvrtc。&lt;br /&gt;
-当加载压缩纹理时，&lt;internal format=&quot;&quot;&gt;参数支持如下几种格式：
-GL_COMPRESSED_RGB_PVRTC_4BPPV1_IMG (RGB，每个像素0.5个字节)
-GL_COMPRESSED_RGB_PVRTC_2BPPV1_IMG (RGB，每个像素0.25个字节)
-GL_COMPRESSED_RGBA_PVRTC_4BPPV1_IMG (RGBA，每个像素0.5个字节)
-GL_COMPRESSED_RGBA_PVRTC_2BPPV1_IMG (RGBA，每个像素0.25个字节)&lt;/internal&gt;&lt;/p&gt;
-
-&lt;h4 id=&quot;atitc&quot;&gt;ATITC&lt;/h4&gt;
-&lt;p&gt;支持的GPU为Qualcomm的Adreno系列。&lt;br /&gt;
-支持的OpenGL ES扩展名为: GL_ATI_texture_compression_atitc。&lt;br /&gt;
-当加载压缩纹理时，&lt;internal format=&quot;&quot;&gt;参数支持如下类型的纹理：
-GL_ATC_RGB_AMD (RGB，每个像素0.5个字节)
-GL_ATC_RGBA_EXPLICIT_ALPHA_AMD (RGBA，每个像素1个字节)
-GL_ATC_RGBA_INTERPOLATED_ALPHA_AMD (RGBA，每个像素1个字节)&lt;/internal&gt;&lt;/p&gt;
-
-&lt;h4 id=&quot;s3tc&quot;&gt;S3TC&lt;/h4&gt;
-&lt;p&gt;也被称为DXTC，在PC上广泛被使用，但是在移动设备上还是属于新鲜事物。支持的GPU为NVIDIA Tegra系列。&lt;br /&gt;
-OpenGL ES扩展名为:&lt;br /&gt;
-GL_EXT_texture_compression_dxt1和GL_EXT_texture_compression_s3tc。&lt;br /&gt;
-当加载压缩纹理时，&lt;internal format=&quot;&quot;&gt;的参数有如下几种格式：
-GL_COMPRESSED_RGB_S3TC_DXT1 (RGB，每个像素0.5个字节)
-GL_COMPRESSED_RGBA_S3TC_DXT1 (RGBA，每个像素0.5个字节)
-GL_COMPRESSED_RGBA_S3TC_DXT3 (RGBA，每个像素1个字节)
-GL_COMPRESSED_RGBA_S3TC_DXT5 (RGBA，每个像素1个字节)&lt;/internal&gt;&lt;/p&gt;
-
-&lt;p&gt;由此可见，Mali系列GPU只支持ETC1格式的压缩纹理，而且该纹理不支持透明通道，有一定局限性。&lt;/p&gt;
-
-&lt;p&gt;以上压缩纹理格式每个像素大小相对A8R8G8B8格式的比例，最高压缩比是16:1，最低压缩比是4:1，对于减小纹理的数据容量有明显作用，相应在显存带宽上也有明显优势，从而提高游戏的运行效率(此特性没有绝对数值，根据每个游戏的用法和瓶颈点不同而有差别)。&lt;/p&gt;
-
-&lt;h2 id=&quot;4-opengl中相关api的使用&quot;&gt;4. OpenGL中相关API的使用&lt;/h2&gt;
-
-&lt;p&gt;1） 获得GPU的型号&lt;/p&gt;
-
-&lt;div class=&quot;language-cpp highlighter-rouge&quot;&gt;&lt;pre class=&quot;highlight&quot;&gt;&lt;code&gt;&lt;span class=&quot;n&quot;&gt;glGetString&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;GL_RENDERER&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;)&lt;/span&gt;
-&lt;/code&gt;&lt;/pre&gt;
-&lt;/div&gt;
-
-&lt;p&gt;2） 获得GPU的生产厂商&lt;/p&gt;
-
-&lt;div class=&quot;language-cpp highlighter-rouge&quot;&gt;&lt;pre class=&quot;highlight&quot;&gt;&lt;code&gt;&lt;span class=&quot;n&quot;&gt;glGetString&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;GL_VENDOR&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;);&lt;/span&gt;
-&lt;/code&gt;&lt;/pre&gt;
-&lt;/div&gt;
-
-&lt;p&gt;3） 获取GPU支持哪些压缩纹理&lt;/p&gt;
-
-&lt;div class=&quot;language-cpp highlighter-rouge&quot;&gt;&lt;pre class=&quot;highlight&quot;&gt;&lt;code&gt;&lt;span class=&quot;n&quot;&gt;string&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;extensions&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;=&lt;/span&gt; &lt;span class=&quot;p&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;k&quot;&gt;const&lt;/span&gt; &lt;span class=&quot;kt&quot;&gt;char&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;*&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;)&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;glGetString&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;GL_EXTENSIONS&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;);&lt;/span&gt;
-&lt;/code&gt;&lt;/pre&gt;
-&lt;/div&gt;
-
-&lt;p&gt;a. 判断是否支持ETC1格式的压缩纹理&lt;/p&gt;
-
-&lt;div class=&quot;language-cpp highlighter-rouge&quot;&gt;&lt;pre class=&quot;highlight&quot;&gt;&lt;code&gt;&lt;span class=&quot;k&quot;&gt;return&lt;/span&gt; &lt;span class=&quot;p&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;extensions&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;find&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;err&quot;&gt;“&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;GL_OES_compressed_ETC1_RGB8_texture&lt;/span&gt;&lt;span class=&quot;err&quot;&gt;”&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;)&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;!=&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;string&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;::&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;npos&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;);&lt;/span&gt;
-&lt;/code&gt;&lt;/pre&gt;
-&lt;/div&gt;
-
-&lt;p&gt;b. 判断是否支持DXT格式的压缩纹理&lt;/p&gt;
-
-&lt;div class=&quot;language-cpp highlighter-rouge&quot;&gt;&lt;pre class=&quot;highlight&quot;&gt;&lt;code&gt;&lt;span class=&quot;k&quot;&gt;return&lt;/span&gt; &lt;span class=&quot;p&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;extensions&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;find&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;err&quot;&gt;“&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;GL_EXT_texture_compression_dxt1&lt;/span&gt;&lt;span class=&quot;err&quot;&gt;”&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;)&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;!=&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;string&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;::&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;npos&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;||&lt;/span&gt;
-    &lt;span class=&quot;n&quot;&gt;extensions&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;find&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;err&quot;&gt;“&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;GL_EXT_texture_compression_s3tc&lt;/span&gt;&lt;span class=&quot;err&quot;&gt;”&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;)&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;!=&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;string&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;::&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;npos&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;);&lt;/span&gt;
-&lt;/code&gt;&lt;/pre&gt;
-&lt;/div&gt;
-
-&lt;p&gt;c. 判断是否支持PVRTC格式的压缩纹理&lt;/p&gt;
-
-&lt;div class=&quot;language-cpp highlighter-rouge&quot;&gt;&lt;pre class=&quot;highlight&quot;&gt;&lt;code&gt;&lt;span class=&quot;k&quot;&gt;return&lt;/span&gt; &lt;span class=&quot;p&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;extensions&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;find&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;err&quot;&gt;“&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;GL_IMG_texture_compression_pvrtc&lt;/span&gt;&lt;span class=&quot;err&quot;&gt;”&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;)&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;!=&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;string&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;::&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;npos&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;);&lt;/span&gt;
-&lt;/code&gt;&lt;/pre&gt;
-&lt;/div&gt;
-
-&lt;p&gt;d. 判断是否支持ATITC格式的压缩纹理&lt;/p&gt;
-
-&lt;div class=&quot;language-cpp highlighter-rouge&quot;&gt;&lt;pre class=&quot;highlight&quot;&gt;&lt;code&gt;&lt;span class=&quot;k&quot;&gt;return&lt;/span&gt; &lt;span class=&quot;p&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;extensions&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;find&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;err&quot;&gt;“&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;GL_AMD_compressed_ATC_texture&lt;/span&gt;&lt;span class=&quot;err&quot;&gt;”&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;)&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;!=&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;string&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;::&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;npos&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;||&lt;/span&gt;
-    &lt;span class=&quot;n&quot;&gt;extensions&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;find&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;err&quot;&gt;“&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;GL_ATI_texture_compression_atitc&lt;/span&gt;&lt;span class=&quot;err&quot;&gt;”&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;)&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;!=&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;string&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;::&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;npos&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;);&lt;/span&gt;
-&lt;/code&gt;&lt;/pre&gt;
-&lt;/div&gt;
-
-&lt;p&gt;4） 填充压缩纹理数据&lt;/p&gt;
-
-&lt;div class=&quot;language-cpp highlighter-rouge&quot;&gt;&lt;pre class=&quot;highlight&quot;&gt;&lt;code&gt;&lt;span class=&quot;kt&quot;&gt;void&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;glCompressedTexImage2D&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;(&lt;/span&gt;
-        &lt;span class=&quot;n&quot;&gt;GLenum&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;target&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,&lt;/span&gt;
-        &lt;span class=&quot;n&quot;&gt;GLint&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;level&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,&lt;/span&gt;
-        &lt;span class=&quot;n&quot;&gt;GLenum&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;internalformat&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,&lt;/span&gt;
-        &lt;span class=&quot;n&quot;&gt;GLsizei&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;width&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,&lt;/span&gt;
-        &lt;span class=&quot;n&quot;&gt;GLsizei&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;height&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,&lt;/span&gt;
-        &lt;span class=&quot;n&quot;&gt;GLint&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;border&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,&lt;/span&gt;
-        &lt;span class=&quot;n&quot;&gt;GLsizei&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;imageSize&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,&lt;/span&gt;
-        &lt;span class=&quot;k&quot;&gt;const&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;GLvoid&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;*&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;data&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;);&lt;/span&gt;
-&lt;/code&gt;&lt;/pre&gt;
-&lt;/div&gt;
-
-&lt;p&gt;这里的参数不做详细解释，其中internalformat即是压缩纹理格式的类型。&lt;/p&gt;
-
-&lt;p&gt;查看设备支持的texture压缩格式，可以使用如下代码获取：&lt;/p&gt;
-
-&lt;div class=&quot;language-cpp highlighter-rouge&quot;&gt;&lt;pre class=&quot;highlight&quot;&gt;&lt;code&gt;&lt;span class=&quot;kt&quot;&gt;int&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;num_formats&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;;&lt;/span&gt;
-&lt;span class=&quot;n&quot;&gt;glGetIntegerv&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;GL_NUM_COMPRESSED_TEXTURE_FORMATS&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;&amp;amp;&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;num_formats&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;);&lt;/span&gt;
-&lt;span class=&quot;n&quot;&gt;std&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;::&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;cout&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;&amp;lt;&amp;lt;&lt;/span&gt;&lt;span class=&quot;s&quot;&gt;&quot;Texture extensions: &quot;&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;&amp;lt;&amp;lt;&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;num_formats&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;&amp;lt;&amp;lt;&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;std&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;::&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;endl&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;;&lt;/span&gt;
-
-&lt;span class=&quot;kt&quot;&gt;int&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;*&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;formats&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;=&lt;/span&gt; &lt;span class=&quot;p&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;kt&quot;&gt;int&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;*&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;)&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;alloca&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;num_formats&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;*&lt;/span&gt; &lt;span class=&quot;k&quot;&gt;sizeof&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;kt&quot;&gt;int&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;));&lt;/span&gt;
-&lt;span class=&quot;n&quot;&gt;glGetIntegerv&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;GL_COMPRESSED_TEXTURE_FORMATS&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;formats&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;);&lt;/span&gt;
-&lt;span class=&quot;k&quot;&gt;for&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;kt&quot;&gt;int&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;i&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;=&lt;/span&gt;&lt;span class=&quot;mi&quot;&gt;0&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;;&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;i&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;&amp;lt;&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;num_formats&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;;&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;i&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;++&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;)&lt;/span&gt;
-&lt;span class=&quot;p&quot;&gt;{&lt;/span&gt;
-    &lt;span class=&quot;n&quot;&gt;std&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;::&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;cout&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;&amp;lt;&amp;lt;&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;i&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;&amp;lt;&amp;lt;&lt;/span&gt;&lt;span class=&quot;s&quot;&gt;&quot; 0x&quot;&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;&amp;lt;&amp;lt;&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;hex&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;&amp;lt;&amp;lt;&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;formats&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;[&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;i&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;]&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;&amp;lt;&amp;lt;&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;dec&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;&amp;lt;&amp;lt;&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;std&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;::&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;endl&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;;&lt;/span&gt;
-&lt;span class=&quot;p&quot;&gt;}&lt;/span&gt; 
-&lt;/code&gt;&lt;/pre&gt;
-&lt;/div&gt;
-
-&lt;p&gt;需要注意的是，使用glCompressedTexImage2D时(PVRTC)，FilterMode不能设置为 GL_LINEAR_MIPMAP_LINEAR, 否则的话加载出来的画线显示黑色, &lt;a href=&quot;https://stackoverflow.com/questions/14488005/pvrtc-texture-with-mipmaps-stays-black&quot;&gt;这里&lt;/a&gt;有提到, 就是这个问题困扰了我一大天。&lt;/p&gt;
-
-&lt;div class=&quot;language-cpp highlighter-rouge&quot;&gt;&lt;pre class=&quot;highlight&quot;&gt;&lt;code&gt;&lt;span class=&quot;c1&quot;&gt;// 能正确加载PVRTC
-&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;glTexParameteri&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;GL_TEXTURE_2D&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;GL_TEXTURE_MIN_FILTER&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;GL_LINEAR&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;);&lt;/span&gt;
-
-&lt;span class=&quot;c1&quot;&gt;// 不能正确加载
-&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;glTexParameteri&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;GL_TEXTURE_2D&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;GL_TEXTURE_MIN_FILTER&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;GL_LINEAR_MIPMAP_LINEAR&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;);&lt;/span&gt;
-&lt;/code&gt;&lt;/pre&gt;
-&lt;/div&gt;
-
-&lt;h2 id=&quot;5-压缩纹理工具的使用&quot;&gt;5. 压缩纹理工具的使用&lt;/h2&gt;
-
-&lt;p&gt;每种压缩纹理以及相应的厂商都提供了压缩纹理的工具，工具都分两个版本：&lt;br /&gt;
-a. 可视化转换工具 (给美工或小白少量使用)&lt;br /&gt;
-b. 命令行转换工具 (给程序批量使用)&lt;/p&gt;
-
-&lt;p&gt;下面对每个工具的用法进行说明。&lt;/p&gt;
-
-&lt;h3 id=&quot;1imagination-technologies-powervr&quot;&gt;1）Imagination Technologies PowerVR&lt;/h3&gt;
-&lt;p&gt;工具&lt;a href=&quot;http://www.imgtec.com/powervr/insider/sdkdownloads/index.asp?installer=Windows%20Installer&quot;&gt;下载地址&lt;/a&gt;&lt;/p&gt;
-
-&lt;p&gt;&lt;img src=&quot;/img/post-engine/tex6.jpg&quot; alt=&quot;&quot; /&gt;&lt;/p&gt;
-
-&lt;p&gt;命令行转换脚本&lt;/p&gt;
-
-&lt;pre&gt;&lt;code class=&quot;language-bat&quot;&gt;@echo off
-for %%i in (*.tga) do PVRTexTool.exe -f PVRTC4 -i %%i
-pause
-&lt;/code&gt;&lt;/pre&gt;
-
-&lt;p&gt;(将本目录下的所有tga文件，转换成”PVRTC4″编码格式的pvr文件，不带mipmap)&lt;/p&gt;
-
-&lt;p&gt;在mac平台下，也可以使用xcode 自带的texturetool，结合命令行的方式来进行格式转换.&lt;/p&gt;
-
-&lt;div class=&quot;language-sh highlighter-rouge&quot;&gt;&lt;pre class=&quot;highlight&quot;&gt;&lt;code&gt;&lt;span class=&quot;nv&quot;&gt;IXCODE&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;=&lt;/span&gt;&lt;span class=&quot;sb&quot;&gt;`&lt;/span&gt;xcode-select -print-path&lt;span class=&quot;sb&quot;&gt;`&lt;/span&gt;
-&lt;span class=&quot;nv&quot;&gt;ISDK&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;=&lt;/span&gt;&lt;span class=&quot;nv&quot;&gt;$IXCODE&lt;/span&gt;/Platforms/iPhoneOS.platform/Developer
-&lt;span class=&quot;nv&quot;&gt;ITEXTURE&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;=&lt;/span&gt;&lt;span class=&quot;nv&quot;&gt;$ISDK&lt;/span&gt;/usr/bin/texturetool
-
-&lt;span class=&quot;c&quot;&gt;# ${1} 代表外部传入的图片路径&lt;/span&gt;
-&lt;span class=&quot;k&quot;&gt;${&lt;/span&gt;&lt;span class=&quot;nv&quot;&gt;ITEXTURE&lt;/span&gt;&lt;span class=&quot;k&quot;&gt;}&lt;/span&gt;  -m -f pvr -e PVRTC 
-    --bits-per-pixel-2 &lt;span class=&quot;k&quot;&gt;${&lt;/span&gt;&lt;span class=&quot;nv&quot;&gt;1&lt;/span&gt;&lt;span class=&quot;k&quot;&gt;}&lt;/span&gt; 
-    -o &lt;span class=&quot;k&quot;&gt;${&lt;/span&gt;&lt;span class=&quot;nv&quot;&gt;1&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;%%.*&lt;/span&gt;&lt;span class=&quot;k&quot;&gt;}&lt;/span&gt;&lt;span class=&quot;s2&quot;&gt;&quot;.pvr&quot;&lt;/span&gt; 
-    -p &lt;span class=&quot;k&quot;&gt;${&lt;/span&gt;&lt;span class=&quot;nv&quot;&gt;1&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;%%.*&lt;/span&gt;&lt;span class=&quot;k&quot;&gt;}&lt;/span&gt;&lt;span class=&quot;s2&quot;&gt;&quot;_prev.pvr&quot;&lt;/span&gt;
-&lt;/code&gt;&lt;/pre&gt;
-&lt;/div&gt;
-
-&lt;p&gt;你可以在&lt;a href=&quot;https://github.com/huailiang/OpenGLEngine/blob/dev/tools/texture.sh&quot;&gt;这里&lt;/a&gt;下载到完整的脚本.&lt;/p&gt;
-
-&lt;h3 id=&quot;2qualcomm-adreno&quot;&gt;2）Qualcomm Adreno&lt;/h3&gt;
-&lt;p&gt;工具&lt;a href=&quot;https://developer.qualcomm.com/mobile-development/mobile-technologies/gaming-graphics-optimization-adreno/tools-and-resources&quot;&gt;下载地址&lt;/a&gt;&lt;/p&gt;
-
-&lt;p&gt;&lt;img src=&quot;/img/post-engine/tex7.jpg&quot; alt=&quot;&quot; /&gt;&lt;/p&gt;
-
-&lt;p&gt;命令行转换脚本&lt;/p&gt;
-
-&lt;pre&gt;&lt;code class=&quot;language-bat&quot;&gt;@echo off
-for %%i in (*.tga) do QCompressCmd.exe %%i %%i.ktx “ATC RGBA Explicit” yes
-pause
-&lt;/code&gt;&lt;/pre&gt;
-
-&lt;p&gt;(将本目录下的所有tga文件，转换成”ATC RGBA Explicit”编码格式的ktx文件，带mipmap)&lt;/p&gt;
-
-&lt;h3 id=&quot;3arm-mali&quot;&gt;3）ARM Mali&lt;/h3&gt;
-&lt;p&gt;工具&lt;a href=&quot;http://malideveloper.arm.com/develop-for-mali/mali-gpu-texture-compression-tool/&quot;&gt;下载地址&lt;/a&gt;&lt;/p&gt;
-
-&lt;p&gt;&lt;img src=&quot;/img/post-engine/tex8.jpg&quot; alt=&quot;&quot; /&gt;&lt;/p&gt;
-
-&lt;p&gt;命令行转换脚本&lt;/p&gt;
-
-&lt;pre&gt;&lt;code class=&quot;language-bat&quot;&gt;@echo off
-for %%i in (*.tga) do PVRTexTool.exe -f ETC -i %%i
-pause
-&lt;/code&gt;&lt;/pre&gt;
-
-&lt;p&gt;(将本目录下的所有tga文件，转换成”ETC”编码格式的pvr文件，不带mipmap这里还是使用的PVRTexTool.exe，也可以使用QCompressCmd.exe)&lt;/p&gt;
-
-&lt;h3 id=&quot;4nvidia-tegra&quot;&gt;4）nVIDIA Tegra&lt;/h3&gt;
-&lt;p&gt;可以使用DirectX SDK中自带的DirectX Texture Tool进行转换&lt;/p&gt;
-
-&lt;p&gt;&lt;img src=&quot;/img/post-engine/tex9.jpg&quot; alt=&quot;&quot; /&gt;&lt;/p&gt;
-
-&lt;p&gt;命令行转换脚本&lt;/p&gt;
-
-&lt;pre&gt;&lt;code class=&quot;language-bat&quot;&gt;@echo off
-for %%i in (*.tga) do texconv.exe -f DXT5 %%i
-pause
-&lt;/code&gt;&lt;/pre&gt;
-
-&lt;p&gt;(将本目录下的所有tga文件，转换成”DXT5″编码格式的dds文件，不带mipmap)&lt;/p&gt;
-
-</description>
-        <pubDate>Wed, 19 Jun 2019 11:00:00 +0800</pubDate>
-        <link>https://huailiang.github.io/blog/2019/texture/</link>
-        <guid isPermaLink="true">https://huailiang.github.io/blog/2019/texture/</guid>
-        
-        <category>前端开发</category>
-        
-        <category>OpenGL</category>
-        
-        <category>工具</category>
         
         
       </item>

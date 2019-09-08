@@ -71,6 +71,30 @@ MathJax.Hub.Config({
     <article class="post">
   <header class="post-header">
     <h1 class="post-title2">
+      <a class="post-link" href="/blog/2019/vulkan/">Valkan 基础渲染流程</a>
+    </h1>
+    <div class="post-meta">
+      <time>Sep 8, 2019</time>
+    </div>
+  </header>
+
+  <p><a href="/blog/2019/vulkan/" title="Permalink to: Valkan 基础渲染流程"
+      class="read-more">Vulkan Render
+
+Vulkan 中的重要组件以及它们的工作流程如下图所示，接下来的文章中会针对每个组件进行学习讲解并配上相关的示例代码，首先是 Instance、Device 和 Queue 组件。
+
+
+
+Instance 组件
+
+在开始创建Device等组件之前，需要创建一个VkInstance对象。
+
+通过vkCreateInstance方法创建VKInstance对象，以下...</a></p>
+</article>
+  
+    <article class="post">
+  <header class="post-header">
+    <h1 class="post-title2">
       <a class="post-link" href="/blog/2019/texturearray/">TextureArray用法</a>
     </h1>
     <div class="post-meta">
@@ -202,28 +226,6 @@ AssetBundle文件的layout...</a></p>
   <p><a href="/blog/2019/harmonics/" title="Permalink to: 球谐光照"
       class="read-more">
   游戏中的光照可以被简单分为两个部分，直接光和间接光。直接光中我们研究各种不同的BRDF材质，甚至BSDF，BSSSRDF等等。这些模型据有很不错的表现力，足够我们区分金属，皮肤，木头等等不同物体的着色表现。但这并不能满足我们，因为光并不是那么简单，光会被反射，会被折射，会被透射，会被吸收，所以物体的受光情况同时又由这个场景的其他物体决定，这部分光照同时拥有着更加富强的表现力，被我们称作...</a></p>
-</article>
-  
-    <article class="post">
-  <header class="post-header">
-    <h1 class="post-title2">
-      <a class="post-link" href="/blog/2019/ibl2/">PBR之基于图像的光照IBL (Specular)</a>
-    </h1>
-    <div class="post-meta">
-      <time>Jun 27, 2019</time>
-    </div>
-  </header>
-
-  <p><a href="/blog/2019/ibl2/" title="Permalink to: PBR之基于图像的光照IBL (Specular)"
-      class="read-more">理论
-
-Hammersley采样
-
-
-  在图形学里面，用到了很多的采样算法。特别当你在写一个光线追踪器的时候，会使用大量的采样算法来对BRDF，光源等进行采样。这些采样操作，一般是先通过创建一个具有均匀分布的2D随机点集合，然后通过变换，将这些2D随机点变换到具体的采样数据上去，如BRDF的方向等等。其中经常被使用到的均匀分布的2D随机采样方式–Hammersley采样。
-
-
-Hammer...</a></p>
 </article>
   
 
