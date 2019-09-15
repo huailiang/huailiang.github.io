@@ -4,7 +4,7 @@ title:      "Mac 下使用 Homebrew"
 date:       2018-02-26 12:00:00
 author:     "Huailiang"
 tags:
-    - OSX
+    - 工具
 ---
 
 

@@ -8,10 +8,7 @@ tags:
 ---
 
 
-## Vulkan Render
-
-
- Vulkan 中的重要组件以及它们的工作流程如下图所示，接下来的文章中会针对每个组件进行学习讲解并配上相关的示例代码，首先是 Instance、Device 和 Queue 组件。
+ Vulkan 中的重要组件以及它们的工作流程如下图所示，接下来的文章中会针对每个组件进行学习讲解并配上相关的示例代码，首先是Instance、Device和Queue组件。
 
 ![](/img/post-unity/cmd4.jpeg)
 
@@ -31,10 +28,9 @@ VkInstance* pInstance);                // 创建的实例
 ```
 
 
- Queue组件是用来和物理设备沟通的桥梁，而具体的沟通过程就需要Command-Buffer（命令缓冲区）组件，它是若干命令的集合，我们向 Queue提交Command-Buffer，然后才交由物理设备 GPU 进行处理。
+ Queue组件是用来和物理设备沟通的桥梁，而具体的沟通过程就需要Command-Buffer（命令缓冲区）组件，它是若干命令的集合，我们向Queue提交Command-Buffer，然后才交由物理设备GPU进行处理。
 
-
-在 vkCreateInstance 函数中看到有个名为 VkInstanceCreateInfo 类型的参数，这就是包含了 VKInstance 要创建的信息。
+在vkCreateInstance函数中看到有个名为VkInstanceCreateInfo类型的参数，这就是包含了VKInstance要创建的信息。
 
 它的参数信息有点多：
 ```c++
@@ -51,15 +47,12 @@ typedef struct VkInstanceCreateInfo {
 ```
 
 
-除了还需要创建一个VkApplicationInfo对象，还可以设置Layer和Extension。
-其中：Layer 是用来错误校验、调试输出的。为了提供性能，其中的方法之一就是减少驱动进行状态、错误校验，而 Vulkan 就把这一层单独抽出来了。
+除了还需要创建一个VkApplicationInfo对象，还可以设置Layer和Extension。其中：Layer是用来错误校验、调试输出的。为了提供性能，其中的方法之一就是减少驱动进行状态、错误校验，而 Vulkan 就把这一层单独抽出来了。
 
 <center><img src="/img/post-unity/cmd3.jpg"></center><br>
 
 
-Layer 在整个架构中的位置如上图，Vulkan API直接和驱动对话，而Layer处于应用和Vulkan API之间，供开发者进行调试。
-
-另外，Extension就是Vulkan支持的拓展，最典型的就是Vulkan的跨平台渲染显示，就是通过拓展来完成的，比如在Android、Windows上使用Vulkan都需要使用不同的拓展才可以把内容显示到屏幕上。
+Layer 在整个架构中的位置如上图，Vulkan API直接和驱动对话，而Layer处于应用和Vulkan API之间，供开发者进行调试。另外，Extension就是Vulkan支持的拓展，最典型的就是Vulkan的跨平台渲染显示，就是通过拓展来完成的，比如在Android、Windows上使用Vulkan都需要使用不同的拓展才可以把内容显示到屏幕上。
 
 
 VkApplicationInfo 结构体，也是创建 Instance 的必要参数之一
@@ -76,7 +69,7 @@ typedef struct VkApplicationInfo {
 } VkApplicationInfo;
 ```
 
-参数释义就比较容易理解了，设置应用的名称、版本号等，有了它们就可以创建Instance对象了 。
+参数释义就比较容易理解了，设置应用的名称、版本号等，有了它们就可以创建Instance对象了。
 
 ```c++
 VkApplicationInfo app_info = {};
@@ -104,11 +97,7 @@ instance_info.enabledLayerCount = 0;
 VkResult result = vkCreateInstance(&instance_info, nullptr, &instance);
 ```
 
-当每调用一个创建函数后，返回的类型都是VkResult，只要VkResult大于0，那么执行就是成功的。
-
-另外还有个参数是VkAllocationCallbacks，表示函数调用时的回调，需要传递一个函数指针，在后面的各种调用中都会看到它的身影，如果有用到可以传参，一般为nullptr就好了。
-
-关于每个结构体，它每个参数的具体释义，参考[vkspec.pdf][i3] ，里面有对每个参数、结构体的详细释义。
+当每调用一个创建函数后，返回的类型都是VkResult，只要VkResult大于0，那么执行就是成功的。另外还有个参数是VkAllocationCallbacks，表示函数调用时的回调，需要传递一个函数指针，在后面的各种调用中都会看到它的身影，如果有用到可以传参，一般为nullptr就好了。关于每个结构体，它每个参数的具体释义，参考[vkspec.pdf][i3]，里面有对每个参数、结构体的详细释义。
 
 
 ## Device 组件
@@ -131,10 +120,8 @@ gpus.resize(gpu_size);
 // 第二次调用获得所有的数据
 res = vkEnumeratePhysicalDevices(instance, &gpu_size, gpus.data());
 ```
-当再一次调用vkEnumeratePhysicalDevices函数时，第三个参数不为null，而是相应的VkPhysicalDevice容器，那么gpus会填充 gpu_size个的VkPhysicalDevice对象。
 
-
-这也算是Vulkan API调用的一个固定套路了，调用两次来获得数据，在后面的代码中也会经常看到这种方式。有了VkPhysicalDevice对象之后，可以查询VkPhysicalDevice上的一些属性，以下函数都可以查询相关信息：
+当再一次调用vkEnumeratePhysicalDevices函数时，第三个参数不为null，而是相应的VkPhysicalDevice容器，那么gpus会填充 gpu_size个的VkPhysicalDevice对象。这也算是Vulkan API调用的一个固定套路了，调用两次来获得数据，在后面的代码中也会经常看到这种方式。有了VkPhysicalDevice对象之后，可以查询VkPhysicalDevice上的一些属性，以下函数都可以查询相关信息：
 
 * vkGetPhysicalDeviceQueueFamilyProperties
 * vkGetPhysicalDeviceMemoryProperties
@@ -182,9 +169,7 @@ typedef enum VkQueueFlagBits {
 typedef VkFlags VkQueueFlags;
 ```
 
-一般来说，我们用的是queueFlags为VK_QUEUE_GRAPHICS_BIT标识位的Queue。那么Queue究竟是什么？物理设备可能会有多个 Queue，不同的 Queue 对应不同的特性。
-
-在文章最开始的图中可以看到，Command-buffer是提交到了Queue，Queue再提交给Device去执行。Queue可以看成是应用程序和物理设备沟通的桥梁，我们在Queue上提交命令，然后再交由GPU去执行。
+一般来说，我们用的是queueFlags为VK_QUEUE_GRAPHICS_BIT标识位的Queue。那么Queue究竟是什么？物理设备可能会有多个 Queue，不同的 Queue 对应不同的特性。在文章最开始的图中可以看到，Command-buffer是提交到了Queue，Queue再提交给Device去执行。Queue可以看成是应用程序和物理设备沟通的桥梁，我们在Queue上提交命令，然后再交由GPU去执行。
 
 
 ## Device 组件
@@ -203,7 +188,6 @@ for (unsigned int i = 0; i < queue_family_count; ++i) {
         break;
     }
 }
-
 float queue_priorities[1] = {0.0};
 // 结构体的类型
 queue_info.sType = VK_STRUCTURE_TYPE_DEVICE_QUEUE_CREATE_INFO;
@@ -243,15 +227,13 @@ typedef void (VKAPI_PTR *PFN_vkGetDeviceQueue)
 uint32_t queueFamilyIndex, // queueFlags 为 VK_QUEUE_GRAPHICS_BIT 的索引
 uint32_t queueIndex,        
 VkQueue* pQueue);       // 要创建的 Queue
-
-// 代码示例
 vkGetDeviceQueue(info.device, info.graphics_queue_family_index, 0, &info.queue);
 ```
-组件销毁
 
-完成了 Instance、Device、Queue 组件的创建之后，还有一件要做的事情就是释放它们，销毁组件。
 
+完成了Instance、Device、Queue组件的创建之后，还有一件要做的事情就是释放它们，销毁组件。
 按照先进后出的方式进行销毁，Instance最先创建反而最后销毁，和Device相关联的Queue当Device销毁了，Queue也随之销毁了。
+
 ```c++
 // 销毁 Device
 vkDestroyDevice(info.device, nullptr);
@@ -262,9 +244,7 @@ vkDestroyInstance(info.instance, nullptr);
 
 ## Vulkan Commandbuffer
 
-
 ### Command-Pool 组件
-
 
 在创建 Command-Buffer之前，需要创建Command-Pool组件，从Command-Pool中去分配Command-Buffer. 先创建一个VkXXXXCreateInfo的结构体
 
@@ -279,13 +259,12 @@ poolCreateInfo.queueFamilyIndex = info.graphics_queue_family_index;
 poolCreateInfo.flags = VK_COMMAND_POOL_CREATE_RESET_COMMAND_BUFFER_BIT;
 // 具体创建函数的调用
 vkCreateCommandPool(info.device, &poolCreateInfo, nullptr, &command_pool);
-
 ```
 
 有几个参数需要注意：
 
-1. queueFamilyIndex参数为创建Queue时选择的那个queueFlags为VK_QUEUE_GRAPHICS_BIT 的索引，从Command-Pool中分配的的Command-Buffer必须提交到同一个Queue中。
-2. flags 有如下的选项，分别指定了 Command-Buffer 的不同特性：
+ 1. queueFamilyIndex参数为创建Queue时选择的那个queueFlags为VK_QUEUE_GRAPHICS_BIT 的索引，从Command-Pool中分配的的Command-Buffer必须提交到同一个Queue中。
+ 2. flags 有如下的选项，分别指定了 Command-Buffer 的不同特性：
 
 ```c++
 typedef enum VkCommandPoolCreateFlagBits {
@@ -295,11 +274,11 @@ typedef enum VkCommandPoolCreateFlagBits {
 } VkCommandPoolCreateFlagBits;
 ```
 
-* VK_COMMAND_POOL_CREATE_TRANSIENT_BIT
+##### VK_COMMAND_POOL_CREATE_TRANSIENT_BIT
 
 表示该 Command-Buffer 的寿命很短，可能在短时间内被重置或释放
 
-* VK_COMMAND_POOL_CREATE_RESET_COMMAND_BUFFER_BIT
+##### VK_COMMAND_POOL_CREATE_RESET_COMMAND_BUFFER_BIT
 
 表示从Command-Pool中分配的Command-Buffer可以通过vkResetCommandBuffer或者vkBeginCommandBuffer方法进行重置，如果没有设置该标识位，就不能调用vkResetCommandBuffer方法进行重置。
 
@@ -352,19 +331,19 @@ vkAllocateCommandBuffers(info.device, &command_buffer_allocate_info, commandBuff
 
 ![](/img/post-unity/cmd5.jpeg)
 
-* Initial 状态
+##### Initial 状态
 在 Command-Buffer 刚刚创建时，它就是处于初始化的状态。从此状态，可以达到Recording状态，另外，如果重置之后，也会回到该状态。
 
-* Recording 状态
+##### Recording 状态
 调用 vkBeginCommandBuffer 方法从Initial状态进入到该状态。一旦进入该状态后，就可以调用vkCmd*等系列方法记录命令。
 
-* Executable 状态
+##### Executable 状态
 调用vkEndCommandBuffer方法从Recording状态进入到该状态，此状态下，Command-Buffer可以提交或者重置。
 
-* Pending 状态
+##### Pending 状态
 把Command-Buffer提交到 Queue之后，就会进入到该状态。此状态下，物理设备可能正在处理记录的命令，因此不要在此时更改 Command-Buffer，当处理结束后，Command-Buffer可能会回到Executable状态或者Invalid状态。
 
-* Invalid 状态
+##### Invalid 状态
 一些操作会使得Command-Buffer进入到此状态，该状态下，Command-Buffer只能重置、或者释放。
 
 
@@ -399,7 +378,7 @@ typedef enum VkCommandBufferUsageFlagBits {
 ```
 
 * VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT
-表示该 Command-Buffer 只使用提交一次，用完之后就会被重置，并且每次提交时都需要重新记录
+表示该Command-Buffer只使用提交一次，用完之后就会被重置，并且每次提交时都需要重新记录
 
 #### end 阶段
 
@@ -412,9 +391,7 @@ vkEndCommandBuffer(commandBuffer[0]);
 
 ### buffer 提交
 
-通过 vkQueueSubmit 方法将 Command-Buffer 提交到 Queue 上。
-
-同样的还是需要创建一个 VkSubmitInfo 结构体：
+通过vkQueueSubmit方法将Command-Buffer提交到Queue上。同样的还是需要创建一个 VkSubmitInfo 结构体：
 
 ```c++
 typedef struct VkSubmitInfo {
@@ -429,9 +406,7 @@ typedef struct VkSubmitInfo {
     const VkSemaphore*             pSignalSemaphores;       //执行结束后通知的 Semaphore 数组指针
 } VkSubmitInfo;
 ```
-它的参数比较多，并且涉及到Command-Buffer之间的同步关系了，这里简单说一下，后面再细说这一块。
-
-如下图，Vulkan 中有Semaphore、Fences、Event、Barrier四种机制来保证同步。
+它的参数比较多，并且涉及到Command-Buffer之间的同步关系了，这里简单说一下，后面再细说这一块。如下图，Vulkan中有Semaphore、Fences、Event、Barrier四种机制来保证同步。
 
 
 ![](/img/post-unity/cmd7.jpeg)
@@ -441,15 +416,13 @@ typedef struct VkSubmitInfo {
 
 #### Semaphore
 
-Semaphore 的作用主要是用来向 Queue 中提交 Command-Buffer 时实现同步。比如说某个 Command-Buffer-B 在执行的某个阶段中需要等待另一个 Command-Buffer-A 执行成功后的结果，同时 Command-Buffer-C 在某阶段又要要等待 Command-Buffer-B 的执行结果，那么就应该使用 Semaphore 机制实现同步；
-此时 Command-Buffer-B 提交到 Queue 时就需要两个 VkSemaphor ，一个表示它需要等待的 Semaphore，并且指定在哪个阶段等待；一个是它执行结束后发出通知的 Semaphore。
+Semaphore的作用主要是用来向Queue中提交Command-Buffer时实现同步。比如说某个Command-Buffer-B在执行的某个阶段中需要等待另一个Command-Buffer-A执行成功后的结果，同时Command-Buffer-C在某阶段又要要等待Command-Buffer-B的执行结果，那么就应该使用Semaphore机制实现同步；
+此时Command-Buffer-B提交到Queue时就需要两个VkSemaphor，一个表示它需要等待的Semaphore，并且指定在哪个阶段等待；一个是它执行结束后发出通知的Semaphore。
 
 #### Fence
 
-Fence 的作用主要是用来保证物理设备和应用程序之间的同步，比如说向 Queue 中提交了 Command-Buffer 后，具体的执行交由物理设备去完成了，这是一个异步的过程，而应用程序如果要等待执行结束，就要使用 Fence 机制。
-Semaphore 和 Fence 有相同之处，但是使用场景却不一样，就如图所示。
-
-Semaphore 和 Fence 的创建过程如下，和以往的 Vulkan 创建对象的调用方式没有太大区别：
+Fence的作用主要是用来保证物理设备和应用程序之间的同步，比如说向Queue中提交了Command-Buffer后，具体的执行交由物理设备去完成了，这是一个异步的过程，而应用程序如果要等待执行结束，就要使用Fence机制。
+Semaphore和Fence有相同之处，但是使用场景却不一样。Semaphore和Fence的创建过程如下，和以往的Vulkan创建对象的调用方式没有太大区别：
 
 ```c++
 // 创建 Semaphore
@@ -467,7 +440,7 @@ fence_info.flags = 0;
 vkCreateFence(info.device, &fenceCreateInfo, nullptr, &drawFence);
 ```
 
-继续回到 VkSubmitInfo 结构体中，如果只是简单的提交 Command-Buffer，那就不需要考虑 Semaphore 这些同步机制了，把相应的参数都设置为 nullptr，或者直接不设置也行，最后提交就好了，代码如下:
+继续回到VkSubmitInfo结构体中，如果只是简单的提交Command-Buffer，那就不需要考虑Semaphore这些同步机制了，把相应的参数都设置为nullptr，或者直接不设置也行，最后提交就好了，代码如下:
 
 ```c++
 // 简单的提交过程
@@ -491,21 +464,19 @@ submitInfo1.pCommandBuffers = &commandBuffer[0];
 vkQueueSubmit(info.queue, 1, &submitInfo1, VK_NULL_HANDLE);
 ```
 
-以上就完成了 Command-Buffer 提交到 Queue 的过程，省略了 Semaphores 和 Fences 的同步机制，当然也可以把它们加上。
+以上就完成了Command-Buffer提交到Queue的过程，省略了Semaphores和Fences的同步机制，当然也可以把它们加上。
 
-在 vkQueueSubmit 的最后一个参数设置为了 VK_NULL_HANDLE ，这是 Vulkan 中设置为 NULL 的一个方法（其实是设置了一个整数 0 ），也可以设置了 Fence ，表示我们要等待该 Command-Buffer 在 Queue 执行结束，虽说 Command-Buffer 也可以通过 Semaphore 来表示执行结束，但这两种方式的使用场景不一样。
+在vkQueueSubmit的最后一个参数设置为了VK_NULL_HANDLE，这是Vulkan中设置为NULL的一个方法（其实是设置了一个整数0），也可以设置了Fence，表示我们要等待该Command-Buffer在Queue执行结束，虽说Command-Buffer也可以通过Semaphore来表示执行结束，但这两种方式的使用场景不一样。
 
 
-回到 Fence 的创建过程，其中有一个 flags 参数表示 Fence 的状态，有如下两种状态：
+回到 Fence 的创建过程，其中有一个flags参数表示Fence的状态，有如下两种状态：
 
-* signaled state
+##### signaled state
 如果 flags 参数为 VK_FENCE_CREATE_SIGNALED_BIT 则表示创建后处于该状态。
-* unsignaled state
+##### unsignaled state
 默认的状态。
-当 vkQueueSubmit 的最后参数传入 Fence 后，就可以通过 Fence 等待该 Command-Buffer 执行结束。
 
-
-当 vkQueueSubmit 的最后参数传入 Fence 后，就可以通过 Fence 等待该 Command-Buffer 执行结束。
+当vkQueueSubmit的最后参数传入Fence后，就可以通过Fence等待该Command-Buffer执行结束。
 
 ```c++
 // wait fence to enter the signaled state on the host
@@ -517,14 +488,10 @@ vkQueueSubmit(info.queue, 1, &submitInfo1, VK_NULL_HANDLE);
     } while (res == VK_TIMEOUT);
 ```
 
-vkWaitForFences 方法会等待Fence进入signaled state状态，该方法的调用要放在while循环中，因为它并不是一个阻塞的方法，可以理解成一个状态查询，如果结果不对，返回的是VK_TIMEOUT，结果满足要求才返回 VK_SUCCESS 。
-
-当  Command-Buffer 执行结束后，传入的 Fence 参数就会从 unsignaled state 进入到 signaled state，从而触发 vkWaitForFences 调用结束循环，表明执行结束了。
-
+vkWaitForFences方法会等待Fence进入signaled state状态，该方法的调用要放在while循环中，因为它并不是一个阻塞的方法，可以理解成一个状态查询，如果结果不对，返回的是VK_TIMEOUT，结果满足要求才返回VK_SUCCESS。当Command-Buffer执行结束后，传入的Fence参数就会从unsignaled state进入到signaled state，从而触发vkWaitForFences调用结束循环，表明执行结束了。
 
 <br>
 参考链接:
- [Unity Command buffer API][i1]
  [Vulkan 移动开发之 Command Buffer][i2]
  [vkspec.pdf][i3]
 

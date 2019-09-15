@@ -5,7 +5,6 @@ date:       2018-02-27 12:00:00
 author:     "Huailiang"
 tags:
     - 工具
-    - OSX
 ---
 
 
