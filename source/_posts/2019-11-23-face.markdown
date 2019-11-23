@@ -221,13 +221,7 @@ $$  x \leftarrow x - \mu \frac{\delta \zeta_S}{\delta x} (\mu: learning rate)$$
 
 （上图红色曲线是余弦相似度的变化， 实际l1=1-cos）
 
-我们使用测试集的图片，使用这套度量方法最终还原出来的效果如视频所示：
 
-<center>
-<iframe src="//player.bilibili.com/player.html?aid=76020308&cid=130040768&page=1" scrolling="no"  width="600" height="600" border="0" frameborder="no" framespacing="0" allowfullscreen="true"> </iframe>
-</center><br>
-
-在引擎中还原出来的效果如下：
 
 [i1]: https://github.com/huailiang/face-nn
 [i2]: https://github.com/huailiang/knead_proj
