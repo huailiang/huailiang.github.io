@@ -210,6 +210,8 @@ dotnet build</code></pre></figure>
 
 <h2 id="unity2019升级问题">Unity2019升级问题</h2>
 
+<h5 id="1-跳转问题">1. 跳转问题</h5>
+
 <p>最近把unity升级到2019版本， 在新版本中unity官方提供了以package的方式来支持vscode。 但是还是有一些问题， 比如说在vscode打开的情况下，在unity测双击代码，vscode不能自动跳转到对应的代码页， 有时候打开代码的时候只是welcode启动页。</p>
 
 <p>这时因为unity自带的vscode editor版本不是最新的， 你可以在菜单栏点击Windows-&gt;Package Manager, 此时你可以看到当前装的所有unity package plugin.</p>
@@ -218,7 +220,11 @@ dotnet build</code></pre></figure>
 
 <p><img src="/img/post-vscode/vs15.jpg" alt="" /></p>
 
-<p>好了，今天的文章就到这里了，祝大家工作顺利。</p>
+<h5 id="2-自动补全">2. 自动补全</h5>
+
+<p>如果在.vscodes的setting.json中隐藏了 “.sln” 和 “.csproj”， 自动补全就会消失，只要在VSCode的资源管理器中可以看到这两种文件，重启OmniSharp Server就好了。。。</p>
+
+<p>按F1键后输入： OmniSharp:Restart OmniSharp</p>
 
 
     </div>

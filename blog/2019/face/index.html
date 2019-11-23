@@ -1,0 +1,426 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <meta http-equiv="X-UA-Compatible" content="IE=edge">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+
+  <title>神经网络捏脸</title>
+  <meta name="description"
+    content="在传统RPG游戏中，捏脸是不可或缺的一环。 类似《楚留香》（现在叫《一梦江湖》）、《完美世界》、《花与剑》里都有捏脸的玩法。目前主流的玩法都是游戏中拖拽滑杆来控制脸部不同的参数，来实现不同的效果。关于捏脸的具体实现，可以参见我在github上传的一个测试demo，里面介绍了详细的原理和代码。">
+
+  <link rel="shortcut icon" href="/img/favicon.ico">
+  <link rel="stylesheet" href="/css/main.css">
+  <link rel="canonical" href="https://huailiang.github.io/blog/2019/face/">
+  <link rel="alternate" type="application/rss+xml" title="Huailiang Blog"
+    href="https://huailiang.github.io/feed.xml" />
+
+</head>
+
+<body>
+  <main>
+    <header class="site-header">
+  <div class="container">
+    <h1><a href="/">Hom<span>e</span></a></h1>
+
+    <button type="button" class="sliding-panel-button">
+      <span></span>
+      <span></span>
+      <span></span>
+    </button>
+
+    <nav class="navbar sliding-panel-content">
+      <ul>
+        
+        <li><a href="/about" title="About">About</a>
+        </li>
+        
+        <li><a href="/blog" title="Blog">Blog</a>
+        </li>
+        
+        <!-- <li><a href="/feed.xml" target="_blank"><i class="icon icon-feed"></i></a></li> -->
+        <li><a href="/category/" target="_blank"><i class="icon icon-feed"></i></a></li>
+      </ul>
+    </nav>
+  </div>
+</header>
+
+<div class="sliding-panel-fade-screen"></div>
+    <script type="text/javascript" src="/js/MathJax.js?config=TeX-AMS-MML_HTMLorMML"></script>
+
+<script type="text/x-mathjax-config">
+MathJax.Hub.Config({
+  tex2jax: {
+    inlineMath: [['$','$'], ['\\(','\\)']],
+    processEscapes: true
+  }
+});
+</script>
+
+<script type="text/x-mathjax-config">
+  MathJax.Hub.Config({
+    tex2jax: {
+      skipTags: ['script', 'noscript', 'style', 'textarea', 'pre', 'code']
+    }
+  });
+
+</script>
+    <div class="container">
+      <article role="article" class="post">
+
+  <div class="card">
+    <header class="post-header">
+      <h1 class="post-title">神经网络捏脸</h1>
+      <p class="post-meta">Nov 23, 2019 •
+        Huailiang</p>
+    </header>
+
+    <div class="post-content">
+      <p>在传统RPG游戏中，捏脸是不可或缺的一环。 类似《楚留香》（现在叫《一梦江湖》）、《完美世界》、《花与剑》里都有捏脸的玩法。目前主流的玩法都是游戏中拖拽滑杆来控制脸部不同的参数，来实现不同的效果。关于捏脸的具体实现，可以参见我在github上传的一个<a href="https://github.com/huailiang/knead_proj">测试demo</a>，里面介绍了详细的原理和代码。</p>
+
+<p><img src="/img/post-ml/face1.jpg" alt="" /></p>
+
+<p>通常情况下， 游戏玩家捏出来的脸都比较丑。要想捏出比较完美的脸型，往往需要花费比较长的时间，而这正是本篇正要照此要解决的。本文引用的理论大多在网易的一篇论文里都有论述:</p>
+
+<p><a href="https://arxiv.org/abs/1909.01064">Face-to-ParameterTranslationforGameCharacterAuto-Creation</a></p>
+
+<p>创建 RPG 游戏角色的一个标准工作流程需要配置大量的面部参数，游戏引擎将这些详细的面部参数作为输入然后产生一个 3D 人脸模型。理论上来讲，游戏角色定制可以看成是“单目 3D 人脸重建”或“风格迁移”问题的一个特殊情况。长期以来，生成包含语义结构的 3D 图像在计算机视觉领域都是一个非常困难的任务。但如今，计算机已经可以使用 CNN 自动生成具有新风格的图像，甚至是由单张面部图像生成 3D 重构结果，这都要归功于近年来深度学习的发展。通过深度网络学习的方法， 一张上传图片， 都很好的捏出来的类似的3D脸型。</p>
+
+<p>本文所有的代码实现上传到github, <a href="https://github.com/huailiang/face-nn">链接地址</a>。 引擎部分实现使用了Unity2019.2, neural network基于pytorch。此外需要下载预训练的model和依赖的子网络参见本文的附录。</p>
+
+<h2 id="dataset">Dataset</h2>
+
+<p>深度网络学习往往都需要一个强大的数据集， 比较有名的如微软的coco dataset, 还有南京大学周志华教授的《机器学习》里提到的西瓜数据集。这里我们使用引擎来生成数据集， 大致的原理论述如下：</p>
+
+<p>首先我们随机生成一组捏脸需要使用的参数，然后在使用这些参数在unity中生成不同的脸型，然后将camera的图像渲染到一张RenderTexture, RenderTexture设置的大小是512x512, 格式是R8G8B8A8, 具体参见下图：</p>
+
+<center><img src="/img/post-ml/face3.jpg" /></center>
+<p><br /></p>
+
+<p>最后将RenderTexture内容转换保存到一张jpg图片中，具体实现的代码如下：</p>
+<div class="language-c# highlighter-rouge"><pre class="highlight"><code><span class="n">Texture2D</span> <span class="n">tex</span> <span class="p">=</span> <span class="k">new</span> <span class="nf">Texture2D</span><span class="p">(</span><span class="n">rt</span><span class="p">.</span><span class="n">width</span><span class="p">,</span> <span class="n">rt</span><span class="p">.</span><span class="n">height</span><span class="p">,</span> <span class="n">TextureFormat</span><span class="p">.</span><span class="n">RGBA32</span><span class="p">,</span> <span class="k">false</span><span class="p">);</span>
+<span class="n">tex</span><span class="p">.</span><span class="nf">ReadPixels</span><span class="p">(</span><span class="k">new</span> <span class="nf">Rect</span><span class="p">(</span><span class="m">0</span><span class="p">,</span> <span class="m">0</span><span class="p">,</span> <span class="n">rt</span><span class="p">.</span><span class="n">width</span><span class="p">,</span> <span class="n">rt</span><span class="p">.</span><span class="n">height</span><span class="p">),</span> <span class="m">0</span><span class="p">,</span> <span class="m">0</span><span class="p">);</span>
+<span class="n">tex</span><span class="p">.</span><span class="nf">Apply</span><span class="p">();</span>
+<span class="kt">byte</span><span class="p">[]</span> <span class="n">bytes</span> <span class="p">=</span> <span class="n">tex</span><span class="p">.</span><span class="nf">EncodeToJPG</span><span class="p">();</span>
+<span class="k">try</span>
+<span class="p">{</span>
+    <span class="n">File</span><span class="p">.</span><span class="nf">WriteAllBytes</span><span class="p">(</span><span class="n">EXPORT</span> <span class="p">+</span> <span class="n">name</span> <span class="p">+</span> <span class="s">".jpg"</span><span class="p">,</span> <span class="n">bytes</span><span class="p">);</span>
+<span class="p">}</span>
+<span class="k">catch</span> <span class="p">(</span><span class="n">IOException</span> <span class="n">ex</span><span class="p">)</span>
+<span class="p">{</span>
+    <span class="n">Debug</span><span class="p">.</span><span class="nf">Log</span><span class="p">(</span><span class="s">"转换图片失败"</span> <span class="p">+</span> <span class="n">ex</span><span class="p">.</span><span class="n">Message</span><span class="p">);</span>
+<span class="p">}</span>
+</code></pre>
+</div>
+
+<p>由于我们使用的是随机params, 所以游戏里的人看起来可能会比较奇怪， 但并不影响我们神经网络的训练。</p>
+
+<p>同时我们将每一张图片对应的捏脸参数保存在一个二进制文件中，名字为db_description， 记录格式如下：</p>
+
+<p>图片数量-[图片名-params][loop]</p>
+
+<p>由于Unity渲染每一帧画面都需要等到每一帧的最后，而我们又希望每一帧尽量输出可能多的图片，因此每一帧的都不会卸载上次渲染完的RenderTexture，故你需要保留足够的内存来生成数据集。在这里我们建议你的电脑需要有16G内存， 生成20000张图片应该足够了。生成训练集的时候，我们故意对params加入一些混淆， 生成一些噪点，用来防止生成的neural network产生过拟合。</p>
+
+<center><img src="/img/post-ml/face4.jpg" /></center>
+<p><br /></p>
+
+<p>由于输入的参数绝大都输都是连续的，其中控制脸部骨骼的参数一共是95个。还有一些参数是离散的，比如说眉毛的样式。这些离散参数被处理为独热[One-hot]编码形式与连续参数拼接起来表示完整的面部参数。所有的参数加起来一共是103个,<br />
+他们将作为神经网络的输入参数，参与到train的过程中。</p>
+
+<p>对于神经网络生成的图片很好的还原出来，并且进一步在引擎里微调，我们还写了一个工具，无论是选择生成的模型，还是训练集里的图片， 都能在引擎里还原出预设的模型。</p>
+
+<center><img src="/img/post-ml/face5.jpg" /></center>
+<p><br /></p>
+
+<p>如图所示， 点击Sync-Picture按钮之后， 选择生成数据集的图片， 引擎就会生成相应的模型。 同理点击Sync-Model按钮，选择生成好的神经网络模型也可以生成引擎里的模型。并且可以在编辑器选项里进一步微调。</p>
+
+<h2 id="网络模型">网络模型</h2>
+
+<p>人脸 - 参数模型由一个模拟器 G(x) 和一个特征提取器 F(y) 组成。前者使用用户自定义的面部参数 x 来模拟游戏引擎的生成过程，并生成一个“预渲染”的面部图像 y。后者则用来决定特征空间，使得面部相似性度量方法可以被用于优化面部参数。</p>
+
+<p><img src="/img/post-ml/face2.jpg" alt="" /></p>
+
+<h3 id="imatator">Imatator</h3>
+
+<p>这里我们训练了一个模拟器Imitator, 用来模拟引擎中参数和模型的对应的关系。 模型的设计类似 DCGAN 的网络配置，它由 8 个转置卷积层组成。由于输入的是103个捏脸参数， 输出却是一张512的图片，所以整个训练的过程中也可以看做是一个上采样的过程。</p>
+
+<center><img src="/img/post-ml/face6.jpg" /></center>
+<p><br /></p>
+
+<p>每一层layer都是有转置卷积、BN、Relu组成， 最后为了保证输出固定在0-1之间，我们使用了Sigmoid激励函数。具体的实现代码如下：</p>
+
+<div class="language-python highlighter-rouge"><pre class="highlight"><code><span class="k">def</span> <span class="nf">deconv_layer</span><span class="p">(</span><span class="n">in_chanel</span><span class="p">,</span> <span class="n">out_chanel</span><span class="p">,</span> <span class="n">kernel_size</span><span class="p">,</span> <span class="n">stride</span><span class="o">=</span><span class="mi">1</span><span class="p">,</span> <span class="n">pad</span><span class="o">=</span><span class="mi">0</span><span class="p">):</span>
+    <span class="k">return</span> <span class="n">nn</span><span class="o">.</span><span class="n">Sequential</span><span class="p">(</span><span class="n">nn</span><span class="o">.</span><span class="n">ConvTranspose2d</span><span class="p">(</span><span class="n">in_chanel</span><span class="p">,</span> <span class="n">out_chanel</span><span class="p">,</span> <span class="n">kernel_size</span><span class="o">=</span><span class="n">kernel_size</span><span class="p">,</span> <span class="n">stride</span><span class="o">=</span><span class="n">stride</span><span class="p">,</span> <span class="n">padding</span><span class="o">=</span><span class="n">pad</span><span class="p">),</span>
+                         <span class="n">nn</span><span class="o">.</span><span class="n">BatchNorm2d</span><span class="p">(</span><span class="n">out_chanel</span><span class="p">),</span> 
+                         <span class="n">nn</span><span class="o">.</span><span class="n">ReLU</span><span class="p">())</span>
+
+<span class="bp">self</span><span class="o">.</span><span class="n">model</span> <span class="o">=</span> <span class="n">nn</span><span class="o">.</span><span class="n">Sequential</span><span class="p">(</span>
+    <span class="n">deconv_layer</span><span class="p">(</span><span class="n">args</span><span class="o">.</span><span class="n">params_cnt</span><span class="p">,</span> <span class="mi">512</span><span class="p">,</span> <span class="n">kernel_size</span><span class="o">=</span><span class="mi">4</span><span class="p">),</span>       <span class="c"># 1. (batch, 512, 4, 4)</span>
+    <span class="n">deconv_layer</span><span class="p">(</span><span class="mi">512</span><span class="p">,</span> <span class="mi">512</span><span class="p">,</span> <span class="n">kernel_size</span><span class="o">=</span><span class="mi">4</span><span class="p">,</span> <span class="n">stride</span><span class="o">=</span><span class="mi">2</span><span class="p">,</span> <span class="n">pad</span><span class="o">=</span><span class="mi">1</span><span class="p">),</span>  <span class="c"># 2. (batch, 512, 8, 8)</span>
+    <span class="n">deconv_layer</span><span class="p">(</span><span class="mi">512</span><span class="p">,</span> <span class="mi">512</span><span class="p">,</span> <span class="n">kernel_size</span><span class="o">=</span><span class="mi">4</span><span class="p">,</span> <span class="n">stride</span><span class="o">=</span><span class="mi">2</span><span class="p">,</span> <span class="n">pad</span><span class="o">=</span><span class="mi">1</span><span class="p">),</span>  <span class="c"># 3. (batch, 512, 16, 16)</span>
+    <span class="n">deconv_layer</span><span class="p">(</span><span class="mi">512</span><span class="p">,</span> <span class="mi">256</span><span class="p">,</span> <span class="n">kernel_size</span><span class="o">=</span><span class="mi">4</span><span class="p">,</span> <span class="n">stride</span><span class="o">=</span><span class="mi">2</span><span class="p">,</span> <span class="n">pad</span><span class="o">=</span><span class="mi">1</span><span class="p">),</span>  <span class="c"># 4. (batch, 256, 32, 32)</span>
+    <span class="n">deconv_layer</span><span class="p">(</span><span class="mi">256</span><span class="p">,</span> <span class="mi">128</span><span class="p">,</span> <span class="n">kernel_size</span><span class="o">=</span><span class="mi">4</span><span class="p">,</span> <span class="n">stride</span><span class="o">=</span><span class="mi">2</span><span class="p">,</span> <span class="n">pad</span><span class="o">=</span><span class="mi">1</span><span class="p">),</span>  <span class="c"># 5. (batch, 128, 64, 64)</span>
+    <span class="n">deconv_layer</span><span class="p">(</span><span class="mi">128</span><span class="p">,</span> <span class="mi">64</span><span class="p">,</span> <span class="n">kernel_size</span><span class="o">=</span><span class="mi">4</span><span class="p">,</span> <span class="n">stride</span><span class="o">=</span><span class="mi">2</span><span class="p">,</span> <span class="n">pad</span><span class="o">=</span><span class="mi">1</span><span class="p">),</span>   <span class="c"># 6. (batch, 64, 128, 128)</span>
+    <span class="n">deconv_layer</span><span class="p">(</span><span class="mi">64</span><span class="p">,</span> <span class="mi">64</span><span class="p">,</span> <span class="n">kernel_size</span><span class="o">=</span><span class="mi">4</span><span class="p">,</span> <span class="n">stride</span><span class="o">=</span><span class="mi">2</span><span class="p">,</span> <span class="n">pad</span><span class="o">=</span><span class="mi">1</span><span class="p">),</span>    <span class="c"># 7. (batch, 64, 256, 256)</span>
+    <span class="n">nn</span><span class="o">.</span><span class="n">ConvTranspose2d</span><span class="p">(</span><span class="mi">64</span><span class="p">,</span> <span class="mi">3</span><span class="p">,</span> <span class="n">kernel_size</span><span class="o">=</span><span class="mi">4</span><span class="p">,</span> <span class="n">stride</span><span class="o">=</span><span class="mi">2</span><span class="p">,</span> <span class="n">padding</span><span class="o">=</span><span class="mi">1</span><span class="p">),</span>  <span class="c"># 8. (batch, 3, 512, 512)</span>
+    <span class="n">nn</span><span class="o">.</span><span class="n">Sigmoid</span><span class="p">(),</span>
+<span class="p">)</span>
+</code></pre>
+</div>
+
+<p>为了使网络更快的收敛， 这里我们使用了Adam优化器（比论文里使用的SDG优化器收敛效果更明显）。优化器的learning-rate也是动态调整的，在train开始的步数我们使用较大值，在网络稳定之后我们使用了较小的学习率进行模型的微调。具体的算法如下， 我们大概5000步更新一次学习率。</p>
+
+<div class="language-py highlighter-rouge"><pre class="highlight"><code><span class="n">x</span> <span class="o">=</span> <span class="n">step</span> <span class="o">/</span> <span class="nb">float</span><span class="p">(</span><span class="n">total_steps</span><span class="p">)</span>
+<span class="n">lr</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">args</span><span class="o">.</span><span class="n">learning_rate</span> <span class="o">*</span> <span class="p">(</span><span class="n">x</span> <span class="o">**</span> <span class="mi">2</span> <span class="o">-</span> <span class="mi">2</span> <span class="o">*</span> <span class="n">x</span> <span class="o">+</span> <span class="mi">1</span><span class="p">)</span> <span class="o">+</span> <span class="mf">2e-3</span>
+</code></pre>
+</div>
+
+<p>模拟器的学习和预测构建为一个基于深度学习的标准回归问题，其中该任务的目标是最小化游戏中渲染图像与生成的图像在原始像素空间中的差异。训练模拟器使用的损失函数如下：</p>
+
+<script type="math/tex; mode=display">% <![CDATA[
+\begin{eqnarray}
+ \zeta_G(x)  &=& E_{x\sim u(x)}\{\Vert y - {\hat y} \Vert_1\} \\
+&=& E_{x\sim u(x)}\{\Vert G(x) - Engine(x)\Vert_1\} 
+\end{eqnarray} %]]></script>
+
+<p>其中 x 表示输入的人脸参数，G(x) 表示模拟器的输出。</p>
+
+<script type="math/tex; mode=display">{\hat y}  = Engine(x)</script>
+
+<p>表示游戏引擎渲染的输出。作者使用 l1 损失函数作为约束，因为相比于 l2 损失，l1 损失能减少更多的模糊。</p>
+
+<script type="math/tex; mode=display">{ G^{\ast}}  =  {\operatorname{arg\,}}\underset{G}{\operatorname{min}}\, \zeta_G(x)</script>
+
+<p>最终我们很成功了拟合了游戏参数-人脸的过程，即使在具有复杂纹理的一些区域中，生成的面部图像和直接由渲染得到真实图像仍具有高度的相似性，例如头发区域。这表明模拟器不仅适合低维面部流形的训练数据，而且还能学会解耦不同面部参数之间的相关性。 效果如视频所示：</p>
+
+<center>
+<iframe src="//player.bilibili.com/player.html?aid=76020308&amp;cid=130040768&amp;page=1" scrolling="no" width="600" height="600" border="0" frameborder="no" framespacing="0" allowfullscreen="true"> </iframe>
+</center>
+<p><br /></p>
+
+<h3 id="facial-similarity-measurement-面部相似测量">Facial Similarity Measurement 面部相似测量</h3>
+
+<p>一旦我们获得了训练好的模拟器 G，由面部参数生成面部图像的过程本质上就成为了一个面部相似性度量问题。由于输入的人脸照片和渲染出的游戏角色图像属于不同的图像域，为了有效地度量面部相似度，作者设计了两个损失函数分别从全局表观和局部细节两方面进行度量。作者借鉴了神经风格迁移的框架在特征空间计算这些损失，而不是在原始的像素空间计算它们的损失值。</p>
+
+<h4 id="discriminative-loss-判别损失">Discriminative Loss 判别损失</h4>
+
+<p>作者引入了一个人脸识别模型 F1 来度量两张人脸的全局表观损失，如人脸形状以及大致表情。同时，作者受到感知距离（perceptual distance，在图像风格转换、图像超分辨率重建、以及特征可视化等领域有广泛应用）的启发。假设对于同一个人的不同肖像照片，它们的特征应该具有相同的表示。最终，作者使用了目前领先的人脸识别模型“Light CNN-29 v2”来提取 256 维的人脸嵌入表示，然后使用该特征计算两张人脸之间的余弦距离作为它们的相似度表示。作者将该损失定义为“判别损失”，因为它的功能是判断真实照片和由模拟器生成的图像是否属于同一个身份。上述的判别损失可以写为下面这种形式</p>
+
+<script type="math/tex; mode=display">% <![CDATA[
+\begin{eqnarray} 
+{\zeta_1{(x, y_r)}}  &=& 1 - \cos (F_1(y), F_1(y_r)) \\
+&=& 1- \cos (F_1(G(x)), F_1(y_r)) 
+\end{eqnarray} %]]></script>
+
+<p>，两个向量间的余弦距离可以表示为：</p>
+
+<script type="math/tex; mode=display">% <![CDATA[
+\cos (a,b)  = \frac {<a, b>}{\sqrt{\Vert a \Vert_2^2 \Vert b \Vert_2^2 }} %]]></script>
+
+<p>在pytorch中， 表示余弦相似度可以使用api:</p>
+
+<div class="language-py highlighter-rouge"><pre class="highlight"><code><span class="n">l1</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">cosine_similarity</span><span class="p">(</span><span class="n">x1</span><span class="p">,</span> <span class="n">x2</span><span class="p">)</span>
+</code></pre>
+</div>
+
+<p>如果你想更加深入的了解余弦相似度， 可以参考<a href="https://www.cnblogs.com/dsgcBlogs/p/8619566.html">网页</a>。</p>
+
+<h4 id="facial-content-loss-面部内容损失">Facial Content Loss 面部内容损失</h4>
+
+<p>除了判别性损失之外，作者还使用人脸语义分割模型提取了局部面部特征，并通过计算这些特征在像素级的误差定义了一个面部内容损失。面部内容损失可以被视为对两个图像中不同面部成分的形状和位移的约束，例如，眼睛、嘴巴和鼻子。由于面部内容损失更关心的是面部图像特征差异而不是日常图像，因此作者没有使用在 ImageNet 数据集上训练的语义分割模型，而是使用非常著名的 Helen 人脸语义分割数据库对模型进行了训练。作者使用 Resnet-50 作为语义分割模型的基础结构，移除了最后的全连接层，并将其输出分辨率从 1/32 增加到了 1/8。为了提高面部语义特征的姿态敏感度，作者使用分割结果（类级的概率响应图）作为特征图的权重来构建姿态敏感的面部内容损失函数。最终，面部内容损失可以定义为：</p>
+
+<script type="math/tex; mode=display">{\zeta_2{(x, y_r)}} = \Vert \omega(G(x))F_2(G(x)) - \omega(y_r)F_2(y_r) \Vert_1</script>
+
+<p>其中 F_2 表示从输入图像到面部语义特征映射的过程，w 表示特征的像素级权重，例如 w_1 表示眼 - 鼻 - 嘴响应图。</p>
+
+<center><img src="/img/post-ml/face7.jpg" /></center>
+<p><br /></p>
+
+<p>在实现的过程中，我们提取了眉毛，眼睛，鼻子，牙齿，上唇，下唇，并且为他们分配权重如下所示：</p>
+
+<div class="language-py highlighter-rouge"><pre class="highlight"><code><span class="c"># [eyebrow，eye，nose，teeth，up lip，lower lip]</span>
+<span class="n">w_r</span> <span class="o">=</span> <span class="p">[</span><span class="mf">1.1</span><span class="p">,</span> <span class="mf">1.1</span><span class="p">,</span> <span class="mf">1.</span><span class="p">,</span> <span class="mf">0.7</span><span class="p">,</span> <span class="mf">1.</span><span class="p">,</span> <span class="mf">1.</span><span class="p">]</span>
+<span class="n">w_g</span> <span class="o">=</span> <span class="p">[</span><span class="mf">1.1</span><span class="p">,</span> <span class="mf">1.1</span><span class="p">,</span> <span class="mf">1.</span><span class="p">,</span> <span class="mf">0.7</span><span class="p">,</span> <span class="mf">1.</span><span class="p">,</span> <span class="mf">1.</span><span class="p">]</span>
+<span class="n">part1</span><span class="p">,</span> <span class="n">_</span> <span class="o">=</span> <span class="n">faceparsing_tensor</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">l2_y</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">parsing</span><span class="p">,</span> <span class="n">w_r</span><span class="p">,</span> <span class="n">cuda</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">cuda</span><span class="p">)</span>
+<span class="n">y_</span> <span class="o">=</span> <span class="n">y_</span><span class="o">.</span><span class="n">transpose</span><span class="p">(</span><span class="mi">2</span><span class="p">,</span> <span class="mi">3</span><span class="p">)</span>
+<span class="n">part2</span><span class="p">,</span> <span class="n">_</span> <span class="o">=</span> <span class="n">faceparsing_tensor</span><span class="p">(</span><span class="n">y_</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">parsing</span><span class="p">,</span> <span class="n">w_g</span><span class="p">,</span> <span class="n">cuda</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">cuda</span><span class="p">)</span>
+<span class="n">loss2</span> <span class="o">=</span> <span class="n">F</span><span class="o">.</span><span class="n">l1_loss</span><span class="p">(</span><span class="n">part1</span><span class="p">,</span> <span class="n">part2</span><span class="p">)</span>
+</code></pre>
+</div>
+
+<p>最终，模型的总损失函数可以写为判别损失和面部内容损失的线性组合：</p>
+
+<script type="math/tex; mode=display">% <![CDATA[
+\begin{eqnarray} 
+\zeta_S(x,y_r)  &=&  \alpha \zeta_1 + \zeta_2 \\
+&=& \alpha(1 - \cos(F_1(G(x)), F_1(y_r))) + \Vert \omega(G(x))F_2(G(x)) - \omega(y_r)F_2(y_r) \Vert_1
+\end{eqnarray} %]]></script>
+
+<p>其中参数 Alpha 用于平衡两个任务的重要性。上文中提到的特征提取器如图 6 所示，作者使用了梯度下降法来解决下面这个优化问题：</p>
+
+<script type="math/tex; mode=display">\underset{x}{\operatorname{min}}\, L_S(x, y_r)</script>
+
+<script type="math/tex; mode=display">S.t.  x_i \in [0, 1]</script>
+
+<p>其中：</p>
+
+<script type="math/tex; mode=display">x = [x_1, x_2,...,x_D]</script>
+
+<p>表示需要优化的面部参数，y_r 表示输入的参考人脸照片。针对作者提出方法，其完整优化过程可以总结为：</p>
+
+<p>阶段 1： 训练模拟器 G、人脸识别网络 F_1 以及人脸分割网络 F_2</p>
+
+<p>阶段 2： 固定 G、F_1 和 F_2，初始化并更新人脸面部参数 x，直到接近迭代的最大次数：</p>
+
+<script type="math/tex; mode=display">x \leftarrow x - \mu \frac{\delta \zeta_S}{\delta x} (\mu: learning rate)</script>
+
+<p>最终train迭代过程中，我们使用了大约1000步，还是跟imitator一样动态调整learningrate。由于l1使用的是余弦距离作为参数，所以train的过程中l1越来越大， l2使用的是脸部分割语义作为参数，loss变得越来越小。  具体过程如图所示：</p>
+
+<p><img src="/img/post-ml/face8.png" alt="" /></p>
+
+<p>（上图红色曲线是余弦相似度的变化， 实际l1=1-cos）</p>
+
+<p>我们使用测试集的图片，使用这套度量方法最终还原出来的效果如视频所示：</p>
+
+<center>
+<iframe src="//player.bilibili.com/player.html?aid=76020308&amp;cid=130040768&amp;page=1" scrolling="no" width="600" height="600" border="0" frameborder="no" framespacing="0" allowfullscreen="true"> </iframe>
+</center>
+<p><br /></p>
+
+<p>在引擎中还原出来的效果如下：</p>
+
+
+    </div>
+  </div>
+
+  <style>
+  .post-nav {
+    overflow: hidden;
+    /* margin-top: 60px; */
+    padding: 12px;
+    white-space: nowrap;
+    /* border-top: 1px solid #eee; */
+  }
+
+  .post-nav-item {
+    display: inline-block;
+    width: 50%;
+    white-space: normal;
+  }
+
+  .post-nav-item a {
+    position: relative;
+    display: inline-block;
+    line-height: 25px;
+    font-size: 14px;
+    color: #555;
+    border-bottom: none;
+  }
+
+  .post-nav-item a:hover {
+    color: #222;
+    font-weight: bold;
+    border-bottom: none;
+  }
+
+  .post-nav-item a:active {
+    top: 2px;
+  }
+
+  .post-nav-item a:before,
+  .post-nav-item a:after {
+    display: inline-block;
+    width: 16px;
+    height: 25px;
+    vertical-align: top;
+    opacity: 0.4;
+    background-size: 16px;
+  }
+
+  .post-nav-none a:none {
+    content: ' ';
+    background-size: 8px;
+  }
+
+  .post-nav-none a:hover:none {
+    opacity: 1;
+  }
+
+  .post-nav-prev a:before {
+    content: ' ';
+    background: url("data:image/svg+xml;base64,PD94bWwgdmVyc2lvbj0iMS4wIiA/PjxzdmcgaGVpZ2h0PSIxMnB4IiB2ZXJzaW9uPSIxLjEiIHZpZXdCb3g9IjAgMCA5IDEyIiB3aWR0aD0iOXB4IiB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHhtbG5zOnNrZXRjaD0iaHR0cDovL3d3dy5ib2hlbWlhbmNvZGluZy5jb20vc2tldGNoL25zIiB4bWxuczp4bGluaz0iaHR0cDovL3d3dy53My5vcmcvMTk5OS94bGluayI+PHRpdGxlLz48ZGVzYy8+PGRlZnMvPjxnIGZpbGw9Im5vbmUiIGZpbGwtcnVsZT0iZXZlbm9kZCIgaWQ9IlBhZ2UtMSIgc3Ryb2tlPSJub25lIiBzdHJva2Utd2lkdGg9IjEiPjxnIGZpbGw9IiMwMDAwMDAiIGlkPSJDb3JlIiB0cmFuc2Zvcm09InRyYW5zbGF0ZSgtMjE4LjAwMDAwMCwgLTkwLjAwMDAwMCkiPjxnIGlkPSJjaGV2cm9uLWxlZnQiIHRyYW5zZm9ybT0idHJhbnNsYXRlKDIxOC41MDAwMDAsIDkwLjAwMDAwMCkiPjxwYXRoIGQ9Ik03LjQsMS40IEw2LDAgTC04Ljg4MTc4NDJlLTE2LDYgTDYsMTIgTDcuNCwxMC42IEwyLjgsNiBMNy40LDEuNCBaIiBpZD0iU2hhcGUiLz48L2c+PC9nPjwvZz48L3N2Zz4=") no-repeat 0 50%;
+    background-size: 8px;
+  }
+
+  .post-nav-prev a:hover:before {
+    opacity: 1;
+  }
+
+  .post-nav-next {
+    text-align: right;
+  }
+
+  .post-nav-next a:after {
+    content: ' ';
+    background: url("data:image/svg+xml;base64,PD94bWwgdmVyc2lvbj0iMS4wIiA/PjxzdmcgaGVpZ2h0PSIxMnB4IiB2ZXJzaW9uPSIxLjEiIHZpZXdCb3g9IjAgMCA5IDEyIiB3aWR0aD0iOXB4IiB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHhtbG5zOnNrZXRjaD0iaHR0cDovL3d3dy5ib2hlbWlhbmNvZGluZy5jb20vc2tldGNoL25zIiB4bWxuczp4bGluaz0iaHR0cDovL3d3dy53My5vcmcvMTk5OS94bGluayI+PHRpdGxlLz48ZGVzYy8+PGRlZnMvPjxnIGZpbGw9Im5vbmUiIGZpbGwtcnVsZT0iZXZlbm9kZCIgaWQ9IlBhZ2UtMSIgc3Ryb2tlPSJub25lIiBzdHJva2Utd2lkdGg9IjEiPjxnIGZpbGw9IiMwMDAwMDAiIGlkPSJDb3JlIiB0cmFuc2Zvcm09InRyYW5zbGF0ZSgtMjYwLjAwMDAwMCwgLTkwLjAwMDAwMCkiPjxnIGlkPSJjaGV2cm9uLXJpZ2h0IiB0cmFuc2Zvcm09InRyYW5zbGF0ZSgyNjAuNTAwMDAwLCA5MC4wMDAwMDApIj48cGF0aCBkPSJNMSwwIEwtMC40LDEuNCBMNC4yLDYgTC0wLjQsMTAuNiBMMSwxMiBMNyw2IEwxLDAgWiIgaWQ9IlNoYXBlIi8+PC9nPjwvZz48L2c+PC9zdmc+") no-repeat 100% 50%;
+    background-size: 8px;
+  }
+
+  .post-nav-next a:hover:after {
+    opacity: 1;
+  }
+</style>
+
+
+
+<div class="post-nav">
+
+  
+  <div class="post-nav-none post-nav-item">
+    <a href=""> </a>
+  </div>
+  
+
+  
+  <div class="post-nav-next post-nav-item">
+    
+    <a href="/blog/2019/vulkan/"> Valkan 基础渲染流程</a>
+  </div>
+  
+
+</div>
+
+</article>
+    </div>
+
+    <footer class="site-footer">
+  <div class="container">
+    <ul class="social">
+  <li><a href="https://twitter.com/penghuailiang" target="_blank"><i class="icon icon-twitter"></i></a></li>
+  <li><a href="https://www.zhihu.com/people/huailiangpenguin" target="_blank"><i class="icon icon-zhihu"></i></a></li>
+  <li><a href="https://www.facebook.com/profile.php?id=100004290725320" target="_blank"><i class="icon icon-facebook"></i></a></li>
+  <li><a href="https://weibo.com/6212299692/profile?topnav=1&wvr=6" target="_blank"><i class="icon icon-sina"></i></a></li>
+  <li><a href="https://www.linkedin.com/in/penghuailiang/" target="_blank"><i class="icon icon-linkedin"></i></a></li>
+  <li><a href="https://github.com/huailiang" target="_blank"><i class="icon icon-github"></i></a></li>
+</ul>
+    <p class="txt-medium-gray">
+      <small>&copy;2019 All rights reserved. </small>
+    </p>
+  </div>
+</footer>
+    <a href="https://github.com/huailiang" target="_blank" class="github-corner"><svg width="80" height="80" viewBox="0 0 250 250" style="fill:#337ab7; color:#fff; position: absolute; top: 0; border: 0; right: 0;"><path d="M0,0 L115,115 L130,115 L142,142 L250,250 L250,0 Z"></path><path d="M128.3,109.0 C113.8,99.7 119.0,89.6 119.0,89.6 C122.0,82.7 120.5,78.6 120.5,78.6 C119.2,72.0 123.4,76.3 123.4,76.3 C127.3,80.9 125.5,87.3 125.5,87.3 C122.9,97.6 130.6,101.9 134.4,103.2" fill="currentColor" style="transform-origin: 130px 106px;" class="octo-arm"></path><path d="M115.0,115.0 C114.9,115.1 118.7,116.5 119.8,115.4 L133.7,101.6 C136.9,99.2 139.9,98.4 142.2,98.6 C133.8,88.0 127.5,74.4 143.8,58.0 C148.5,53.4 154.0,51.2 159.7,51.0 C160.3,49.4 163.2,43.6 171.4,40.1 C171.4,40.1 176.1,42.5 178.8,56.2 C183.1,58.6 187.2,61.8 190.9,65.4 C194.5,69.0 197.7,73.2 200.1,77.6 C213.8,80.2 216.3,84.9 216.3,84.9 C212.7,93.1 206.9,96.0 205.4,96.6 C205.1,102.4 203.0,107.8 198.3,112.5 C181.9,128.9 168.3,122.5 157.7,114.1 C157.9,116.9 156.7,120.9 152.7,124.9 L141.0,136.5 C139.8,137.7 141.6,141.9 141.8,141.8 Z" fill="currentColor" class="octo-body"></path></svg></a>
+
+
+    <script src="//code.jquery.com/jquery-1.11.3.min.js"></script>
+    <script>
+      $(document).ready(function () {
+        $('.sliding-panel-button,.sliding-panel-fade-screen,.sliding-panel-close').on('click touchstart', function (e) {
+          $('.sliding-panel-content,.sliding-panel-fade-screen').toggleClass('is-visible');
+          e.preventDefault();
+        });
+      });
+    </script>
+  </main>
+</body>
+
+</html>
