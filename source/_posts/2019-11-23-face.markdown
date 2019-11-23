@@ -1,0 +1,235 @@
+---
+layout:     post
+title:      "神经网络捏脸"
+date:       2019-11-23 03:00:00
+author:     "Huailiang"
+tags:
+    - 引擎
+    - 人工智能
+---
+
+
+在传统RPG游戏中，捏脸是不可或缺的一环。 类似《楚留香》（现在叫《一梦江湖》）、《完美世界》、《花与剑》里都有捏脸的玩法。目前主流的玩法都是游戏中拖拽滑杆来控制脸部不同的参数，来实现不同的效果。关于捏脸的具体实现，可以参见我在github上传的一个[测试demo][i2]，里面介绍了详细的原理和代码。
+
+![](/img/post-ml/face1.jpg)
+
+
+通常情况下， 游戏玩家捏出来的脸都比较丑。要想捏出比较完美的脸型，往往需要花费比较长的时间，而这正是本篇正要照此要解决的。本文引用的理论大多在网易的一篇论文里都有论述:
+
+[Face-to-ParameterTranslationforGameCharacterAuto-Creation][i3]
+
+创建 RPG 游戏角色的一个标准工作流程需要配置大量的面部参数，游戏引擎将这些详细的面部参数作为输入然后产生一个 3D 人脸模型。理论上来讲，游戏角色定制可以看成是“单目 3D 人脸重建”或“风格迁移”问题的一个特殊情况。长期以来，生成包含语义结构的 3D 图像在计算机视觉领域都是一个非常困难的任务。但如今，计算机已经可以使用 CNN 自动生成具有新风格的图像，甚至是由单张面部图像生成 3D 重构结果，这都要归功于近年来深度学习的发展。通过深度网络学习的方法， 一张上传图片， 都很好的捏出来的类似的3D脸型。
+
+本文所有的代码实现上传到github, [链接地址][i1]。 引擎部分实现使用了Unity2019.2, neural network基于pytorch。此外需要下载预训练的model和依赖的子网络参见本文的附录。
+
+## Dataset
+
+深度网络学习往往都需要一个强大的数据集， 比较有名的如微软的coco dataset, 还有南京大学周志华教授的《机器学习》里提到的西瓜数据集。这里我们使用引擎来生成数据集， 大致的原理论述如下：
+
+首先我们随机生成一组捏脸需要使用的参数，然后在使用这些参数在unity中生成不同的脸型，然后将camera的图像渲染到一张RenderTexture, RenderTexture设置的大小是512x512, 格式是R8G8B8A8, 具体参见下图：
+
+<center><img src="/img/post-ml/face3.jpg"></center><br>
+
+最后将RenderTexture内容转换保存到一张jpg图片中，具体实现的代码如下：
+```c#
+Texture2D tex = new Texture2D(rt.width, rt.height, TextureFormat.RGBA32, false);
+tex.ReadPixels(new Rect(0, 0, rt.width, rt.height), 0, 0);
+tex.Apply();
+byte[] bytes = tex.EncodeToJPG();
+try
+{
+    File.WriteAllBytes(EXPORT + name + ".jpg", bytes);
+}
+catch (IOException ex)
+{
+    Debug.Log("转换图片失败" + ex.Message);
+}
+```
+
+由于我们使用的是随机params, 所以游戏里的人看起来可能会比较奇怪， 但并不影响我们神经网络的训练。
+
+同时我们将每一张图片对应的捏脸参数保存在一个二进制文件中，名字为db_description， 记录格式如下：
+
+图片数量-[图片名-params][loop]
+
+由于Unity渲染每一帧画面都需要等到每一帧的最后，而我们又希望每一帧尽量输出可能多的图片，因此每一帧的都不会卸载上次渲染完的RenderTexture，故你需要保留足够的内存来生成数据集。在这里我们建议你的电脑需要有16G内存， 生成20000张图片应该足够了。生成训练集的时候，我们故意对params加入一些混淆， 生成一些噪点，用来防止生成的neural network产生过拟合。
+
+<center><img src="/img/post-ml/face4.jpg"></center><br>
+
+由于输入的参数绝大都输都是连续的，其中控制脸部骨骼的参数一共是95个。还有一些参数是离散的，比如说眉毛的样式。这些离散参数被处理为独热[One-hot]编码形式与连续参数拼接起来表示完整的面部参数。所有的参数加起来一共是103个,
+他们将作为神经网络的输入参数，参与到train的过程中。
+
+
+对于神经网络生成的图片很好的还原出来，并且进一步在引擎里微调，我们还写了一个工具，无论是选择生成的模型，还是训练集里的图片， 都能在引擎里还原出预设的模型。
+
+<center><img src="/img/post-ml/face5.jpg"></center><br>
+
+如图所示， 点击Sync-Picture按钮之后， 选择生成数据集的图片， 引擎就会生成相应的模型。 同理点击Sync-Model按钮，选择生成好的神经网络模型也可以生成引擎里的模型。并且可以在编辑器选项里进一步微调。
+
+
+## 网络模型
+
+
+人脸 - 参数模型由一个模拟器 G(x) 和一个特征提取器 F(y) 组成。前者使用用户自定义的面部参数 x 来模拟游戏引擎的生成过程，并生成一个“预渲染”的面部图像 y。后者则用来决定特征空间，使得面部相似性度量方法可以被用于优化面部参数。
+
+![](/img/post-ml/face2.jpg)
+
+
+### Imatator
+
+这里我们训练了一个模拟器Imitator, 用来模拟引擎中参数和模型的对应的关系。 模型的设计类似 DCGAN 的网络配置，它由 8 个转置卷积层组成。由于输入的是103个捏脸参数， 输出却是一张512的图片，所以整个训练的过程中也可以看做是一个上采样的过程。
+
+<center><img src="/img/post-ml/face6.jpg"></center><br>
+
+每一层layer都是有转置卷积、BN、Relu组成， 最后为了保证输出固定在0-1之间，我们使用了Sigmoid激励函数。具体的实现代码如下：
+
+```python
+def deconv_layer(in_chanel, out_chanel, kernel_size, stride=1, pad=0):
+    return nn.Sequential(nn.ConvTranspose2d(in_chanel, out_chanel, kernel_size=kernel_size, stride=stride, padding=pad),
+                         nn.BatchNorm2d(out_chanel), 
+                         nn.ReLU())
+
+self.model = nn.Sequential(
+    deconv_layer(args.params_cnt, 512, kernel_size=4),       # 1. (batch, 512, 4, 4)
+    deconv_layer(512, 512, kernel_size=4, stride=2, pad=1),  # 2. (batch, 512, 8, 8)
+    deconv_layer(512, 512, kernel_size=4, stride=2, pad=1),  # 3. (batch, 512, 16, 16)
+    deconv_layer(512, 256, kernel_size=4, stride=2, pad=1),  # 4. (batch, 256, 32, 32)
+    deconv_layer(256, 128, kernel_size=4, stride=2, pad=1),  # 5. (batch, 128, 64, 64)
+    deconv_layer(128, 64, kernel_size=4, stride=2, pad=1),   # 6. (batch, 64, 128, 128)
+    deconv_layer(64, 64, kernel_size=4, stride=2, pad=1),    # 7. (batch, 64, 256, 256)
+    nn.ConvTranspose2d(64, 3, kernel_size=4, stride=2, padding=1),  # 8. (batch, 3, 512, 512)
+    nn.Sigmoid(),
+)
+```
+
+为了使网络更快的收敛， 这里我们使用了Adam优化器（比论文里使用的SDG优化器收敛效果更明显）。优化器的learning-rate也是动态调整的，在train开始的步数我们使用较大值，在网络稳定之后我们使用了较小的学习率进行模型的微调。具体的算法如下， 我们大概5000步更新一次学习率。
+
+```py
+x = step / float(total_steps)
+lr = self.args.learning_rate * (x ** 2 - 2 * x + 1) + 2e-3
+```
+
+模拟器的学习和预测构建为一个基于深度学习的标准回归问题，其中该任务的目标是最小化游戏中渲染图像与生成的图像在原始像素空间中的差异。训练模拟器使用的损失函数如下：
+
+$$ \begin{eqnarray}
+ \zeta_G(x)  &=& E_{x\sim u(x)}\{\Vert y - {\hat y} \Vert_1\} \\
+&=& E_{x\sim u(x)}\{\Vert G(x) - Engine(x)\Vert_1\} 
+\end{eqnarray}$$
+
+其中 x 表示输入的人脸参数，G(x) 表示模拟器的输出。
+
+$$ {\hat y}  = Engine(x) $$
+
+表示游戏引擎渲染的输出。作者使用 l1 损失函数作为约束，因为相比于 l2 损失，l1 损失能减少更多的模糊。
+
+
+$$ { G^{\ast}}  =  {\operatorname{arg\,}}\underset{G}{\operatorname{min}}\, \zeta_G(x) $$
+
+最终我们很成功了拟合了游戏参数-人脸的过程，即使在具有复杂纹理的一些区域中，生成的面部图像和直接由渲染得到真实图像仍具有高度的相似性，例如头发区域。这表明模拟器不仅适合低维面部流形的训练数据，而且还能学会解耦不同面部参数之间的相关性。 效果如视频所示：
+
+<center>
+<iframe src="//player.bilibili.com/player.html?aid=76020308&cid=130040768&page=1" scrolling="no"  width="600" height="600" border="0" frameborder="no" framespacing="0" allowfullscreen="true"> </iframe>
+</center><br>
+
+
+### Facial Similarity Measurement 面部相似测量
+
+
+一旦我们获得了训练好的模拟器 G，由面部参数生成面部图像的过程本质上就成为了一个面部相似性度量问题。由于输入的人脸照片和渲染出的游戏角色图像属于不同的图像域，为了有效地度量面部相似度，作者设计了两个损失函数分别从全局表观和局部细节两方面进行度量。作者借鉴了神经风格迁移的框架在特征空间计算这些损失，而不是在原始的像素空间计算它们的损失值。
+
+
+
+#### Discriminative Loss 判别损失
+
+作者引入了一个人脸识别模型 F1 来度量两张人脸的全局表观损失，如人脸形状以及大致表情。同时，作者受到感知距离（perceptual distance，在图像风格转换、图像超分辨率重建、以及特征可视化等领域有广泛应用）的启发。假设对于同一个人的不同肖像照片，它们的特征应该具有相同的表示。最终，作者使用了目前领先的人脸识别模型“Light CNN-29 v2”来提取 256 维的人脸嵌入表示，然后使用该特征计算两张人脸之间的余弦距离作为它们的相似度表示。作者将该损失定义为“判别损失”，因为它的功能是判断真实照片和由模拟器生成的图像是否属于同一个身份。上述的判别损失可以写为下面这种形式
+
+
+$$ \begin{eqnarray} 
+{\zeta_1{(x, y_r)}}  &=& 1 - \cos (F_1(y), F_1(y_r)) \\
+&=& 1- \cos (F_1(G(x)), F_1(y_r)) 
+\end{eqnarray}$$
+
+
+，两个向量间的余弦距离可以表示为：
+
+$$ \cos (a,b)  = \frac {<a, b>}{\sqrt{\Vert a \Vert_2^2 \Vert b \Vert_2^2 }} $$
+
+
+在pytorch中， 表示余弦相似度可以使用api:
+
+```py
+l1 = torch.cosine_similarity(x1, x2)
+```
+
+如果你想更加深入的了解余弦相似度， 可以参考[网页][i4]。
+
+#### Facial Content Loss 面部内容损失
+
+除了判别性损失之外，作者还使用人脸语义分割模型提取了局部面部特征，并通过计算这些特征在像素级的误差定义了一个面部内容损失。面部内容损失可以被视为对两个图像中不同面部成分的形状和位移的约束，例如，眼睛、嘴巴和鼻子。由于面部内容损失更关心的是面部图像特征差异而不是日常图像，因此作者没有使用在 ImageNet 数据集上训练的语义分割模型，而是使用非常著名的 Helen 人脸语义分割数据库对模型进行了训练。作者使用 Resnet-50 作为语义分割模型的基础结构，移除了最后的全连接层，并将其输出分辨率从 1/32 增加到了 1/8。为了提高面部语义特征的姿态敏感度，作者使用分割结果（类级的概率响应图）作为特征图的权重来构建姿态敏感的面部内容损失函数。最终，面部内容损失可以定义为：
+
+
+$$ {\zeta_2{(x, y_r)}} = \Vert \omega(G(x))F_2(G(x)) - \omega(y_r)F_2(y_r) \Vert_1 $$
+
+其中 F_2 表示从输入图像到面部语义特征映射的过程，w 表示特征的像素级权重，例如 w_1 表示眼 - 鼻 - 嘴响应图。
+
+<center><img src="/img/post-ml/face7.jpg"></center><br>
+
+在实现的过程中，我们提取了眉毛，眼睛，鼻子，牙齿，上唇，下唇，并且为他们分配权重如下所示： 
+
+```py
+# [eyebrow，eye，nose，teeth，up lip，lower lip]
+w_r = [1.1, 1.1, 1., 0.7, 1., 1.]
+w_g = [1.1, 1.1, 1., 0.7, 1., 1.]
+part1, _ = faceparsing_tensor(self.l2_y, self.parsing, w_r, cuda=self.cuda)
+y_ = y_.transpose(2, 3)
+part2, _ = faceparsing_tensor(y_, self.parsing, w_g, cuda=self.cuda)
+loss2 = F.l1_loss(part1, part2)
+```
+
+最终，模型的总损失函数可以写为判别损失和面部内容损失的线性组合：
+
+
+$$ \begin{eqnarray} 
+\zeta_S(x,y_r)  &=&  \alpha \zeta_1 + \zeta_2 \\
+&=& \alpha(1 - \cos(F_1(G(x)), F_1(y_r))) + \Vert \omega(G(x))F_2(G(x)) - \omega(y_r)F_2(y_r) \Vert_1
+\end{eqnarray}$$
+
+
+其中参数 Alpha 用于平衡两个任务的重要性。上文中提到的特征提取器如图 6 所示，作者使用了梯度下降法来解决下面这个优化问题：
+
+
+$$ \underset{x}{\operatorname{min}}\, L_S(x, y_r) $$
+
+$$ S.t.  x_i \in [0, 1] $$
+
+其中：
+
+$$  x = [x_1, x_2,...,x_D] $$ 
+
+表示需要优化的面部参数，y_r 表示输入的参考人脸照片。针对作者提出方法，其完整优化过程可以总结为：
+
+阶段 1： 训练模拟器 G、人脸识别网络 F_1 以及人脸分割网络 F_2
+
+阶段 2： 固定 G、F_1 和 F_2，初始化并更新人脸面部参数 x，直到接近迭代的最大次数：
+
+$$  x \leftarrow x - \mu \frac{\delta \zeta_S}{\delta x} (\mu: learning rate)$$ 
+
+
+最终train迭代过程中，我们使用了大约1000步，还是跟imitator一样动态调整learningrate。由于l1使用的是余弦距离作为参数，所以train的过程中l1越来越大， l2使用的是脸部分割语义作为参数，loss变得越来越小。  具体过程如图所示：
+
+![](/img/post-ml/face8.png)
+
+（上图红色曲线是余弦相似度的变化， 实际l1=1-cos）
+
+我们使用测试集的图片，使用这套度量方法最终还原出来的效果如视频所示：
+
+<center>
+<iframe src="//player.bilibili.com/player.html?aid=76020308&cid=130040768&page=1" scrolling="no"  width="600" height="600" border="0" frameborder="no" framespacing="0" allowfullscreen="true"> </iframe>
+</center><br>
+
+在引擎中还原出来的效果如下：
+
+[i1]: https://github.com/huailiang/face-nn
+[i2]: https://github.com/huailiang/knead_proj
+[i3]: https://arxiv.org/abs/1909.01064
+[i4]: https://www.cnblogs.com/dsgcBlogs/p/8619566.html
