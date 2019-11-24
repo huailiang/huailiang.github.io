@@ -11,7 +11,7 @@ tags:
 
 在传统RPG游戏中，捏脸是不可或缺的一环。 类似《楚留香》（现在叫《一梦江湖》）、《完美世界》、《花与剑》里都有捏脸的玩法。目前主流的玩法都是游戏中拖拽滑杆来控制脸部不同的参数，来实现不同的效果。关于捏脸的具体实现，可以参见我在github上传的一个[测试demo][i2]，里面介绍了详细的原理和代码。
 
-![](/img/post-ml/face1.jpg)
+![](/img/post-ml/face1.jpeg)
 
 
 通常情况下， 游戏玩家捏出来的脸都比较丑。要想捏出比较完美的脸型，往往需要花费比较长的时间，而这正是本篇正要照此要解决的。本文引用的理论大多在网易的一篇论文里都有论述:
@@ -103,38 +103,43 @@ catch (IOException ex)
 
 如图所示， 点击Sync-Picture按钮之后， 选择生成数据集的图片， 引擎就会生成相应的模型。 同理点击Sync-Model按钮，选择生成好的神经网络模型也可以生成引擎里的模型。并且可以在编辑器选项里进一步微调。
 
+<center><img src="/img/post-ml/face3.jpg"></center><br>
 
 ## 网络模型
 
 
-人脸 - 参数模型由一个模拟器 G(x) 和一个特征提取器 F(y) 组成。前者使用用户自定义的面部参数 x 来模拟游戏引擎的生成过程，并生成一个“预渲染”的面部图像 y。后者则用来决定特征空间，使得面部相似性度量方法可以被用于优化面部参数。
+人脸 - 参数模型由一个模拟器Imiatator G(x) 和一个特征提取器 F(y) 组成。前者使用用户自定义的面部参数 x 来模拟游戏引擎的生成过程，并生成一个“预渲染”的面部图像 y。后者则用来决定特征空间，使得面部相似性度量方法可以被用于优化面部参数。
 
 ![](/img/post-ml/face2.jpg)
 
 
 ### Imatator
 
-这里我们训练了一个模拟器Imitator, 用来模拟引擎中参数和模型的对应的关系。 模型的设计类似 DCGAN 的网络配置，它由 8 个转置卷积层组成。由于输入的是103个捏脸参数， 输出却是一张512的图片，所以整个训练的过程中也可以看做是一个上采样的过程。
+这里我们训练了一个模拟器Imitator G(x), 用来模拟引擎中参数和模型的对应的关系。 模型的设计类似 DCGAN 的网络配置，它由 8 个转置卷积层组成。由于输入的是103个捏脸参数， 输出却是一张512的图片，所以整个训练的过程中也可以看做是一个上采样的过程。
 
 <center><img src="/img/post-ml/face6.jpg"></center><br>
 
 每一层layer都是有转置卷积、BN、Relu组成， 最后为了保证输出固定在0-1之间，我们使用了Sigmoid激励函数。具体的实现代码如下：
 
 ```python
-def deconv_layer(in_chanel, out_chanel, kernel_size, stride=1, pad=0):
-    return nn.Sequential(nn.ConvTranspose2d(in_chanel, out_chanel, kernel_size=kernel_size, stride=stride, padding=pad),
-                         nn.BatchNorm2d(out_chanel), 
-                         nn.ReLU())
+def deconv_layer(self, in_chanel, out_chanel, kernel_size, stride=1, pad=0):
+    return nn.Sequential(nn.ConvTranspose2d(in_chanel, 
+                        out_chanel, 
+                        kernel_size=kernel_size, 
+                        stride=stride, 
+                        padding=pad),
+                        nn.BatchNorm2d(out_chanel), 
+                        nn.ReLU())
 
 self.model = nn.Sequential(
-    deconv_layer(args.params_cnt, 512, kernel_size=4),       # 1. (batch, 512, 4, 4)
-    deconv_layer(512, 512, kernel_size=4, stride=2, pad=1),  # 2. (batch, 512, 8, 8)
-    deconv_layer(512, 512, kernel_size=4, stride=2, pad=1),  # 3. (batch, 512, 16, 16)
-    deconv_layer(512, 256, kernel_size=4, stride=2, pad=1),  # 4. (batch, 256, 32, 32)
-    deconv_layer(256, 128, kernel_size=4, stride=2, pad=1),  # 5. (batch, 128, 64, 64)
-    deconv_layer(128, 64, kernel_size=4, stride=2, pad=1),   # 6. (batch, 64, 128, 128)
-    deconv_layer(64, 64, kernel_size=4, stride=2, pad=1),    # 7. (batch, 64, 256, 256)
-    nn.ConvTranspose2d(64, 3, kernel_size=4, stride=2, padding=1),  # 8. (batch, 3, 512, 512)
+    deconv_layer(args.params_cnt, 512, kernel_size=4),       
+    deconv_layer(512, 512, kernel_size=4, stride=2, pad=1),  
+    deconv_layer(512, 512, kernel_size=4, stride=2, pad=1), 
+    deconv_layer(512, 256, kernel_size=4, stride=2, pad=1),  
+    deconv_layer(256, 128, kernel_size=4, stride=2, pad=1),  
+    deconv_layer(128, 64, kernel_size=4, stride=2, pad=1),   
+    deconv_layer(64, 64, kernel_size=4, stride=2, pad=1),    
+    nn.ConvTranspose2d(64, 3, kernel_size=4, stride=2, padding=1), 
     nn.Sigmoid(),
 )
 ```
@@ -259,7 +264,32 @@ $$  x \leftarrow x - \mu \frac{\delta \zeta_S}{\delta x} (\mu: learning rate)$$
 （上图红色曲线是余弦相似度的变化， 实际l1=1-cos）
 
 
+
+<!-- 最终我们使用上述的方法来测量testset里的图片对应的参数， 从下面的视频中可以看到换换的效果还是不错的， 这意味着别人的模型截图一下发送给我们， 我们就能迅速的在引擎里还原出来。
+
+
+
+<center>
+<iframe src="//player.bilibili.com/player.html?aid=76020308&cid=130040768&page=1" scrolling="no"  width="600" height="600" border="0" frameborder="no" framespacing="0" allowfullscreen="true"> </iframe>
+</center><br>
+
+
+在引擎里的效果， 正面图和侧面图：
+
+![](/img/post-ml/face8.png)
+
+
+### 写在最后：
+
+* 1. 对于外部的图片，一般我们建议首先使用dlib截面部的图， 往往dlib生成的图片和trainset的图片脸部整体轮廓存在一个的偏差， 我们建议先去PS里微调一下， 比如说dataset没有脖子，而dlib却保留了较多部分的脖子。因为我们脸部语义分割网络定义的loss 函数是了l1, 稍微调整之后，能大大加快网络的收敛速度。
+
 <br>
+
+* 2. 可能读者更希望看到我们的神经网络能够还原的不仅仅是testset脸部的参数, 而是像论文里还原出一些明星的脸型，甚至是自己上传的一些照片的脸型，这当然是可行的。但这对游戏里的模型提出了一定要求，游戏里拉扯骨骼不能带来畸变或者穿帮， 即蒙皮的时候需更符合物理， 我在调试测试的模型的时候，稍微拉扯眉毛的骨骼，眼珠或者发型就穿帮了， 所以控制这些参数的范围其实设置了一个很小的范围值。 -->
+
+
+<br>
+
 
 ### 附录:
 [引擎里裁掉头发的imitator model][i5]
