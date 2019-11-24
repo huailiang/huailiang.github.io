@@ -5,8 +5,8 @@
     <description>关于前端与设计、黑客与画家 | 怀亮，Web &amp; Mobile Lover，Software Engineer，Game Designer | 这里是 @Huailiang怀亮 的个人博客，与你一起发现更大的世界。</description>
     <link>https://huailiang.github.io/</link>
     <atom:link href="https://huailiang.github.io/feed.xml" rel="self" type="application/rss+xml"/>
-    <pubDate>Sat, 23 Nov 2019 17:29:05 +0800</pubDate>
-    <lastBuildDate>Sat, 23 Nov 2019 17:29:05 +0800</lastBuildDate>
+    <pubDate>Sun, 24 Nov 2019 21:45:49 +0800</pubDate>
+    <lastBuildDate>Sun, 24 Nov 2019 21:45:49 +0800</lastBuildDate>
     <generator>Jekyll v3.0.5</generator>
     
       <item>
@@ -27,11 +27,47 @@
 
 &lt;p&gt;深度网络学习往往都需要一个强大的数据集， 比较有名的如微软的coco dataset, 还有南京大学周志华教授的《机器学习》里提到的西瓜数据集。这里我们使用引擎来生成数据集， 大致的原理论述如下：&lt;/p&gt;
 
-&lt;p&gt;首先我们随机生成一组捏脸需要使用的参数，然后在使用这些参数在unity中生成不同的脸型，然后将camera的图像渲染到一张RenderTexture, RenderTexture设置的大小是512x512, 格式是R8G8B8A8, 具体参见下图：&lt;/p&gt;
-
-&lt;center&gt;&lt;img src=&quot;/img/post-ml/face3.jpg&quot; /&gt;&lt;/center&gt;
-&lt;p&gt;&lt;br /&gt;&lt;/p&gt;
-
+&lt;p&gt;首先我们随机生成一组捏脸需要使用的参数，然后在使用这些参数在unity中生成不同的脸型，然后将camera的图像渲染到一张RenderTexture, RenderTexture设置的大小是512x512, 格式是R8G8B8A8, 具体参见如表：&lt;/p&gt;
+&lt;div style=&quot;text-align: center;&quot;&gt;
+&lt;table border=&quot;1&quot; style=&quot;font-size:14px&quot;&gt;
+ &lt;tr&gt;
+    &lt;th&gt;参数&lt;/th&gt;
+    &lt;th&gt;Value&lt;/th&gt;
+&lt;/tr&gt;          
+&lt;tr&gt;
+    &lt;td&gt;Dimension&lt;/td&gt;
+    &lt;td&gt;2D&lt;/td&gt;
+&lt;/tr&gt;   
+&lt;tr&gt;
+    &lt;td&gt;Size&lt;/td&gt;
+    &lt;td&gt;512&lt;/td&gt;
+&lt;/tr&gt;   
+&lt;tr&gt;
+    &lt;td&gt;Format&lt;/td&gt;
+    &lt;td&gt;R8G8B8A8_UNORM&lt;/td&gt;
+&lt;/tr&gt;   
+&lt;tr&gt;
+    &lt;td&gt;Depth Buffer&lt;/td&gt;
+    &lt;td&gt;At least 16 bits depth (no stencel)&lt;/td&gt;
+&lt;/tr&gt;   
+&lt;tr&gt;
+    &lt;td&gt;Enable Mipmap&lt;/td&gt;
+    &lt;td&gt;False&lt;/td&gt;
+&lt;/tr&gt;   
+&lt;tr&gt;
+    &lt;td&gt;Wrap Mode&lt;/td&gt;
+    &lt;td&gt;Clamp&lt;/td&gt;
+&lt;/tr&gt;
+&lt;tr&gt;
+    &lt;td&gt;Filter Mode&lt;/td&gt;
+    &lt;td&gt;Bilinear&lt;/td&gt;
+&lt;/tr&gt;  
+&lt;tr&gt;
+    &lt;td&gt;Aniso Level&lt;/td&gt;
+    &lt;td&gt;0&lt;/td&gt;
+&lt;/tr&gt;  
+&lt;/table&gt;
+&lt;/div&gt;
 &lt;p&gt;最后将RenderTexture内容转换保存到一张jpg图片中，具体实现的代码如下：&lt;/p&gt;
 &lt;div class=&quot;language-c# highlighter-rouge&quot;&gt;&lt;pre class=&quot;highlight&quot;&gt;&lt;code&gt;&lt;span class=&quot;n&quot;&gt;Texture2D&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;tex&lt;/span&gt; &lt;span class=&quot;p&quot;&gt;=&lt;/span&gt; &lt;span class=&quot;k&quot;&gt;new&lt;/span&gt; &lt;span class=&quot;nf&quot;&gt;Texture2D&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;rt&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;width&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;rt&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;height&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;TextureFormat&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;RGBA32&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,&lt;/span&gt; &lt;span class=&quot;k&quot;&gt;false&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;);&lt;/span&gt;
 &lt;span class=&quot;n&quot;&gt;tex&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;nf&quot;&gt;ReadPixels&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;k&quot;&gt;new&lt;/span&gt; &lt;span class=&quot;nf&quot;&gt;Rect&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;m&quot;&gt;0&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,&lt;/span&gt; &lt;span class=&quot;m&quot;&gt;0&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;rt&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;width&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;rt&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;height&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;),&lt;/span&gt; &lt;span class=&quot;m&quot;&gt;0&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,&lt;/span&gt; &lt;span class=&quot;m&quot;&gt;0&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;);&lt;/span&gt;
@@ -52,7 +88,7 @@
 
 &lt;p&gt;同时我们将每一张图片对应的捏脸参数保存在一个二进制文件中，名字为db_description， 记录格式如下：&lt;/p&gt;
 
-&lt;p&gt;图片数量-[图片名-params][loop]&lt;/p&gt;
+&lt;p&gt;图片数量-[图片名-params][loop]  (loop=图片数量)&lt;/p&gt;
 
 &lt;p&gt;由于Unity渲染每一帧画面都需要等到每一帧的最后，而我们又希望每一帧尽量输出可能多的图片，因此每一帧的都不会卸载上次渲染完的RenderTexture，故你需要保留足够的内存来生成数据集。在这里我们建议你的电脑需要有16G内存， 生成20000张图片应该足够了。生成训练集的时候，我们故意对params加入一些混淆， 生成一些噪点，用来防止生成的neural network产生过拟合。&lt;/p&gt;
 
@@ -193,9 +229,9 @@
 
 &lt;p&gt;其中参数 Alpha 用于平衡两个任务的重要性。上文中提到的特征提取器如图 6 所示，作者使用了梯度下降法来解决下面这个优化问题：&lt;/p&gt;
 
-&lt;script type=&quot;math/tex; mode=display&quot;&gt;\underset{x}{\operatorname{min}}\, L_S(x, y_r)&lt;/script&gt;
+&lt;script type=&quot;math/tex; mode=display&quot;&gt;\underset{x}{\operatorname{min}}\, \zeta_S(x, y_r)&lt;/script&gt;
 
-&lt;script type=&quot;math/tex; mode=display&quot;&gt;S.t.  x_i \in [0, 1]&lt;/script&gt;
+&lt;script type=&quot;math/tex; mode=display&quot;&gt;s.t.  x_i \in [0, 1]&lt;/script&gt;
 
 &lt;p&gt;其中：&lt;/p&gt;
 
@@ -215,14 +251,11 @@
 
 &lt;p&gt;（上图红色曲线是余弦相似度的变化， 实际l1=1-cos）&lt;/p&gt;
 
-&lt;p&gt;我们使用测试集的图片，使用这套度量方法最终还原出来的效果如视频所示：&lt;/p&gt;
-
-&lt;center&gt;
-&lt;iframe src=&quot;//player.bilibili.com/player.html?aid=76020308&amp;amp;cid=130040768&amp;amp;page=1&quot; scrolling=&quot;no&quot; width=&quot;600&quot; height=&quot;600&quot; border=&quot;0&quot; frameborder=&quot;no&quot; framespacing=&quot;0&quot; allowfullscreen=&quot;true&quot;&gt; &lt;/iframe&gt;
-&lt;/center&gt;
 &lt;p&gt;&lt;br /&gt;&lt;/p&gt;
 
-&lt;p&gt;在引擎中还原出来的效果如下：&lt;/p&gt;
+&lt;h3 id=&quot;附录&quot;&gt;附录:&lt;/h3&gt;
+&lt;p&gt;&lt;a href=&quot;https://pan.baidu.com/s/1RWmvCJHOeXSFDxERQ26mUg&quot;&gt;引擎里裁掉头发的imitator model&lt;/a&gt;&lt;br /&gt;
+&lt;a href=&quot;https://pan.baidu.com/s/1z0YvwsfBAFnhETjj0Zby-g&quot;&gt;引擎里完整显示头发、脖子等非脸 imitatormodel&lt;/a&gt;&lt;/p&gt;
 
 </description>
         <pubDate>Sat, 23 Nov 2019 11:00:00 +0800</pubDate>

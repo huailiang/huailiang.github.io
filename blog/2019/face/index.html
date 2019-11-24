@@ -92,11 +92,47 @@ MathJax.Hub.Config({
 
 <p>深度网络学习往往都需要一个强大的数据集， 比较有名的如微软的coco dataset, 还有南京大学周志华教授的《机器学习》里提到的西瓜数据集。这里我们使用引擎来生成数据集， 大致的原理论述如下：</p>
 
-<p>首先我们随机生成一组捏脸需要使用的参数，然后在使用这些参数在unity中生成不同的脸型，然后将camera的图像渲染到一张RenderTexture, RenderTexture设置的大小是512x512, 格式是R8G8B8A8, 具体参见下图：</p>
-
-<center><img src="/img/post-ml/face3.jpg" /></center>
-<p><br /></p>
-
+<p>首先我们随机生成一组捏脸需要使用的参数，然后在使用这些参数在unity中生成不同的脸型，然后将camera的图像渲染到一张RenderTexture, RenderTexture设置的大小是512x512, 格式是R8G8B8A8, 具体参见如表：</p>
+<div style="text-align: center;">
+<table border="1" style="font-size:14px">
+ <tr>
+    <th>参数</th>
+    <th>Value</th>
+</tr>          
+<tr>
+    <td>Dimension</td>
+    <td>2D</td>
+</tr>   
+<tr>
+    <td>Size</td>
+    <td>512</td>
+</tr>   
+<tr>
+    <td>Format</td>
+    <td>R8G8B8A8_UNORM</td>
+</tr>   
+<tr>
+    <td>Depth Buffer</td>
+    <td>At least 16 bits depth (no stencel)</td>
+</tr>   
+<tr>
+    <td>Enable Mipmap</td>
+    <td>False</td>
+</tr>   
+<tr>
+    <td>Wrap Mode</td>
+    <td>Clamp</td>
+</tr>
+<tr>
+    <td>Filter Mode</td>
+    <td>Bilinear</td>
+</tr>  
+<tr>
+    <td>Aniso Level</td>
+    <td>0</td>
+</tr>  
+</table>
+</div>
 <p>最后将RenderTexture内容转换保存到一张jpg图片中，具体实现的代码如下：</p>
 <div class="language-c# highlighter-rouge"><pre class="highlight"><code><span class="n">Texture2D</span> <span class="n">tex</span> <span class="p">=</span> <span class="k">new</span> <span class="nf">Texture2D</span><span class="p">(</span><span class="n">rt</span><span class="p">.</span><span class="n">width</span><span class="p">,</span> <span class="n">rt</span><span class="p">.</span><span class="n">height</span><span class="p">,</span> <span class="n">TextureFormat</span><span class="p">.</span><span class="n">RGBA32</span><span class="p">,</span> <span class="k">false</span><span class="p">);</span>
 <span class="n">tex</span><span class="p">.</span><span class="nf">ReadPixels</span><span class="p">(</span><span class="k">new</span> <span class="nf">Rect</span><span class="p">(</span><span class="m">0</span><span class="p">,</span> <span class="m">0</span><span class="p">,</span> <span class="n">rt</span><span class="p">.</span><span class="n">width</span><span class="p">,</span> <span class="n">rt</span><span class="p">.</span><span class="n">height</span><span class="p">),</span> <span class="m">0</span><span class="p">,</span> <span class="m">0</span><span class="p">);</span>
@@ -117,7 +153,7 @@ MathJax.Hub.Config({
 
 <p>同时我们将每一张图片对应的捏脸参数保存在一个二进制文件中，名字为db_description， 记录格式如下：</p>
 
-<p>图片数量-[图片名-params][loop]</p>
+<p>图片数量-[图片名-params][loop]  (loop=图片数量)</p>
 
 <p>由于Unity渲染每一帧画面都需要等到每一帧的最后，而我们又希望每一帧尽量输出可能多的图片，因此每一帧的都不会卸载上次渲染完的RenderTexture，故你需要保留足够的内存来生成数据集。在这里我们建议你的电脑需要有16G内存， 生成20000张图片应该足够了。生成训练集的时候，我们故意对params加入一些混淆， 生成一些噪点，用来防止生成的neural network产生过拟合。</p>
 
@@ -258,9 +294,9 @@ MathJax.Hub.Config({
 
 <p>其中参数 Alpha 用于平衡两个任务的重要性。上文中提到的特征提取器如图 6 所示，作者使用了梯度下降法来解决下面这个优化问题：</p>
 
-<script type="math/tex; mode=display">\underset{x}{\operatorname{min}}\, L_S(x, y_r)</script>
+<script type="math/tex; mode=display">\underset{x}{\operatorname{min}}\, \zeta_S(x, y_r)</script>
 
-<script type="math/tex; mode=display">S.t.  x_i \in [0, 1]</script>
+<script type="math/tex; mode=display">s.t.  x_i \in [0, 1]</script>
 
 <p>其中：</p>
 
@@ -280,14 +316,11 @@ MathJax.Hub.Config({
 
 <p>（上图红色曲线是余弦相似度的变化， 实际l1=1-cos）</p>
 
-<p>我们使用测试集的图片，使用这套度量方法最终还原出来的效果如视频所示：</p>
-
-<center>
-<iframe src="//player.bilibili.com/player.html?aid=76020308&amp;cid=130040768&amp;page=1" scrolling="no" width="600" height="600" border="0" frameborder="no" framespacing="0" allowfullscreen="true"> </iframe>
-</center>
 <p><br /></p>
 
-<p>在引擎中还原出来的效果如下：</p>
+<h3 id="附录">附录:</h3>
+<p><a href="https://pan.baidu.com/s/1RWmvCJHOeXSFDxERQ26mUg">引擎里裁掉头发的imitator model</a><br />
+<a href="https://pan.baidu.com/s/1z0YvwsfBAFnhETjj0Zby-g">引擎里完整显示头发、脖子等非脸 imitatormodel</a></p>
 
 
     </div>
