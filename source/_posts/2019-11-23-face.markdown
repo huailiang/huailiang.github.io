@@ -294,6 +294,11 @@ $$  x \leftarrow x - \mu \frac{\delta \zeta_S}{\delta x} (\mu: learning rate)$$
 ### 附录:
 [引擎里裁掉头发的imitator model][i5]
 [引擎里完整显示头发、脖子等非脸 imitatormodel][i6]
+[dlib 引用模型][i7]
+[脸部语义分割模型][i8]
+
+
+
 
 [i1]: https://github.com/huailiang/face-nn
 [i2]: https://github.com/huailiang/knead_proj
@@ -301,3 +306,5 @@ $$  x \leftarrow x - \mu \frac{\delta \zeta_S}{\delta x} (\mu: learning rate)$$
 [i4]: https://www.cnblogs.com/dsgcBlogs/p/8619566.html
 [i5]: https://pan.baidu.com/s/1RWmvCJHOeXSFDxERQ26mUg
 [i6]: https://pan.baidu.com/s/1z0YvwsfBAFnhETjj0Zby-g
+[i7]: http://dlib.net/files/shape_predictor_68_face_landmarks.dat.bz2
+[i8]: https://pan.baidu.com/s/1E_rGkbqzf0ppyl5ks9FSLQ

@@ -1,0 +1,133 @@
+---
+layout:     post
+title:      "Unity lua脚本调试"
+date:       2019-11-23 03:00:00
+author:     "Huailiang"
+tags:
+    - Unity
+---
+
+
+
+大多游戏都在使用lua脚本来热更新游戏逻辑，下面介绍两个工具如何调试lua，介绍的两款lua调试工具都支持以下特性：
+
+
+```
+自动补全（auto completion）
+代码片段（snippet completion）
+定义跳转（definition）
+生成注释（comment generation）
+类型推断（limited type inference）
+代码格式化（formatting）: 依赖 lua-fmt
+代码诊断（linting）：依赖 luacheck
+调试器（debugger）
+```
+
+
+
+## Jet brains 工具链
+
+下载安装IntelliJ IDEA 或者pycharm, 这两款软件都是[Jet Brains][i4]旗下的软件。 现在更多的人使用它们来开发python或者java， 我们这里主要使用的是其一款插件，叫做EmmyLua。
+
+以Pycharm为例：
+
+安装好之后，选择File->Settings, 再打开的设置窗口选中Plugins来安装插件， 搜到EmmyLua, 点击Install按钮，进行安装：
+
+![](/img/post-lua/lua6.jpeg)
+
+选择Unity工程lua脚本所在的文件夹打开（注意lua require时搜索路径，所以这里一定对应起来）。 
+
+增加识别文件扩展名，将*.lua 和*.txt统统识别为lua脚本，（*.lua.txt能识别为lua，但影响debug, 可能是emmylua的一个bug）
+
+![](/img/post-lua/lua7.jpg)
+
+在上图选项Ignore files and folders 可以设置忽略在侧边栏显示的文件匹配符。很多非代码相关的东西都可以通过此方式屏蔽掉。
+
+
+菜单栏选中Run->Attach to Process, 在本机所有的进程中选择Unity进程即可调试了。
+
+![](/img/post-lua/lua8.jpg)
+
+运行效果如下：
+
+![](/img/post-lua/lua9.jpg)
+
+
+如果你不习惯pycharm自带的快捷键, 你还可以在setting的Keymap中改成vs的快捷键。除了vs的快捷键， pycharm还提供了很多其他编辑器的快捷键， 比如说Sublime, Eclipse等。
+
+如果你之前是一名python开发者， 第一次打开一个lua的工程的时候， pycharm会加载很多python本地安装的packages, 如果这影响了编辑器的性能，你可以在Settings里面清掉Project interpreter：
+
+![](/img/post-lua/lua10.jpg)
+
+如果你是一位原生的lua开发者， 而非使用引擎调试lua， 你需要配置编译好的lua.exe的文件位置和lua的search path, 配置好之后也能很方便的调试。
+
+![](/img/post-lua/lua11.jpg)
+
+
+
+## VSCode 
+
+这里推荐一款vscode的plugin, 腾讯开发的插件叫LuaPanda, 因为LuaPanda是基于luasocket的， 所以你必须确保你的lua环境已经安装了luasocket, 又鉴于此特性，所以这款插件还可以远程调试， 比如说手机连着编辑器调试。
+
+![](/img/post-lua/lua15.jpg)
+
+#### 文件配置
+
+文件：[LuaPanda.lua][i2]
+
+下载位置：[github][i3] 的 Debugger 目录下
+
+把以上两个文件放在lua代码可以引用到的位置，并在用户代码中引用:
+
+require("LuaPanda").start("127.0.0.1",8818);
+*8818是默认端口号，如果需要修改，请同时修改launch.json的端口设置。
+
+
+#### 调试配置
+
+切换到VSCode的调试选项卡，点击齿轮，在弹出框中选择 LuaPanda (若无此选项说明以前用别的插件调试过lua , 要把先前用过的调试插件禁用)。会自动生成launch.json文件。
+
+![](/img/post-lua/lua12.png)
+
+
+launch.json 配置项中要修改的主要是luaFileExtension, 改成lua文件使用的后缀就行。（比如xlua改为lua.txt, slua是txt）。各配置项鼠标悬停会有提示，可根据需要更改。
+
+![](/img/post-lua/lua12.png)
+
+先运行VSCode端，再运行Lua代码: 点击调试选项卡左上角的绿色箭头，再运行unity/ue4工程。如果有stopOnEntry或是执行到断点处，就会自动停住。
+
+![](/img/post-lua/lua13.png)
+
+
+LuaPanda 在PC上调试会默认使用 c hook，它是用c重写了debugger的核心hook部分，从而提高调试器的执行效率。 c hook会默认启用，无需单独接入。
+
+验证方式：停在断点处后，在调试控制台输入LuaPanda.getInfo()， 返回信息的BaseInfo会给出提示，如果c库已加载，还会给出版本号。
+
+
+LuaPanda调试器功能依赖LuaSocket, 可运行于slua，slua-unreal ，xlua 等已集成 LuaSocket 的 lua 环境，也可以在console中调试。lua 版本支持 5.1- 5.3。
+
+其他依赖项目（插件中已包含，无需用户手动安装):
+
+```
+luaparse
+luacheck
+lua-fmt
+path-reader
+```
+
+
+更多关于LuaPanda的介绍， [参考这里][i1]
+
+
+
+## 写在最后
+
+由于作者经常使用pycharm写python脚本， 已经很熟悉Jetbrains的那一套环境了，所以我更倾向于使用第一种方式来调试lua。 然而vscode显然更轻量级一些， 读者喜欢使用哪一款，萝卜青菜 各有所爱吧。
+
+<br>
+
+
+[i1]: https://github.com/Tencent/LuaPanda/blob/master/Docs/Manual/access-guidelines.md
+[i2]: https://github.com/Tencent/LuaPanda/blob/master/Debugger/LuaPanda.lua
+[i3]: https://github.com/Tencent/LuaPanda
+[i4]: www.jetbrains.com
