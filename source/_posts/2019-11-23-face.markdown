@@ -265,18 +265,18 @@ $$  x \leftarrow x - \mu \frac{\delta \zeta_S}{\delta x} (\mu: learning rate)$$
 
 
 
-<!-- 最终我们使用上述的方法来测量testset里的图片对应的参数， 从下面的视频中可以看到换换的效果还是不错的， 这意味着别人的模型截图一下发送给我们， 我们就能迅速的在引擎里还原出来。
+最终我们使用上述的方法来测量testset里的图片对应的参数， 从下面的视频中可以看到换换的效果还是不错的， 这意味着别人的模型截图一下发送给我们， 我们就能迅速的在引擎里还原出来。
 
 
 
 <center>
-<iframe src="//player.bilibili.com/player.html?aid=76020308&cid=130040768&page=1" scrolling="no"  width="600" height="600" border="0" frameborder="no" framespacing="0" allowfullscreen="true"> </iframe>
+<iframe src="//player.bilibili.com/player.html?aid=76951213&cid=131617715&page=1" scrolling="no"  width="600" height="600" border="0" frameborder="no" framespacing="0" allowfullscreen="true"> </iframe>
 </center><br>
 
 
 在引擎里的效果， 正面图和侧面图：
 
-![](/img/post-ml/face8.png)
+![](/img/post-ml/face9.jpg)
 
 
 ### 写在最后：
@@ -285,7 +285,7 @@ $$  x \leftarrow x - \mu \frac{\delta \zeta_S}{\delta x} (\mu: learning rate)$$
 
 <br>
 
-* 2. 可能读者更希望看到我们的神经网络能够还原的不仅仅是testset脸部的参数, 而是像论文里还原出一些明星的脸型，甚至是自己上传的一些照片的脸型，这当然是可行的。但这对游戏里的模型提出了一定要求，游戏里拉扯骨骼不能带来畸变或者穿帮， 即蒙皮的时候需更符合物理， 我在调试测试的模型的时候，稍微拉扯眉毛的骨骼，眼珠或者发型就穿帮了， 所以控制这些参数的范围其实设置了一个很小的范围值。 -->
+* 2. 可能读者更希望看到我们的神经网络能够还原的不仅仅是testset脸部的参数, 而是像论文里还原出一些明星的脸型，甚至是自己上传的一些照片的脸型，这当然是可行的。但这对游戏里的模型提出了一定要求，游戏里拉扯骨骼不能带来畸变或者穿帮， 即蒙皮的时候需更符合物理， 我在调试测试的模型的时候，稍微拉扯眉毛的骨骼，眼珠或者发型就穿帮了， 所以控制这些参数的范围其实设置了一个很小的范围值。
 
 
 <br>
