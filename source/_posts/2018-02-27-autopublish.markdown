@@ -77,7 +77,7 @@ new Date().format("yyyyMMddHHmmss")
 
 获取所有的分支：
 
-``` python 
+``` groovy 
 def cmd = 'git ls-remote --heads git@git.intra.123u.com:dragon_nest/dragon-nest.git'
 def proc = cmd.execute()
 proc.waitFor()

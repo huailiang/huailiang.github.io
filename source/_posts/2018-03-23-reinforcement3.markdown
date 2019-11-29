@@ -102,11 +102,11 @@ def _to_learn(self,j):
 我们使用的神经网络输出得到的实际值和预估值做平方差再求均值来计算损失函数。
 
 {% highlight python %}
-说明：
+# 说明：
 tf.squared_difference(x,y,name=None)
 
-功能：计算(x-y)(x-y)。
-输入：x为张量，可以为`half`,`float32`, `float64`类型。
+# 功能：计算(x-y)(x-y)。
+# 输入：x为张量，可以为`half`,`float32`, `float64`类型。
 {% endhighlight %}
 
 

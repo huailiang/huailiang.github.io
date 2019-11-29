@@ -99,7 +99,7 @@ APP_STL       := c++_static
 
  在Android.mk中配置所要编译的 c++文件，编译使用的宏。使用方式跟 linux 使用 gcc编译c++很类似。
 
-``` cpp
+``` sh
 
 LOCAL_PATH := $(call my-dir)  
 

@@ -43,7 +43,7 @@ def var_bias(shape):
 
 首先，关于什么是卷积，文章（3）有一牛人用一句话总结得很好：卷积就是带权的积分，看下面的一维卷积公式:
 
-  ![](/img/post-tf/cnn03.png)
+  $$  c(x) = \int_{-\infty}^\infty f(\tau)g(x-\tau)d\tau $$
  
 函数值与权值的乘积相加即可得到卷积值c(x)，换句话说，我们对函数值的加权叠加，即可得到x处的卷积值。CNN利用的是多维卷积，但原理一样，不多说了，同时建议不要过多纠缠这个概念，理解就好，以后若作科研再作深入了解。对于图像处理，CNN会对输入图像矩阵化，然后从矩阵第一个元素开始逐一进行卷积运算。
 
@@ -69,10 +69,10 @@ def maxpool(x):
 	return tf.nn.max_pool(x,ksize=[1,2,2,1],strides=[1,2,2,1],padding='SAME')
 
 
-padding='SAME' 表示输出大小不会发生改变，filter 以0填充
-padding='VILID' 信息会有损 一般在池化pooling才会改变大小
+# padding='SAME' 表示输出大小不会发生改变，filter 以0填充
+# padding='VILID' 信息会有损 一般在池化pooling才会改变大小
 
-- 定义模型输入 这里从 MNIST 测试数据获取
+# 定义模型输入 这里从 MNIST 测试数据获取
 
 xs=tf.placeholder(tf.float32,[None,784])/255
 ys=tf.placeholder(tf.float32,[None,10])

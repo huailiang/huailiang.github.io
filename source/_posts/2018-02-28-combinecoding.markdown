@@ -26,7 +26,7 @@ tags:
 
 这三种方法当中，C++ Interop是针对托管C++使用的方法（说实话C++/CLI感觉没啥前途），COM Interop则是针对Window软件开发而采用的方式。所以我们只剩下一种解决方案：也就是PInvoke来进行托管环境与非托管环境的互操作。不过由于PInvoke本身内容也并不少，所以在这里我也就简单介绍一下其使用的方式，更详细的内容可以去查看官方文档，或者是下一个《精通.Net互操作》的pdf来阅读就可以了。
 
-### 新手入门
+## 新手入门
 如何做到c# 能调用到c++代码呢，下面我们通过一个小的Demo展示。
 
 - 在Unity 新建一个c# 代码，里面内容如下：
@@ -80,7 +80,7 @@ extern "C"
 
 ![](/img/post-cpp/cpp2.jpg)
 
-### 断点调试
+## 断点调试
 在你的c++ 调试（D）->附加到进程（P)... ,在弹出的窗口作如下选择：
 
 ![](/img/post-cpp/cpp3.jpg)
@@ -89,8 +89,11 @@ extern "C"
 
 ![](/img/post-cpp/cpp4.jpg)
 
+如果你的vs工程是由cmakelist生成的， 且断点不能再unity中命中的话，可以检查c/c++里的调式信息格式选项有没有设置成下图所示的选项：
 
-### 复杂的数据封送
+![](/img/post-cpp/cpp20.jpg)
+
+## 复杂的数据封送
 
 #### 指针传递
 
@@ -200,7 +203,7 @@ static extern void iGetFashionListRowByID(int idx, ref RowData row);
 ```
 
 
-### 面向对象
+## 面向对象
 
 通过上面测试我们可以看到出c#里都是静态函数，c++都写在extern c中，需要自己去获取对应的实例，这些都是面向过程的。而c++天然是面对对象的OO,那我们如何实现c#里去new一个c++对象，c# new的对象又是如何析构的呢？
 
@@ -280,7 +283,7 @@ if (GUI.Button(new Rect(20, 220, 100, 60), "Swig"))
 在c#里new c++里的对象，记得一定要Dispose(),否则的话，会造成内存泄漏，带来不必要的麻烦。上面的代码如果没有显示调用ins.Dispose() 可是可以的，ins在托管销毁的时候，swig已帮助我们在析构函数中调用Dispose(),但这样释放的不及时，并不是函数退出的时候就会释放。在生成的Invoik类的析构函数自动调用了Disposse()。最后说说swig的缺点，swig并不会帮助我们生成UNITY_IPHONE ios平台下外链调用，即DllImport 因为ios平台我们平常使用的都是静态库， 而不像Windows和Android平台一样是动态库。
 ![](/img/post-cpp/cpp11.jpg)
 
-### Swig常用语法
+## Swig常用语法
 详细的文档请参考官方文档，这里只做简单的一些介绍。
 
 我在项目中写了一个简单的模板，用到了一些Swig的常用功能：

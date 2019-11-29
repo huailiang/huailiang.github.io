@@ -217,7 +217,7 @@ MAC默认是没有cmake指令的。要测试你的MAC是否已经装过cmake，�
 
 CMakeLists.txt：
 
-{% highlight cpp %}
+{% highlight bash %}
 cmake_minimum_required(VERSION 3.0.2)
 #project(GameCore)
 

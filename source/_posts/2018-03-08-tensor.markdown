@@ -67,7 +67,7 @@ TensorFlow用张量这种数据结构来表示所有的数据.你可以把一个
 阶
 在TensorFlow系统中，张量的维数来被描述为阶.但是张量的阶和矩阵的阶并不是同一个概念.张量的阶（有时是关于如顺序或度数或者是n维）是张量维数的一个数量描述.比如，下面的张量（使用Python中list定义的）就是2阶.
 
-{% highlight json %}
+{% highlight python %}
     t = [[1, 2, 3], [4, 5, 6], [7, 8, 9]]
 {% endhighlight %}
 
@@ -357,10 +357,10 @@ writer.add_summary(result,step)
 
 
 如果6006端口被占用，会报一下错误：
-{% highlight json %}
+```
 ERROR:tensorflow:Tried to connect to port 6006, but address is in use.
 Tried to connect to port 6006, but address is in use.
-{% endhighlight %}
+```
 
 解决可以使用 --port 指定端口：
 

@@ -132,27 +132,27 @@ string extensions = (const char*)glGetString(GL_EXTENSIONS);
 a. 判断是否支持ETC1格式的压缩纹理
 
 ``` cpp 
-return (extensions.find(“GL_OES_compressed_ETC1_RGB8_texture”)!= string::npos);
+return (extensions.find("GL_OES_compressed_ETC1_RGB8_texture")!= string::npos);
 ```
 
 b. 判断是否支持DXT格式的压缩纹理
 
 ``` cpp
-return (extensions.find(“GL_EXT_texture_compression_dxt1”)!= string::npos ||
-    extensions.find(“GL_EXT_texture_compression_s3tc”)!= string::npos);
+return (extensions.find("GL_EXT_texture_compression_dxt1")!= string::npos ||
+    extensions.find("GL_EXT_texture_compression_s3tc")!= string::npos);
 ```
 
 c. 判断是否支持PVRTC格式的压缩纹理
 
 ``` cpp
-return (extensions.find(“GL_IMG_texture_compression_pvrtc”)!= string::npos);
+return (extensions.find("GL_IMG_texture_compression_pvrtc")!= string::npos);
 ```
 
 d. 判断是否支持ATITC格式的压缩纹理
 
 ``` cpp
-return (extensions.find(“GL_AMD_compressed_ATC_texture”)!= string::npos ||
-    extensions.find(“GL_ATI_texture_compression_atitc”)!= string::npos);
+return (extensions.find("GL_AMD_compressed_ATC_texture")!= string::npos ||
+    extensions.find("GL_ATI_texture_compression_atitc")!= string::npos);
 ```
 
 4） 填充压缩纹理数据

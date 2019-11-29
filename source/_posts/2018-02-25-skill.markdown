@@ -54,7 +54,7 @@ if (CurrentSkillData.Result[nHotID].Sector_Type)  //扇形
         float x = CurrentSkillData.Result[nHotID].Range / ShownTransform.localScale.y * Mathf.Cos(theta);
         float z = CurrentSkillData.Result[nHotID].Range / ShownTransform.localScale.y * Mathf.Sin(theta);
         Vector3 endPoint = new Vector3(x, 0, z);
-        if (theta == 0） firstPoint = endPoint;
+        if (theta == 0) firstPoint = endPoint;
         else Gizmos.DrawLine(beginPoint, endPoint);
         beginPoint = endPoint;
     }
