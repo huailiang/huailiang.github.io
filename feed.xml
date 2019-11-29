@@ -5,8 +5,8 @@
     <description>关于前端与设计、黑客与画家 | 怀亮，Web &amp; Mobile Lover，Software Engineer，Game Designer | 这里是 @Huailiang怀亮 的个人博客，与你一起发现更大的世界。</description>
     <link>https://huailiang.github.io/</link>
     <atom:link href="https://huailiang.github.io/feed.xml" rel="self" type="application/rss+xml"/>
-    <pubDate>Fri, 29 Nov 2019 12:02:32 +0800</pubDate>
-    <lastBuildDate>Fri, 29 Nov 2019 12:02:32 +0800</lastBuildDate>
+    <pubDate>Fri, 29 Nov 2019 12:59:53 +0800</pubDate>
+    <lastBuildDate>Fri, 29 Nov 2019 12:59:53 +0800</lastBuildDate>
     <generator>Jekyll v3.0.5</generator>
     
       <item>
@@ -2742,8 +2742,145 @@ z &amp; = r\cos\phi
       </item>
     
       <item>
-        <title>PBR之基于图像的光照IBL (Specular)</title>
-        <description>&lt;h2 id=&quot;理论&quot;&gt;理论&lt;/h2&gt;
+        <title>基于图像的光照IBL</title>
+        <description>&lt;h3 id=&quot;基于图像的光照image-based-lighting&quot;&gt;基于图像的光照(Image Based Lighting)&lt;/h3&gt;
+
+&lt;p&gt;在开始之前，我们先来了解下什么是基于图像的光照(IBL)。一个物体，不会单独的存在一个空空的环境里面，它的周围一定有其他的物体。当光源照射到其他物体上的时候，一定也会反射，其中就有很多反射的光线会反射到该物体上去。上一篇文章中我们模拟的是直接光照。对于直接光照系统，像上面那种其他物体反射过来的光，我们一般就只是使用一个Ambient项来模拟。这种模拟方法只能够模拟单调的环境光照效果，想要更加丰富，更加精细的效果，我们就需要使用更加丰富的环境光照系统，而IBL就是实现它的一种方式。&lt;/p&gt;
+
+&lt;p&gt;一般来说，我们通过一张环境贴图(Environment Map)来保存一个物体周围的环境信息，然后通过某种处理，来实现丰富的环境光照效果。本文就是讲述，如何通过对环境贴图进行处理，然后实现丰富的环境光照效果。&lt;/p&gt;
+
+&lt;h3 id=&quot;从渲染方程解释ibl&quot;&gt;从渲染方程解释IBL&lt;/h3&gt;
+
+&lt;p&gt;根据前面对环境光照的描述，环境光照也应该符合这个公式，只不过相对于直接光照，它需要计算更多的入射光线。&lt;/p&gt;
+
+&lt;script type=&quot;math/tex; mode=display&quot;&gt;L_o(p,\omega_o) = \int\limits_{\Omega} (k_d\frac{c}{\pi} + k_s\frac{DFG}{4(\omega_o \cdot n)(\omega_i \cdot n)}) L_i(p,\omega_i) n \cdot \omega_i d\omega_i&lt;/script&gt;
+
+&lt;p&gt;同时从渲染方程可以看出，我们可以把渲染方程拆成两个部分进行处理：&lt;/p&gt;
+
+&lt;script type=&quot;math/tex; mode=display&quot;&gt;L_o(p,\omega_o) = \int\limits_{\Omega} (k_d\frac{c}{\pi}) L_i(p,\omega_i) n \cdot \omega_i d\omega_i + \int\limits_{\Omega} (k_s\frac{DFG}{4(\omega_o \cdot n)(\omega_i \cdot n)}) L_i(p,\omega_i) n \cdot \omega_i d\omega_i&lt;/script&gt;
+
+&lt;p&gt;上述公式左半部分是漫反射，右半部分是高光处理。&lt;/p&gt;
+
+&lt;h2 id=&quot;漫反射-diffuse&quot;&gt;漫反射 Diffuse&lt;/h2&gt;
+
+&lt;script type=&quot;math/tex; mode=display&quot;&gt;L_o(p,\omega_o) = k_d\frac{c}{\pi} \int\limits_{\Omega} L_i(p,\omega_i) n \cdot \omega_i d\omega_i&lt;/script&gt;
+
+&lt;p&gt;对于这个方程，我们就可以将周围环境的所有光照信息保存在一张环境贴图中，而这个环境贴图就模拟了所有的。&lt;/p&gt;
+
+&lt;h3 id=&quot;环境贴图&quot;&gt;环境贴图&lt;/h3&gt;
+
+&lt;p&gt;在图形领域，用于保存周围环境信息的环境贴图有多种形式，如&lt;/p&gt;
+
+&lt;p&gt;现在业界,对于IBL普遍使用的是Cube Map的形式。本篇文章也将主要使用Cube Map来进行IBL。&lt;/p&gt;
+
+&lt;p&gt;HDR对于PBR非常重要，没有了HDR，PBR的效果将大大折扣。所以，对于IBL来说，我们依然需要使用HDR。也就说，对于周围环境光照的描述，需要通过HDR的格式文件来保存。&lt;/p&gt;
+
+&lt;p&gt;本文的所有使用的环境光照贴图将从&lt;a href=&quot;http://www.hdrlabs.com/sibl/archive.html&quot;&gt;sIBL&lt;/a&gt;中获取，这个网站里面有很多免费使用的HDR光照贴图，我们将从这些图中选择一些进行测试。&lt;/p&gt;
+
+&lt;p&gt;&lt;img src=&quot;/img/post-engine/tex11.jpg&quot; alt=&quot;&quot; /&gt;&lt;/p&gt;
+
+&lt;p&gt;需要注意的是，这个网站里面的HDR贴图并不是CubeMap的形式，而是EquirectangularMap的形式进行保存的，所以接下来我们需要解决两个问题：如何读取.hdr文件，如何对这个贴图进行filter。&lt;/p&gt;
+
+&lt;h3 id=&quot;hdr文件读取&quot;&gt;.hdr文件读取&lt;/h3&gt;
+
+&lt;p&gt;在sIBL网站上，已经给出了.hdr文件格式的详细描述。我这里为了方便就直接使用了github上开源的stb_image库来读取.hdr文件。这个库里面都是一些单个文件的c代码库，感兴趣的读者可以自行探索。&lt;/p&gt;
+
+&lt;p&gt;得到.hdr文件保存的HDR数据了，然后可以通过图形API创建一个2D的HDR纹理&lt;/p&gt;
+
+&lt;h3 id=&quot;equirectangular-map-filter&quot;&gt;Equirectangular Map Filter&lt;/h3&gt;
+
+&lt;p&gt;我们前面说过，我们将使用Cube Map来进行IBL。所以，我们需要一种方法来将该Equirectangular Map转换为Cube Map。为此，我们先简单的绘制一个球体，然后将这个Equirectangular Map贴上去，然后使用传统的创建Cube Map的方式产生一张Cube Map。&lt;/p&gt;
+
+&lt;div class=&quot;language-glsl highlighter-rouge&quot;&gt;&lt;pre class=&quot;highlight&quot;&gt;&lt;code&gt;&lt;span class=&quot;cp&quot;&gt;#version 330 core
+&lt;/span&gt;&lt;span class=&quot;k&quot;&gt;out&lt;/span&gt; &lt;span class=&quot;kt&quot;&gt;vec4&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;FragColor&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;;&lt;/span&gt;
+&lt;span class=&quot;k&quot;&gt;in&lt;/span&gt; &lt;span class=&quot;kt&quot;&gt;vec3&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;WorldPos&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;;&lt;/span&gt;
+
+&lt;span class=&quot;k&quot;&gt;uniform&lt;/span&gt; &lt;span class=&quot;kt&quot;&gt;sampler2D&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;equirectangularMap&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;;&lt;/span&gt;
+
+&lt;span class=&quot;k&quot;&gt;const&lt;/span&gt; &lt;span class=&quot;kt&quot;&gt;vec2&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;invAtan&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;=&lt;/span&gt; &lt;span class=&quot;kt&quot;&gt;vec2&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;mi&quot;&gt;0&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;mi&quot;&gt;1591&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,&lt;/span&gt; &lt;span class=&quot;mi&quot;&gt;0&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;mi&quot;&gt;3183&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;);&lt;/span&gt;
+&lt;span class=&quot;kt&quot;&gt;vec2&lt;/span&gt; &lt;span class=&quot;nf&quot;&gt;SampleSphericalMap&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;kt&quot;&gt;vec3&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;v&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;)&lt;/span&gt;
+&lt;span class=&quot;p&quot;&gt;{&lt;/span&gt;
+    &lt;span class=&quot;kt&quot;&gt;vec2&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;uv&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;=&lt;/span&gt; &lt;span class=&quot;kt&quot;&gt;vec2&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;atan&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;v&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;z&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;v&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;x&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;),&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;asin&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;v&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;y&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;));&lt;/span&gt;
+    &lt;span class=&quot;n&quot;&gt;uv&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;*=&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;invAtan&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;;&lt;/span&gt;
+    &lt;span class=&quot;n&quot;&gt;uv&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;+=&lt;/span&gt; &lt;span class=&quot;mi&quot;&gt;0&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;mi&quot;&gt;5&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;;&lt;/span&gt;
+    &lt;span class=&quot;k&quot;&gt;return&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;uv&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;;&lt;/span&gt;
+&lt;span class=&quot;p&quot;&gt;}&lt;/span&gt;
+
+&lt;span class=&quot;kt&quot;&gt;void&lt;/span&gt; &lt;span class=&quot;nf&quot;&gt;main&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;()&lt;/span&gt;
+&lt;span class=&quot;p&quot;&gt;{&lt;/span&gt;		
+    &lt;span class=&quot;kt&quot;&gt;vec2&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;uv&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;=&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;SampleSphericalMap&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;normalize&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;WorldPos&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;));&lt;/span&gt;
+    &lt;span class=&quot;kt&quot;&gt;vec3&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;color&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;=&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;texture&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;equirectangularMap&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;uv&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;).&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;rgb&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;;&lt;/span&gt;
+    
+    &lt;span class=&quot;n&quot;&gt;FragColor&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;=&lt;/span&gt; &lt;span class=&quot;kt&quot;&gt;vec4&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;color&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,&lt;/span&gt; &lt;span class=&quot;mi&quot;&gt;1&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;mi&quot;&gt;0&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;);&lt;/span&gt;
+&lt;span class=&quot;p&quot;&gt;}&lt;/span&gt;
+&lt;/code&gt;&lt;/pre&gt;
+&lt;/div&gt;
+
+&lt;p&gt;通过计算atan(n.z, n.x)就能够得到具有该法线顶点的UV坐标的U值，通过计算asin(n.y)就能够得到具有该法线顶点的UV坐标的V值。同时，由于atan函数返回的结果在[−π,π]&lt;br /&gt;
+之间，而asin返回的结果在[−π/2,π/2]之间，所有需要把它们都映射到[0,1]之间。&lt;/p&gt;
+
+&lt;p&gt;在得到了这个球体之后，我们就可以简单的使用传统的方法来创建CubeMap，主要就是通过设置FOV为90度的摄像机，分别朝着+X,-X,+Y,-Y,+Z,-Z去观察该球体，然后渲染CubeMap的6个面，从而得到一张HDR的CubeMap。&lt;/p&gt;
+
+&lt;h3 id=&quot;预计算辐射光照贴图&quot;&gt;预计算辐射光照贴图&lt;/h3&gt;
+
+&lt;p&gt;&lt;img src=&quot;/img/post-engine/tex10.png&quot; alt=&quot;&quot; /&gt;&lt;/p&gt;
+
+&lt;p&gt;为了方便进行积分运算，一般都将渲染方程改为球面坐标的积分形式，其中：&lt;/p&gt;
+
+&lt;script type=&quot;math/tex; mode=display&quot;&gt;n⋅\omega_i=\cos\theta&lt;/script&gt;
+
+&lt;script type=&quot;math/tex; mode=display&quot;&gt;d\omega_i=\sin\theta d\phi d\theta&lt;/script&gt;
+
+&lt;p&gt;所以，方程转变为如下形式：&lt;/p&gt;
+
+&lt;script type=&quot;math/tex; mode=display&quot;&gt;L_o(p,\phi_o, \theta_o) = k_d\frac{c}{\pi} \int_{\phi = 0}^{2\pi} \int_{\theta = 0}^{\frac{1}{2}\pi} L_i(p,\phi_i, \theta_i) \cos\theta \sin\theta d\phi d\theta \tag{1}&lt;/script&gt;
+
+&lt;p&gt;上述公式转换为Riemann Sum(黎曼和)的表述：&lt;/p&gt;
+
+&lt;p&gt;Riemann Sum是一种很简单的积分方法，当我们的步进值越小的时候，通过这种方法计算出来的h值就越加的接近真实值。&lt;/p&gt;
+
+&lt;script type=&quot;math/tex; mode=display&quot;&gt;L_o(p,\phi_o, \theta_o) = k_d\frac{c}{\pi} \frac{1}{n1 n2} \sum_{\phi = 0}^{n1} \sum_{\theta = 0}^{n2} L_i(p,\phi_i, \theta_i) \cos(\theta) \sin(\theta) d\phi d\theta \tag{2}&lt;/script&gt;
+
+&lt;div class=&quot;language-glsl highlighter-rouge&quot;&gt;&lt;pre class=&quot;highlight&quot;&gt;&lt;code&gt;&lt;span class=&quot;kt&quot;&gt;vec3&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;irradiance&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;=&lt;/span&gt; &lt;span class=&quot;kt&quot;&gt;vec3&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;mi&quot;&gt;0&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;mi&quot;&gt;0&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;);&lt;/span&gt;  
+
+&lt;span class=&quot;kt&quot;&gt;vec3&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;up&lt;/span&gt;    &lt;span class=&quot;o&quot;&gt;=&lt;/span&gt; &lt;span class=&quot;kt&quot;&gt;vec3&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;mi&quot;&gt;0&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;mi&quot;&gt;0&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,&lt;/span&gt; &lt;span class=&quot;mi&quot;&gt;1&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;mi&quot;&gt;0&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,&lt;/span&gt; &lt;span class=&quot;mi&quot;&gt;0&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;mi&quot;&gt;0&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;);&lt;/span&gt;
+&lt;span class=&quot;kt&quot;&gt;vec3&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;right&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;=&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;cross&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;up&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;normal&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;);&lt;/span&gt;
+&lt;span class=&quot;n&quot;&gt;up&lt;/span&gt;         &lt;span class=&quot;o&quot;&gt;=&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;cross&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;normal&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;right&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;);&lt;/span&gt;
+
+&lt;span class=&quot;kt&quot;&gt;float&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;sampleDelta&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;=&lt;/span&gt; &lt;span class=&quot;mi&quot;&gt;0&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;mo&quot;&gt;025&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;;&lt;/span&gt;
+&lt;span class=&quot;kt&quot;&gt;float&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;nrSamples&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;=&lt;/span&gt; &lt;span class=&quot;mi&quot;&gt;0&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;mi&quot;&gt;0&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;;&lt;/span&gt; 
+&lt;span class=&quot;k&quot;&gt;for&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;kt&quot;&gt;float&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;phi&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;=&lt;/span&gt; &lt;span class=&quot;mi&quot;&gt;0&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;mi&quot;&gt;0&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;;&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;phi&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;&amp;lt;&lt;/span&gt; &lt;span class=&quot;mi&quot;&gt;2&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;mi&quot;&gt;0&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;*&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;PI&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;;&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;phi&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;+=&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;sampleDelta&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;)&lt;/span&gt;
+&lt;span class=&quot;p&quot;&gt;{&lt;/span&gt;
+    &lt;span class=&quot;k&quot;&gt;for&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;kt&quot;&gt;float&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;theta&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;=&lt;/span&gt; &lt;span class=&quot;mi&quot;&gt;0&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;mi&quot;&gt;0&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;;&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;theta&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;&amp;lt;&lt;/span&gt; &lt;span class=&quot;mi&quot;&gt;0&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;mi&quot;&gt;5&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;*&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;PI&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;;&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;theta&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;+=&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;sampleDelta&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;)&lt;/span&gt;
+    &lt;span class=&quot;p&quot;&gt;{&lt;/span&gt;
+        &lt;span class=&quot;c1&quot;&gt;// spherical to cartesian (in tangent space)
+&lt;/span&gt;        &lt;span class=&quot;kt&quot;&gt;vec3&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;tangentSample&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;=&lt;/span&gt; &lt;span class=&quot;kt&quot;&gt;vec3&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;sin&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;theta&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;)&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;*&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;cos&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;phi&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;),&lt;/span&gt;  &lt;span class=&quot;n&quot;&gt;sin&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;theta&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;)&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;*&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;sin&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;phi&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;),&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;cos&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;theta&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;));&lt;/span&gt;
+        &lt;span class=&quot;c1&quot;&gt;// tangent space to world
+&lt;/span&gt;        &lt;span class=&quot;kt&quot;&gt;vec3&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;sampleVec&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;=&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;tangentSample&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;x&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;*&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;right&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;+&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;tangentSample&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;y&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;*&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;up&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;+&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;tangentSample&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;z&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;*&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;N&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;;&lt;/span&gt; 
+
+        &lt;span class=&quot;n&quot;&gt;irradiance&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;+=&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;texture&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;environmentMap&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;sampleVec&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;).&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;rgb&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;*&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;cos&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;theta&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;)&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;*&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;sin&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;theta&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;);&lt;/span&gt;
+        &lt;span class=&quot;n&quot;&gt;nrSamples&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;++&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;;&lt;/span&gt;
+    &lt;span class=&quot;p&quot;&gt;}&lt;/span&gt;
+&lt;span class=&quot;p&quot;&gt;}&lt;/span&gt;
+&lt;span class=&quot;n&quot;&gt;irradiance&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;=&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;PI&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;*&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;irradiance&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;*&lt;/span&gt; &lt;span class=&quot;p&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;mi&quot;&gt;1&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;mi&quot;&gt;0&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;/&lt;/span&gt; &lt;span class=&quot;kt&quot;&gt;float&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;nrSamples&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;));&lt;/span&gt;
+&lt;/code&gt;&lt;/pre&gt;
+&lt;/div&gt;
+
+&lt;p&gt;预计算辐射光照贴图(irradianceMap). 这个计算过程输入为一张环境贴图 CubeMap .输出也是一张 CubeMap. 如下图所示.&lt;/p&gt;
+
+&lt;p&gt;&lt;img src=&quot;/img/post-engine/tex12.png&quot; alt=&quot;&quot; /&gt;&lt;/p&gt;
+
+&lt;p&gt;在球谐面卷积采样， 生成的图像有点类似模糊的效果。离线生成的irradianceMap大小就32x32, 精度不需要那么高, 中间值使用插值就可以得到。&lt;/p&gt;
+
+&lt;p&gt;整个流程:&lt;/p&gt;
+
+&lt;p&gt;equirectangularmap(.hdr) -&amp;gt; envCubemap -&amp;gt; irradianceMap&lt;/p&gt;
+
+&lt;p&gt;在引擎里看到的效果，就是如下所示:&lt;/p&gt;
+
+&lt;p&gt;&lt;img src=&quot;/img/post-engine/tex13.jpg&quot; alt=&quot;&quot; /&gt;&lt;/p&gt;
+
+&lt;h2 id=&quot;高光-specular&quot;&gt;高光 Specular&lt;/h2&gt;
 
 &lt;h3 id=&quot;hammersley采样&quot;&gt;Hammersley采样&lt;/h3&gt;
 
@@ -2865,7 +3002,7 @@ z &amp; = r\cos\phi
 &lt;/code&gt;&lt;/pre&gt;
 &lt;/div&gt;
 
-&lt;h2 id=&quot;蒙特卡罗尔积分monte-carlo-integration&quot;&gt;蒙特卡罗尔积分(Monte Carlo Integration)&lt;/h2&gt;
+&lt;h3 id=&quot;蒙特卡罗尔积分monte-carlo-integration&quot;&gt;蒙特卡罗尔积分(Monte Carlo Integration)&lt;/h3&gt;
 
 &lt;p&gt;蒙特卡洛积分主要出现在统计和概率学理论中。 &lt;br /&gt;
 举一个例子：假如你想统计某个国家公民的平均身高。为了得到你的答案，你可以测量每个人的身高并取平均值最后得到十分准确的答案。当然，这种方法十分耗时耗力，所以我们会采取更为方便但结果不是很精确的方法。 &lt;br /&gt;
@@ -2887,9 +3024,9 @@ z &amp; = r\cos\phi
 
 &lt;p&gt;蒙特卡洛积分在计算机图形学中十分流行，因为它使用一种相当直观的方式来近似获取连续积分的结果：在任何地方/体积中进行采样（比如半球体Ω），生成N个随机采样，计算并权衡每个采样对最终结果的贡献。&lt;/p&gt;
 
-&lt;h2 id=&quot;重要性采样&quot;&gt;重要性采样&lt;/h2&gt;
+&lt;h3 id=&quot;重要性采样&quot;&gt;重要性采样&lt;/h3&gt;
 
-&lt;p&gt;概率密度&lt;/p&gt;
+&lt;p&gt;概率密度:&lt;/p&gt;
 
 &lt;p&gt;对于连续型随机变量来说，概率密度函数就是描述了在样本区间里面子区间发生概率的一种函数，它和随机变量X的关系如下所示：&lt;/p&gt;
 
@@ -2909,7 +3046,7 @@ z &amp; = r\cos\phi
 
 &lt;p&gt;细心的读者可能会发现，好像我们只要找到一个采样点$x_i$，然后求出$p(x_i)$和$f(x_i)$，在使用$\frac{f(x_i)}{p(x_i)}$就已经能够得到最终的积分值了啊，干么还要采样那么多的数据，然后在求个平均值？这是因为，在解决实际问题的时候，我们往往很难精确的求出某个函数$f(x)$对应的概率密度函数$p(x)$。这时候的概率密度函数，就依靠于我们选取的采样策略来定义，它实际上是与最终的概率密度函数接近的一个函数，并不是真真的概率密度函数，所以需要通过多次采样，求平均值的方法来抵消这种近似带来的误差。关于这段内容，等到后面讲解对BRDF进行采样的时候，大家就能够理解。我们对BRDF进行采样的时候，往往很难求出BRDF本身的PDF，而是通过选取合适的采样策略，比如对GGX进行采样来逼近。&lt;/p&gt;
 
-&lt;h2 id=&quot;公式部分&quot;&gt;公式部分&lt;/h2&gt;
+&lt;h3 id=&quot;公式部分&quot;&gt;公式部分&lt;/h3&gt;
 
 &lt;p&gt;原始的PBR反射方程：&lt;/p&gt;
 
@@ -3056,10 +3193,11 @@ Epic Games的split sum approximation 通过将方程分成两部分，分别计�
 &lt;p&gt;&lt;img src=&quot;/img/post-engine/tex15.jpg&quot; alt=&quot;&quot; /&gt;&lt;/p&gt;
 
 &lt;p&gt;右下角对应的是预过滤环境贴图。&lt;/p&gt;
+
 </description>
-        <pubDate>Thu, 27 Jun 2019 11:00:00 +0800</pubDate>
-        <link>https://huailiang.github.io/blog/2019/ibl2/</link>
-        <guid isPermaLink="true">https://huailiang.github.io/blog/2019/ibl2/</guid>
+        <pubDate>Sat, 22 Jun 2019 11:00:00 +0800</pubDate>
+        <link>https://huailiang.github.io/blog/2019/ibl/</link>
+        <guid isPermaLink="true">https://huailiang.github.io/blog/2019/ibl/</guid>
         
         <category>引擎</category>
         
