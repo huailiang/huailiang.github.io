@@ -5,7 +5,7 @@
   <meta http-equiv="X-UA-Compatible" content="IE=edge">
   <meta name="viewport" content="width=device-width, initial-scale=1">
 
-  <title>强化学习-游戏AI Trainning (四)</title>
+  <title>强化学习-游戏AI Trainning (三)</title>
   <meta name="description"
     content="  记得半年前，我介绍过强化学习的算法，比如说Q-learning, sara, DQN. 今天我们来介绍两种新的强化学习的算法Policy Gradient。  相较于之前的方法，今天的两种方式更加深入的使用深度神经网络。">
 
@@ -70,7 +70,7 @@ MathJax.Hub.Config({
 
   <div class="card">
     <header class="post-header">
-      <h1 class="post-title">强化学习-游戏AI Trainning (四)</h1>
+      <h1 class="post-title">强化学习-游戏AI Trainning (三)</h1>
       <p class="post-meta">Nov 10, 2018 •
         Huailiang</p>
     </header>
@@ -101,7 +101,7 @@ git checkout ppo</code></pre></figure>
 <p><img src="/img/post-reinforcement/re21.jpg" alt="" /></p>
 
 <p>损失函数即：<b>loss= -log(prob)*vt</b><br />
-今天我们的目的不是推导�此公式是怎么得来的，而是利用此公式，来实现机器学习的目的。若你想详细了解算法详细的推导过程，可以参考<a href="https://blog.csdn.net/qq_30615903/article/details/80747380">这篇文章</a>。</p>
+今天我们的目的不是推导此公式是怎么得来的，而是利用此公式，来实现机器学习的目的。若你想详细了解算法详细的推导过程，可以参考<a href="https://blog.csdn.net/qq_30615903/article/details/80747380">这篇文章</a>。</p>
 
 <p>通过我们公式可以看到，当奖励（vt）越大的时候，在loss不断减少的情况下，prob发生的几率会越大。反之，奖励（vt)越小的情况，随着梯度�，prob发生的机会也越小。</p>
 
@@ -126,8 +126,7 @@ git checkout ppo</code></pre></figure>
 
 <h2 id="purpose">purpose</h2>
 
-<p>�此次我们的目的，还是通过机器学习，�使�游戏中的小鸟宝宝学会飞翔。�我们依旧采用�unity来�表现，而使用python来拟合神经网络，�训练数据。二者之间通过socket来实现数据通信。<br />
-最终实现的效果如下图所示：</p>
+<p>此次我们的目的，还是通过机器学习，使游戏中的小鸟宝宝学会飞翔。我们依旧采用unity来表现，而使用python来拟合神经网络，训练数据。二者之间通过socket来实现数据通信。最终实现的效果如下图所示：</p>
 
 <p><img src="/img/post-reinforcement/re10.gif" alt="" /></p>
 
@@ -139,7 +138,7 @@ git checkout ppo</code></pre></figure>
 
 <p>根据github提供的项目，切到PolicyGradient分支，在根目录找到PolicyGradients文件夹,所有的实现都在里面了。</p>
 
-<p>我们使用两个全连接层（fc1,fc2）设计我们的�神经网络，</p>
+<p>我们使用两个全连接层（fc1,fc2）设计我们的神经网络，</p>
 
 <figure class="highlight"><pre><code class="language-python" data-lang="python"><span class="k">with</span> <span class="n">tf</span><span class="o">.</span><span class="n">name_scope</span><span class="p">(</span><span class="s">'inputs'</span><span class="p">):</span>
     <span class="bp">self</span><span class="o">.</span><span class="n">tf_obs</span> <span class="o">=</span> <span class="n">tf</span><span class="o">.</span><span class="n">placeholder</span><span class="p">(</span><span class="n">tf</span><span class="o">.</span><span class="n">float32</span><span class="p">,</span> <span class="p">[</span><span class="bp">None</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">n_features</span><span class="p">],</span> <span class="n">name</span><span class="o">=</span><span class="s">"observations"</span><span class="p">)</span>
@@ -189,13 +188,13 @@ git checkout ppo</code></pre></figure>
   <li><b>PPO</b></li>
 </ul>
 
-<p>根据github提供的项目，切到ppo分支，在根目录找到ppo文件夹,所有的实现都在里面了。这里采用的是官方paper介绍的第二种算法（clip）。看到网络设计上ppo的实现方式很多，有基于连续的，有基于离散的�，还有采用多线程来更新网络的�参数。</p>
+<p>根据github提供的项目，切到ppo分支，在根目录找到ppo文件夹,所有的实现都在里面了。这里采用的是官方paper介绍的第二种算法（clip）。看到网络设计上ppo的实现方式很多，有基于连续的，有基于离散的，还有采用多线程来更新网络的参数。</p>
 
-<p>鉴于我们的设计目的是使小鸟学会飞翔，这里我们的实现方式采用的是离散的方式实现ppo。因为我们小鸟采取的动作就两种（fly or pad）。�</p>
+<p>鉴于我们的设计目的是使小鸟学会飞翔，这里我们的实现方式采用的是离散的方式实现ppo。因为我们小鸟采取的动作就两种（fly or pad）。</p>
 
-<p>根据OpenAI官方的�Paper，我们设计我们的网络结构。 由于PPO是基于A3C，又是利用两个网络的接近程度来更新网络中的参数，所以这里至少有三个神经网络，即critic, actor1(pi), actor2(oldpi)。</p>
+<p>根据OpenAI官方的Paper，我们设计我们的网络结构。 由于PPO是基于A3C，又是利用两个网络的接近程度来更新网络中的参数，所以这里至少有三个神经网络，即critic, actor1(pi), actor2(oldpi)。</p>
 
-<p>我们实现�如下：</p>
+<p>我们实现如下：</p>
 
 <div class="language-python highlighter-rouge"><pre class="highlight"><code><span class="c">#critic</span>
 <span class="k">with</span> <span class="n">tf</span><span class="o">.</span><span class="n">variable_scope</span><span class="p">(</span><span class="s">'critic'</span><span class="p">):</span>
@@ -221,7 +220,7 @@ git checkout ppo</code></pre></figure>
 </code></pre>
 </div>
 
-<p>我们根据pi和old pi之间测差异�决定Loss：</p>
+<p>我们根据pi和old pi之间测差异决定Loss：</p>
 
 <div class="language-python highlighter-rouge"><pre class="highlight"><code><span class="n">a_indices</span> <span class="o">=</span> <span class="n">tf</span><span class="o">.</span><span class="n">stack</span><span class="p">([</span><span class="n">tf</span><span class="o">.</span><span class="nb">range</span><span class="p">(</span><span class="n">tf</span><span class="o">.</span><span class="n">shape</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">tfa</span><span class="p">)[</span><span class="mi">0</span><span class="p">],</span> <span class="n">dtype</span><span class="o">=</span><span class="n">tf</span><span class="o">.</span><span class="n">int32</span><span class="p">),</span> <span class="bp">self</span><span class="o">.</span><span class="n">tfa</span><span class="p">],</span> <span class="n">axis</span><span class="o">=</span><span class="mi">1</span><span class="p">)</span>
 <span class="n">pi_prob</span> <span class="o">=</span> <span class="n">tf</span><span class="o">.</span><span class="n">gather_nd</span><span class="p">(</span><span class="n">params</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">pi</span><span class="p">,</span> <span class="n">indices</span><span class="o">=</span><span class="n">a_indices</span><span class="p">)</span>   <span class="c"># shape=(None, )</span>

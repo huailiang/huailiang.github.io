@@ -105,17 +105,17 @@ MathJax.Hub.Config({
 
 <p>OpenCV的作用以前还是小看了，最近网易游戏在GDC发布的AirTest自动化测试的工具就是基于OpenCV. 有些人还用OpenCV实现了微信小游戏《跳一跳》自动刷分，虽说里面使用了很多随机的算法，但还是腾讯官方不知道使用了什么算法，居然能检测到作弊，然后给屏蔽掉评分。</p>
 
-<p>本次利用openCV获取每一帧的所有脸部位置，然后截取脸部部分，传递给我们的CNN模型。cnn模型其实就是一个图片分类器，根据传递过来的图片，经过大量的训练，得到一个�分类值（对应的标记label）。获得对应的标记之后，在通过OpenCV gui特性画一个�方框，把名字标记在人脸处。</p>
+<p>本次利用openCV获取每一帧的所有脸部位置，然后截取脸部部分，传递给我们的CNN模型。cnn模型其实就是一个图片分类器，根据传递过来的图片，经过大量的训练，得到一个分类值（对应的标记label）。获得对应的标记之后，在通过OpenCV gui特性画一个方框，把名字标记在人脸处。</p>
 
 <p><img src="/img/post-tf/opencv.jpg" alt="" /></p>
 
 <p><b>素材获取</b></p>
 
-<p>因为需要训练需要大量的人脸素材，此次项目中所有使用的素材都是来源于UMASS（马萨诸塞大学）的一个对外的网站，这里你可以获取大量的�预处理好的关于人脸素材，�下载地址：<a href="http://vis-www.cs.umass.edu/lfw/">http://vis-www.cs.umass.edu/lfw/</a>。</p>
+<p>因为需要训练需要大量的人脸素材，此次项目中所有使用的素材都是来源于UMASS（马萨诸塞大学）的一个对外的网站，这里你可以获取大量的�预处理好的关于人脸素材，下载地址：<a href="http://vis-www.cs.umass.edu/lfw/">http://vis-www.cs.umass.edu/lfw/</a>。</p>
 
 <p><img src="/img/post-tf/face.jpg" alt="" /></p>
 
-<p>由于每个人的对应的素材（图片张数）大小不一，我们这里截取了几位数量较多的名人图片的素材来当本地的训练集，比如说美国前任总统George_W_Bush,大概有四五百张。不过其他人好像还是少了点，比如说选择的�Laura Bush( George_W_Bush‘s Wife), 犹如素材较少，出现了训练的时候表现很好，�测试的时候出错的情况（过拟合-over fit）.</p>
+<p>由于每个人的对应的素材（图片张数）大小不一，我们这里截取了几位数量较多的名人图片的素材来当本地的训练集，比如说美国前任总统George_W_Bush,大概有四五百张。不过其他人好像还是少了点，比如说选择的Laura Bush( George_W_Bush‘s Wife), 犹如素材较少，出现了训练的时候表现很好，测试的时候出错的情况（过拟合-over fit）.</p>
 
 <p>而且我们专门写了一个python脚本用来删除那些图片数量较少的名人文件夹：</p>
 
@@ -137,9 +137,9 @@ MathJax.Hub.Config({
 		<span class="k">if</span> <span class="n">cnt</span><span class="o">&lt;</span><span class="mi">18</span><span class="p">:</span>
 			 <span class="n">shutil</span><span class="o">.</span><span class="n">rmtree</span><span class="p">(</span><span class="n">fpath</span><span class="p">)</span></code></pre></figure>
 
-<p>我们的视频素材是从youtube� 随便找的一个关于Geoger Bush的演讲视频，貌似清晰度有点问题，不过也不影响我们训练的过程，谁关心呢。</p>
+<p>我们的视频素材是从youtube 随便找的一个关于Geoger Bush的演讲视频，貌似清晰度有点问题，不过也不影响我们训练的过程，谁关心呢。</p>
 
-<p>关于训练集和测试集的�构建, 我们从UMASS下载的图片集中最终选取了八位名人的图片做八分类，他们分别是：</p>
+<p>关于训练集和测试集的构建, 我们从UMASS下载的图片集中最终选取了八位名人的图片做八分类，他们分别是：</p>
 
 <ul>
   <li>Bill_Clinton</li>
@@ -152,7 +152,7 @@ MathJax.Hub.Config({
   <li>Winona_Ryder</li>
 </ul>
 
-<p>�项目按文件路径加载图片集，�并根据文件夹的名称划给相应的标签, 代码实现如下：</p>
+<p>项目按文件路径加载图片集，并根据文件夹的名称划给相应的标签, 代码实现如下：</p>
 
 <figure class="highlight"><pre><code class="language-python" data-lang="python"><span class="n">images</span> <span class="o">=</span> <span class="p">[]</span>
 <span class="n">labels</span> <span class="o">=</span> <span class="p">[]</span>
@@ -191,7 +191,7 @@ MathJax.Hub.Config({
                     <span class="n">labels</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="mi">7</span><span class="p">)</span>                            
                     </code></pre></figure>
 
-<p>关于CNN网络的搭建，我们借助Keras的代码一共使用了十七层神经网络，统计一共使用了4次卷积，4次�激励层，2次池化层，最后还包含全连接层和Dropout层、分类层。对应的代码如下：</p>
+<p>关于CNN网络的搭建，我们借助Keras的代码一共使用了十七层神经网络，统计一共使用了4次卷积，4次激励层，2次池化层，最后还包含全连接层和Dropout层、分类层。对应的代码如下：</p>
 
 <figure class="highlight"><pre><code class="language-python" data-lang="python"><span class="k">def</span> <span class="nf">build_model</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">dataset</span><span class="p">,</span> <span class="n">nb_classes</span><span class="o">=</span><span class="mi">8</span><span class="p">):</span>
         <span class="c"># 构建一个空的网络模型，它是一个线性堆叠模型，各神经网络层会被顺序添加，专业名称为序贯模型或线性堆叠模型</span>
@@ -240,9 +240,9 @@ MathJax.Hub.Config({
 
 <p><img src="/img/post-tf/tf43.jpg" alt="" /></p>
 
-<p>最后如果我们随即使用一张图片集的图片验证，基本上都是对的。但如果我们从Internet上找一张关于Laura Bush的照片，确实很容易就出错了，毕竟laura的�训练�图片实在是太少了。</p>
+<p>最后如果我们随即使用一张图片集的图片验证，基本上都是对的。但如果我们从Internet上找一张关于Laura Bush的照片，确实很容易就出错了，毕竟laura的训练图片实在是太少了。</p>
 
-<p>我们还是使用openCv的方式提取图像，传递给�模型，基本上bush是可以是别的，但也存在着误差。代码部分这里就不贴出来了，大家可以下载github工程去查看对应的face_predict_use_keras.py脚本。 在场的观众也可能被误认为是Bush�，毕竟在训练的时候�我们没有这些观众的图片，在经过CNN输出分类的时候就有可能随机是Bush了。可能计算机认为他们长得比较像吧。</p>
+<p>我们还是使用openCv的方式提取图像，传递给模型，基本上bush是可以是别的，但也存在着误差。代码部分这里就不贴出来了，大家可以下载github工程去查看对应的face_predict_use_keras.py脚本。 在场的观众也可能被误认为是Bush，毕竟在训练的时候我们没有这些观众的图片，在经过CNN输出分类的时候就有可能随机是Bush了。可能计算机认为他们长得比较像吧。</p>
 
 <p><img src="/img/post-tf/tf41.jpg" alt="" /></p>
 
