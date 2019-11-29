@@ -274,112 +274,112 @@ mv -f libGameCore.a <span class="k">${</span><span class="nv">path</span><span c
 
 <p>CMakeLists.txt：</p>
 
-<figure class="highlight"><pre><code class="language-cpp" data-lang="cpp"><span class="n">cmake_minimum_required</span><span class="p">(</span><span class="n">VERSION</span> <span class="mf">3.0.2</span><span class="p">)</span>
-<span class="cp">#project(GameCore)
-</span>
-<span class="n">include_directories</span><span class="p">(</span><span class="err">$</span><span class="p">{</span><span class="n">CMAKE_CURRENT_SOURCE_DIR</span><span class="p">})</span>
+<figure class="highlight"><pre><code class="language-bash" data-lang="bash">cmake_minimum_required<span class="o">(</span>VERSION 3.0.2<span class="o">)</span>
+<span class="c">#project(GameCore)</span>
 
-<span class="n">file</span><span class="p">(</span><span class="n">GLOB_RECURSE</span> <span class="n">source_cpp_files</span> <span class="s">"${CMAKE_CURRENT_SOURCE_DIR}/../XCPP/GameCore/*.cpp"</span><span class="p">)</span>
-<span class="n">file</span><span class="p">(</span><span class="n">GLOB_RECURSE</span> <span class="n">source_c_files</span> <span class="s">"${CMAKE_CURRENT_SOURCE_DIR}/../XCPP/GameCore/*.c"</span><span class="p">)</span>
+include_directories<span class="o">(</span><span class="k">${</span><span class="nv">CMAKE_CURRENT_SOURCE_DIR</span><span class="k">}</span><span class="o">)</span>
 
-<span class="cp"># 设置使用 C++11 标准
-</span><span class="n">set</span><span class="p">(</span><span class="n">CMAKE_CXX_STANDARD</span> <span class="mi">11</span><span class="p">)</span>
-<span class="n">set</span><span class="p">(</span><span class="n">CMAKE_CXX_STANDARD_REQUIRED</span> <span class="n">ON</span><span class="p">)</span>
+file<span class="o">(</span>GLOB_RECURSE source_cpp_files <span class="s2">"</span><span class="k">${</span><span class="nv">CMAKE_CURRENT_SOURCE_DIR</span><span class="k">}</span><span class="s2">/../XCPP/GameCore/*.cpp"</span><span class="o">)</span>
+file<span class="o">(</span>GLOB_RECURSE source_c_files <span class="s2">"</span><span class="k">${</span><span class="nv">CMAKE_CURRENT_SOURCE_DIR</span><span class="k">}</span><span class="s2">/../XCPP/GameCore/*.c"</span><span class="o">)</span>
 
-
-<span class="cp"># 编译 Debug 模式还是 Release 模式
-</span><span class="n">set</span><span class="p">(</span><span class="n">CMAKE_BUILD_TYPE</span> <span class="n">Release</span><span class="p">)</span>
-
-<span class="cp"># 根据 OSX、Android、iOS 等不同平台，分别设置不同的配置
-</span><span class="k">if</span> <span class="p">(</span><span class="n">OSX</span><span class="p">)</span>
-    <span class="n">message</span><span class="p">(</span><span class="s">"is building osx platform"</span><span class="p">)</span>
-
-    <span class="n">include</span><span class="p">(</span><span class="n">CheckCXXCompilerFlag</span><span class="p">)</span>  
-    <span class="n">CHECK_CXX_COMPILER_FLAG</span><span class="p">(</span><span class="s">"-std=c++11"</span> <span class="n">COMPILER_SUPPORTS_CXX11</span><span class="p">)</span>  
-    <span class="n">CHECK_CXX_COMPILER_FLAG</span><span class="p">(</span><span class="s">"-std=c++0x"</span> <span class="n">COMPILER_SUPPORTS_CXX0X</span><span class="p">)</span>  
-    <span class="k">if</span><span class="p">(</span><span class="n">COMPILER_SUPPORTS_CXX11</span><span class="p">)</span>  
-            <span class="n">set</span><span class="p">(</span><span class="n">CMAKE_CXX_FLAGS</span> <span class="s">"${CMAKE_CXX_FLAGS} -std=c++11"</span><span class="p">)</span>  
-    <span class="n">elseif</span><span class="p">(</span><span class="n">COMPILER_SUPPORTS_CXX0X</span><span class="p">)</span>  
-            <span class="n">set</span><span class="p">(</span><span class="n">CMAKE_CXX_FLAGS</span> <span class="s">"${CMAKE_CXX_FLAGS} -std=c++0x"</span><span class="p">)</span>  
-    <span class="k">else</span><span class="p">()</span>  
-         <span class="n">message</span><span class="p">(</span><span class="n">STATUS</span> <span class="s">"The compiler ${CMAKE_CXX_COMPILER} has no C++11 support. Please use a different C++ compiler."</span><span class="p">)</span>  
-    <span class="n">endif</span><span class="p">()</span>  
-
-    <span class="n">add_library</span><span class="p">(</span><span class="n">GameCore</span> <span class="n">MODULE</span> <span class="err">$</span><span class="p">{</span><span class="n">source_cpp_files</span><span class="p">}</span> <span class="err">$</span><span class="p">{</span><span class="n">source_c_files</span><span class="p">})</span>
-
-    <span class="cp"># OSX 下面的 Unity 插件要是 GameCore.bundle 格式的
-</span>    <span class="n">set_target_properties</span><span class="p">(</span><span class="n">GameCore</span> <span class="n">PROPERTIES</span> <span class="n">BUNDLE</span> <span class="n">TRUE</span><span class="p">)</span>
-
-    <span class="cp"># 设置代码库的输出路径
-</span>    <span class="n">set</span><span class="p">(</span><span class="n">OUT_PATH</span> <span class="err">$</span><span class="p">{</span><span class="n">CMAKE_CURRENT_SOURCE_DIR</span><span class="p">}</span><span class="o">/</span><span class="n">out</span><span class="o">/</span><span class="n">OSX</span><span class="o">/</span><span class="p">)</span>
-
-    <span class="cp"># 添加编译使用的宏
-</span>    <span class="n">ADD_DEFINITIONS</span><span class="p">(</span><span class="o">-</span><span class="n">D__MACH__</span><span class="p">)</span>
-
-<span class="n">elseif</span><span class="p">(</span><span class="n">IOS</span><span class="p">)</span>
-    <span class="n">message</span><span class="p">(</span><span class="s">"is building ios platform"</span><span class="p">)</span>
-
-	<span class="n">add_library</span><span class="p">(</span><span class="n">GameCore</span> <span class="n">STATIC</span> <span class="err">$</span><span class="p">{</span><span class="n">source_cpp_files</span><span class="p">}</span> <span class="err">$</span><span class="p">{</span><span class="n">source_c_files</span><span class="p">})</span>
-
-    <span class="cp"># 设置编译器, 由于 iOS 和 OSX 使用的是相同的编译器，所以此处设置为 Mac 上的Clang 的路径
-</span>    <span class="cp"># 但是对于 Android 来讲，交叉编译的环境为 NDK 的编译器环境，所以需要对 Android 设置为 NDK 下面的编译器路径。
-</span>    <span class="n">set</span><span class="p">(</span><span class="n">CMAKE_C_COMPILER</span> <span class="n">clang</span><span class="p">)</span>
-    <span class="n">set</span><span class="p">(</span><span class="n">CMAKE_CXX_COMPILER</span> <span class="n">clang</span><span class="o">++</span><span class="p">)</span>
-    <span class="cp"># bitcode 设置为 NO
-</span>    <span class="n">set</span><span class="p">(</span><span class="n">CMAKE_CXX_FLAGS</span> <span class="s">"${CMAKE_CXX_FLAGS} -fembed-bitcode"</span><span class="p">)</span>
-    <span class="n">set</span><span class="p">(</span><span class="n">CMAKE_C_FLAGS</span> <span class="s">"${CMAKE_C_FLAGS} -fembed-bitcode"</span><span class="p">)</span>
-
-    <span class="cp"># 最低支持的 iOS 版本
-</span>    <span class="n">set</span><span class="p">(</span><span class="n">CMAKE_XCODE_ATTRIBUTE_IPHONEOS_DEPLOYMENT_TARGET</span> <span class="s">"7.1"</span><span class="p">)</span>
-
-    <span class="cp"># 支持的指令架构
-</span>    <span class="n">set</span><span class="p">(</span><span class="n">CMAKE_OSX_ARCHITECTURES</span> <span class="s">"armv7 armv7s arm64"</span><span class="p">)</span>
-
-    <span class="cp"># 使用哪个 iOS SDK 进行打包，这里需要注意是对 iPhone 真机打包还是 iPhone 模拟器打包，二者的 SDK 是不同的。
-</span>    <span class="cp"># 我们这里使用的是 iPhone 真机的 SDK。
-</span>    <span class="n">set</span><span class="p">(</span><span class="n">CMAKE_OSX_SYSROOT</span> <span class="o">/</span><span class="n">Applications</span><span class="o">/</span><span class="n">Xcode</span><span class="p">.</span><span class="n">app</span><span class="o">/</span><span class="n">Contents</span><span class="o">/</span><span class="n">Developer</span><span class="o">/</span><span class="n">Platforms</span><span class="o">/</span><span class="n">iPhoneOS</span><span class="p">.</span><span class="n">platform</span><span class="o">/</span><span class="n">Developer</span><span class="o">/</span><span class="n">SDKs</span><span class="o">/</span><span class="n">iPhoneOS</span><span class="p">.</span><span class="n">sdk</span><span class="p">)</span>
-
-    <span class="cp"># 设置代码库的输出路径
-</span>    <span class="n">set</span><span class="p">(</span><span class="n">OUT_PATH</span> <span class="err">$</span><span class="p">{</span><span class="n">CMAKE_CURRENT_SOURCE_DIR</span><span class="p">}</span><span class="o">/</span><span class="n">out</span><span class="o">/</span><span class="n">iOS</span><span class="o">/</span><span class="p">)</span>
-
-    <span class="cp"># 添加编译使用的宏
-</span>    <span class="n">ADD_DEFINITIONS</span><span class="p">(</span><span class="o">-</span><span class="n">D__iOS__</span><span class="p">)</span>
-
-<span class="n">elseif</span><span class="p">(</span><span class="n">ANDROID</span><span class="p">)</span>
-    <span class="n">message</span><span class="p">(</span><span class="s">"is building android platform"</span><span class="p">)</span>
-
-    <span class="n">add_library</span><span class="p">(</span><span class="n">GameCore</span> <span class="n">SHARED</span> <span class="err">$</span><span class="p">{</span><span class="n">source_cpp_files</span><span class="p">}</span> <span class="err">$</span><span class="p">{</span><span class="n">source_c_files</span><span class="p">})</span>
-
-    <span class="cp"># 由于 Unity 在 Android 下面对 C++ 只支持 .so 的动态库格式，
-</span>    <span class="cp"># 而如果你用 Mac 机编译时，默认的动态库格式为 .dylib,
-</span>    <span class="cp"># 所以我们需要显示的使用 .so 后缀。
-</span>    <span class="n">set_target_properties</span><span class="p">(</span><span class="n">GameCore</span> <span class="n">PROPERTIES</span> <span class="n">SUFFIX</span> <span class="s">".so"</span><span class="p">)</span>
-
-    <span class="cp"># 设置代码库的输出路径
-</span>    <span class="n">set</span><span class="p">(</span><span class="n">OUT_PATH</span> <span class="err">$</span><span class="p">{</span><span class="n">CMAKE_CURRENT_SOURCE_DIR</span><span class="p">}</span><span class="o">/</span><span class="n">out</span><span class="o">/</span><span class="n">Android</span><span class="o">/</span><span class="err">$</span><span class="p">{</span><span class="n">ANDROID_ABI</span><span class="p">}</span><span class="o">/</span><span class="p">)</span>
-
-    <span class="cp"># 添加编译使用的宏
-</span>    <span class="n">ADD_DEFINITIONS</span><span class="p">(</span><span class="o">-</span><span class="n">D__ANDROID__</span><span class="p">)</span>
-
-<span class="k">else</span><span class="p">()</span>
-    <span class="n">message</span><span class="p">(</span><span class="s">"warn: unknown platform"</span><span class="p">)</span>
-    <span class="n">message</span><span class="p">(</span><span class="err">$</span><span class="p">{</span><span class="n">CMAKE_SYSTEM</span><span class="p">})</span>
-    <span class="n">add_library</span><span class="p">(</span><span class="n">GameCore</span> <span class="n">STATIC</span> <span class="err">$</span><span class="p">{</span><span class="n">source_cpp_files</span><span class="p">}</span> <span class="err">$</span><span class="p">{</span><span class="n">source_c_files</span><span class="p">})</span>
-    <span class="n">set</span><span class="p">(</span><span class="n">OUT_PATH</span> <span class="err">$</span><span class="p">{</span><span class="n">CMAKE_CURRENT_SOURCE_DIR</span><span class="p">}</span><span class="o">/</span><span class="n">out</span><span class="o">/</span><span class="k">else</span><span class="o">/</span><span class="p">)</span>
-<span class="n">endif</span><span class="p">()</span>
+<span class="c"># 设置使用 C++11 标准</span>
+<span class="nb">set</span><span class="o">(</span>CMAKE_CXX_STANDARD 11<span class="o">)</span>
+<span class="nb">set</span><span class="o">(</span>CMAKE_CXX_STANDARD_REQUIRED ON<span class="o">)</span>
 
 
-<span class="cp"># 设置代码库的输出路径, 对 Debug 和 Release 模式都设置成同一个路径
-</span><span class="n">set_target_properties</span><span class="p">(</span><span class="n">GameCore</span> <span class="n">PROPERTIES</span>
-        <span class="n">LIBRARY_OUTPUT_DIRECTORY</span> <span class="err">$</span><span class="p">{</span><span class="n">OUT_PATH</span><span class="p">}</span>
-        <span class="n">ARCHIVE_OUTPUT_DIRECTORY</span> <span class="err">$</span><span class="p">{</span><span class="n">OUT_PATH</span><span class="p">}</span>
-        <span class="n">LIBRARY_OUTPUT_DIRECTORY_RELEASE</span> <span class="err">$</span><span class="p">{</span><span class="n">OUT_PATH</span><span class="p">}</span>
-        <span class="n">ARCHIVE_OUTPUT_DIRECTORY_RELEASE</span> <span class="err">$</span><span class="p">{</span><span class="n">OUT_PATH</span><span class="p">}</span>
-        <span class="n">LIBRARY_OUTPUT_DIRECTORY_DEBUG</span> <span class="err">$</span><span class="p">{</span><span class="n">OUT_PATH</span><span class="p">}</span>
-        <span class="n">ARCHIVE_OUTPUT_DIRECTORY_DEBUG</span> <span class="err">$</span><span class="p">{</span><span class="n">OUT_PATH</span><span class="p">}</span>
-        <span class="n">LIBRARY_OUTPUT_DIRECTORY_RELEASE</span> <span class="err">$</span><span class="p">{</span><span class="n">OUT_PATH</span><span class="p">}</span>
-        <span class="n">ARCHIVE_OUTPUT_DIRECTORY_RELEASE</span> <span class="err">$</span><span class="p">{</span><span class="n">OUT_PATH</span><span class="p">}</span>
-        <span class="p">)</span></code></pre></figure>
+<span class="c"># 编译 Debug 模式还是 Release 模式</span>
+<span class="nb">set</span><span class="o">(</span>CMAKE_BUILD_TYPE Release<span class="o">)</span>
+
+<span class="c"># 根据 OSX、Android、iOS 等不同平台，分别设置不同的配置</span>
+<span class="k">if</span> <span class="o">(</span>OSX<span class="o">)</span>
+    message<span class="o">(</span><span class="s2">"is building osx platform"</span><span class="o">)</span>
+
+    include<span class="o">(</span>CheckCXXCompilerFlag<span class="o">)</span>  
+    CHECK_CXX_COMPILER_FLAG<span class="o">(</span><span class="s2">"-std=c++11"</span> COMPILER_SUPPORTS_CXX11<span class="o">)</span>  
+    CHECK_CXX_COMPILER_FLAG<span class="o">(</span><span class="s2">"-std=c++0x"</span> COMPILER_SUPPORTS_CXX0X<span class="o">)</span>  
+    <span class="k">if</span><span class="o">(</span>COMPILER_SUPPORTS_CXX11<span class="o">)</span>  
+            <span class="nb">set</span><span class="o">(</span>CMAKE_CXX_FLAGS <span class="s2">"</span><span class="k">${</span><span class="nv">CMAKE_CXX_FLAGS</span><span class="k">}</span><span class="s2"> -std=c++11"</span><span class="o">)</span>  
+    elseif<span class="o">(</span>COMPILER_SUPPORTS_CXX0X<span class="o">)</span>  
+            <span class="nb">set</span><span class="o">(</span>CMAKE_CXX_FLAGS <span class="s2">"</span><span class="k">${</span><span class="nv">CMAKE_CXX_FLAGS</span><span class="k">}</span><span class="s2"> -std=c++0x"</span><span class="o">)</span>  
+    <span class="k">else</span><span class="o">()</span>  
+         message<span class="o">(</span>STATUS <span class="s2">"The compiler </span><span class="k">${</span><span class="nv">CMAKE_CXX_COMPILER</span><span class="k">}</span><span class="s2"> has no C++11 support. Please use a different C++ compiler."</span><span class="o">)</span>  
+    endif<span class="o">()</span>  
+
+    add_library<span class="o">(</span>GameCore MODULE <span class="k">${</span><span class="nv">source_cpp_files</span><span class="k">}</span> <span class="k">${</span><span class="nv">source_c_files</span><span class="k">}</span><span class="o">)</span>
+
+    <span class="c"># OSX 下面的 Unity 插件要是 GameCore.bundle 格式的</span>
+    set_target_properties<span class="o">(</span>GameCore PROPERTIES BUNDLE TRUE<span class="o">)</span>
+
+    <span class="c"># 设置代码库的输出路径</span>
+    <span class="nb">set</span><span class="o">(</span>OUT_PATH <span class="k">${</span><span class="nv">CMAKE_CURRENT_SOURCE_DIR</span><span class="k">}</span>/out/OSX/<span class="o">)</span>
+
+    <span class="c"># 添加编译使用的宏</span>
+    ADD_DEFINITIONS<span class="o">(</span>-D__MACH__<span class="o">)</span>
+
+elseif<span class="o">(</span>IOS<span class="o">)</span>
+    message<span class="o">(</span><span class="s2">"is building ios platform"</span><span class="o">)</span>
+
+	add_library<span class="o">(</span>GameCore STATIC <span class="k">${</span><span class="nv">source_cpp_files</span><span class="k">}</span> <span class="k">${</span><span class="nv">source_c_files</span><span class="k">}</span><span class="o">)</span>
+
+    <span class="c"># 设置编译器, 由于 iOS 和 OSX 使用的是相同的编译器，所以此处设置为 Mac 上的Clang 的路径</span>
+    <span class="c"># 但是对于 Android 来讲，交叉编译的环境为 NDK 的编译器环境，所以需要对 Android 设置为 NDK 下面的编译器路径。</span>
+    <span class="nb">set</span><span class="o">(</span>CMAKE_C_COMPILER clang<span class="o">)</span>
+    <span class="nb">set</span><span class="o">(</span>CMAKE_CXX_COMPILER clang++<span class="o">)</span>
+    <span class="c"># bitcode 设置为 NO</span>
+    <span class="nb">set</span><span class="o">(</span>CMAKE_CXX_FLAGS <span class="s2">"</span><span class="k">${</span><span class="nv">CMAKE_CXX_FLAGS</span><span class="k">}</span><span class="s2"> -fembed-bitcode"</span><span class="o">)</span>
+    <span class="nb">set</span><span class="o">(</span>CMAKE_C_FLAGS <span class="s2">"</span><span class="k">${</span><span class="nv">CMAKE_C_FLAGS</span><span class="k">}</span><span class="s2"> -fembed-bitcode"</span><span class="o">)</span>
+
+    <span class="c"># 最低支持的 iOS 版本</span>
+    <span class="nb">set</span><span class="o">(</span>CMAKE_XCODE_ATTRIBUTE_IPHONEOS_DEPLOYMENT_TARGET <span class="s2">"7.1"</span><span class="o">)</span>
+
+    <span class="c"># 支持的指令架构</span>
+    <span class="nb">set</span><span class="o">(</span>CMAKE_OSX_ARCHITECTURES <span class="s2">"armv7 armv7s arm64"</span><span class="o">)</span>
+
+    <span class="c"># 使用哪个 iOS SDK 进行打包，这里需要注意是对 iPhone 真机打包还是 iPhone 模拟器打包，二者的 SDK 是不同的。</span>
+    <span class="c"># 我们这里使用的是 iPhone 真机的 SDK。</span>
+    <span class="nb">set</span><span class="o">(</span>CMAKE_OSX_SYSROOT /Applications/Xcode.app/Contents/Developer/Platforms/iPhoneOS.platform/Developer/SDKs/iPhoneOS.sdk<span class="o">)</span>
+
+    <span class="c"># 设置代码库的输出路径</span>
+    <span class="nb">set</span><span class="o">(</span>OUT_PATH <span class="k">${</span><span class="nv">CMAKE_CURRENT_SOURCE_DIR</span><span class="k">}</span>/out/iOS/<span class="o">)</span>
+
+    <span class="c"># 添加编译使用的宏</span>
+    ADD_DEFINITIONS<span class="o">(</span>-D__iOS__<span class="o">)</span>
+
+elseif<span class="o">(</span>ANDROID<span class="o">)</span>
+    message<span class="o">(</span><span class="s2">"is building android platform"</span><span class="o">)</span>
+
+    add_library<span class="o">(</span>GameCore SHARED <span class="k">${</span><span class="nv">source_cpp_files</span><span class="k">}</span> <span class="k">${</span><span class="nv">source_c_files</span><span class="k">}</span><span class="o">)</span>
+
+    <span class="c"># 由于 Unity 在 Android 下面对 C++ 只支持 .so 的动态库格式，</span>
+    <span class="c"># 而如果你用 Mac 机编译时，默认的动态库格式为 .dylib,</span>
+    <span class="c"># 所以我们需要显示的使用 .so 后缀。</span>
+    set_target_properties<span class="o">(</span>GameCore PROPERTIES SUFFIX <span class="s2">".so"</span><span class="o">)</span>
+
+    <span class="c"># 设置代码库的输出路径</span>
+    <span class="nb">set</span><span class="o">(</span>OUT_PATH <span class="k">${</span><span class="nv">CMAKE_CURRENT_SOURCE_DIR</span><span class="k">}</span>/out/Android/<span class="k">${</span><span class="nv">ANDROID_ABI</span><span class="k">}</span>/<span class="o">)</span>
+
+    <span class="c"># 添加编译使用的宏</span>
+    ADD_DEFINITIONS<span class="o">(</span>-D__ANDROID__<span class="o">)</span>
+
+<span class="k">else</span><span class="o">()</span>
+    message<span class="o">(</span><span class="s2">"warn: unknown platform"</span><span class="o">)</span>
+    message<span class="o">(</span><span class="k">${</span><span class="nv">CMAKE_SYSTEM</span><span class="k">}</span><span class="o">)</span>
+    add_library<span class="o">(</span>GameCore STATIC <span class="k">${</span><span class="nv">source_cpp_files</span><span class="k">}</span> <span class="k">${</span><span class="nv">source_c_files</span><span class="k">}</span><span class="o">)</span>
+    <span class="nb">set</span><span class="o">(</span>OUT_PATH <span class="k">${</span><span class="nv">CMAKE_CURRENT_SOURCE_DIR</span><span class="k">}</span>/out/else/<span class="o">)</span>
+endif<span class="o">()</span>
+
+
+<span class="c"># 设置代码库的输出路径, 对 Debug 和 Release 模式都设置成同一个路径</span>
+set_target_properties<span class="o">(</span>GameCore PROPERTIES
+        LIBRARY_OUTPUT_DIRECTORY <span class="k">${</span><span class="nv">OUT_PATH</span><span class="k">}</span>
+        ARCHIVE_OUTPUT_DIRECTORY <span class="k">${</span><span class="nv">OUT_PATH</span><span class="k">}</span>
+        LIBRARY_OUTPUT_DIRECTORY_RELEASE <span class="k">${</span><span class="nv">OUT_PATH</span><span class="k">}</span>
+        ARCHIVE_OUTPUT_DIRECTORY_RELEASE <span class="k">${</span><span class="nv">OUT_PATH</span><span class="k">}</span>
+        LIBRARY_OUTPUT_DIRECTORY_DEBUG <span class="k">${</span><span class="nv">OUT_PATH</span><span class="k">}</span>
+        ARCHIVE_OUTPUT_DIRECTORY_DEBUG <span class="k">${</span><span class="nv">OUT_PATH</span><span class="k">}</span>
+        LIBRARY_OUTPUT_DIRECTORY_RELEASE <span class="k">${</span><span class="nv">OUT_PATH</span><span class="k">}</span>
+        ARCHIVE_OUTPUT_DIRECTORY_RELEASE <span class="k">${</span><span class="nv">OUT_PATH</span><span class="k">}</span>
+        <span class="o">)</span></code></pre></figure>
 
 <p>生成 ios 静态库，还需要配置一个 toolchain文件,你可以在这里<a href="https://github.com/zilongshanren/Box2D-cocos2d-x/blob/master/Box2D/toolchain/">点击下载</a>。然后使用如下命令，生成 ios 工程：</p>
 

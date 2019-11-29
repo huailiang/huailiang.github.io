@@ -5,13 +5,13 @@
     <description>关于前端与设计、黑客与画家 | 怀亮，Web &amp; Mobile Lover，Software Engineer，Game Designer | 这里是 @Huailiang怀亮 的个人博客，与你一起发现更大的世界。</description>
     <link>https://huailiang.github.io/</link>
     <atom:link href="https://huailiang.github.io/feed.xml" rel="self" type="application/rss+xml"/>
-    <pubDate>Fri, 29 Nov 2019 09:44:05 +0800</pubDate>
-    <lastBuildDate>Fri, 29 Nov 2019 09:44:05 +0800</lastBuildDate>
+    <pubDate>Fri, 29 Nov 2019 11:21:46 +0800</pubDate>
+    <lastBuildDate>Fri, 29 Nov 2019 11:21:46 +0800</lastBuildDate>
     <generator>Jekyll v3.0.5</generator>
     
       <item>
         <title>Unity lua脚本调试</title>
-        <description>&lt;p&gt;大多游戏都在使用lua脚本来热更新游戏逻辑，下面介绍两个工具如何调试lua，介绍的两款lua调试工具都支持以下特性：&lt;/p&gt;
+        <description>&lt;p&gt;原生的lua代码调试支持的工具很多， 这里主要说的是能Attach到Unity进程交互调试的工具。 大多游戏都在使用lua脚本来热更新游戏逻辑，下面介绍两个工具如何调试lua，介绍的两款lua调试工具都支持以下特性：&lt;/p&gt;
 
 &lt;div class=&quot;highlighter-rouge&quot;&gt;&lt;pre class=&quot;highlight&quot;&gt;&lt;code&gt;自动补全（auto completion）
 代码片段（snippet completion）

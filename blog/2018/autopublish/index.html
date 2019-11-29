@@ -147,28 +147,28 @@ open .
 
 <p>获取所有的分支：</p>
 
-<div class="language-python highlighter-rouge"><pre class="highlight"><code><span class="k">def</span> <span class="nf">cmd</span> <span class="o">=</span> <span class="s">'git ls-remote --heads git@git.intra.123u.com:dragon_nest/dragon-nest.git'</span>
-<span class="k">def</span> <span class="nf">proc</span> <span class="o">=</span> <span class="n">cmd</span><span class="o">.</span><span class="n">execute</span><span class="p">()</span>
-<span class="n">proc</span><span class="o">.</span><span class="n">waitFor</span><span class="p">()</span>
+<div class="language-groovy highlighter-rouge"><pre class="highlight"><code><span class="kt">def</span> <span class="n">cmd</span> <span class="o">=</span> <span class="s1">'git ls-remote --heads git@git.intra.123u.com:dragon_nest/dragon-nest.git'</span>
+<span class="kt">def</span> <span class="n">proc</span> <span class="o">=</span> <span class="n">cmd</span><span class="o">.</span><span class="na">execute</span><span class="o">()</span>
+<span class="n">proc</span><span class="o">.</span><span class="na">waitFor</span><span class="o">()</span>
 
-<span class="k">if</span> <span class="p">(</span> <span class="n">proc</span><span class="o">.</span><span class="n">exitValue</span><span class="p">()</span> <span class="o">!=</span> <span class="mi">0</span> <span class="p">)</span> <span class="p">{</span>
- <span class="n">println</span> <span class="s">"Error, ${proc.err.text}"</span>
+<span class="k">if</span> <span class="o">(</span> <span class="n">proc</span><span class="o">.</span><span class="na">exitValue</span><span class="o">()</span> <span class="o">!=</span> <span class="mi">0</span> <span class="o">)</span> <span class="o">{</span>
+ <span class="n">println</span> <span class="s2">"Error, ${proc.err.text}"</span>
  <span class="k">return</span>
-<span class="p">}</span>
+<span class="o">}</span>
 
-<span class="k">def</span> <span class="nf">text</span> <span class="o">=</span> <span class="n">proc</span><span class="o">.</span><span class="n">text</span>
+<span class="kt">def</span> <span class="n">text</span> <span class="o">=</span> <span class="n">proc</span><span class="o">.</span><span class="na">text</span>
 
-<span class="k">def</span> <span class="nf">match</span> <span class="o">=</span> <span class="o">/</span><span class="n">refs</span>\<span class="o">/</span><span class="n">heads</span>\<span class="o">/</span><span class="p">(</span><span class="o">.+</span><span class="p">)</span><span class="err">$</span><span class="o">/</span>
-<span class="k">def</span> <span class="nf">tags</span> <span class="o">=</span> <span class="p">[]</span>
+<span class="kt">def</span> <span class="n">match</span> <span class="o">=</span> <span class="s">/refs\/heads\/(.+)$/</span>
+<span class="kt">def</span> <span class="n">tags</span> <span class="o">=</span> <span class="o">[]</span>
 
-<span class="n">text</span><span class="o">.</span><span class="n">eachLine</span> <span class="p">{</span>
-<span class="k">if</span> <span class="p">((</span><span class="n">m</span> <span class="o">=</span> <span class="n">it</span> <span class="o">=~</span> <span class="o">/</span><span class="n">refs</span>\<span class="o">/</span><span class="n">heads</span>\<span class="o">/</span><span class="p">(</span><span class="o">.+</span><span class="err">?</span><span class="p">)</span><span class="err">$</span><span class="o">/</span><span class="p">))</span> <span class="p">{</span>
-  <span class="o">//</span><span class="n">println</span> <span class="n">m</span><span class="o">.</span><span class="n">group</span><span class="p">(</span><span class="mi">1</span><span class="p">)</span>
-  <span class="n">tags</span><span class="o">.</span><span class="n">push</span><span class="p">(</span><span class="n">m</span><span class="o">.</span><span class="n">group</span><span class="p">(</span><span class="mi">1</span><span class="p">))</span>
-<span class="p">}</span>
-<span class="p">}</span>
+<span class="n">text</span><span class="o">.</span><span class="na">eachLine</span> <span class="o">{</span>
+<span class="k">if</span> <span class="o">((</span><span class="n">m</span> <span class="o">=</span> <span class="n">it</span> <span class="o">=~</span> <span class="s">/refs\/heads\/(.+?)$/</span><span class="o">))</span> <span class="o">{</span>
+  <span class="c1">//println m.group(1)</span>
+  <span class="n">tags</span><span class="o">.</span><span class="na">push</span><span class="o">(</span><span class="n">m</span><span class="o">.</span><span class="na">group</span><span class="o">(</span><span class="mi">1</span><span class="o">))</span>
+<span class="o">}</span>
+<span class="o">}</span>
 
-<span class="n">tags</span><span class="o">.</span><span class="n">unique</span><span class="p">()</span>
+<span class="n">tags</span><span class="o">.</span><span class="na">unique</span><span class="o">()</span>
 <span class="k">return</span> <span class="n">tags</span>
 </code></pre>
 </div>

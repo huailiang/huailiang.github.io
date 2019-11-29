@@ -163,48 +163,48 @@ MathJax.Hub.Config({
 
 <p>在Android.mk中配置所要编译的 c++文件，编译使用的宏。使用方式跟 linux 使用 gcc编译c++很类似。</p>
 
-<div class="language-cpp highlighter-rouge"><pre class="highlight"><code>
-<span class="n">LOCAL_PATH</span> <span class="o">:=</span> <span class="err">$</span><span class="p">(</span><span class="n">call</span> <span class="n">my</span><span class="o">-</span><span class="n">dir</span><span class="p">)</span>  
+<div class="language-sh highlighter-rouge"><pre class="highlight"><code>
+LOCAL_PATH :<span class="o">=</span> <span class="k">$(</span>call my-dir<span class="k">)</span>  
 
-<span class="n">include</span> <span class="err">$</span><span class="p">(</span><span class="n">CLEAR_VARS</span><span class="p">)</span>
+include <span class="k">$(</span>CLEAR_VARS<span class="k">)</span>
 
-<span class="n">LOCAL_CFLAGS</span><span class="o">:=</span> <span class="o">-</span><span class="n">DHAVE_PTHREAD</span><span class="o">=</span><span class="mi">1</span>
+LOCAL_CFLAGS:<span class="o">=</span> -DHAVE_PTHREAD<span class="o">=</span>1
 
-<span class="cp">#  c++目录的相对路径
-</span><span class="n">MY_FILES_PATH</span>  <span class="o">:=</span>  <span class="err">$</span><span class="p">(</span><span class="n">LOCAL_PATH</span><span class="p">)</span><span class="o">/</span>
+<span class="c">#  c++目录的相对路径</span>
+MY_FILES_PATH  :<span class="o">=</span>  <span class="k">$(</span>LOCAL_PATH<span class="k">)</span>/
 
-<span class="cp"># c++后缀
-</span><span class="n">MY_FILES_SUFFIX</span> <span class="o">:=</span> <span class="o">%</span><span class="p">.</span><span class="n">cpp</span> <span class="o">%</span><span class="p">.</span><span class="n">cc</span> <span class="o">%</span><span class="p">.</span><span class="n">c</span>
+<span class="c"># c++后缀</span>
+MY_FILES_SUFFIX :<span class="o">=</span> %.cpp %.cc %.c
 
-<span class="cp"># 递归遍历目录下的所有的文件
-</span><span class="n">rwildcard</span><span class="o">=</span><span class="err">$</span><span class="p">(</span><span class="n">wildcard</span> <span class="err">$</span><span class="mi">1</span><span class="err">$</span><span class="mi">2</span><span class="p">)</span> <span class="err">$</span><span class="p">(</span><span class="n">foreach</span> <span class="n">d</span><span class="p">,</span><span class="err">$</span><span class="p">(</span><span class="n">wildcard</span> <span class="err">$</span><span class="mi">1</span><span class="o">*</span><span class="p">),</span><span class="err">$</span><span class="p">(</span><span class="n">call</span> <span class="n">rwildcard</span><span class="p">,</span><span class="err">$</span><span class="n">d</span><span class="o">/</span><span class="p">,</span><span class="err">$</span><span class="mi">2</span><span class="p">))</span>
+<span class="c"># 递归遍历目录下的所有的文件</span>
+<span class="nv">rwildcard</span><span class="o">=</span><span class="k">$(</span>wildcard <span class="nv">$1$2</span><span class="k">)</span> <span class="k">$(</span>foreach d,<span class="k">$(</span>wildcard <span class="nv">$1</span><span class="k">*)</span>,<span class="k">$(</span>call rwildcard,<span class="nv">$d</span>/,<span class="nv">$2</span><span class="k">))</span>
 
-<span class="cp"># 获取相应的源文件
-</span><span class="n">MY_ALL_FILES</span> <span class="o">:=</span> <span class="err">$</span><span class="p">(</span><span class="n">foreach</span> <span class="n">src_path</span><span class="p">,</span><span class="err">$</span><span class="p">(</span><span class="n">MY_FILES_PATH</span><span class="p">),</span> <span class="err">$</span><span class="p">(</span><span class="n">call</span> <span class="n">rwildcard</span><span class="p">,</span><span class="err">$</span><span class="p">(</span><span class="n">src_path</span><span class="p">),</span><span class="o">*</span><span class="p">.</span><span class="o">*</span><span class="p">)</span> <span class="p">)</span> 
-<span class="n">MY_ALL_FILES</span> <span class="o">:=</span> <span class="err">$</span><span class="p">(</span><span class="n">MY_ALL_FILES</span><span class="o">:</span><span class="err">$</span><span class="p">(</span><span class="n">MY_CPP_PATH</span><span class="p">)</span><span class="o">/</span><span class="p">.</span><span class="o">/%=</span><span class="err">$</span><span class="p">(</span><span class="n">MY_CPP_PATH</span><span class="p">)</span><span class="o">%</span><span class="p">)</span>
-<span class="n">MY_SRC_LIST</span>  <span class="o">:=</span> <span class="err">$</span><span class="p">(</span><span class="n">filter</span> <span class="err">$</span><span class="p">(</span><span class="n">MY_FILES_SUFFIX</span><span class="p">),</span><span class="err">$</span><span class="p">(</span><span class="n">MY_ALL_FILES</span><span class="p">))</span> 
-<span class="n">MY_SRC_LIST</span>  <span class="o">:=</span> <span class="err">$</span><span class="p">(</span><span class="n">MY_SRC_LIST</span><span class="o">:</span><span class="err">$</span><span class="p">(</span><span class="n">LOCAL_PATH</span><span class="p">)</span><span class="o">/%=%</span><span class="p">)</span>
+<span class="c"># 获取相应的源文件</span>
+MY_ALL_FILES :<span class="o">=</span> <span class="k">$(</span>foreach src_path,<span class="k">$(</span>MY_FILES_PATH<span class="k">)</span>, <span class="k">$(</span>call rwildcard,<span class="k">$(</span>src_path<span class="k">)</span>,<span class="k">*</span>.<span class="k">*)</span> <span class="k">)</span> 
+MY_ALL_FILES :<span class="o">=</span> <span class="k">$(</span>MY_ALL_FILES:<span class="k">$(</span>MY_CPP_PATH<span class="k">)</span>/./%<span class="o">=</span><span class="k">$(</span>MY_CPP_PATH<span class="k">)</span>%<span class="k">)</span>
+MY_SRC_LIST  :<span class="o">=</span> <span class="k">$(</span>filter <span class="k">$(</span>MY_FILES_SUFFIX<span class="k">)</span>,<span class="k">$(</span>MY_ALL_FILES<span class="k">))</span> 
+MY_SRC_LIST  :<span class="o">=</span> <span class="k">$(</span>MY_SRC_LIST:<span class="k">$(</span>LOCAL_PATH<span class="k">)</span>/%<span class="o">=</span>%<span class="k">)</span>
 
-<span class="cp"># 去除字串的重复单词
-</span><span class="n">define</span> <span class="n">uniq</span> <span class="o">=</span>
-  <span class="err">$</span><span class="p">(</span><span class="n">eval</span> <span class="n">seen</span> <span class="o">:=</span><span class="p">)</span>
-  <span class="err">$</span><span class="p">(</span><span class="n">foreach</span> <span class="n">_</span><span class="p">,</span><span class="err">$</span><span class="mi">1</span><span class="p">,</span><span class="err">$</span><span class="p">(</span><span class="k">if</span> <span class="err">$</span><span class="p">(</span><span class="n">filter</span> <span class="err">$</span><span class="n">_</span><span class="p">,</span><span class="err">$</span><span class="p">{</span><span class="n">seen</span><span class="p">}),,</span><span class="err">$</span><span class="p">(</span><span class="n">eval</span> <span class="n">seen</span> <span class="o">+=</span> <span class="err">$</span><span class="n">_</span><span class="p">)))</span>
-  <span class="err">$</span><span class="p">{</span><span class="n">seen</span><span class="p">}</span>
-<span class="n">endef</span>
+<span class="c"># 去除字串的重复单词</span>
+define uniq <span class="o">=</span>
+  <span class="k">$(</span><span class="nb">eval </span>seen :<span class="o">=</span><span class="k">)</span>
+  <span class="k">$(</span>foreach _,<span class="nv">$1</span>,<span class="k">$(if</span> <span class="k">$(</span>filter <span class="nv">$_</span>,<span class="k">${</span><span class="nv">seen</span><span class="k">})</span>,,<span class="k">$(</span><span class="nb">eval </span>seen +<span class="o">=</span> <span class="nv">$_</span><span class="k">)))</span>
+  <span class="k">${</span><span class="nv">seen</span><span class="k">}</span>
+endef
 
-<span class="cp"># 递归遍历获取所有目录
-</span><span class="n">MY_ALL_DIRS</span> <span class="o">:=</span> <span class="err">$</span><span class="p">(</span><span class="n">dir</span> <span class="err">$</span><span class="p">(</span><span class="n">foreach</span> <span class="n">src_path</span><span class="p">,</span><span class="err">$</span><span class="p">(</span><span class="n">MY_FILES_PATH</span><span class="p">),</span> <span class="err">$</span><span class="p">(</span><span class="n">call</span> <span class="n">rwildcard</span><span class="p">,</span><span class="err">$</span><span class="p">(</span><span class="n">src_path</span><span class="p">),</span><span class="err">*/</span><span class="p">)</span> <span class="p">)</span> <span class="p">)</span>
-<span class="n">MY_ALL_DIRS</span> <span class="o">:=</span> <span class="err">$</span><span class="p">(</span><span class="n">call</span> <span class="n">uniq</span><span class="p">,</span><span class="err">$</span><span class="p">(</span><span class="n">MY_ALL_DIRS</span><span class="p">))</span>
+<span class="c"># 递归遍历获取所有目录</span>
+MY_ALL_DIRS :<span class="o">=</span> <span class="k">$(</span>dir <span class="k">$(</span>foreach src_path,<span class="k">$(</span>MY_FILES_PATH<span class="k">)</span>, <span class="k">$(</span>call rwildcard,<span class="k">$(</span>src_path<span class="k">)</span>,<span class="k">*</span>/<span class="k">)</span> <span class="k">)</span> <span class="k">)</span>
+MY_ALL_DIRS :<span class="o">=</span> <span class="k">$(</span>call uniq,<span class="k">$(</span>MY_ALL_DIRS<span class="k">))</span>
 
-<span class="cp"># 赋值给NDK编译系统
-</span><span class="n">LOCAL_SRC_FILES</span>  <span class="o">:=</span> <span class="err">$</span><span class="p">(</span><span class="n">MY_SRC_LIST</span><span class="p">)</span>
-<span class="n">LOCAL_C_INCLUDES</span><span class="o">:=</span> <span class="err">$</span><span class="p">(</span><span class="n">LOCAL_PATH</span><span class="p">)</span><span class="o">/</span>
+<span class="c"># 赋值给NDK编译系统</span>
+LOCAL_SRC_FILES  :<span class="o">=</span> <span class="k">$(</span>MY_SRC_LIST<span class="k">)</span>
+LOCAL_C_INCLUDES:<span class="o">=</span> <span class="k">$(</span>LOCAL_PATH<span class="k">)</span>/
 
-<span class="n">LOCAL_SHARED_LIBRARIES</span><span class="o">:=</span> 
-<span class="n">LOCAL_MODULE</span><span class="o">:=</span> <span class="n">libprotobuf</span><span class="o">-</span><span class="n">lib</span>
-<span class="n">LOCAL_MODULE_TAGS</span> <span class="o">:=</span> <span class="n">optional</span>
-<span class="n">LOCAL_LDLIBS</span> <span class="o">+=</span> <span class="o">-</span><span class="n">llog</span>
-<span class="n">include</span> <span class="err">$</span><span class="p">(</span><span class="n">BUILD_SHARED_LIBRARY</span><span class="p">)</span>
+LOCAL_SHARED_LIBRARIES:<span class="o">=</span> 
+LOCAL_MODULE:<span class="o">=</span> libprotobuf-lib
+LOCAL_MODULE_TAGS :<span class="o">=</span> optional
+LOCAL_LDLIBS +<span class="o">=</span> -llog
+include <span class="k">$(</span>BUILD_SHARED_LIBRARY<span class="k">)</span>
 
 </code></pre>
 </div>

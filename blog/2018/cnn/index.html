@@ -107,7 +107,7 @@ MathJax.Hub.Config({
 
 <p>首先，关于什么是卷积，文章（3）有一牛人用一句话总结得很好：卷积就是带权的积分，看下面的一维卷积公式:</p>
 
-<p><img src="/img/post-tf/cnn03.png" alt="" /></p>
+<script type="math/tex; mode=display">c(x) = \int_{-\infty}^\infty f(\tau)g(x-\tau)d\tau</script>
 
 <p>函数值与权值的乘积相加即可得到卷积值c(x)，换句话说，我们对函数值的加权叠加，即可得到x处的卷积值。CNN利用的是多维卷积，但原理一样，不多说了，同时建议不要过多纠缠这个概念，理解就好，以后若作科研再作深入了解。对于图像处理，CNN会对输入图像矩阵化，然后从矩阵第一个元素开始逐一进行卷积运算。</p>
 
@@ -131,10 +131,10 @@ MathJax.Hub.Config({
 	<span class="k">return</span> <span class="n">tf</span><span class="o">.</span><span class="n">nn</span><span class="o">.</span><span class="n">max_pool</span><span class="p">(</span><span class="n">x</span><span class="p">,</span><span class="n">ksize</span><span class="o">=</span><span class="p">[</span><span class="mi">1</span><span class="p">,</span><span class="mi">2</span><span class="p">,</span><span class="mi">2</span><span class="p">,</span><span class="mi">1</span><span class="p">],</span><span class="n">strides</span><span class="o">=</span><span class="p">[</span><span class="mi">1</span><span class="p">,</span><span class="mi">2</span><span class="p">,</span><span class="mi">2</span><span class="p">,</span><span class="mi">1</span><span class="p">],</span><span class="n">padding</span><span class="o">=</span><span class="s">'SAME'</span><span class="p">)</span>
 
 
-<span class="n">padding</span><span class="o">=</span><span class="s">'SAME'</span> <span class="err">表示输出大小不会发生改变，</span><span class="nb">filter</span> <span class="err">以</span><span class="mi">0</span><span class="err">填充</span>
-<span class="n">padding</span><span class="o">=</span><span class="s">'VILID'</span> <span class="err">信息会有损</span> <span class="err">一般在池化</span><span class="n">pooling</span><span class="err">才会改变大小</span>
+<span class="c"># padding='SAME' 表示输出大小不会发生改变，filter 以0填充</span>
+<span class="c"># padding='VILID' 信息会有损 一般在池化pooling才会改变大小</span>
 
-<span class="o">-</span> <span class="err">定义模型输入</span> <span class="err">这里从</span> <span class="n">MNIST</span> <span class="err">测试数据获取</span>
+<span class="c"># 定义模型输入 这里从 MNIST 测试数据获取</span>
 
 <span class="n">xs</span><span class="o">=</span><span class="n">tf</span><span class="o">.</span><span class="n">placeholder</span><span class="p">(</span><span class="n">tf</span><span class="o">.</span><span class="n">float32</span><span class="p">,[</span><span class="bp">None</span><span class="p">,</span><span class="mi">784</span><span class="p">])</span><span class="o">/</span><span class="mi">255</span>
 <span class="n">ys</span><span class="o">=</span><span class="n">tf</span><span class="o">.</span><span class="n">placeholder</span><span class="p">(</span><span class="n">tf</span><span class="o">.</span><span class="n">float32</span><span class="p">,[</span><span class="bp">None</span><span class="p">,</span><span class="mi">10</span><span class="p">])</span>

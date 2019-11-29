@@ -82,12 +82,12 @@ MathJax.Hub.Config({
 
 <p>C\C++ 采取指针机制构建引用传递，所以通常引用传递也称为“指针传递”。Cg 语言中参数传递方式同样分为“值传递”和“引用传递”，但指针机制并不被 GPU 硬件所支持，所以 Cg 语言采用不同的语法修辞符来区别“值传递”和“引用传递”。这些修辞符分别为：</p>
 
-<div class="language-c highlighter-rouge"><pre class="highlight"><code>
-<span class="n">in</span><span class="o">:</span> <span class="err">修辞一个形参只是用于输入，进入函数体时被初始化，且该形参值的改变不会影响实参值，这是典型的值传递方式。</span>
+<div class="highlighter-rouge"><pre class="highlight"><code>
+in: 修辞一个形参只是用于输入，进入函数体时被初始化，且该形参值的改变不会影响实参值，这是典型的值传递方式。
 
-<span class="n">out</span><span class="o">:</span> <span class="err">修辞一个形参只是用于输出的，进入函数体时并没有被初始化，这种类型的形参一般是一个函数的运行结果；</span>
+out: 修辞一个形参只是用于输出的，进入函数体时并没有被初始化，这种类型的形参一般是一个函数的运行结果；
 
-<span class="n">inout</span><span class="o">:</span> <span class="err">修辞一个形参既用于输入也用于输出，这是典型的引用传递。</span>
+inout: 修辞一个形参既用于输入也用于输出，这是典型的引用传递。
 
 </code></pre>
 </div>

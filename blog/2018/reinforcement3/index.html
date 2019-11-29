@@ -162,11 +162,11 @@ MathJax.Hub.Config({
 
 <p>我们使用的神经网络输出得到的实际值和预估值做平方差再求均值来计算损失函数。</p>
 
-<figure class="highlight"><pre><code class="language-python" data-lang="python"><span class="err">说明：</span>
+<figure class="highlight"><pre><code class="language-python" data-lang="python"><span class="c"># 说明：</span>
 <span class="n">tf</span><span class="o">.</span><span class="n">squared_difference</span><span class="p">(</span><span class="n">x</span><span class="p">,</span><span class="n">y</span><span class="p">,</span><span class="n">name</span><span class="o">=</span><span class="bp">None</span><span class="p">)</span>
 
-<span class="err">功能：计算</span><span class="p">(</span><span class="n">x</span><span class="o">-</span><span class="n">y</span><span class="p">)(</span><span class="n">x</span><span class="o">-</span><span class="n">y</span><span class="p">)</span><span class="err">。</span>
-<span class="err">输入：</span><span class="n">x</span><span class="err">为张量，可以为</span><span class="sb">`half`</span><span class="p">,</span><span class="sb">`float32`</span><span class="p">,</span> <span class="sb">`float64`</span><span class="err">类型。</span></code></pre></figure>
+<span class="c"># 功能：计算(x-y)(x-y)。</span>
+<span class="c"># 输入：x为张量，可以为`half`,`float32`, `float64`类型。</span></code></pre></figure>
 
 <figure class="highlight"><pre><code class="language-python" data-lang="python"><span class="c"># 计算损失函数  </span>
 <span class="k">with</span> <span class="n">tf</span><span class="o">.</span><span class="n">variable_scope</span><span class="p">(</span><span class="s">'loss'</span><span class="p">):</span>

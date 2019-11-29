@@ -346,7 +346,7 @@
         '#': 'Hash',
         '\u2019': 'Prime'
       },
-      remap: { '-': '2212', '*': '2217' },
+      remap: {'-': '2212','*': '2217'},
       mathchar0mi: {
         alpha: '03B1',
         beta: '03B2',
@@ -362,7 +362,7 @@
         mu: '03BC',
         nu: '03BD',
         xi: '03BE',
-        omicron: '03BF',
+        omicron: '03BF', 
         pi: '03C0',
         rho: '03C1',
         sigma: '03C3',
@@ -480,8 +480,8 @@
         succ: '227B',
         prec: '227A',
         approx: '2248',
-        succeq: '2AB0',
-        preceq: '2AAF',
+        succeq: '2AB0', 
+        preceq: '2AAF', 
         supset: '2283',
         subset: '2282',
         supseteq: '2287',
@@ -537,11 +537,11 @@
         cdots: '22EF',
         vdots: '22EE',
         ddots: '22F1',
-        dotsc: '2026',
-        dotsb: '22EF',
-        dotsm: '22EF',
-        dotsi: '22EF',
-        dotso: '2026',
+        dotsc: '2026',  
+        dotsb: '22EF',  
+        dotsm: '22EF', 
+        dotsi: '22EF',  
+        dotso: '2026',  
         ldotp: ['002E', { texClass: MML.TEXCLASS.PUNCT }],
         cdotp: ['22C5', { texClass: MML.TEXCLASS.PUNCT }],
         colon: ['003A', { texClass: MML.TEXCLASS.PUNCT }]
@@ -578,13 +578,13 @@
         '|': ['|', { texClass: MML.TEXCLASS.ORD }],
         '.': '',
         '\\\\': '\\',
-        '\\lmoustache': '23B0',
-        '\\rmoustache': '23B1',
-        '\\lgroup': '27EE',
-        '\\rgroup': '27EF',
+        '\\lmoustache': '23B0',  
+        '\\rmoustache': '23B1',  
+        '\\lgroup': '27EE',  
+        '\\rgroup': '27EF', 
         '\\arrowvert': '23D0',
         '\\Arrowvert': '2016',
-        '\\bracevert': '23AA',
+        '\\bracevert': '23AA', 
         '\\Vert': ['2225', { texClass: MML.TEXCLASS.ORD }],
         '\\|': ['2225', { texClass: MML.TEXCLASS.ORD }],
         '\\vert': ['|', { texClass: MML.TEXCLASS.ORD }],
@@ -617,7 +617,7 @@
         mit: ['SetFont', MML.VARIANT.ITALIC],
         oldstyle: ['SetFont', MML.VARIANT.OLDSTYLE],
         cal: ['SetFont', MML.VARIANT.CALIGRAPHIC],
-        it: ['SetFont', "-tex-mathit"],
+        it: ['SetFont', "-tex-mathit"], 
         bf: ['SetFont', MML.VARIANT.BOLD],
         bbFont: ['SetFont', MML.VARIANT.DOUBLESTRUCK],
         scr: ['SetFont', MML.VARIANT.SCRIPT],
@@ -625,7 +625,7 @@
         sf: ['SetFont', MML.VARIANT.SANSSERIF],
         tt: ['SetFont', MML.VARIANT.MONOSPACE],
         tiny: ['SetSize', 0.5],
-        Tiny: ['SetSize', 0.6],
+        Tiny: ['SetSize', 0.6],  
         scriptsize: ['SetSize', 0.7],
         small: ['SetSize', 0.85],
         normalsize: ['SetSize', 1.0],
@@ -705,7 +705,7 @@
         moveleft: 'MoveLeftRight',
         moveright: 'MoveLeftRight',
         ',': ['Spacer', MML.LENGTH.THINMATHSPACE],
-        ':': ['Spacer', MML.LENGTH.MEDIUMMATHSPACE],
+        ':': ['Spacer', MML.LENGTH.MEDIUMMATHSPACE], 
         '>': ['Spacer', MML.LENGTH.MEDIUMMATHSPACE],
         ';': ['Spacer', MML.LENGTH.THICKMATHSPACE],
         '!': ['Spacer', MML.LENGTH.NEGATIVETHINMATHSPACE],
@@ -759,18 +759,18 @@
         vphantom: ['Phantom', 1, 0],
         hphantom: ['Phantom', 0, 1],
         smash: 'Smash',
-        acute: ['Accent', "02CA"],
-        grave: ['Accent', "02CB"],
-        ddot: ['Accent', "00A8"],
+        acute: ['Accent', "02CA"],  
+        grave: ['Accent', "02CB"],  
+        ddot: ['Accent', "00A8"],  
         tilde: ['Accent', "02DC"],  // or 0303
         bar: ['Accent', "02C9"],  // or 0304
         breve: ['Accent', "02D8"],  // or 0306
         check: ['Accent', "02C7"],  // or 030C
         hat: ['Accent', "02C6"],  // or 0302
         vec: ['Accent', "20D7"],
-        dot: ['Accent', "02D9"],
-        widetilde: ['Accent', "02DC", 1],
-        widehat: ['Accent', "02C6", 1],
+        dot: ['Accent', "02D9"], 
+        widetilde: ['Accent', "02DC", 1], 
+        widehat: ['Accent', "02C6", 1], 
         matrix: 'Matrix',
         array: 'Matrix',
         pmatrix: ['Matrix', '(', ')'],
@@ -862,7 +862,7 @@
         'alignat*': ['ExtensionEnv', null, 'AMSmath'],
         alignedat: ['ExtensionEnv', null, 'AMSmath']
       },
-      p_height: 1.2 / .85
+      p_height: 1.2 / .85  
     });
     if (this.config.Macros) {
       var MACROS = this.config.Macros;
@@ -898,7 +898,7 @@
       if (this.stack.Top().type !== "mml") { return null }
       return this.stack.Top().data[0];
     },
-    mmlToken: function (token) { return token },
+    mmlToken: function (token) { return token }, 
     ControlSequence: function (c) {
       var name = this.GetCS(), macro = this.csFindMacro(name);
       if (macro) {
@@ -953,7 +953,8 @@
     Tilde: function (c) { this.Push(MML.mtext(MML.chars(NBSP))) },
     Space: function (c) { },
     Superscript: function (c) {
-      if (this.GetNext().match(/\d/)) { this.string = this.string.substr(0, this.i + 1) + " " + this.string.substr(this.i + 1) }
+      if (this.GetNext().match(/\d/)) 
+      { this.string = this.string.substr(0, this.i + 1) + " " + this.string.substr(this.i + 1) }
       var position, base = this.stack.Prev(); if (!base) { base = MML.mi("") }
       if (base.isEmbellishedWrapper) { base = base.data[0].data[0] }
       if (base.type === "msubsup") {
@@ -975,7 +976,8 @@
       this.Push(STACKITEM.subsup(base).With({ position: position }));
     },
     Subscript: function (c) {
-      if (this.GetNext().match(/\d/)) { this.string = this.string.substr(0, this.i + 1) + " " + this.string.substr(this.i + 1) }
+      if (this.GetNext().match(/\d/)) 
+      { this.string = this.string.substr(0, this.i + 1) + " " + this.string.substr(this.i + 1) }
       var position, base = this.stack.Prev(); if (!base) { base = MML.mi("") }
       if (base.isEmbellishedWrapper) { base = base.data[0].data[0] }
       if (base.type === "msubsup") {
@@ -1069,7 +1071,7 @@
         form: MML.FORM.PREFIX,
         texClass: MML.TEXCLASS.OP
       });
-      mml.useMMLspacing &= ~mml.SPACE_ATTR.form;
+      mml.useMMLspacing &= ~mml.SPACE_ATTR.form;  
       this.Push(this.mmlToken(mml));
     },
     Limits: function (name, limits) {
@@ -1280,8 +1282,8 @@
     },
     Require: function (name) {
       var file = this.GetArgument(name)
-        .replace(/.*\//, "")
-        .replace(/[^a-z0-9_.-]/ig, "");
+        .replace(/.*\//, "")        
+        .replace(/[^a-z0-9_.-]/ig, ""); 
       this.Extension(null, file);
     },
     Extension: function (name, file, array) {
@@ -1344,7 +1346,7 @@
         }
       }
     },
-    Cr: function (name) { this.Push(STACKITEM.cell().With({ isCR: true, name: name })); },
+    Cr: function (name) { this.Push(STACKITEM.cell().With({ isCR: true, name: name }));},
     CrLaTeX: function (name) {
       var n = this.GetBrackets(name, "").replace(/ /g, "");
       if (n && !n.match(/^(((\.\d+|\d+(\.\d*)?))(pt|em|ex|mu|mm|cm|in|pc))$/)) { TEX.Error("Bracket argument to " + name + " must be a dimension") }
@@ -1372,8 +1374,8 @@
       if (unit === "pt") { return m / 10 }
       if (unit === "pc") { return m * 1.2 }
       if (unit === "in") { return m * this.emPerInch }
-      if (unit === "cm") { return m * this.emPerInch / 2.54 }
-      if (unit === "mm") { return m * this.emPerInch / 25.4 }
+      if (unit === "cm") { return m * this.emPerInch / 2.54 } 
+      if (unit === "mm") { return m * this.emPerInch / 25.4 } 
       if (unit === "mu") { return m / 18 }
       return 0;
     },
@@ -1428,7 +1430,7 @@
       if (open) { array.open = this.convertDelimiter(open) }
       if (close) { array.close = this.convertDelimiter(close) }
       if (style === "D") { array.arraydef.displaystyle = true }
-      if (style === "S") { array.arraydef.scriptlevel = 1 }
+      if (style === "S") { array.arraydef.scriptlevel = 1 } 
       if (raggedHeight) { array.arraydef.useHeight = false }
       this.Push(begin);
       return array;
@@ -1623,12 +1625,12 @@
   TEX.Augment({
     Stack: STACK, Parse: PARSE, Definitions: TEXDEF, Startup: STARTUP,
     config: {
-      MAXMACROS: 10000,
-      MAXBUFFER: 5 * 1024
+      MAXMACROS: 10000,    
+      MAXBUFFER: 5 * 1024   
     },
     sourceMenuTitle: "TeX Commands",
-    prefilterHooks: MathJax.Callback.Hooks(true),
-    postfilterHooks: MathJax.Callback.Hooks(true),
+    prefilterHooks: MathJax.Callback.Hooks(true),   
+    postfilterHooks: MathJax.Callback.Hooks(true),  
     Config: function () {
       this.SUPER(arguments).Config.apply(this, arguments);
       if (this.config.equationNumbers.autoNumber !== "none") {

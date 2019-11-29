@@ -128,7 +128,7 @@ MathJax.Hub.Config({
 <p>阶<br />
 在TensorFlow系统中，张量的维数来被描述为阶.但是张量的阶和矩阵的阶并不是同一个概念.张量的阶（有时是关于如顺序或度数或者是n维）是张量维数的一个数量描述.比如，下面的张量（使用Python中list定义的）就是2阶.</p>
 
-<figure class="highlight"><pre><code class="language-json" data-lang="json"><span class="w">    </span><span class="err">t</span><span class="w"> </span><span class="err">=</span><span class="w"> </span><span class="p">[[</span><span class="mi">1</span><span class="p">,</span><span class="w"> </span><span class="mi">2</span><span class="p">,</span><span class="w"> </span><span class="mi">3</span><span class="p">],</span><span class="w"> </span><span class="p">[</span><span class="mi">4</span><span class="p">,</span><span class="w"> </span><span class="mi">5</span><span class="p">,</span><span class="w"> </span><span class="mi">6</span><span class="p">],</span><span class="w"> </span><span class="p">[</span><span class="mi">7</span><span class="p">,</span><span class="w"> </span><span class="mi">8</span><span class="p">,</span><span class="w"> </span><span class="mi">9</span><span class="p">]]</span></code></pre></figure>
+<figure class="highlight"><pre><code class="language-python" data-lang="python">    <span class="n">t</span> <span class="o">=</span> <span class="p">[[</span><span class="mi">1</span><span class="p">,</span> <span class="mi">2</span><span class="p">,</span> <span class="mi">3</span><span class="p">],</span> <span class="p">[</span><span class="mi">4</span><span class="p">,</span> <span class="mi">5</span><span class="p">,</span> <span class="mi">6</span><span class="p">],</span> <span class="p">[</span><span class="mi">7</span><span class="p">,</span> <span class="mi">8</span><span class="p">,</span> <span class="mi">9</span><span class="p">]]</span></code></pre></figure>
 
 <p>你可以认为一个二阶张量就是我们平常所说的矩阵，一阶张量可以认为是一个向量.对于一个二阶张量你可以用语句t[i, j]来访问其中的任何元素.而对于三阶张量你可以用’t[i, j, k]’来访问其中的任何元素.</p>
 
@@ -382,9 +382,10 @@ tf.reduce_mean(x_) ==&gt; 2.5 #如果不指定第二个参数，那么就在所�
 <p><img src="/img/post-tf/tf38.jpeg" alt="" /></p>
 
 <p>如果6006端口被占用，会报一下错误：</p>
-
-<figure class="highlight"><pre><code class="language-json" data-lang="json"><span class="err">ERROR:tensorflow:Tried</span><span class="w"> </span><span class="err">to</span><span class="w"> </span><span class="err">connect</span><span class="w"> </span><span class="err">to</span><span class="w"> </span><span class="err">port</span><span class="w"> </span><span class="mi">6006</span><span class="err">,</span><span class="w"> </span><span class="err">but</span><span class="w"> </span><span class="err">address</span><span class="w"> </span><span class="err">is</span><span class="w"> </span><span class="err">in</span><span class="w"> </span><span class="err">use.</span><span class="w">
-</span><span class="err">Tried</span><span class="w"> </span><span class="err">to</span><span class="w"> </span><span class="err">connect</span><span class="w"> </span><span class="err">to</span><span class="w"> </span><span class="err">port</span><span class="w"> </span><span class="mi">6006</span><span class="err">,</span><span class="w"> </span><span class="err">but</span><span class="w"> </span><span class="err">address</span><span class="w"> </span><span class="err">is</span><span class="w"> </span><span class="err">in</span><span class="w"> </span><span class="err">use.</span></code></pre></figure>
+<div class="highlighter-rouge"><pre class="highlight"><code>ERROR:tensorflow:Tried to connect to port 6006, but address is in use.
+Tried to connect to port 6006, but address is in use.
+</code></pre>
+</div>
 
 <p>解决可以使用 –port 指定端口：</p>
 
