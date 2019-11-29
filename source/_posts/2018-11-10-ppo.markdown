@@ -1,6 +1,6 @@
 ---
 layout:     post
-title:      "强化学习-游戏AI Trainning (四)"
+title:      "强化学习-游戏AI Trainning (三)"
 date:       2018-11-10 03:00:00
 author:     "Huailiang"
 tags:
@@ -34,7 +34,7 @@ Policy gradient 是 RL 中另外一个大家族, 他不像 Value-based 方法 (Q
 
 
 损失函数即：<b>loss= -log(prob)*vt</b>
-今天我们的目的不是推导�此公式是怎么得来的，而是利用此公式，来实现机器学习的目的。若你想详细了解算法详细的推导过程，可以参考[这篇文章][i1]。
+今天我们的目的不是推导此公式是怎么得来的，而是利用此公式，来实现机器学习的目的。若你想详细了解算法详细的推导过程，可以参考[这篇文章][i1]。
 
 通过我们公式可以看到，当奖励（vt）越大的时候，在loss不断减少的情况下，prob发生的几率会越大。反之，奖励（vt)越小的情况，随着梯度�，prob发生的机会也越小。
 
@@ -58,8 +58,7 @@ PPO 是一套 Actor-Critic 结构, Actor 想最大化 J_PPO, Critic 想最小化
 
 ## purpose
 
-�此次我们的目的，还是通过机器学习，�使�游戏中的小鸟宝宝学会飞翔。�我们依旧采用�unity来�表现，而使用python来拟合神经网络，�训练数据。二者之间通过socket来实现数据通信。
-最终实现的效果如下图所示：
+此次我们的目的，还是通过机器学习，使游戏中的小鸟宝宝学会飞翔。我们依旧采用unity来表现，而使用python来拟合神经网络，训练数据。二者之间通过socket来实现数据通信。最终实现的效果如下图所示：
 
 ![](/img/post-reinforcement/re10.gif)
 
@@ -69,7 +68,7 @@ PPO 是一套 Actor-Critic 结构, Actor 想最大化 J_PPO, Critic 想最小化
 
 根据github提供的项目，切到PolicyGradient分支，在根目录找到PolicyGradients文件夹,所有的实现都在里面了。
 
-我们使用两个全连接层（fc1,fc2）设计我们的�神经网络，
+我们使用两个全连接层（fc1,fc2）设计我们的神经网络，
 
 {% highlight python %}
 with tf.name_scope('inputs'):
@@ -121,13 +120,13 @@ with tf.name_scope('train'):
 
 - <b>PPO</b>
 
-根据github提供的项目，切到ppo分支，在根目录找到ppo文件夹,所有的实现都在里面了。这里采用的是官方paper介绍的第二种算法（clip）。看到网络设计上ppo的实现方式很多，有基于连续的，有基于离散的�，还有采用多线程来更新网络的�参数。
+根据github提供的项目，切到ppo分支，在根目录找到ppo文件夹,所有的实现都在里面了。这里采用的是官方paper介绍的第二种算法（clip）。看到网络设计上ppo的实现方式很多，有基于连续的，有基于离散的，还有采用多线程来更新网络的参数。
 
-鉴于我们的设计目的是使小鸟学会飞翔，这里我们的实现方式采用的是离散的方式实现ppo。因为我们小鸟采取的动作就两种（fly or pad）。�
+鉴于我们的设计目的是使小鸟学会飞翔，这里我们的实现方式采用的是离散的方式实现ppo。因为我们小鸟采取的动作就两种（fly or pad）。
 
-根据OpenAI官方的�Paper，我们设计我们的网络结构。 由于PPO是基于A3C，又是利用两个网络的接近程度来更新网络中的参数，所以这里至少有三个神经网络，即critic, actor1(pi), actor2(oldpi)。
+根据OpenAI官方的Paper，我们设计我们的网络结构。 由于PPO是基于A3C，又是利用两个网络的接近程度来更新网络中的参数，所以这里至少有三个神经网络，即critic, actor1(pi), actor2(oldpi)。
 
-我们实现�如下：
+我们实现如下：
 
 ``` python
 #critic
@@ -153,7 +152,7 @@ def _build_anet(self, name, trainable):
 
 ``` 
 
-我们根据pi和old pi之间测差异�决定Loss：
+我们根据pi和old pi之间测差异决定Loss：
 
 ```  python 
 a_indices = tf.stack([tf.range(tf.shape(self.tfa)[0], dtype=tf.int32), self.tfa], axis=1)

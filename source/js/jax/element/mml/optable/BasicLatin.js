@@ -25,7 +25,7 @@
         '+=': MO.BIN4,         
         '-=': MO.BIN4,         
         '->': MO.BIN5,         
-        '
+        '//': [1, 1, TEXCLASS.BIN], 
         '/=': MO.BIN4,         
         ':=': MO.BIN4,         
         '<=': MO.BIN5,         
