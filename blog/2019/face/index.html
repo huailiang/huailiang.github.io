@@ -160,7 +160,7 @@ MathJax.Hub.Config({
 <center><img src="/img/post-ml/face4.jpg" /></center>
 <p><br /></p>
 
-<p>由于输入的参数绝大都输都是连续的，其中控制脸部骨骼的参数一共是95个。还有一些参数是离散的，比如说眉毛的样式。这些离散参数被处理为独热[One-hot]编码形式与连续参数拼接起来表示完整的面部参数。所有的参数加起来一共是103个,<br />
+<p>由于输入的参数绝大都输都是连续的，其中控制脸部骨骼的参数一共是95个。还有一些参数是离散的，比如说眉毛的样式。这些离散参数被处理为独热[One-hot]编码形式与连续参数拼接起来表示完整的面部参数。所有的参数加起来一共是99个,<br />
 他们将作为神经网络的输入参数，参与到train的过程中。</p>
 
 <p>对于神经网络生成的图片很好的还原出来，并且进一步在引擎里微调，我们还写了一个工具，无论是选择生成的模型，还是训练集里的图片， 都能在引擎里还原出预设的模型。</p>
@@ -358,7 +358,9 @@ MathJax.Hub.Config({
 
 <h3 id="附录">附录:</h3>
 <p><a href="https://pan.baidu.com/s/1RWmvCJHOeXSFDxERQ26mUg">引擎里裁掉头发的imitator model</a><br />
-<a href="https://pan.baidu.com/s/1z0YvwsfBAFnhETjj0Zby-g">引擎里完整显示头发、脖子等非脸 imitatormodel</a></p>
+<a href="https://pan.baidu.com/s/1z0YvwsfBAFnhETjj0Zby-g">引擎里完整显示头发、脖子等非脸 imitatormodel</a><br />
+<a href="http://dlib.net/files/shape_predictor_68_face_landmarks.dat.bz2">dlib 引用模型</a><br />
+<a href="https://pan.baidu.com/s/1E_rGkbqzf0ppyl5ks9FSLQ">脸部语义分割模型</a></p>
 
 
     </div>
@@ -447,8 +449,9 @@ MathJax.Hub.Config({
 <div class="post-nav">
 
   
-  <div class="post-nav-none post-nav-item">
-    <a href=""> </a>
+  <div class="post-nav-prev post-nav-item">
+    
+    <a href="/blog/2019/luadebug/"> Unity lua脚本调试</a>
   </div>
   
 

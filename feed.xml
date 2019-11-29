@@ -5,9 +5,124 @@
     <description>关于前端与设计、黑客与画家 | 怀亮，Web &amp; Mobile Lover，Software Engineer，Game Designer | 这里是 @Huailiang怀亮 的个人博客，与你一起发现更大的世界。</description>
     <link>https://huailiang.github.io/</link>
     <atom:link href="https://huailiang.github.io/feed.xml" rel="self" type="application/rss+xml"/>
-    <pubDate>Mon, 25 Nov 2019 15:08:29 +0800</pubDate>
-    <lastBuildDate>Mon, 25 Nov 2019 15:08:29 +0800</lastBuildDate>
+    <pubDate>Fri, 29 Nov 2019 09:44:05 +0800</pubDate>
+    <lastBuildDate>Fri, 29 Nov 2019 09:44:05 +0800</lastBuildDate>
     <generator>Jekyll v3.0.5</generator>
+    
+      <item>
+        <title>Unity lua脚本调试</title>
+        <description>&lt;p&gt;大多游戏都在使用lua脚本来热更新游戏逻辑，下面介绍两个工具如何调试lua，介绍的两款lua调试工具都支持以下特性：&lt;/p&gt;
+
+&lt;div class=&quot;highlighter-rouge&quot;&gt;&lt;pre class=&quot;highlight&quot;&gt;&lt;code&gt;自动补全（auto completion）
+代码片段（snippet completion）
+定义跳转（definition）
+生成注释（comment generation）
+类型推断（limited type inference）
+代码格式化（formatting）: 依赖 lua-fmt
+代码诊断（linting）：依赖 luacheck
+调试器（debugger）
+&lt;/code&gt;&lt;/pre&gt;
+&lt;/div&gt;
+
+&lt;h2 id=&quot;jet-brains-工具链&quot;&gt;Jet brains 工具链&lt;/h2&gt;
+
+&lt;p&gt;下载安装IntelliJ IDEA 或者pycharm, 这两款软件都是&lt;a href=&quot;www.jetbrains.com&quot;&gt;Jet Brains&lt;/a&gt;旗下的软件。 现在更多的人使用它们来开发python或者java， 我们这里主要使用的是其一款插件，叫做EmmyLua。&lt;/p&gt;
+
+&lt;p&gt;以Pycharm为例：&lt;/p&gt;
+
+&lt;p&gt;安装好之后，选择File-&amp;gt;Settings, 再打开的设置窗口选中Plugins来安装插件， 搜到EmmyLua, 点击Install按钮，进行安装：&lt;/p&gt;
+
+&lt;p&gt;&lt;img src=&quot;/img/post-lua/lua6.jpeg&quot; alt=&quot;&quot; /&gt;&lt;/p&gt;
+
+&lt;p&gt;选择Unity工程lua脚本所在的文件夹打开（注意lua require时搜索路径，所以这里一定对应起来）。&lt;/p&gt;
+
+&lt;p&gt;增加识别文件扩展名，将&lt;em&gt;.lua 和&lt;/em&gt;.txt统统识别为lua脚本，（*.lua.txt能识别为lua，但影响debug, 可能是emmylua的一个bug）&lt;/p&gt;
+
+&lt;p&gt;&lt;img src=&quot;/img/post-lua/lua7.jpg&quot; alt=&quot;&quot; /&gt;&lt;/p&gt;
+
+&lt;p&gt;在上图选项Ignore files and folders 可以设置忽略在侧边栏显示的文件匹配符。很多非代码相关的东西都可以通过此方式屏蔽掉。&lt;/p&gt;
+
+&lt;p&gt;菜单栏选中Run-&amp;gt;Attach to Process, 在本机所有的进程中选择Unity进程即可调试了。&lt;/p&gt;
+
+&lt;p&gt;&lt;img src=&quot;/img/post-lua/lua8.jpg&quot; alt=&quot;&quot; /&gt;&lt;/p&gt;
+
+&lt;p&gt;运行效果如下：&lt;/p&gt;
+
+&lt;p&gt;&lt;img src=&quot;/img/post-lua/lua9.jpg&quot; alt=&quot;&quot; /&gt;&lt;/p&gt;
+
+&lt;p&gt;如果你不习惯pycharm自带的快捷键, 你还可以在setting的Keymap中改成vs的快捷键。除了vs的快捷键， pycharm还提供了很多其他编辑器的快捷键， 比如说Sublime, Eclipse等。&lt;/p&gt;
+
+&lt;p&gt;如果你之前是一名python开发者， 第一次打开一个lua的工程的时候， pycharm会加载很多python本地安装的packages, 如果这影响了编辑器的性能，你可以在Settings里面清掉Project interpreter：&lt;/p&gt;
+
+&lt;p&gt;&lt;img src=&quot;/img/post-lua/lua10.jpg&quot; alt=&quot;&quot; /&gt;&lt;/p&gt;
+
+&lt;p&gt;如果你是一位原生的lua开发者， 而非使用引擎调试lua， 你需要配置编译好的lua.exe的文件位置和lua的search path, 配置好之后也能很方便的调试。&lt;/p&gt;
+
+&lt;p&gt;&lt;img src=&quot;/img/post-lua/lua11.jpg&quot; alt=&quot;&quot; /&gt;&lt;/p&gt;
+
+&lt;h2 id=&quot;vscode&quot;&gt;VSCode&lt;/h2&gt;
+
+&lt;p&gt;这里推荐一款vscode的plugin, 腾讯开发的插件叫LuaPanda, 因为LuaPanda是基于luasocket的， 所以你必须确保你的lua环境已经安装了luasocket, 又鉴于此特性，所以这款插件还可以远程调试， 比如说手机连着编辑器调试。&lt;/p&gt;
+
+&lt;p&gt;&lt;img src=&quot;/img/post-lua/lua15.jpg&quot; alt=&quot;&quot; /&gt;&lt;/p&gt;
+
+&lt;h4 id=&quot;文件配置&quot;&gt;文件配置&lt;/h4&gt;
+
+&lt;p&gt;文件：&lt;a href=&quot;https://github.com/Tencent/LuaPanda/blob/master/Debugger/LuaPanda.lua&quot;&gt;LuaPanda.lua&lt;/a&gt;&lt;/p&gt;
+
+&lt;p&gt;下载位置：&lt;a href=&quot;https://github.com/Tencent/LuaPanda&quot;&gt;github&lt;/a&gt; 的 Debugger 目录下&lt;/p&gt;
+
+&lt;p&gt;把以上两个文件放在lua代码可以引用到的位置，并在用户代码中引用:&lt;/p&gt;
+
+&lt;p&gt;require(“LuaPanda”).start(“127.0.0.1”,8818);&lt;br /&gt;
+*8818是默认端口号，如果需要修改，请同时修改launch.json的端口设置。&lt;/p&gt;
+
+&lt;h4 id=&quot;调试配置&quot;&gt;调试配置&lt;/h4&gt;
+
+&lt;p&gt;切换到VSCode的调试选项卡，点击齿轮，在弹出框中选择 LuaPanda (若无此选项说明以前用别的插件调试过lua , 要把先前用过的调试插件禁用)。会自动生成launch.json文件。&lt;/p&gt;
+
+&lt;p&gt;&lt;img src=&quot;/img/post-lua/lua12.png&quot; alt=&quot;&quot; /&gt;&lt;/p&gt;
+
+&lt;p&gt;launch.json 配置项中要修改的主要是luaFileExtension, 改成lua文件使用的后缀就行。（比如xlua改为lua.txt, slua是txt）。各配置项鼠标悬停会有提示，可根据需要更改。&lt;/p&gt;
+
+&lt;p&gt;&lt;img src=&quot;/img/post-lua/lua12.png&quot; alt=&quot;&quot; /&gt;&lt;/p&gt;
+
+&lt;p&gt;先运行VSCode端，再运行Lua代码: 点击调试选项卡左上角的绿色箭头，再运行unity/ue4工程。如果有stopOnEntry或是执行到断点处，就会自动停住。&lt;/p&gt;
+
+&lt;p&gt;&lt;img src=&quot;/img/post-lua/lua13.png&quot; alt=&quot;&quot; /&gt;&lt;/p&gt;
+
+&lt;p&gt;LuaPanda 在PC上调试会默认使用 c hook，它是用c重写了debugger的核心hook部分，从而提高调试器的执行效率。 c hook会默认启用，无需单独接入。&lt;/p&gt;
+
+&lt;p&gt;验证方式：停在断点处后，在调试控制台输入LuaPanda.getInfo()， 返回信息的BaseInfo会给出提示，如果c库已加载，还会给出版本号。&lt;/p&gt;
+
+&lt;p&gt;LuaPanda调试器功能依赖LuaSocket, 可运行于slua，slua-unreal ，xlua 等已集成 LuaSocket 的 lua 环境，也可以在console中调试。lua 版本支持 5.1- 5.3。&lt;/p&gt;
+
+&lt;p&gt;其他依赖项目（插件中已包含，无需用户手动安装):&lt;/p&gt;
+
+&lt;div class=&quot;highlighter-rouge&quot;&gt;&lt;pre class=&quot;highlight&quot;&gt;&lt;code&gt;luaparse
+luacheck
+lua-fmt
+path-reader
+&lt;/code&gt;&lt;/pre&gt;
+&lt;/div&gt;
+
+&lt;p&gt;更多关于LuaPanda的介绍， &lt;a href=&quot;https://github.com/Tencent/LuaPanda/blob/master/Docs/Manual/access-guidelines.md&quot;&gt;参考这里&lt;/a&gt;&lt;/p&gt;
+
+&lt;h2 id=&quot;写在最后&quot;&gt;写在最后&lt;/h2&gt;
+
+&lt;p&gt;由于作者经常使用pycharm写python脚本， 已经很熟悉Jetbrains的那一套环境了，所以我更倾向于使用第一种方式来调试lua。 然而vscode显然更轻量级一些， 读者喜欢使用哪一款，萝卜青菜 各有所爱吧。&lt;/p&gt;
+
+&lt;p&gt;&lt;br /&gt;&lt;/p&gt;
+
+</description>
+        <pubDate>Mon, 25 Nov 2019 11:00:00 +0800</pubDate>
+        <link>https://huailiang.github.io/blog/2019/luadebug/</link>
+        <guid isPermaLink="true">https://huailiang.github.io/blog/2019/luadebug/</guid>
+        
+        <category>Unity</category>
+        
+        
+      </item>
     
       <item>
         <title>神经网络捏脸</title>
@@ -95,7 +210,7 @@
 &lt;center&gt;&lt;img src=&quot;/img/post-ml/face4.jpg&quot; /&gt;&lt;/center&gt;
 &lt;p&gt;&lt;br /&gt;&lt;/p&gt;
 
-&lt;p&gt;由于输入的参数绝大都输都是连续的，其中控制脸部骨骼的参数一共是95个。还有一些参数是离散的，比如说眉毛的样式。这些离散参数被处理为独热[One-hot]编码形式与连续参数拼接起来表示完整的面部参数。所有的参数加起来一共是103个,&lt;br /&gt;
+&lt;p&gt;由于输入的参数绝大都输都是连续的，其中控制脸部骨骼的参数一共是95个。还有一些参数是离散的，比如说眉毛的样式。这些离散参数被处理为独热[One-hot]编码形式与连续参数拼接起来表示完整的面部参数。所有的参数加起来一共是99个,&lt;br /&gt;
 他们将作为神经网络的输入参数，参与到train的过程中。&lt;/p&gt;
 
 &lt;p&gt;对于神经网络生成的图片很好的还原出来，并且进一步在引擎里微调，我们还写了一个工具，无论是选择生成的模型，还是训练集里的图片， 都能在引擎里还原出预设的模型。&lt;/p&gt;
@@ -293,7 +408,9 @@
 
 &lt;h3 id=&quot;附录&quot;&gt;附录:&lt;/h3&gt;
 &lt;p&gt;&lt;a href=&quot;https://pan.baidu.com/s/1RWmvCJHOeXSFDxERQ26mUg&quot;&gt;引擎里裁掉头发的imitator model&lt;/a&gt;&lt;br /&gt;
-&lt;a href=&quot;https://pan.baidu.com/s/1z0YvwsfBAFnhETjj0Zby-g&quot;&gt;引擎里完整显示头发、脖子等非脸 imitatormodel&lt;/a&gt;&lt;/p&gt;
+&lt;a href=&quot;https://pan.baidu.com/s/1z0YvwsfBAFnhETjj0Zby-g&quot;&gt;引擎里完整显示头发、脖子等非脸 imitatormodel&lt;/a&gt;&lt;br /&gt;
+&lt;a href=&quot;http://dlib.net/files/shape_predictor_68_face_landmarks.dat.bz2&quot;&gt;dlib 引用模型&lt;/a&gt;&lt;br /&gt;
+&lt;a href=&quot;https://pan.baidu.com/s/1E_rGkbqzf0ppyl5ks9FSLQ&quot;&gt;脸部语义分割模型&lt;/a&gt;&lt;/p&gt;
 
 </description>
         <pubDate>Sat, 23 Nov 2019 11:00:00 +0800</pubDate>
@@ -2633,331 +2750,6 @@ z &amp; = r\cos\phi
         <guid isPermaLink="true">https://huailiang.github.io/blog/2019/harmonics/</guid>
         
         <category>Unity</category>
-        
-        <category>引擎</category>
-        
-        
-      </item>
-    
-      <item>
-        <title>PBR之基于图像的光照IBL (Specular)</title>
-        <description>&lt;h2 id=&quot;理论&quot;&gt;理论&lt;/h2&gt;
-
-&lt;h3 id=&quot;hammersley采样&quot;&gt;Hammersley采样&lt;/h3&gt;
-
-&lt;blockquote&gt;
-  &lt;p&gt;在图形学里面，用到了很多的采样算法。特别当你在写一个光线追踪器的时候，会使用大量的采样算法来对BRDF，光源等进行采样。这些采样操作，一般是先通过创建一个具有均匀分布的2D随机点集合，然后通过变换，将这些2D随机点变换到具体的采样数据上去，如BRDF的方向等等。其中经常被使用到的均匀分布的2D随机采样方式–Hammersley采样。&lt;/p&gt;
-&lt;/blockquote&gt;
-
-&lt;p&gt;Hammersley采样是在计算机里面大量使用了二进制来表示数据，如下表所示的一些十进制与二进制的对应关系：&lt;/p&gt;
-
-&lt;table&gt;
-  &lt;thead&gt;
-    &lt;tr&gt;
-      &lt;th style=&quot;text-align: center&quot;&gt;十进制&lt;/th&gt;
-      &lt;th style=&quot;text-align: center&quot;&gt;二进制&lt;/th&gt;
-    &lt;/tr&gt;
-  &lt;/thead&gt;
-  &lt;tbody&gt;
-    &lt;tr&gt;
-      &lt;td style=&quot;text-align: center&quot;&gt;1&lt;/td&gt;
-      &lt;td style=&quot;text-align: center&quot;&gt;1&lt;/td&gt;
-    &lt;/tr&gt;
-    &lt;tr&gt;
-      &lt;td style=&quot;text-align: center&quot;&gt;2&lt;/td&gt;
-      &lt;td style=&quot;text-align: center&quot;&gt;10&lt;/td&gt;
-    &lt;/tr&gt;
-    &lt;tr&gt;
-      &lt;td style=&quot;text-align: center&quot;&gt;3&lt;/td&gt;
-      &lt;td style=&quot;text-align: center&quot;&gt;11&lt;/td&gt;
-    &lt;/tr&gt;
-    &lt;tr&gt;
-      &lt;td style=&quot;text-align: center&quot;&gt;4&lt;/td&gt;
-      &lt;td style=&quot;text-align: center&quot;&gt;100&lt;/td&gt;
-    &lt;/tr&gt;
-  &lt;/tbody&gt;
-&lt;/table&gt;
-
-&lt;p&gt;而Hammersley采样就是利用计算机使用二进制表示的特性，来构造均匀分布的2D随机采样点。它是通过对一个二进制数进行Radical Inverse方法，来构造出一个值来实现的。它的过程如下表：&lt;/p&gt;
-
-&lt;table&gt;
-&lt;thead&gt;
-&lt;tr&gt;
-  &lt;th align=&quot;center&quot;&gt;十进制&lt;/th&gt;
-  &lt;th align=&quot;center&quot;&gt;二进制&lt;/th&gt;
-  &lt;th align=&quot;left&quot; width=&quot;280&quot;&gt;Radical Inverse&lt;/th&gt;
-  &lt;th align=&quot;center&quot;&gt;值&lt;/th&gt;
-&lt;/tr&gt;
-&lt;/thead&gt;
-&lt;tbody&gt;&lt;tr&gt;
-  &lt;td align=&quot;center&quot;&gt;1&lt;/td&gt;
-  &lt;td align=&quot;center&quot;&gt;1&lt;/td&gt;
-  &lt;td align=&quot;left&quot;&gt;.1 = 1 * 1/2&lt;/td&gt;
-  &lt;td align=&quot;center&quot;&gt;0.5&lt;/td&gt;
-&lt;/tr&gt;
-&lt;tr&gt;
-  &lt;td align=&quot;center&quot;&gt;2&lt;/td&gt;
-  &lt;td align=&quot;center&quot;&gt;10&lt;/td&gt;
-  &lt;td align=&quot;left&quot;&gt;.01 = 0 * 1/2 + 1 * 1/4&lt;/td&gt;
-  &lt;td align=&quot;center&quot;&gt;0.25&lt;/td&gt;
-&lt;/tr&gt;
-&lt;tr&gt;
-  &lt;td align=&quot;center&quot;&gt;3&lt;/td&gt;
-  &lt;td align=&quot;center&quot;&gt;11&lt;/td&gt;
-  &lt;td align=&quot;left&quot;&gt;.11 = 1 * 1/2 + 1 * 1/4&lt;/td&gt;
-  &lt;td align=&quot;center&quot;&gt;0.75&lt;/td&gt;
-&lt;/tr&gt;
-&lt;tr&gt;
-  &lt;td align=&quot;center&quot;&gt;4&lt;/td&gt;
-  &lt;td align=&quot;center&quot;&gt;100&lt;/td&gt;
-  &lt;td align=&quot;left&quot;&gt;.001 = 0 * 1/2 + 0 * 1/4 + 1 * 1/8&lt;/td&gt;
-  &lt;td align=&quot;center&quot;&gt;0.125&lt;/td&gt;
-&lt;/tr&gt;
-&lt;/tbody&gt;&lt;/table&gt;
-
-&lt;p&gt;从上表可以看到，Radical Inverse方法，就是简单的将给定的十进制数的二进制表示方法，反过来放在小数点之后，构造一个在[0,1]之间的值。&lt;/p&gt;
-
-&lt;p&gt;在明白了Radical Inverse方法之后，我们就可以构造hammersley的2D随机分布的采样点集合，如下所示：&lt;/p&gt;
-
-&lt;script type=&quot;math/tex; mode=display&quot;&gt;p_i = (x_i,y_i) =(i/N,\phi(i))&lt;/script&gt;
-
-&lt;p&gt;其中N表示的是一共有多少个采样点，$ \phi(i) $ 就是对i进行Radical Inverse之后的值。&lt;/p&gt;
-
-&lt;p&gt;对应的分布图如下所示：&lt;/p&gt;
-
-&lt;p&gt;&lt;img src=&quot;/img/post-engine/tex14.jpg&quot; alt=&quot;&quot; /&gt;&lt;/p&gt;
-
-&lt;p&gt;引擎里对应的分别给出支持位运算和低阶实现的GLSL代码:&lt;/p&gt;
-
-&lt;div class=&quot;language-glsl highlighter-rouge&quot;&gt;&lt;pre class=&quot;highlight&quot;&gt;&lt;code&gt;
-&lt;span class=&quot;c1&quot;&gt;// 位运算
-&lt;/span&gt;&lt;span class=&quot;kt&quot;&gt;float&lt;/span&gt; &lt;span class=&quot;nf&quot;&gt;RadicalInverse_VdC&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;kt&quot;&gt;uint&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;bits&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;)&lt;/span&gt;
-&lt;span class=&quot;p&quot;&gt;{&lt;/span&gt;
-    &lt;span class=&quot;n&quot;&gt;bits&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;=&lt;/span&gt; &lt;span class=&quot;p&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;bits&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;&amp;lt;&amp;lt;&lt;/span&gt; &lt;span class=&quot;mi&quot;&gt;16u&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;)&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;|&lt;/span&gt; &lt;span class=&quot;p&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;bits&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;&amp;gt;&amp;gt;&lt;/span&gt; &lt;span class=&quot;mi&quot;&gt;16u&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;);&lt;/span&gt;
-    &lt;span class=&quot;n&quot;&gt;bits&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;=&lt;/span&gt; &lt;span class=&quot;p&quot;&gt;((&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;bits&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;&amp;amp;&lt;/span&gt; &lt;span class=&quot;mh&quot;&gt;0x55555555u&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;)&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;&amp;lt;&amp;lt;&lt;/span&gt; &lt;span class=&quot;mi&quot;&gt;1u&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;)&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;|&lt;/span&gt; &lt;span class=&quot;p&quot;&gt;((&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;bits&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;&amp;amp;&lt;/span&gt; &lt;span class=&quot;mh&quot;&gt;0xAAAAAAAAu&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;)&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;&amp;gt;&amp;gt;&lt;/span&gt; &lt;span class=&quot;mi&quot;&gt;1u&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;);&lt;/span&gt;
-    &lt;span class=&quot;n&quot;&gt;bits&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;=&lt;/span&gt; &lt;span class=&quot;p&quot;&gt;((&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;bits&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;&amp;amp;&lt;/span&gt; &lt;span class=&quot;mh&quot;&gt;0x33333333u&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;)&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;&amp;lt;&amp;lt;&lt;/span&gt; &lt;span class=&quot;mi&quot;&gt;2u&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;)&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;|&lt;/span&gt; &lt;span class=&quot;p&quot;&gt;((&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;bits&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;&amp;amp;&lt;/span&gt; &lt;span class=&quot;mh&quot;&gt;0xCCCCCCCCu&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;)&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;&amp;gt;&amp;gt;&lt;/span&gt; &lt;span class=&quot;mi&quot;&gt;2u&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;);&lt;/span&gt;
-    &lt;span class=&quot;n&quot;&gt;bits&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;=&lt;/span&gt; &lt;span class=&quot;p&quot;&gt;((&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;bits&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;&amp;amp;&lt;/span&gt; &lt;span class=&quot;mh&quot;&gt;0x0F0F0F0Fu&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;)&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;&amp;lt;&amp;lt;&lt;/span&gt; &lt;span class=&quot;mi&quot;&gt;4u&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;)&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;|&lt;/span&gt; &lt;span class=&quot;p&quot;&gt;((&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;bits&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;&amp;amp;&lt;/span&gt; &lt;span class=&quot;mh&quot;&gt;0xF0F0F0F0u&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;)&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;&amp;gt;&amp;gt;&lt;/span&gt; &lt;span class=&quot;mi&quot;&gt;4u&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;);&lt;/span&gt;
-    &lt;span class=&quot;n&quot;&gt;bits&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;=&lt;/span&gt; &lt;span class=&quot;p&quot;&gt;((&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;bits&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;&amp;amp;&lt;/span&gt; &lt;span class=&quot;mh&quot;&gt;0x00FF00FFu&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;)&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;&amp;lt;&amp;lt;&lt;/span&gt; &lt;span class=&quot;mi&quot;&gt;8u&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;)&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;|&lt;/span&gt; &lt;span class=&quot;p&quot;&gt;((&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;bits&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;&amp;amp;&lt;/span&gt; &lt;span class=&quot;mh&quot;&gt;0xFF00FF00u&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;)&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;&amp;gt;&amp;gt;&lt;/span&gt; &lt;span class=&quot;mi&quot;&gt;8u&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;);&lt;/span&gt;
-    &lt;span class=&quot;k&quot;&gt;return&lt;/span&gt; &lt;span class=&quot;kt&quot;&gt;float&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;bits&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;)&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;*&lt;/span&gt; &lt;span class=&quot;mf&quot;&gt;2.3283064365386963e-10&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;;&lt;/span&gt; &lt;span class=&quot;c1&quot;&gt;// / 0x100000000
-&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;}&lt;/span&gt;
-
-&lt;span class=&quot;c1&quot;&gt;// 不支持位运算
-&lt;/span&gt;&lt;span class=&quot;kt&quot;&gt;float&lt;/span&gt; &lt;span class=&quot;nf&quot;&gt;VanDerCorpus&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;kt&quot;&gt;uint&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;n&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,&lt;/span&gt; &lt;span class=&quot;kt&quot;&gt;uint&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;base&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;)&lt;/span&gt;
-&lt;span class=&quot;p&quot;&gt;{&lt;/span&gt;
-    &lt;span class=&quot;kt&quot;&gt;float&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;invBase&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;=&lt;/span&gt; &lt;span class=&quot;mi&quot;&gt;1&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;mi&quot;&gt;0&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;/&lt;/span&gt; &lt;span class=&quot;kt&quot;&gt;float&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;base&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;);&lt;/span&gt;
-    &lt;span class=&quot;kt&quot;&gt;float&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;denom&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;=&lt;/span&gt; &lt;span class=&quot;mi&quot;&gt;1&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;mi&quot;&gt;0&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;;&lt;/span&gt;
-    &lt;span class=&quot;kt&quot;&gt;float&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;result&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;=&lt;/span&gt; &lt;span class=&quot;mi&quot;&gt;0&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;mi&quot;&gt;0&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;;&lt;/span&gt;
-    &lt;span class=&quot;k&quot;&gt;for&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;kt&quot;&gt;uint&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;i&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;=&lt;/span&gt; &lt;span class=&quot;mi&quot;&gt;0u&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;;&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;i&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;&amp;lt;&lt;/span&gt; &lt;span class=&quot;mi&quot;&gt;32u&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;;&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;++&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;i&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;)&lt;/span&gt;
-    &lt;span class=&quot;p&quot;&gt;{&lt;/span&gt;
-        &lt;span class=&quot;k&quot;&gt;if&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;n&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;&amp;gt;&lt;/span&gt; &lt;span class=&quot;mi&quot;&gt;0u&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;)&lt;/span&gt;
-        &lt;span class=&quot;p&quot;&gt;{&lt;/span&gt;
-            &lt;span class=&quot;n&quot;&gt;denom&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;=&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;mod&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;kt&quot;&gt;float&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;n&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;),&lt;/span&gt; &lt;span class=&quot;mi&quot;&gt;2&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;mi&quot;&gt;0&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;);&lt;/span&gt;
-            &lt;span class=&quot;n&quot;&gt;result&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;+=&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;denom&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;*&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;invBase&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;;&lt;/span&gt;
-            &lt;span class=&quot;n&quot;&gt;invBase&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;=&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;invBase&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;/&lt;/span&gt; &lt;span class=&quot;mi&quot;&gt;2&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;mi&quot;&gt;0&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;;&lt;/span&gt;
-            &lt;span class=&quot;n&quot;&gt;n&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;=&lt;/span&gt; &lt;span class=&quot;kt&quot;&gt;uint&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;kt&quot;&gt;float&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;n&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;)&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;/&lt;/span&gt; &lt;span class=&quot;mi&quot;&gt;2&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;mi&quot;&gt;0&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;);&lt;/span&gt;
-        &lt;span class=&quot;p&quot;&gt;}&lt;/span&gt;
-    &lt;span class=&quot;p&quot;&gt;}&lt;/span&gt;
-    &lt;span class=&quot;k&quot;&gt;return&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;result&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;;&lt;/span&gt;
-&lt;span class=&quot;p&quot;&gt;}&lt;/span&gt;
-
-&lt;/code&gt;&lt;/pre&gt;
-&lt;/div&gt;
-
-&lt;h2 id=&quot;蒙特卡罗尔积分monte-carlo-integration&quot;&gt;蒙特卡罗尔积分(Monte Carlo Integration)&lt;/h2&gt;
-
-&lt;p&gt;蒙特卡洛积分主要出现在统计和概率学理论中。 &lt;br /&gt;
-举一个例子：假如你想统计某个国家公民的平均身高。为了得到你的答案，你可以测量每个人的身高并取平均值最后得到十分准确的答案。当然，这种方法十分耗时耗力，所以我们会采取更为方便但结果不是很精确的方法。 &lt;br /&gt;
-我们可以在这些人口中完全随机的测量一定人数的身高并获得平均结果。人数可以小到只测量100人的身高。这样你可得到一个比较准确的结果，这被称之为大数定律。具体而言就是，只要做到真正的随机选取一个集合中的子集合进行测量，你就能得到非常接近最终答案的答案，而答案的精确度随着子集合的大小而增加。&lt;/p&gt;
-
-&lt;p&gt;蒙特卡洛积分建立在这个大数定律的基础之上，并且使用同样的方法来解决积分。不使用所有可能的采样值X来计算积分，而是生成几个随机采样值N来解决积分。随着N的增加我们会获得更加接近准确答案的结果。&lt;/p&gt;
-
-&lt;script type=&quot;math/tex; mode=display&quot;&gt;\int_a^b f(x) \,{\rm d}x = \frac{(b-a)}{N}\sum_{i=0}^{n-1}f(x_i)&lt;/script&gt;
-
-&lt;p&gt;为了解决这个积分，我们在区间a到b中随机选取N个采样向量，求它们的和并最后除以采样的数量。pdf是可能性密度函数，它告诉我们在总采样向量集合中选取某个特定的采样向量的概率。举一个例子：人群身高的pdf看起来是这个样子&lt;/p&gt;
-
-&lt;p&gt;&lt;img src=&quot;/img/post-engine/tex15.png&quot; alt=&quot;&quot; /&gt;&lt;/p&gt;
-
-&lt;p&gt;从这幅图片可以看出如果我们对人群随机采样身高，有很高的概率得到1.70，很低的概率得到1.50。&lt;/p&gt;
-
-&lt;p&gt;根据蒙特卡洛积分，一些采样值可能会有比其他采样值更高的生成概率。这就是为什么对于任意的蒙特卡洛估计值，我们要除以或者乘上该采样向量的概率值即pdf函数值。到目前为止，对于估算积分的每种情况，我们生成的采样都是统一的，都有相同的生成概率。我们的估计值直到现在都是公平的，这意味着给一个数量不断增长的采样，我们最终会收敛到一个准确的积分值。&lt;/p&gt;
-
-&lt;p&gt;当然，一些蒙特卡洛估量是不公平的，这意味着生成采样向量的时候不是完全随机的，而是聚集在某个特殊的值或方向附近。这些非公平的蒙特卡洛估量有着更快的收敛速度，这意味着它们能够非常快的收敛到准确答案，但是由于它们不公正的天性，它们并不是总能收敛到准确答案。这往往意味着需要一个可接受的权衡，特别是在计算机图形当中，准确的答案对结果并不是特别重要。&lt;/p&gt;
-
-&lt;p&gt;蒙特卡洛积分在计算机图形学中十分流行，因为它使用一种相当直观的方式来近似获取连续积分的结果：在任何地方/体积中进行采样（比如半球体Ω），生成N个随机采样，计算并权衡每个采样对最终结果的贡献。&lt;/p&gt;
-
-&lt;h2 id=&quot;重要性采样&quot;&gt;重要性采样&lt;/h2&gt;
-
-&lt;p&gt;概率密度&lt;/p&gt;
-
-&lt;p&gt;对于连续型随机变量来说，概率密度函数就是描述了在样本区间里面子区间发生概率的一种函数，它和随机变量X的关系如下所示：&lt;/p&gt;
-
-&lt;script type=&quot;math/tex; mode=display&quot;&gt;X([a,b]) = \int_a^bp(x){\rm d}x&lt;/script&gt;
-
-&lt;p&gt;。其中$X([a,b])$表示的就是事件发生在样本区间$[a,b]$中的概率。而$p(x)$就是随机变量$X$的概率分布函数。所以随机变量$X$和概率密度函数$p(x)$之间就是积分关系。这也就说明了，对于单一事件发生的概率在该积分中是没有意义的。&lt;/p&gt;
-
-&lt;p&gt;除了上面的公式之外，概率密度函数还有一个重要的特性：&lt;/p&gt;
-
-&lt;script type=&quot;math/tex; mode=display&quot;&gt;\int_{-\infty}^{+\infty}p(x){\rm d}x = 1&lt;/script&gt;
-
-&lt;p&gt;这个特性表示，事件发生在整个概率区间里面的概率为1。&lt;/p&gt;
-
-&lt;script type=&quot;math/tex; mode=display&quot;&gt;\int_a^b f(x) \,{\rm d}x ≈ \frac{1}{N}\sum_{i=0}^{n-1} \frac{f(x_i)}{p(x_i)}\quad&lt;/script&gt;
-
-&lt;p&gt;其中$p(x)$就是概率密度函数。这里之所以要除以$p(x_i)$，是因为当我们的采样点为$x_i$的时候，我们可以通过$p(x_i)$计算出该采样点对最终积分的一个贡献度权重值，这样一除就能够得到最终的积分值。&lt;/p&gt;
-
-&lt;p&gt;细心的读者可能会发现，好像我们只要找到一个采样点$x_i$，然后求出$p(x_i)$和$f(x_i)$，在使用$\frac{f(x_i)}{p(x_i)}$就已经能够得到最终的积分值了啊，干么还要采样那么多的数据，然后在求个平均值？这是因为，在解决实际问题的时候，我们往往很难精确的求出某个函数$f(x)$对应的概率密度函数$p(x)$。这时候的概率密度函数，就依靠于我们选取的采样策略来定义，它实际上是与最终的概率密度函数接近的一个函数，并不是真真的概率密度函数，所以需要通过多次采样，求平均值的方法来抵消这种近似带来的误差。关于这段内容，等到后面讲解对BRDF进行采样的时候，大家就能够理解。我们对BRDF进行采样的时候，往往很难求出BRDF本身的PDF，而是通过选取合适的采样策略，比如对GGX进行采样来逼近。&lt;/p&gt;
-
-&lt;h2 id=&quot;公式部分&quot;&gt;公式部分&lt;/h2&gt;
-
-&lt;p&gt;原始的PBR反射方程：&lt;/p&gt;
-
-&lt;script type=&quot;math/tex; mode=display&quot;&gt;L_o(p,\omega_o) = \int\limits_{\Omega} (k_d\frac{c}{\pi} + k_s\frac{DFG}{4(\omega_o \cdot n)(\omega_i \cdot n)}) L_i(p,\omega_i) n \cdot \omega_i  d\omega_i&lt;/script&gt;
-
-&lt;p&gt;在解决漫反射辐照问题的时候，我们仅仅需要的是入射光线Wi，但是在解决镜面反射辐照的时候，因为双向反射分布函数：&lt;/p&gt;
-
-&lt;script type=&quot;math/tex; mode=display&quot;&gt;f_r(p, w_i, w_o) = \frac{DFG}{4(\omega_o \cdot n)(\omega_i \cdot n)}&lt;/script&gt;
-
-&lt;p&gt;我们需要的输入变量由入射光Wi和出射（观察）方向Wo两者同时决定，我们不能将Wi和Wo的所有组合都尝试并计算一遍来得出结果（因为性能要求太过庞大），所以我们需要一些别的方法。 &lt;br /&gt;
-Epic Games的split sum approximation 通过将方程分成两部分，分别计算结果再组合的方式来解决这个问题，他们将镜面反射方程变成如下形式&lt;/p&gt;
-
-&lt;script type=&quot;math/tex; mode=display&quot;&gt;L_o(p,\omega_o) = 
-		\int\limits_{\Omega} (k_s\frac{DFG}{4(\omega_o \cdot n)(\omega_i \cdot n)}
-			L_i(p,\omega_i) n \cdot \omega_i  d\omega_i
-			=
-		\int\limits_{\Omega} f_r(p, \omega_i, \omega_o) L_i(p,\omega_i) n \cdot \omega_i  d\omega_i&lt;/script&gt;
-
-&lt;p&gt;对于第一部分，我们使用预过滤环境贴图来解决，并且我们把粗糙度加入进去。由于粗糙程度的增加，环境贴图需要更多的离散采样向量和更多的模糊反射。对于每一个粗糙度等级，我们将其连续的模糊结果储存在预过滤贴图的mipmap等级中（不熟悉mipmap的可以先去了解一下mipmap的作用）。如下例所示：我们将5个不同模糊等级的结果存储在5个mipmap等级的贴图中。&lt;/p&gt;
-
-&lt;p&gt;&lt;img src=&quot;/img/post-engine/tex17.png&quot; alt=&quot;&quot; /&gt;&lt;/p&gt;
-
-&lt;p&gt;我们通过获得双向反射分布函数（BRDF）中的输入变量——法线和观察方向及其正态分布函数来生成采样向量和散射强度。但是在这之前，我们无法获取观察向量（因为我们还没有真正绘制物体，现在只是在预处理环境贴图），Epic Games为了解决这个问题，让观察方向总是等于Wo，即下列代码：&lt;/p&gt;
-
-&lt;div class=&quot;language-glsl highlighter-rouge&quot;&gt;&lt;pre class=&quot;highlight&quot;&gt;&lt;code&gt;&lt;span class=&quot;kt&quot;&gt;vec3&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;N&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;=&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;normalize&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;WorldPos&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;);&lt;/span&gt;
-&lt;span class=&quot;kt&quot;&gt;vec3&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;R&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;=&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;N&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;;&lt;/span&gt;
-&lt;span class=&quot;kt&quot;&gt;vec3&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;V&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;=&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;R&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;;&lt;/span&gt;
-&lt;/code&gt;&lt;/pre&gt;
-&lt;/div&gt;
-
-&lt;p&gt;对于方程的第二部分，该部分就是双向反射分布函数（BRDF）的镜面反射积分。如果我们假设每个方向的入射光的颜色是白的（即L(p,x)=1.0），在给出粗糙度和法线n与光向量Wi的夹角的情况下，我们可以预计算双向反射分布函数（BRDF）的返回值。Epic Games 会根据每个法线n与光向量Wi的组合以及粗糙度来存储一个值到2D的查找纹理当中（LUT），这个贴图也叫做BRDF积分贴图。这个2D查找纹理输出一个scale（不知道这里应该怎么翻译，对应于图片的红色分量）和一个偏移值（绿色分量）为菲涅尔方程提供参数，最终会给予我们第二部分的镜面反射积分：&lt;/p&gt;
-
-&lt;p&gt;&lt;img src=&quot;/img/post-engine/tex18.png&quot; alt=&quot;&quot; /&gt;&lt;/p&gt;
-
-&lt;p&gt;关于前面给到的第二部分方程， 如下：&lt;/p&gt;
-
-&lt;script type=&quot;math/tex; mode=display&quot;&gt;L_o(p,\omega_o) = 
-		\int\limits_{\Omega} L_i(p,\omega_i) d\omega_i
-		*
-		\int\limits_{\Omega} f_r(p, \omega_i, \omega_o) n \cdot \omega_i d\omega_i&lt;/script&gt;
-
-&lt;p&gt;右边部分要求我们在给出N与W0的夹角、表面粗糙度和菲涅尔F0后对BRDF方程进行卷积。这很像当Li为1.0时对镜面BRDF进行积分。在3个变量的情况下对BRDF进行卷积十分麻烦，但是我们可以把F0移出镜面BRDF方程：&lt;/p&gt;
-
-&lt;script type=&quot;math/tex; mode=display&quot;&gt;\int\limits_{\Omega} f_r(p, \omega_i, \omega_o) n \cdot \omega_i d\omega_i 
-  = \int\limits_{\Omega} f_r(p, \omega_i, \omega_o) \frac{F(\omega_o, h)}{F(\omega_o, h)} n \cdot \omega_i d\omega_i&lt;/script&gt;
-
-&lt;p&gt;F代表的是菲涅尔方程。将菲涅尔移动到BRDF的分母上，可以得到如下方程：&lt;/p&gt;
-
-&lt;script type=&quot;math/tex; mode=display&quot;&gt;\int\limits_{\Omega} \frac{f_r(p, \omega_i, \omega_o)}{F(\omega_o, h)} F(\omega_o, h)  n \cdot \omega_i d\omega_i&lt;/script&gt;
-
-&lt;p&gt;我们用菲涅尔方程的近似值来代替最右边的菲涅尔方程：&lt;/p&gt;
-
-&lt;script type=&quot;math/tex; mode=display&quot;&gt;\int\limits_{\Omega} \frac{f_r(p, \omega_i, \omega_o)}{F(\omega_o, h)} (F_0 + (1 - F_0){(1 - \omega_o \cdot h)}^5)  n \cdot \omega_i d\omega_i&lt;/script&gt;
-
-&lt;p&gt;让我们用α来代替(1−ωo⋅h)5(1−ωo⋅h)^5，以便于更方便的解决F0：&lt;/p&gt;
-
-&lt;script type=&quot;math/tex; mode=display&quot;&gt;\int\limits_{\Omega} \frac{f_r(p, \omega_i, \omega_o)}{F(\omega_o, h)} (F_0 + (1 - F_0)\alpha)  n \cdot \omega_i d\omega_i&lt;/script&gt;
-
-&lt;script type=&quot;math/tex; mode=display&quot;&gt;\int\limits_{\Omega} \frac{f_r(p, \omega_i, \omega_o)}{F(\omega_o, h)} (F_0 + 1*\alpha - F_0*\alpha)  n \cdot \omega_i d\omega_i&lt;/script&gt;
-
-&lt;script type=&quot;math/tex; mode=display&quot;&gt;\int\limits_{\Omega} \frac{f_r(p, \omega_i, \omega_o)}{F(\omega_o, h)} (F_0 * (1 - \alpha) + \alpha)  n \cdot \omega_i d\omega_i&lt;/script&gt;
-
-&lt;p&gt;然后我们将其分成两部分：&lt;/p&gt;
-
-&lt;script type=&quot;math/tex; mode=display&quot;&gt;\int\limits_{\Omega} \frac{f_r(p, \omega_i, \omega_o)}{F(\omega_o, h)} (F_0 * (1 - \alpha))  n \cdot \omega_i d\omega_i
-              +
-	\int\limits_{\Omega} \frac{f_r(p, \omega_i, \omega_o)}{F(\omega_o, h)} (\alpha)  n \cdot \omega_i d\omega_i&lt;/script&gt;
-
-&lt;p&gt;接下来，我们可以把F0提到积分外面，并将α变回原来的式子：&lt;/p&gt;
-
-&lt;script type=&quot;math/tex; mode=display&quot;&gt;F_0 \int\limits_{\Omega} f_r(p, \omega_i, \omega_o)(1 - {(1 - \omega_o \cdot h)}^5)  n \cdot \omega_i d\omega_i
-              +
-	\int\limits_{\Omega} f_r(p, \omega_i, \omega_o) {(1 - \omega_o \cdot h)}^5  n \cdot \omega_i d\omega_i&lt;/script&gt;
-
-&lt;p&gt;注意！！：因为本身f(p,ωi,ωo)包含菲涅尔方程， 所以我们可以将分母上的F与其抵消~&lt;/p&gt;
-
-&lt;p&gt;使用一种相似的方式更早的对环境贴图进行卷积，我们可以通过BRDF方程的输入进行卷积：N与W0的夹角和粗糙度以及存储在纹理中的卷积结果。我们将卷积结果存储在一张2D查找纹理中（LUT），也被称为BRDF积分贴图，我们稍后会在PBR光照着色器中使用它来得到简介镜面反射结果。&lt;/p&gt;
-
-&lt;p&gt;BRDF卷积着色器对一个2D平面进行操作，使用2D纹理的坐标作为BRDF 卷积的直接输入（NdotV和粗糙度）。这部分的卷积代码与预过滤卷积代码十分的相似，不同之处是它的采样向量是根据BRDF的几何函数和菲涅尔方程近似值得到的：&lt;/p&gt;
-
-&lt;div class=&quot;language-glsl highlighter-rouge&quot;&gt;&lt;pre class=&quot;highlight&quot;&gt;&lt;code&gt;&lt;span class=&quot;kt&quot;&gt;vec2&lt;/span&gt; &lt;span class=&quot;nf&quot;&gt;IntegrateBRDF&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;kt&quot;&gt;float&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;NdotV&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,&lt;/span&gt; &lt;span class=&quot;kt&quot;&gt;float&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;roughness&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;)&lt;/span&gt;
-&lt;span class=&quot;p&quot;&gt;{&lt;/span&gt;
-    &lt;span class=&quot;kt&quot;&gt;vec3&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;V&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;;&lt;/span&gt;
-    &lt;span class=&quot;n&quot;&gt;V&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;x&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;=&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;sqrt&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;mi&quot;&gt;1&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;mi&quot;&gt;0&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;-&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;NdotV&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;*&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;NdotV&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;);&lt;/span&gt;
-    &lt;span class=&quot;n&quot;&gt;V&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;y&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;=&lt;/span&gt; &lt;span class=&quot;mi&quot;&gt;0&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;mi&quot;&gt;0&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;;&lt;/span&gt;
-    &lt;span class=&quot;n&quot;&gt;V&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;z&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;=&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;NdotV&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;;&lt;/span&gt;
-
-    &lt;span class=&quot;kt&quot;&gt;float&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;A&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;=&lt;/span&gt; &lt;span class=&quot;mi&quot;&gt;0&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;mi&quot;&gt;0&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;;&lt;/span&gt;
-    &lt;span class=&quot;kt&quot;&gt;float&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;B&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;=&lt;/span&gt; &lt;span class=&quot;mi&quot;&gt;0&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;mi&quot;&gt;0&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;;&lt;/span&gt; 
-
-    &lt;span class=&quot;kt&quot;&gt;vec3&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;N&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;=&lt;/span&gt; &lt;span class=&quot;kt&quot;&gt;vec3&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;mi&quot;&gt;0&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;mi&quot;&gt;0&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,&lt;/span&gt; &lt;span class=&quot;mi&quot;&gt;0&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;mi&quot;&gt;0&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,&lt;/span&gt; &lt;span class=&quot;mi&quot;&gt;1&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;mi&quot;&gt;0&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;);&lt;/span&gt;
-    
-    &lt;span class=&quot;k&quot;&gt;const&lt;/span&gt; &lt;span class=&quot;kt&quot;&gt;uint&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;SAMPLE_COUNT&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;=&lt;/span&gt; &lt;span class=&quot;mi&quot;&gt;1024u&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;;&lt;/span&gt;
-    &lt;span class=&quot;k&quot;&gt;for&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;kt&quot;&gt;uint&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;i&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;=&lt;/span&gt; &lt;span class=&quot;mi&quot;&gt;0u&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;;&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;i&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;&amp;lt;&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;SAMPLE_COUNT&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;;&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;++&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;i&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;)&lt;/span&gt;
-    &lt;span class=&quot;p&quot;&gt;{&lt;/span&gt;
-        &lt;span class=&quot;c1&quot;&gt;// generates a sample vector that&#39;s biased towards the
-&lt;/span&gt;        &lt;span class=&quot;c1&quot;&gt;// preferred alignment direction (importance sampling).
-&lt;/span&gt;        &lt;span class=&quot;kt&quot;&gt;vec2&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;Xi&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;=&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;Hammersley&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;i&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;SAMPLE_COUNT&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;);&lt;/span&gt;
-        &lt;span class=&quot;kt&quot;&gt;vec3&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;H&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;=&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;ImportanceSampleGGX&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;Xi&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;N&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;roughness&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;);&lt;/span&gt;
-        &lt;span class=&quot;kt&quot;&gt;vec3&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;L&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;=&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;normalize&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;mi&quot;&gt;2&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;mi&quot;&gt;0&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;*&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;dot&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;V&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;H&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;)&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;*&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;H&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;-&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;V&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;);&lt;/span&gt;
-
-        &lt;span class=&quot;kt&quot;&gt;float&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;NdotL&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;=&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;max&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;L&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;z&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,&lt;/span&gt; &lt;span class=&quot;mi&quot;&gt;0&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;mi&quot;&gt;0&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;);&lt;/span&gt;
-        &lt;span class=&quot;kt&quot;&gt;float&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;NdotH&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;=&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;max&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;H&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;z&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,&lt;/span&gt; &lt;span class=&quot;mi&quot;&gt;0&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;mi&quot;&gt;0&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;);&lt;/span&gt;
-        &lt;span class=&quot;kt&quot;&gt;float&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;VdotH&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;=&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;max&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;dot&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;V&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;H&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;),&lt;/span&gt; &lt;span class=&quot;mi&quot;&gt;0&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;mi&quot;&gt;0&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;);&lt;/span&gt;
-
-        &lt;span class=&quot;k&quot;&gt;if&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;NdotL&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;&amp;gt;&lt;/span&gt; &lt;span class=&quot;mi&quot;&gt;0&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;mi&quot;&gt;0&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;)&lt;/span&gt;
-        &lt;span class=&quot;p&quot;&gt;{&lt;/span&gt;
-            &lt;span class=&quot;kt&quot;&gt;float&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;G&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;=&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;GeometrySmithIBL&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;N&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;V&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;L&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;roughness&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;);&lt;/span&gt;
-            &lt;span class=&quot;kt&quot;&gt;float&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;G_Vis&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;=&lt;/span&gt; &lt;span class=&quot;p&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;G&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;*&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;VdotH&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;)&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;/&lt;/span&gt; &lt;span class=&quot;p&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;NdotH&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;*&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;NdotV&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;);&lt;/span&gt;
-            &lt;span class=&quot;kt&quot;&gt;float&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;Fc&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;=&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;pow&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;mi&quot;&gt;1&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;mi&quot;&gt;0&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;-&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;VdotH&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,&lt;/span&gt; &lt;span class=&quot;mi&quot;&gt;5&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;mi&quot;&gt;0&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;);&lt;/span&gt;
-
-            &lt;span class=&quot;n&quot;&gt;A&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;+=&lt;/span&gt; &lt;span class=&quot;p&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;mi&quot;&gt;1&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;mi&quot;&gt;0&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;-&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;Fc&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;)&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;*&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;G_Vis&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;;&lt;/span&gt;
-            &lt;span class=&quot;n&quot;&gt;B&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;+=&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;Fc&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;*&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;G_Vis&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;;&lt;/span&gt;
-        &lt;span class=&quot;p&quot;&gt;}&lt;/span&gt;
-    &lt;span class=&quot;p&quot;&gt;}&lt;/span&gt;
-    &lt;span class=&quot;n&quot;&gt;A&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;/=&lt;/span&gt; &lt;span class=&quot;kt&quot;&gt;float&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;SAMPLE_COUNT&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;);&lt;/span&gt;
-    &lt;span class=&quot;n&quot;&gt;B&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;/=&lt;/span&gt; &lt;span class=&quot;kt&quot;&gt;float&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;SAMPLE_COUNT&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;);&lt;/span&gt;
-    &lt;span class=&quot;k&quot;&gt;return&lt;/span&gt; &lt;span class=&quot;kt&quot;&gt;vec2&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;A&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;B&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;);&lt;/span&gt;
-&lt;span class=&quot;p&quot;&gt;}&lt;/span&gt;
-
-&lt;span class=&quot;kt&quot;&gt;void&lt;/span&gt; &lt;span class=&quot;nf&quot;&gt;main&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;()&lt;/span&gt; 
-&lt;span class=&quot;p&quot;&gt;{&lt;/span&gt;
-    &lt;span class=&quot;kt&quot;&gt;vec2&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;integratedBRDF&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;=&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;IntegrateBRDF&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;TexCoords&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;x&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;TexCoords&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;y&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;);&lt;/span&gt;
-    &lt;span class=&quot;n&quot;&gt;FragColor&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;=&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;integratedBRDF&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;;&lt;/span&gt;
-&lt;span class=&quot;p&quot;&gt;}&lt;/span&gt;
-&lt;/code&gt;&lt;/pre&gt;
-&lt;/div&gt;
-
-&lt;p&gt;我们生成的这个查找纹理的水平分量代表BRDF的输入n*Wi，竖直分量则是输入的粗糙度。当我们拥有BRDF积分贴图和预过滤环境贴图后，我们可以将两者合并，并得到镜面积分结果：&lt;/p&gt;
-
-&lt;div class=&quot;language-glsl highlighter-rouge&quot;&gt;&lt;pre class=&quot;highlight&quot;&gt;&lt;code&gt;&lt;span class=&quot;kt&quot;&gt;float&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;lod&lt;/span&gt;  &lt;span class=&quot;o&quot;&gt;=&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;getMipLevelFromRoughness&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;roughness&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;);&lt;/span&gt;
-&lt;span class=&quot;kt&quot;&gt;vec3&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;prefilteredColor&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;=&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;textureCubeLod&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;PrefilteredEnvMap&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;refVec&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;lod&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;);&lt;/span&gt;
-&lt;span class=&quot;kt&quot;&gt;vec2&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;envBRDF&lt;/span&gt;  &lt;span class=&quot;o&quot;&gt;=&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;texture2D&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;BRDFIntegrationMap&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,&lt;/span&gt; &lt;span class=&quot;kt&quot;&gt;vec2&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;roughness&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;ndotv&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;)).&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;xy&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;;&lt;/span&gt;
-&lt;span class=&quot;kt&quot;&gt;vec3&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;indirectSpecular&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;=&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;prefilteredColor&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;*&lt;/span&gt; &lt;span class=&quot;p&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;F&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;*&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;envBRDF&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;x&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;+&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;envBRDF&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;y&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;)&lt;/span&gt; 
-&lt;/code&gt;&lt;/pre&gt;
-&lt;/div&gt;
-
-&lt;p&gt;只看间接光高光部分输出：&lt;/p&gt;
-
-&lt;p&gt;&lt;img src=&quot;/img/post-engine/tex16.jpg&quot; alt=&quot;&quot; /&gt;&lt;/p&gt;
-
-&lt;p&gt;整体PBR渲染输出：&lt;/p&gt;
-
-&lt;p&gt;&lt;img src=&quot;/img/post-engine/tex15.jpg&quot; alt=&quot;&quot; /&gt;&lt;/p&gt;
-
-&lt;p&gt;右下角对应的是预过滤环境贴图。&lt;/p&gt;
-</description>
-        <pubDate>Thu, 27 Jun 2019 11:00:00 +0800</pubDate>
-        <link>https://huailiang.github.io/blog/2019/ibl2/</link>
-        <guid isPermaLink="true">https://huailiang.github.io/blog/2019/ibl2/</guid>
         
         <category>引擎</category>
         
