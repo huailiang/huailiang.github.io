@@ -91,7 +91,7 @@ extern "C"
 
 如果你的vs工程是由cmakelist生成的， 且断点不能再unity中命中的话，可以检查c/c++里的调式信息格式选项有没有设置成下图所示的选项：
 
-![](/img/post-cpp/cpp20.jpg)
+![](/img/post-cpp/20.jpg)
 
 ## 复杂的数据封送
 

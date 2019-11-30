@@ -1,6 +1,6 @@
 ---
 layout:     post
-title:      "龙之谷技能编辑器是如何实现的"
+title:      "技能编辑器实现"
 date:       2018-02-25 12:00:00
 author:     "Huailiang"
 tags:

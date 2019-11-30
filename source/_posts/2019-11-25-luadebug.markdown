@@ -9,19 +9,24 @@ tags:
 
 
 
-原生的lua代码调试支持的工具很多， 这里主要说的是能Attach到Unity进程交互调试的工具。 大多游戏都在使用lua脚本来热更新游戏逻辑，下面介绍两个工具如何调试lua，介绍的两款lua调试工具都支持以下特性：
+原生的lua代码调试支持的工具很多， 这里主要说的是能Attach到Unity进程交互调试的工具。 大多游戏都在使用lua脚本来热更新游戏逻辑，下面介绍两个工具如何调试lua，
+
+ * jetbrains旗下软件（IntelliJ IDEA 和 Pycharm）
+ * vscode（LuaPanda）
+
+<br><center><img src="/img/post-lua/lua0.jpg"></center><br>
+
+两款ide都是跨平台的， 在windows和macos上都有很好的支持, 而且都支持以下lua的特性：
 
 
-```
-自动补全（auto completion）
-代码片段（snippet completion）
-定义跳转（definition）
-生成注释（comment generation）
-类型推断（limited type inference）
-代码格式化（formatting）: 依赖 lua-fmt
-代码诊断（linting）：依赖 luacheck
-调试器（debugger）
-```
+* 自动补全（auto completion）
+* 代码片段（snippet completion）
+* 定义跳转（definition）
+* 生成注释（comment generation）
+* 类型推断（limited type inference）
+* 代码格式化（formatting）: vscode依赖 lua-fmt
+* 代码诊断（linting）：vscode依赖 luacheck
+* 调试器（debugger）
 
 
 
@@ -46,9 +51,9 @@ tags:
 
 菜单栏选中Run->Attach to Process, 在本机所有的进程中选择Unity进程即可调试了。
 
-![](/img/post-lua/lua8.jpg)
+<center><img src="/img/post-lua/lua8.jpg"></center><br>
 
-运行效果如下：
+运行效果如下， 既可以看到调用堆栈， 又可以查看过程变量，非常的方便。
 
 ![](/img/post-lua/lua9.jpg)
 
@@ -67,9 +72,13 @@ tags:
 
 ## VSCode 
 
-这里推荐一款vscode的plugin, 腾讯开发的插件叫LuaPanda, 因为LuaPanda是基于luasocket的， 所以你必须确保你的lua环境已经安装了luasocket, 又鉴于此特性，所以这款插件还可以远程调试， 比如说手机连着编辑器调试。
+这里推荐一款vscode的plugin, 腾讯开发的插件叫LuaPanda, 因为LuaPanda是基于luasocket的， 所以你必须确保你的lua环境已经安装了luasocket, 又鉴于此特性，所以这款插件还可以远程调试(需在同一局域网内， 并且可以pin通)， 比如说手机连着编辑器调试。关于更多的联机调试， [查看文档][i5]。
 
 ![](/img/post-lua/lua15.jpg)
+
+LuaPanda的vscode adapter是使用typescript(javascript的超集) 语言编写的， 大约1000行，核心代码: [luaDebug.ts][i6]
+
+
 
 #### 文件配置
 
@@ -86,8 +95,6 @@ require("LuaPanda").start("127.0.0.1",8818);
 #### 调试配置
 
 切换到VSCode的调试选项卡，点击齿轮，在弹出框中选择 LuaPanda (若无此选项说明以前用别的插件调试过lua , 要把先前用过的调试插件禁用)。会自动生成launch.json文件。
-
-![](/img/post-lua/lua12.png)
 
 
 launch.json 配置项中要修改的主要是luaFileExtension, 改成lua文件使用的后缀就行。（比如xlua改为lua.txt, slua是txt）。各配置项鼠标悬停会有提示，可根据需要更改。
@@ -116,6 +123,8 @@ path-reader
 ```
 
 
+
+
 更多关于LuaPanda的介绍， [参考这里][i1]
 
 
@@ -130,4 +139,6 @@ path-reader
 [i1]: https://github.com/Tencent/LuaPanda/blob/master/Docs/Manual/access-guidelines.md
 [i2]: https://github.com/Tencent/LuaPanda/blob/master/Debugger/LuaPanda.lua
 [i3]: https://github.com/Tencent/LuaPanda
-[i4]: www.jetbrains.com
+[i4]: https://www.jetbrains.com
+[i5]: https://github.com/Tencent/LuaPanda/blob/master/Docs/Manual/debug-on-phone.md
+[i6]: https://github.com/Tencent/LuaPanda/blob/master/src/debug/luaDebug.ts
