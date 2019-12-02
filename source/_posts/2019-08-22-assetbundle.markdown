@@ -121,8 +121,8 @@ Unity5.3之后， 大致了提供2种方式读取AB的方式， 即LoadFromMemor
 
 在查看Unity API的时候发现LoadFromFile末尾有一个offset参数，那么这个参数有什么用呢？是否可以起到防止AssetBundle资源直接被AssetStudio提取呢？先看官方文档的接口说明：
 
-```cs
-public static AssetBundle LoadFromFile(string path, uint crc, along offset);
+```csharp
+public static AssetBundle LoadFromFile(string path, uint crc, long offset);
 
 Parameters
 
