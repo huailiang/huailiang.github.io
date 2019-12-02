@@ -32,7 +32,7 @@ tags:
 
 ## Jet brains 工具链
 
-下载安装IntelliJ IDEA 或者pycharm, 这两款软件都是[Jet Brains][i4]旗下的软件。 现在更多的人使用它们来开发python或者java， 我们这里主要使用的是其一款插件，叫做EmmyLua。
+下载安装IntelliJ IDEA 或者pycharm, 这两款软件都是[Jet Brains][i4]旗下的软件。 现在更多的人使用它们来开发python或者java， 我们这里主要使用的是其一款插件，叫做[EmmyLua][i7]。
 
 以Pycharm为例：
 
@@ -123,8 +123,6 @@ path-reader
 ```
 
 
-
-
 更多关于LuaPanda的介绍， [参考这里][i1]
 
 
@@ -142,3 +140,4 @@ path-reader
 [i4]: https://www.jetbrains.com
 [i5]: https://github.com/Tencent/LuaPanda/blob/master/Docs/Manual/debug-on-phone.md
 [i6]: https://github.com/Tencent/LuaPanda/blob/master/src/debug/luaDebug.ts
+[i7]: https://emmylua.github.io/
