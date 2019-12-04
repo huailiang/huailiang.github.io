@@ -1,0 +1,179 @@
+---
+layout:     post
+title:      "NDK同步读取StreamingAssets资源"
+date:       2019-12-03 03:00:00
+author:     "Huailiang"
+tags:
+    - Unity
+---
+
+
+## AS 生成jar包
+
+在新建样例工程，鼠标右键点击app->New->选择Module
+
+![](/img/post-android/and-1.jpeg)
+
+选择AndroidLibrary->点击Next
+
+![](/img/post-android/and-2.jpeg)
+
+打开Library工程的build.gardle文件,并添加代码
+
+``` grovy
+task makeJar(type: Copy){
+    delete 'build/libs/sdk.jar'
+    from('build/intermediates/bundles/release/')
+    into('build/libs/')
+    include('classes.jar')
+    rename('classes.jar', 'sdk.jar')
+}
+
+makeJar.dependsOn(build)
+```
+默认编译的代码都放在classes.jar里了， 所在目录build/intermediates/bundles/release，我们即需把相应对象拷贝出来即可并重名为sdk.jar.
+
+打开Terminal控制台,输入指令 gradlew make
+
+```sh
+gradlew makejar
+```
+
+![](/img/post-android/and-3.jpeg)
+
+首次生成会慢一点,Success如下图,jar文件会出现在Library工程对应的build->libs->中,同样arr会出现在outputs中。如果你的library工程有依赖第三方的jar， 则可以把相应的jar都拷贝到跟build同级目录的libs目录, 然后sync一下即可。
+
+
+
+
+
+在Unity开发当中StreamingAssets始终是一个比较重要的目录，里面一般会放一些重要的资源，配置等等，在PC以及iOS等平台，我们能够直接通过文件的形式访问到StreamingAssets文件夹下的文件，但是在安卓平台下，这些文件是经过压缩的。
+实际上这些资源在android下是通过AssetManager进行管理的。我们可以通过Android的JavaAPI进行直接的读取。如下代码
+
+
+
+
+
+但是在实际的使用过程当中我们会发现，如果我们将Java堆当中的bytes直接通过Unity提供的CallFunc的方式调用的话每一次调用都会带来相应bytes大小的GCAlloc，导致大量的GC出现，所以这个时候NDK就需要出来帮忙了。
+
+实际上NDK中的C++代码不仅仅是java虚拟机可以通过jni的方式调用，C#也可以直接通过PInvoke的方式进行调用。
+
+使用ndk读取assetmanager的代码如下：
+
+```c++
+#include "nativeread_reset_com_nativeread_NativeHelper.h"
+#include <android/asset_manager_jni.h>
+#include <android/asset_manager.h>
+#include <string>
+#include <jni.h>
+#include <android/log.h>
+#include <stdint.h>
+
+#ifdef __cplusplus
+extern "C" {
+#endif
+
+#define TAG    "native-read-bytes" // 这个是自定义的LOG的标识
+#define LOGD(...)  __android_log_print(ANDROID_LOG_DEBUG,TAG,__VA_ARGS__) // 定义LOGD类型
+
+static AAssetManager *assetManager = nullptr;
+
+JNIEXPORT void JNICALL Java_nativeread_reset_com_nativeread_NativeHelper_SetAssetManager
+        (JNIEnv *env, jobject jobj, jobject jassetManager) {
+    LOGD("set asset manager");
+    assetManager = AAssetManager_fromJava(env, jassetManager);
+}
+
+JNIEXPORT int32_t JNICALL ReadAssetsBytes(char* fileName, unsigned char** result){
+    if(assetManager == nullptr) return -1;
+    
+    AAsset* asset = AAssetManager_open(assetManager, fileName, AASSET_MODE_UNKNOWN);
+    if(asset == nullptr) return -1;
+    off_t size = AAsset_getLength(asset);
+    if(size > 0){
+        *result = new unsigned char[size];
+        AAsset_read(asset, *result, size);
+    }
+    AAsset_close(asset);
+
+    return (int32_t)size;
+}
+
+JNIEXPORT int32_t JNICALL ReadAssetsBytesWithOffset(char* fileName, unsigned char** result, int32_t offset, int32_t length){
+
+    if(assetManager == nullptr) return -1;
+    
+    AAsset* asset = AAssetManager_open(assetManager, fileName, AASSET_MODE_UNKNOWN);
+    if(asset == nullptr) return -1;
+    
+    off_t size = AAsset_getLength(asset);
+    if(size > 0){
+        try {
+            *result = new unsigned char[length];
+            AAsset_seek(asset, offset, SEEK_SET);
+            AAsset_read(asset, *result, length);
+        }catch (std::bad_alloc){
+            *result = nullptr;
+            return -1;
+        }
+    }
+    AAsset_close(asset);
+
+    return (int32_t)length;
+}
+
+JNIEXPORT int32_t JNICALL ReadRawBytes(char* fileName, unsigned char** result){
+    if(fileName == nullptr) return -1;
+    FILE* file = fopen(fileName, "r");
+    if(file == nullptr) return -2;
+    fseek(file, 0L, SEEK_END);
+    int32_t size = ftell(file);
+    if(size <= 0) return -3;
+    *result = new uint8_t[size];
+    fseek(file, 0, SEEK_SET);
+    fread(*result, sizeof(uint8_t), static_cast<size_t>(size), file);
+    fclose(file);
+    return size;
+}
+
+
+JNIEXPORT void JNICALL ReleaseBytes(unsigned char* bytes){
+    delete[] bytes;
+}
+
+JNIEXPORT int JNICALL Add(int a , int b){
+    return a + b;
+}
+
+#ifdef __cplusplus
+}
+#endif
+```
+
+上述的方法第一个直接通过AssetManager读取文件，另外一个则以offset的形式进行读取AssetManager的文件，第三个方法则是直接读取文件，例如沙盒目录的文件就可以使用该方法读取，最后一个则是释放bytes。
+
+接下来我们需要将bytes读取到C#当中：
+我们先将方法导出到C#当中：
+
+
+
+这样我们就可以直接调用C++的方法了。
+然后我们编写读取数据的代码：
+
+
+
+可以看到我们这里使用了流作为缓冲区，流里面的buffer可以反复为我们利用，这样我们就可以通过Marshal.Copy不断将数据写入到流中，当我们需要使用的时候我们就可以直接读取数据。
+下面同样的，是直接读取文件的方法：
+
+
+
+以上，通过这样的方法，我们可以毫无GC地同步读取Android下StreamingAssets的代码。如果不使用Java也不使用NDK的情况下，如果我们使用WWW去加载，不仅仅无法同步读取，其带来的GC也是不可小觑的。
+
+接下去我们可能会提升一些难度，加入UnityNativePlugin以及OpenGLES的内容，有关于NDK调用libpng的内容。
+
+<br>
+
+
+[i1]: http://www.resetoter.cn/?p=672
+[i2]: http://www.resetoter.cn/?p=660
+[i3]: https://github.com/Tencent/LuaPanda
