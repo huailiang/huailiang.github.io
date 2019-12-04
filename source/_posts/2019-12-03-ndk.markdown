@@ -44,14 +44,34 @@ gradlew makejar
 首次生成会慢一点,Success如下图,jar文件会出现在Library工程对应的build->libs->中,同样arr会出现在outputs中。如果你的library工程有依赖第三方的jar， 则可以把相应的jar都拷贝到跟build同级目录的libs目录, 然后sync一下即可。
 
 
+## NDK 生成so
+
+首先， 你需要去google官网[下载NDK][i3], 然后就可以使用ndk-build生成so了， 步骤如下：
+
+1. 创建jni目录，把需要编译的cpp和头文件放进去
+2. 编写Android.mk和Application.mk, 相关文档[参考这里][i4]
+3. 在终端执行如下命令：
+   ```
+   ndk-build clean
+   ndk-build
+   ```
+就可以看到跟jni同级目录libs文件下生成的so文件了。
+
+Android Studio也支持快速的ndk-build, 打开File->Settings->External Tools, 点击+， 做如图设置：
+
+![](/img/post-android/and-4.jpg)
+
+然后配置 ndk-build clean：
+
+![](/img/post-android/and-5.jpg)
 
 
+然后选中modile, 右键external tool -> ndk-build 就可以生成so了。
+
+## StreamingAssets同步
 
 在Unity开发当中StreamingAssets始终是一个比较重要的目录，里面一般会放一些重要的资源，配置等等，在PC以及iOS等平台，我们能够直接通过文件的形式访问到StreamingAssets文件夹下的文件，但是在安卓平台下，这些文件是经过压缩的。
 实际上这些资源在android下是通过AssetManager进行管理的。我们可以通过Android的JavaAPI进行直接的读取。如下代码
-
-
-
 
 
 但是在实际的使用过程当中我们会发现，如果我们将Java堆当中的bytes直接通过Unity提供的CallFunc的方式调用的话每一次调用都会带来相应bytes大小的GCAlloc，导致大量的GC出现，所以这个时候NDK就需要出来帮忙了。
@@ -176,4 +196,5 @@ JNIEXPORT int JNICALL Add(int a , int b){
 
 [i1]: http://www.resetoter.cn/?p=672
 [i2]: http://www.resetoter.cn/?p=660
-[i3]: https://github.com/Tencent/LuaPanda
+[i3]: https://developer.android.google.cn/ndk/downloads/
+[i4]: https://developer.android.google.cn/ndk/guides/ndk-build
