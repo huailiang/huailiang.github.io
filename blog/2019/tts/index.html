@@ -5,13 +5,13 @@
   <meta http-equiv="X-UA-Compatible" content="IE=edge">
   <meta name="viewport" content="width=device-width, initial-scale=1">
 
-  <title>Unity lua脚本调试</title>
+  <title>Tacatron2 之文字转语音</title>
   <meta name="description"
-    content="原生的lua代码调试支持的工具很多， 这里主要说的是能Attach到Unity进程交互调试的工具。 大多游戏都在使用lua脚本来热更新游戏逻辑，下面介绍两个工具如何调试lua，">
+    content="声音的概念">
 
   <link rel="shortcut icon" href="/img/favicon.ico">
   <link rel="stylesheet" href="/css/main.css">
-  <link rel="canonical" href="https://huailiang.github.io/blog/2019/luadebug/">
+  <link rel="canonical" href="https://huailiang.github.io/blog/2019/tts/">
 
 </head>
 
@@ -67,118 +67,82 @@ MathJax.Hub.Config({
 
   <div class="card">
     <header class="post-header">
-      <h1 class="post-title">Unity lua脚本调试</h1>
-      <p class="post-meta">Nov 25, 2019 •
+      <h1 class="post-title">Tacatron2 之文字转语音</h1>
+      <p class="post-meta">Dec 1, 2019 •
         Huailiang</p>
     </header>
 
     <div class="post-content">
-      <p>原生的lua代码调试支持的工具很多， 这里主要说的是能Attach到Unity进程交互调试的工具。 大多游戏都在使用lua脚本来热更新游戏逻辑，下面介绍两个工具如何调试lua，</p>
+      <h2 id="声音的概念">声音的概念</h2>
 
-<ul>
-  <li>jetbrains旗下软件（IntelliJ IDEA 和 Pycharm）</li>
-  <li>vscode（LuaPanda）</li>
-</ul>
+<blockquote>
+  <p>声音信号本是一维的时域信号，直观上很难看出频率变化规律。如果通过傅里叶变换把它变到频域上，虽然可以看出信号的频率分布，但是丢失了时域信息，无法看出频率分布随时间的变化。为了解决这个问题，很多时频分析手段应运而生。短时傅里叶，小波，Wigner分布等都是常用的时频域分析方法。</p>
+</blockquote>
 
-<p><br /><center><img src="/img/post-lua/lua0.jpg" /></center><br /></p>
+<h3 id="spectrogram-声谱图">Spectrogram 声谱图</h3>
 
-<p>两款ide都是跨平台的， 在windows和macos上都有很好的支持, 而且都支持以下lua的特性：</p>
+<h3 id="stft-短时傅里叶变换">STFT 短时傅里叶变换</h3>
 
-<ul>
-  <li>自动补全（auto completion）</li>
-  <li>代码片段（snippet completion）</li>
-  <li>定义跳转（definition）</li>
-  <li>生成注释（comment generation）</li>
-  <li>类型推断（limited type inference）</li>
-  <li>代码格式化（formatting）: vscode依赖 lua-fmt</li>
-  <li>代码诊断（linting）：vscode依赖 luacheck</li>
-  <li>调试器（debugger）</li>
-</ul>
+<p>短时傅里叶变换（STFT）是最经典的时频域分析方法。傅里叶变换（FT）想必大家都不陌生，这里不做专门介绍。所谓短时傅里叶变换，顾名思义，是对短时的信号做傅里叶变化。那么短时的信号怎么得到的? 是长时的信号分帧得来的。</p>
 
-<h2 id="jet-brains-工具链">Jet brains 工具链</h2>
+<p>STFT的原理非常简单，把一段长信号分帧、加窗，再对每一帧做傅里叶变换（FFT），最后把每一帧的结果沿另一个维度堆叠起来，得到类似于一幅图的二维信号形式。如果我们原始信号是声音信号，那么通过STFT展开得到的二维信号就是所谓的声谱图。</p>
 
-<p>下载安装IntelliJ IDEA 或者pycharm, 这两款软件都是<a href="https://www.jetbrains.com">Jet Brains</a>旗下的软件。 现在更多的人使用它们来开发python或者java， 我们这里主要使用的是其一款插件，叫做EmmyLua。</p>
+<p><img src="/img/post-ml/tts1.jpeg" alt="" /></p>
 
-<p>以Pycharm为例：</p>
+<h3 id="dct变换">DCT变换</h3>
 
-<p>安装好之后，选择File-&gt;Settings, 再打开的设置窗口选中Plugins来安装插件， 搜到EmmyLua, 点击Install按钮，进行安装：</p>
+<p>即离散余弦转换， DCT能够将空域的信号转换到频域上，因此具有良好的去相关性的性能。DCT变换本身是无损的且具有对称性</p>
 
-<p><img src="/img/post-lua/lua6.jpeg" alt="" /></p>
+<h3 id="梅尔频谱-mel-spectrum">梅尔频谱 mel-spectrum</h3>
 
-<p>选择Unity工程lua脚本所在的文件夹打开（注意lua require时搜索路径，所以这里一定对应起来）。</p>
+<p>声谱图往往是很大的一张图，为了得到合适大小的声音特征，往往把它通过梅尔标度滤波器组（mel-scale filter banks），变换为梅尔频谱.</p>
 
-<p>增加识别文件扩展名，将<em>.lua 和</em>.txt统统识别为lua脚本，（*.lua.txt能识别为lua，但影响debug, 可能是emmylua的一个bug）</p>
+<p>梅尔标度，the mel scale，由Stevens，Volkmann和Newman在1937年命名。我们知道，频率的单位是赫兹（Hz），人耳能听到的频率范围是20-20000Hz，但人耳对Hz这种标度单位并不是线性感知关系。例如如果我们适应了1000Hz的音调，如果把音调频率提高到2000Hz，我们的耳朵只能觉察到频率提高了一点点，根本察觉不到频率提高了一倍。如果将普通的频率标度转化为梅尔频率标度，映射关系如下式所示：</p>
 
-<p><img src="/img/post-lua/lua7.jpg" alt="" /></p>
+<script type="math/tex; mode=display">mel(f) = 2595 * \log_{10}(1+f/700)</script>
 
-<p>在上图选项Ignore files and folders 可以设置忽略在侧边栏显示的文件匹配符。很多非代码相关的东西都可以通过此方式屏蔽掉。</p>
+<h3 id="梅尔倒频谱-mfc">梅尔倒频谱 MFC</h3>
 
-<p>菜单栏选中Run-&gt;Attach to Process, 在本机所有的进程中选择Unity进程即可调试了。</p>
+<p>梅尔倒频谱(Mel-Frequency Spectrum, MFC)系一个可用来代表短期音讯的频谱，其原理根基于以非线性的梅尔刻度(mel scale)表示的对数频谱(spectrum)及其线性余弦转换(linear cosine transform)之上</p>
 
-<center><img src="/img/post-lua/lua8.jpg" /></center>
-<p><br /></p>
-
-<p>运行效果如下， 既可以看到调用堆栈， 又可以查看过程变量，非常的方便。</p>
-
-<p><img src="/img/post-lua/lua9.jpg" alt="" /></p>
-
-<p>如果你不习惯pycharm自带的快捷键, 你还可以在setting的Keymap中改成vs的快捷键。除了vs的快捷键， pycharm还提供了很多其他编辑器的快捷键， 比如说Sublime, Eclipse等。</p>
-
-<p>如果你之前是一名python开发者， 第一次打开一个lua的工程的时候， pycharm会加载很多python本地安装的packages, 如果这影响了编辑器的性能，你可以在Settings里面清掉Project interpreter：</p>
-
-<p><img src="/img/post-lua/lua10.jpg" alt="" /></p>
-
-<p>如果你是一位原生的lua开发者， 而非使用引擎调试lua， 你需要配置编译好的lua.exe的文件位置和lua的search path, 配置好之后也能很方便的调试。</p>
-
-<p><img src="/img/post-lua/lua11.jpg" alt="" /></p>
-
-<h2 id="vscode">VSCode</h2>
-
-<p>这里推荐一款vscode的plugin, 腾讯开发的插件叫LuaPanda, 因为LuaPanda是基于luasocket的， 所以你必须确保你的lua环境已经安装了luasocket, 又鉴于此特性，所以这款插件还可以远程调试(需在同一局域网内， 并且可以pin通)， 比如说手机连着编辑器调试。关于更多的联机调试， <a href="https://github.com/Tencent/LuaPanda/blob/master/Docs/Manual/debug-on-phone.md">查看文档</a>。</p>
-
-<p><img src="/img/post-lua/lua15.jpg" alt="" /></p>
-
-<p>LuaPanda的vscode adapter是使用typescript(javascript的超集) 语言编写的， 大约1000行，核心代码: <a href="https://github.com/Tencent/LuaPanda/blob/master/src/debug/luaDebug.ts">luaDebug.ts</a></p>
-
-<h4 id="文件配置">文件配置</h4>
-
-<p>文件：<a href="https://github.com/Tencent/LuaPanda/blob/master/Debugger/LuaPanda.lua">LuaPanda.lua</a></p>
-
-<p>下载位置：<a href="https://github.com/Tencent/LuaPanda">github</a> 的 Debugger 目录下</p>
-
-<p>把以上两个文件放在lua代码可以引用到的位置，并在用户代码中引用:</p>
-
-<p>require(“LuaPanda”).start(“127.0.0.1”,8818);<br />
-*8818是默认端口号，如果需要修改，请同时修改launch.json的端口设置。</p>
-
-<h4 id="调试配置">调试配置</h4>
-
-<p>切换到VSCode的调试选项卡，点击齿轮，在弹出框中选择 LuaPanda (若无此选项说明以前用别的插件调试过lua , 要把先前用过的调试插件禁用)。会自动生成launch.json文件。</p>
-
-<p>launch.json 配置项中要修改的主要是luaFileExtension, 改成lua文件使用的后缀就行。（比如xlua改为lua.txt, slua是txt）。各配置项鼠标悬停会有提示，可根据需要更改。</p>
-
-<p><img src="/img/post-lua/lua12.png" alt="" /></p>
-
-<p>先运行VSCode端，再运行Lua代码: 点击调试选项卡左上角的绿色箭头，再运行unity/ue4工程。如果有stopOnEntry或是执行到断点处，就会自动停住。</p>
-
-<p><img src="/img/post-lua/lua13.png" alt="" /></p>
-
-<p>LuaPanda 在PC上调试会默认使用 c hook，它是用c重写了debugger的核心hook部分，从而提高调试器的执行效率。 c hook会默认启用，无需单独接入。</p>
-
-<p>验证方式：停在断点处后，在调试控制台输入LuaPanda.getInfo()， 返回信息的BaseInfo会给出提示，如果c库已加载，还会给出版本号。</p>
-
-<p>LuaPanda调试器功能依赖LuaSocket, 可运行于slua，slua-unreal ，xlua 等已集成 LuaSocket 的 lua 环境，也可以在console中调试。lua 版本支持 5.1- 5.3。</p>
-
-<p>其他依赖项目（插件中已包含，无需用户手动安装):</p>
-
-<div class="highlighter-rouge"><pre class="highlight"><code>luaparse
-luacheck
-lua-fmt
-path-reader
+<p>梅尔倒频谱系数通常是用以下方法得到的：</p>
+<div class="highlighter-rouge"><pre class="highlight"><code>* 将一讯号进行傅里叶转换（Fourier transform）
+* 将频谱映射（mapping）至梅尔刻度，利用三角窗函数（triangular overlapping window）
+* 取对数（logarithm）
+* 取离散余弦转换（discrete cosine transform）
+* MFCC是转换后的频谱
 </code></pre>
 </div>
 
-<p>更多关于LuaPanda的介绍， <a href="https://github.com/Tencent/LuaPanda/blob/master/Docs/Manual/access-guidelines.md">参考这里</a></p>
+<h5 id="系数推导">系数推导:</h5>
+
+<ol>
+  <li>对该信号做傅立叶变换</li>
+</ol>
+
+<script type="math/tex; mode=display">X[k] = FTx[n]</script>
+
+<ol>
+  <li>根据下面公式算出Y[m]</li>
+</ol>
+
+<script type="math/tex; mode=display">Y[M] = \log\left( \sum_{k=f_{m-1}}^{f_{m+1}} \left|X[k] \right|^2 B_m[k] \right)</script>
+
+<p>其中 $ B_m[k] $ 是梅尔频率倒频谱的遮罩</p>
+
+<script type="math/tex; mode=display">% <![CDATA[
+c(u) = 
+\begin{cases}
+0  & k < f_{m-1} and k > f_{m+1}\\
+\frac{k - f_{m-1}}{f_m - f_{m-1}} & f_{m-1} \leqslant k \leqslant f_{m+1} \\
+\frac{f_{m+1} - k}{f_{m+1} - f_m} & f_m \leqslant k \leqslant f_{m+1}
+\end{cases} %]]></script>
+
+<p>对Y[m]做IDCT得 ，因为Y[m]是偶函数,故用IDCT(反离散余弦变换)取代IDFT(反离散傅立叶变换)</p>
+
+<script type="math/tex; mode=display">c_x[n] = \frac{1}{M} \sum_{m=1}^{M}Y[m]cos\left( \frac{\pi n(m-1/2)}{M} \right)</script>
+
+<h2 id="librosa-音频处理库">librosa 音频处理库</h2>
 
 <h2 id="写在最后">写在最后</h2>
 
@@ -273,16 +237,15 @@ path-reader
 <div class="post-nav">
 
   
-  <div class="post-nav-prev post-nav-item">
-    
-    <a href="/blog/2019/tts/"> Tacatron2 之文字转语音</a>
+  <div class="post-nav-none post-nav-item">
+    <a href=""> </a>
   </div>
   
 
   
   <div class="post-nav-next post-nav-item">
     
-    <a href="/blog/2019/face/"> 神经网络捏脸</a>
+    <a href="/blog/2019/luadebug/"> Unity lua脚本调试</a>
   </div>
   
 
