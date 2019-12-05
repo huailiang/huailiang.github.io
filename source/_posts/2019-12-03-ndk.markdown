@@ -8,7 +8,7 @@ tags:
 ---
 
 
-## AS 生成jar包
+## AndroidStudio 生成jar包
 
 在新建样例工程，鼠标右键点击app->New->选择Module
 
@@ -67,6 +67,46 @@ Android Studio也支持快速的ndk-build, 打开File->Settings->External Tools,
 
 
 然后选中modile, 右键external tool -> ndk-build 就可以生成so了。
+
+![](/img/post-android/and-6.jpg)
+
+默认的话， 对于Android Studio对c++不会默认补全提示的， 为了友好的编辑c++代码，需要链接到ndk， 设置如下：
+
+1. 设置ndk的路径， File->Project Structure->SDK Location
+   
+![](/img/post-android/and-7.jpg)
+
+2.  右键你的工程， 选中Link C++ Project with Gradle, 在弹出的窗口中设置Android.mk的路径， 然后sync下， 就可以啦
+
+![](/img/post-android/and-8.jpg)
+
+如果你的代码引用了ndk库的内容， 如下：
+
+```c++
+#include <android/asset_manager.h>
+#include <android/log.h>
+```
+
+那么在编写android.mk的时候， 需要加上如下声明：
+```sh
+LOCAL_LDLIBS += -llog
+LOCAL_LDLIBS += -landroid
+```
+
+而如果使用忽略的方式编译出来的.so文件
+
+```sh
+LOCAL_ALLOW_UNDEFINED_SYMBOLS := true
+```
+
+会在运行时的时候，报如下错误：
+
+```
+12-05 20:31:43.364 25559 25591 E Unity   : Unable to find NativeLib
+12-05 20:31:43.475 25559 25591 E Unity   : DllNotFoundException: NativeLib
+12-05 20:31:43.475 25559 25591 E Unity   :   at (wrapper managed-to-native) NativeRead.Add(int,int)
+12-05 20:31:43.475 25559 25591 E Unity   :   at test.NDKRead (System.String file) [0x00000] in
+```
 
 ## StreamingAssets同步
 
@@ -175,21 +215,47 @@ JNIEXPORT int JNICALL Add(int a , int b){
 接下来我们需要将bytes读取到C#当中：
 我们先将方法导出到C#当中：
 
+```c#
+[DllImport(libName)]
+public static extern int Add(int a, int b);
+
+[DllImport(libName)]
+public static extern int ReadRawBytes(string name, ref IntPtr ptr);
+
+[DllImport(libName)]
+public static extern void ReleaseBytes(IntPtr ptr);
+```
 
 
-这样我们就可以直接调用C++的方法了。
-然后我们编写读取数据的代码：
-
-
-
-可以看到我们这里使用了流作为缓冲区，流里面的buffer可以反复为我们利用，这样我们就可以通过Marshal.Copy不断将数据写入到流中，当我们需要使用的时候我们就可以直接读取数据。
+这样我们就可以直接调用C++的方法了。可以看到我们这里使用了流作为缓冲区，流里面的buffer可以反复为我们利用，这样我们就可以通过Marshal.Copy不断将数据写入到流中，当我们需要使用的时候我们就可以直接读取数据。
 下面同样的，是直接读取文件的方法：
 
+```c#
+MemoryStream stream = new MemoryStream();
+var ptr = IntPtr.Zero;
+int size = NativeRead.ReadAssetsBytes(file, ref ptr);
+Debug.Log("native size: " + size);
+if (size > 0)
+{
+    if (ptr == IntPtr.Zero)
+    {
+        Debug.LogError("read failed!");
+    }
+    else
+    {
+        stream.SetLength(size);
+        stream.Position = 0;
+        Marshal.Copy(ptr, stream.GetBuffer(), 0, size);
+        var reader = new BinaryReader(stream);
+        Debug.Log(reader.ReadString());
+        NativeRead.ReleaseBytes(ptr);
+    }
+}
+```
 
 
 以上，通过这样的方法，我们可以毫无GC地同步读取Android下StreamingAssets的代码。如果不使用Java也不使用NDK的情况下，如果我们使用WWW去加载，不仅仅无法同步读取，其带来的GC也是不可小觑的。
 
-接下去我们可能会提升一些难度，加入UnityNativePlugin以及OpenGLES的内容，有关于NDK调用libpng的内容。
 
 <br>
 
