@@ -181,7 +181,7 @@ MathJax.Hub.Config({
 
 <p>在查看Unity API的时候发现LoadFromFile末尾有一个offset参数，那么这个参数有什么用呢？是否可以起到防止AssetBundle资源直接被AssetStudio提取呢？先看官方文档的接口说明：</p>
 
-<div class="language-cs highlighter-rouge"><pre class="highlight"><code><span class="k">public</span> <span class="k">static</span><span class="err"> </span><span class="n">AssetBundle</span><span class="err"> </span><span class="nf">LoadFromFile</span><span class="p">(</span><span class="kt">string</span><span class="err"> </span><span class="n">path</span><span class="p">,</span> <span class="kt">uint</span><span class="err"> </span><span class="n">crc</span><span class="p">,</span> <span class="n">along</span><span class="err"> </span><span class="n">offset</span><span class="p">);</span>
+<div class="language-csharp highlighter-rouge"><pre class="highlight"><code><span class="k">public</span> <span class="k">static</span> <span class="n">AssetBundle</span> <span class="nf">LoadFromFile</span><span class="p">(</span><span class="kt">string</span><span class="err"> </span><span class="n">path</span><span class="p">,</span> <span class="kt">uint</span><span class="err"> </span><span class="n">crc</span><span class="p">,</span> <span class="kt">long</span><span class="err"> </span><span class="n">offset</span><span class="p">);</span>
 
 <span class="n">Parameters</span>
 

@@ -1,0 +1,461 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <meta http-equiv="X-UA-Compatible" content="IE=edge">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+
+  <title>NDK同步读取StreamingAssets资源</title>
+  <meta name="description"
+    content="AndroidStudio 生成jar包">
+
+  <link rel="shortcut icon" href="/img/favicon.ico">
+  <link rel="stylesheet" href="/css/main.css">
+  <link rel="canonical" href="https://huailiang.github.io/blog/2019/ndk/">
+
+</head>
+
+<body>
+  <main>
+    <header class="site-header">
+  <div class="container">
+    <h1><a href="/">Hom<span>e</span></a></h1>
+
+    <button type="button" class="sliding-panel-button">
+      <span></span>
+      <span></span>
+      <span></span>
+    </button>
+
+    <nav class="navbar sliding-panel-content">
+      <ul>
+        
+        <li><a href="/about" title="About">About</a>
+        </li>
+        
+        <li><a href="/blog" title="Blog">Blog</a>
+        </li>
+        
+       <li><a href="/category/" target="_blank"><i class="icon icon-feed"></i></a></li>
+      </ul>
+    </nav>
+  </div>
+</header>
+
+<div class="sliding-panel-fade-screen"></div>
+    <script type="text/javascript" src="/js/MathJax.js?config=TeX-AMS-MML_HTMLorMML"></script>
+
+<script type="text/x-mathjax-config">
+MathJax.Hub.Config({
+  tex2jax: {
+    inlineMath: [['$','$'], ['\\(','\\)']],
+    processEscapes: true
+  }
+});
+</script>
+
+<script type="text/x-mathjax-config">
+  MathJax.Hub.Config({
+    tex2jax: {
+      skipTags: ['script', 'noscript', 'style', 'textarea', 'pre', 'code']
+    }
+  });
+
+</script>
+    <div class="container">
+      <article role="article" class="post">
+
+  <div class="card">
+    <header class="post-header">
+      <h1 class="post-title">NDK同步读取StreamingAssets资源</h1>
+      <p class="post-meta">Dec 3, 2019 •
+        Huailiang</p>
+    </header>
+
+    <div class="post-content">
+      <h2 id="androidstudio-生成jar包">AndroidStudio 生成jar包</h2>
+
+<p>在新建样例工程，鼠标右键点击app-&gt;New-&gt;选择Module</p>
+
+<p><img src="/img/post-android/and-1.jpeg" alt="" /></p>
+
+<p>选择AndroidLibrary-&gt;点击Next</p>
+
+<p><img src="/img/post-android/and-2.jpeg" alt="" /></p>
+
+<p>打开Library工程的build.gardle文件,并添加代码</p>
+
+<pre><code class="language-grovy">task makeJar(type: Copy){
+    delete 'build/libs/sdk.jar'
+    from('build/intermediates/bundles/release/')
+    into('build/libs/')
+    include('classes.jar')
+    rename('classes.jar', 'sdk.jar')
+}
+
+makeJar.dependsOn(build)
+</code></pre>
+<p>默认编译的代码都放在classes.jar里了， 所在目录build/intermediates/bundles/release，我们即需把相应对象拷贝出来即可并重名为sdk.jar.</p>
+
+<p>打开Terminal控制台,输入指令 gradlew make</p>
+
+<div class="language-sh highlighter-rouge"><pre class="highlight"><code>gradlew makejar
+</code></pre>
+</div>
+
+<p><img src="/img/post-android/and-3.jpeg" alt="" /></p>
+
+<p>首次生成会慢一点,Success如下图,jar文件会出现在Library工程对应的build-&gt;libs-&gt;中,同样arr会出现在outputs中。如果你的library工程有依赖第三方的jar， 则可以把相应的jar都拷贝到跟build同级目录的libs目录, 然后sync一下即可。</p>
+
+<h2 id="ndk-生成so">NDK 生成so</h2>
+
+<p>首先， 你需要去google官网<a href="https://developer.android.google.cn/ndk/downloads/">下载NDK</a>, 然后就可以使用ndk-build生成so了， 步骤如下：</p>
+
+<ol>
+  <li>创建jni目录，把需要编译的cpp和头文件放进去</li>
+  <li>编写Android.mk和Application.mk, 相关文档<a href="https://developer.android.google.cn/ndk/guides/ndk-build">参考这里</a></li>
+  <li>在终端执行如下命令：
+    <div class="highlighter-rouge"><pre class="highlight"><code>ndk-build clean
+ndk-build
+</code></pre>
+    </div>
+    <p>就可以看到跟jni同级目录libs文件下生成的so文件了。</p>
+  </li>
+</ol>
+
+<p>Android Studio也支持快速的ndk-build, 打开File-&gt;Settings-&gt;External Tools, 点击+， 做如图设置：</p>
+
+<p><img src="/img/post-android/and-4.jpg" alt="" /></p>
+
+<p>然后配置 ndk-build clean：</p>
+
+<p><img src="/img/post-android/and-5.jpg" alt="" /></p>
+
+<p>然后选中modile, 右键external tool -&gt; ndk-build 就可以生成so了。</p>
+
+<p><img src="/img/post-android/and-6.jpg" alt="" /></p>
+
+<p>默认的话， 对于Android Studio对c++不会默认补全提示的， 为了友好的编辑c++代码，需要链接到ndk， 设置如下：</p>
+
+<ol>
+  <li>设置ndk的路径， File-&gt;Project Structure-&gt;SDK Location</li>
+</ol>
+
+<p><img src="/img/post-android/and-7.jpg" alt="" /></p>
+
+<ol>
+  <li>右键你的工程， 选中Link C++ Project with Gradle, 在弹出的窗口中设置Android.mk的路径， 然后sync下， 就可以啦</li>
+</ol>
+
+<p><img src="/img/post-android/and-8.jpg" alt="" /></p>
+
+<p>如果你的代码引用了ndk库的内容， 如下：</p>
+
+<div class="language-c++ highlighter-rouge"><pre class="highlight"><code><span class="cp">#include &lt;android/asset_manager.h&gt;
+#include &lt;android/log.h&gt;
+</span></code></pre>
+</div>
+
+<p>那么在编写android.mk的时候， 需要加上如下声明：</p>
+<div class="language-sh highlighter-rouge"><pre class="highlight"><code>LOCAL_LDLIBS +<span class="o">=</span> -llog
+LOCAL_LDLIBS +<span class="o">=</span> -landroid
+</code></pre>
+</div>
+
+<p>而如果使用忽略的方式编译出来的.so文件</p>
+
+<div class="language-sh highlighter-rouge"><pre class="highlight"><code>LOCAL_ALLOW_UNDEFINED_SYMBOLS :<span class="o">=</span> <span class="nb">true</span>
+</code></pre>
+</div>
+
+<p>会在运行时的时候，报如下错误：</p>
+
+<div class="highlighter-rouge"><pre class="highlight"><code>12-05 20:31:43.364 25559 25591 E Unity   : Unable to find NativeLib
+12-05 20:31:43.475 25559 25591 E Unity   : DllNotFoundException: NativeLib
+12-05 20:31:43.475 25559 25591 E Unity   :   at (wrapper managed-to-native) NativeRead.Add(int,int)
+12-05 20:31:43.475 25559 25591 E Unity   :   at test.NDKRead (System.String file) [0x00000] in
+</code></pre>
+</div>
+
+<h2 id="streamingassets同步">StreamingAssets同步</h2>
+
+<p>在Unity开发当中StreamingAssets始终是一个比较重要的目录，里面一般会放一些重要的资源，配置等等，在PC以及iOS等平台，我们能够直接通过文件的形式访问到StreamingAssets文件夹下的文件，但是在安卓平台下，这些文件是经过压缩的。<br />
+实际上这些资源在android下是通过AssetManager进行管理的。我们可以通过Android的JavaAPI进行直接的读取。如下代码</p>
+
+<p>但是在实际的使用过程当中我们会发现，如果我们将Java堆当中的bytes直接通过Unity提供的CallFunc的方式调用的话每一次调用都会带来相应bytes大小的GCAlloc，导致大量的GC出现，所以这个时候NDK就需要出来帮忙了。</p>
+
+<p>实际上NDK中的C++代码不仅仅是java虚拟机可以通过jni的方式调用，C#也可以直接通过PInvoke的方式进行调用。</p>
+
+<p>使用ndk读取assetmanager的代码如下：</p>
+
+<div class="language-c++ highlighter-rouge"><pre class="highlight"><code><span class="cp">#include "nativeread_reset_com_nativeread_NativeHelper.h"
+#include &lt;android/asset_manager_jni.h&gt;
+#include &lt;android/asset_manager.h&gt;
+#include &lt;string&gt;
+#include &lt;jni.h&gt;
+#include &lt;android/log.h&gt;
+#include &lt;stdint.h&gt;
+</span>
+<span class="cp">#ifdef __cplusplus
+</span><span class="k">extern</span> <span class="s">"C"</span> <span class="p">{</span>
+<span class="cp">#endif
+</span>
+<span class="cp">#define TAG    "native-read-bytes" // 这个是自定义的LOG的标识
+#define LOGD(...)  __android_log_print(ANDROID_LOG_DEBUG,TAG,__VA_ARGS__) // 定义LOGD类型
+</span>
+<span class="k">static</span> <span class="n">AAssetManager</span> <span class="o">*</span><span class="n">assetManager</span> <span class="o">=</span> <span class="nb">nullptr</span><span class="p">;</span>
+
+<span class="n">JNIEXPORT</span> <span class="kt">void</span> <span class="n">JNICALL</span> <span class="nf">Java_nativeread_reset_com_nativeread_NativeHelper_SetAssetManager</span>
+        <span class="p">(</span><span class="n">JNIEnv</span> <span class="o">*</span><span class="n">env</span><span class="p">,</span> <span class="n">jobject</span> <span class="n">jobj</span><span class="p">,</span> <span class="n">jobject</span> <span class="n">jassetManager</span><span class="p">)</span> <span class="p">{</span>
+    <span class="n">LOGD</span><span class="p">(</span><span class="s">"set asset manager"</span><span class="p">);</span>
+    <span class="n">assetManager</span> <span class="o">=</span> <span class="n">AAssetManager_fromJava</span><span class="p">(</span><span class="n">env</span><span class="p">,</span> <span class="n">jassetManager</span><span class="p">);</span>
+<span class="p">}</span>
+
+<span class="n">JNIEXPORT</span> <span class="kt">int32_t</span> <span class="n">JNICALL</span> <span class="n">ReadAssetsBytes</span><span class="p">(</span><span class="kt">char</span><span class="o">*</span> <span class="n">fileName</span><span class="p">,</span> <span class="kt">unsigned</span> <span class="kt">char</span><span class="o">**</span> <span class="n">result</span><span class="p">){</span>
+    <span class="k">if</span><span class="p">(</span><span class="n">assetManager</span> <span class="o">==</span> <span class="nb">nullptr</span><span class="p">)</span> <span class="k">return</span> <span class="o">-</span><span class="mi">1</span><span class="p">;</span>
+    
+    <span class="n">AAsset</span><span class="o">*</span> <span class="n">asset</span> <span class="o">=</span> <span class="n">AAssetManager_open</span><span class="p">(</span><span class="n">assetManager</span><span class="p">,</span> <span class="n">fileName</span><span class="p">,</span> <span class="n">AASSET_MODE_UNKNOWN</span><span class="p">);</span>
+    <span class="k">if</span><span class="p">(</span><span class="n">asset</span> <span class="o">==</span> <span class="nb">nullptr</span><span class="p">)</span> <span class="k">return</span> <span class="o">-</span><span class="mi">1</span><span class="p">;</span>
+    <span class="kt">off_t</span> <span class="n">size</span> <span class="o">=</span> <span class="n">AAsset_getLength</span><span class="p">(</span><span class="n">asset</span><span class="p">);</span>
+    <span class="k">if</span><span class="p">(</span><span class="n">size</span> <span class="o">&gt;</span> <span class="mi">0</span><span class="p">){</span>
+        <span class="o">*</span><span class="n">result</span> <span class="o">=</span> <span class="k">new</span> <span class="kt">unsigned</span> <span class="kt">char</span><span class="p">[</span><span class="n">size</span><span class="p">];</span>
+        <span class="n">AAsset_read</span><span class="p">(</span><span class="n">asset</span><span class="p">,</span> <span class="o">*</span><span class="n">result</span><span class="p">,</span> <span class="n">size</span><span class="p">);</span>
+    <span class="p">}</span>
+    <span class="n">AAsset_close</span><span class="p">(</span><span class="n">asset</span><span class="p">);</span>
+
+    <span class="k">return</span> <span class="p">(</span><span class="kt">int32_t</span><span class="p">)</span><span class="n">size</span><span class="p">;</span>
+<span class="p">}</span>
+
+<span class="n">JNIEXPORT</span> <span class="kt">int32_t</span> <span class="n">JNICALL</span> <span class="n">ReadAssetsBytesWithOffset</span><span class="p">(</span><span class="kt">char</span><span class="o">*</span> <span class="n">fileName</span><span class="p">,</span> <span class="kt">unsigned</span> <span class="kt">char</span><span class="o">**</span> <span class="n">result</span><span class="p">,</span> <span class="kt">int32_t</span> <span class="n">offset</span><span class="p">,</span> <span class="kt">int32_t</span> <span class="n">length</span><span class="p">){</span>
+
+    <span class="k">if</span><span class="p">(</span><span class="n">assetManager</span> <span class="o">==</span> <span class="nb">nullptr</span><span class="p">)</span> <span class="k">return</span> <span class="o">-</span><span class="mi">1</span><span class="p">;</span>
+    
+    <span class="n">AAsset</span><span class="o">*</span> <span class="n">asset</span> <span class="o">=</span> <span class="n">AAssetManager_open</span><span class="p">(</span><span class="n">assetManager</span><span class="p">,</span> <span class="n">fileName</span><span class="p">,</span> <span class="n">AASSET_MODE_UNKNOWN</span><span class="p">);</span>
+    <span class="k">if</span><span class="p">(</span><span class="n">asset</span> <span class="o">==</span> <span class="nb">nullptr</span><span class="p">)</span> <span class="k">return</span> <span class="o">-</span><span class="mi">1</span><span class="p">;</span>
+    
+    <span class="kt">off_t</span> <span class="n">size</span> <span class="o">=</span> <span class="n">AAsset_getLength</span><span class="p">(</span><span class="n">asset</span><span class="p">);</span>
+    <span class="k">if</span><span class="p">(</span><span class="n">size</span> <span class="o">&gt;</span> <span class="mi">0</span><span class="p">){</span>
+        <span class="k">try</span> <span class="p">{</span>
+            <span class="o">*</span><span class="n">result</span> <span class="o">=</span> <span class="k">new</span> <span class="kt">unsigned</span> <span class="kt">char</span><span class="p">[</span><span class="n">length</span><span class="p">];</span>
+            <span class="n">AAsset_seek</span><span class="p">(</span><span class="n">asset</span><span class="p">,</span> <span class="n">offset</span><span class="p">,</span> <span class="n">SEEK_SET</span><span class="p">);</span>
+            <span class="n">AAsset_read</span><span class="p">(</span><span class="n">asset</span><span class="p">,</span> <span class="o">*</span><span class="n">result</span><span class="p">,</span> <span class="n">length</span><span class="p">);</span>
+        <span class="p">}</span><span class="k">catch</span> <span class="p">(</span><span class="n">std</span><span class="o">::</span><span class="n">bad_alloc</span><span class="p">){</span>
+            <span class="o">*</span><span class="n">result</span> <span class="o">=</span> <span class="nb">nullptr</span><span class="p">;</span>
+            <span class="k">return</span> <span class="o">-</span><span class="mi">1</span><span class="p">;</span>
+        <span class="p">}</span>
+    <span class="p">}</span>
+    <span class="n">AAsset_close</span><span class="p">(</span><span class="n">asset</span><span class="p">);</span>
+
+    <span class="k">return</span> <span class="p">(</span><span class="kt">int32_t</span><span class="p">)</span><span class="n">length</span><span class="p">;</span>
+<span class="p">}</span>
+
+<span class="n">JNIEXPORT</span> <span class="kt">int32_t</span> <span class="n">JNICALL</span> <span class="n">ReadRawBytes</span><span class="p">(</span><span class="kt">char</span><span class="o">*</span> <span class="n">fileName</span><span class="p">,</span> <span class="kt">unsigned</span> <span class="kt">char</span><span class="o">**</span> <span class="n">result</span><span class="p">){</span>
+    <span class="k">if</span><span class="p">(</span><span class="n">fileName</span> <span class="o">==</span> <span class="nb">nullptr</span><span class="p">)</span> <span class="k">return</span> <span class="o">-</span><span class="mi">1</span><span class="p">;</span>
+    <span class="kt">FILE</span><span class="o">*</span> <span class="n">file</span> <span class="o">=</span> <span class="n">fopen</span><span class="p">(</span><span class="n">fileName</span><span class="p">,</span> <span class="s">"r"</span><span class="p">);</span>
+    <span class="k">if</span><span class="p">(</span><span class="n">file</span> <span class="o">==</span> <span class="nb">nullptr</span><span class="p">)</span> <span class="k">return</span> <span class="o">-</span><span class="mi">2</span><span class="p">;</span>
+    <span class="n">fseek</span><span class="p">(</span><span class="n">file</span><span class="p">,</span> <span class="mi">0L</span><span class="p">,</span> <span class="n">SEEK_END</span><span class="p">);</span>
+    <span class="kt">int32_t</span> <span class="n">size</span> <span class="o">=</span> <span class="n">ftell</span><span class="p">(</span><span class="n">file</span><span class="p">);</span>
+    <span class="k">if</span><span class="p">(</span><span class="n">size</span> <span class="o">&lt;=</span> <span class="mi">0</span><span class="p">)</span> <span class="k">return</span> <span class="o">-</span><span class="mi">3</span><span class="p">;</span>
+    <span class="o">*</span><span class="n">result</span> <span class="o">=</span> <span class="k">new</span> <span class="kt">uint8_t</span><span class="p">[</span><span class="n">size</span><span class="p">];</span>
+    <span class="n">fseek</span><span class="p">(</span><span class="n">file</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="n">SEEK_SET</span><span class="p">);</span>
+    <span class="n">fread</span><span class="p">(</span><span class="o">*</span><span class="n">result</span><span class="p">,</span> <span class="k">sizeof</span><span class="p">(</span><span class="kt">uint8_t</span><span class="p">),</span> <span class="k">static_cast</span><span class="o">&lt;</span><span class="kt">size_t</span><span class="o">&gt;</span><span class="p">(</span><span class="n">size</span><span class="p">),</span> <span class="n">file</span><span class="p">);</span>
+    <span class="n">fclose</span><span class="p">(</span><span class="n">file</span><span class="p">);</span>
+    <span class="k">return</span> <span class="n">size</span><span class="p">;</span>
+<span class="p">}</span>
+
+
+<span class="n">JNIEXPORT</span> <span class="kt">void</span> <span class="n">JNICALL</span> <span class="n">ReleaseBytes</span><span class="p">(</span><span class="kt">unsigned</span> <span class="kt">char</span><span class="o">*</span> <span class="n">bytes</span><span class="p">){</span>
+    <span class="k">delete</span><span class="p">[]</span> <span class="n">bytes</span><span class="p">;</span>
+<span class="p">}</span>
+
+<span class="n">JNIEXPORT</span> <span class="kt">int</span> <span class="n">JNICALL</span> <span class="n">Add</span><span class="p">(</span><span class="kt">int</span> <span class="n">a</span> <span class="p">,</span> <span class="kt">int</span> <span class="n">b</span><span class="p">){</span>
+    <span class="k">return</span> <span class="n">a</span> <span class="o">+</span> <span class="n">b</span><span class="p">;</span>
+<span class="p">}</span>
+
+<span class="cp">#ifdef __cplusplus
+</span><span class="p">}</span>
+<span class="cp">#endif
+</span></code></pre>
+</div>
+
+<p>上述的方法第一个直接通过AssetManager读取文件，另外一个则以offset的形式进行读取AssetManager的文件，第三个方法则是直接读取文件，例如沙盒目录的文件就可以使用该方法读取，最后一个则是释放bytes。</p>
+
+<p>接下来我们需要将bytes读取到C#当中：<br />
+我们先将方法导出到C#当中：</p>
+
+<div class="language-c# highlighter-rouge"><pre class="highlight"><code><span class="na">[DllImport(libName)]</span>
+<span class="k">public</span> <span class="k">static</span> <span class="k">extern</span> <span class="kt">int</span> <span class="nf">Add</span><span class="p">(</span><span class="kt">int</span> <span class="n">a</span><span class="p">,</span> <span class="kt">int</span> <span class="n">b</span><span class="p">);</span>
+
+<span class="na">[DllImport(libName)]</span>
+<span class="k">public</span> <span class="k">static</span> <span class="k">extern</span> <span class="kt">int</span> <span class="nf">ReadRawBytes</span><span class="p">(</span><span class="kt">string</span> <span class="n">name</span><span class="p">,</span> <span class="k">ref</span> <span class="n">IntPtr</span> <span class="n">ptr</span><span class="p">);</span>
+
+<span class="na">[DllImport(libName)]</span>
+<span class="k">public</span> <span class="k">static</span> <span class="k">extern</span> <span class="k">void</span> <span class="nf">ReleaseBytes</span><span class="p">(</span><span class="n">IntPtr</span> <span class="n">ptr</span><span class="p">);</span>
+</code></pre>
+</div>
+
+<p>这样我们就可以直接调用C++的方法了。可以看到我们这里使用了流作为缓冲区，流里面的buffer可以反复为我们利用，这样我们就可以通过Marshal.Copy不断将数据写入到流中，当我们需要使用的时候我们就可以直接读取数据。<br />
+下面同样的，是直接读取文件的方法：</p>
+
+<div class="language-c# highlighter-rouge"><pre class="highlight"><code><span class="n">MemoryStream</span> <span class="n">stream</span> <span class="p">=</span> <span class="k">new</span> <span class="nf">MemoryStream</span><span class="p">();</span>
+<span class="kt">var</span> <span class="n">ptr</span> <span class="p">=</span> <span class="n">IntPtr</span><span class="p">.</span><span class="n">Zero</span><span class="p">;</span>
+<span class="kt">int</span> <span class="n">size</span> <span class="p">=</span> <span class="n">NativeRead</span><span class="p">.</span><span class="nf">ReadAssetsBytes</span><span class="p">(</span><span class="n">file</span><span class="p">,</span> <span class="k">ref</span> <span class="n">ptr</span><span class="p">);</span>
+<span class="n">Debug</span><span class="p">.</span><span class="nf">Log</span><span class="p">(</span><span class="s">"native size: "</span> <span class="p">+</span> <span class="n">size</span><span class="p">);</span>
+<span class="k">if</span> <span class="p">(</span><span class="n">size</span> <span class="p">&gt;</span> <span class="m">0</span><span class="p">)</span>
+<span class="p">{</span>
+    <span class="k">if</span> <span class="p">(</span><span class="n">ptr</span> <span class="p">==</span> <span class="n">IntPtr</span><span class="p">.</span><span class="n">Zero</span><span class="p">)</span>
+    <span class="p">{</span>
+        <span class="n">Debug</span><span class="p">.</span><span class="nf">LogError</span><span class="p">(</span><span class="s">"read failed!"</span><span class="p">);</span>
+    <span class="p">}</span>
+    <span class="k">else</span>
+    <span class="p">{</span>
+        <span class="n">stream</span><span class="p">.</span><span class="nf">SetLength</span><span class="p">(</span><span class="n">size</span><span class="p">);</span>
+        <span class="n">stream</span><span class="p">.</span><span class="n">Position</span> <span class="p">=</span> <span class="m">0</span><span class="p">;</span>
+        <span class="n">Marshal</span><span class="p">.</span><span class="nf">Copy</span><span class="p">(</span><span class="n">ptr</span><span class="p">,</span> <span class="n">stream</span><span class="p">.</span><span class="nf">GetBuffer</span><span class="p">(),</span> <span class="m">0</span><span class="p">,</span> <span class="n">size</span><span class="p">);</span>
+        <span class="kt">var</span> <span class="n">reader</span> <span class="p">=</span> <span class="k">new</span> <span class="nf">BinaryReader</span><span class="p">(</span><span class="n">stream</span><span class="p">);</span>
+        <span class="n">Debug</span><span class="p">.</span><span class="nf">Log</span><span class="p">(</span><span class="n">reader</span><span class="p">.</span><span class="nf">ReadString</span><span class="p">());</span>
+        <span class="n">NativeRead</span><span class="p">.</span><span class="nf">ReleaseBytes</span><span class="p">(</span><span class="n">ptr</span><span class="p">);</span>
+    <span class="p">}</span>
+<span class="p">}</span>
+</code></pre>
+</div>
+
+<p>以上，通过这样的方法，我们可以毫无GC地同步读取Android下StreamingAssets的代码。如果不使用Java也不使用NDK的情况下，如果我们使用WWW去加载，不仅仅无法同步读取，其带来的GC也是不可小觑的。</p>
+
+<p><br /></p>
+
+
+    </div>
+  </div>
+
+  <style>
+  .post-nav {
+    overflow: hidden;
+    /* margin-top: 60px; */
+    padding: 12px;
+    white-space: nowrap;
+    /* border-top: 1px solid #eee; */
+  }
+
+  .post-nav-item {
+    display: inline-block;
+    width: 50%;
+    white-space: normal;
+  }
+
+  .post-nav-item a {
+    position: relative;
+    display: inline-block;
+    line-height: 25px;
+    font-size: 14px;
+    color: #555;
+    border-bottom: none;
+  }
+
+  .post-nav-item a:hover {
+    color: #222;
+    font-weight: bold;
+    border-bottom: none;
+  }
+
+  .post-nav-item a:active {
+    top: 2px;
+  }
+
+  .post-nav-item a:before,
+  .post-nav-item a:after {
+    display: inline-block;
+    width: 16px;
+    height: 25px;
+    vertical-align: top;
+    opacity: 0.4;
+    background-size: 16px;
+  }
+
+  .post-nav-none a:none {
+    content: ' ';
+    background-size: 8px;
+  }
+
+  .post-nav-none a:hover:none {
+    opacity: 1;
+  }
+
+  .post-nav-prev a:before {
+    content: ' ';
+    background: url("data:image/svg+xml;base64,PD94bWwgdmVyc2lvbj0iMS4wIiA/PjxzdmcgaGVpZ2h0PSIxMnB4IiB2ZXJzaW9uPSIxLjEiIHZpZXdCb3g9IjAgMCA5IDEyIiB3aWR0aD0iOXB4IiB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHhtbG5zOnNrZXRjaD0iaHR0cDovL3d3dy5ib2hlbWlhbmNvZGluZy5jb20vc2tldGNoL25zIiB4bWxuczp4bGluaz0iaHR0cDovL3d3dy53My5vcmcvMTk5OS94bGluayI+PHRpdGxlLz48ZGVzYy8+PGRlZnMvPjxnIGZpbGw9Im5vbmUiIGZpbGwtcnVsZT0iZXZlbm9kZCIgaWQ9IlBhZ2UtMSIgc3Ryb2tlPSJub25lIiBzdHJva2Utd2lkdGg9IjEiPjxnIGZpbGw9IiMwMDAwMDAiIGlkPSJDb3JlIiB0cmFuc2Zvcm09InRyYW5zbGF0ZSgtMjE4LjAwMDAwMCwgLTkwLjAwMDAwMCkiPjxnIGlkPSJjaGV2cm9uLWxlZnQiIHRyYW5zZm9ybT0idHJhbnNsYXRlKDIxOC41MDAwMDAsIDkwLjAwMDAwMCkiPjxwYXRoIGQ9Ik03LjQsMS40IEw2LDAgTC04Ljg4MTc4NDJlLTE2LDYgTDYsMTIgTDcuNCwxMC42IEwyLjgsNiBMNy40LDEuNCBaIiBpZD0iU2hhcGUiLz48L2c+PC9nPjwvZz48L3N2Zz4=") no-repeat 0 50%;
+    background-size: 8px;
+  }
+
+  .post-nav-prev a:hover:before {
+    opacity: 1;
+  }
+
+  .post-nav-next {
+    text-align: right;
+  }
+
+  .post-nav-next a:after {
+    content: ' ';
+    background: url("data:image/svg+xml;base64,PD94bWwgdmVyc2lvbj0iMS4wIiA/PjxzdmcgaGVpZ2h0PSIxMnB4IiB2ZXJzaW9uPSIxLjEiIHZpZXdCb3g9IjAgMCA5IDEyIiB3aWR0aD0iOXB4IiB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHhtbG5zOnNrZXRjaD0iaHR0cDovL3d3dy5ib2hlbWlhbmNvZGluZy5jb20vc2tldGNoL25zIiB4bWxuczp4bGluaz0iaHR0cDovL3d3dy53My5vcmcvMTk5OS94bGluayI+PHRpdGxlLz48ZGVzYy8+PGRlZnMvPjxnIGZpbGw9Im5vbmUiIGZpbGwtcnVsZT0iZXZlbm9kZCIgaWQ9IlBhZ2UtMSIgc3Ryb2tlPSJub25lIiBzdHJva2Utd2lkdGg9IjEiPjxnIGZpbGw9IiMwMDAwMDAiIGlkPSJDb3JlIiB0cmFuc2Zvcm09InRyYW5zbGF0ZSgtMjYwLjAwMDAwMCwgLTkwLjAwMDAwMCkiPjxnIGlkPSJjaGV2cm9uLXJpZ2h0IiB0cmFuc2Zvcm09InRyYW5zbGF0ZSgyNjAuNTAwMDAwLCA5MC4wMDAwMDApIj48cGF0aCBkPSJNMSwwIEwtMC40LDEuNCBMNC4yLDYgTC0wLjQsMTAuNiBMMSwxMiBMNyw2IEwxLDAgWiIgaWQ9IlNoYXBlIi8+PC9nPjwvZz48L2c+PC9zdmc+") no-repeat 100% 50%;
+    background-size: 8px;
+  }
+
+  .post-nav-next a:hover:after {
+    opacity: 1;
+  }
+</style>
+
+
+
+<div class="post-nav">
+
+  
+  <div class="post-nav-none post-nav-item">
+    <a href=""> </a>
+  </div>
+  
+
+  
+  <div class="post-nav-next post-nav-item">
+    
+    <a href="/blog/2019/luadebug/"> Unity lua脚本调试</a>
+  </div>
+  
+
+</div>
+
+</article>
+    </div>
+
+    <footer class="site-footer">
+  <div class="container">
+    <ul class="social">
+  <li><a href="https://twitter.com/penghuailiang" target="_blank"><i class="icon icon-twitter"></i></a></li>
+  <li><a href="https://www.zhihu.com/people/huailiangpenguin" target="_blank"><i class="icon icon-zhihu"></i></a></li>
+  <li><a href="https://www.facebook.com/profile.php?id=100004290725320" target="_blank"><i class="icon icon-facebook"></i></a></li>
+  <li><a href="https://weibo.com/6212299692/profile?topnav=1&wvr=6" target="_blank"><i class="icon icon-sina"></i></a></li>
+  <li><a href="https://www.linkedin.com/in/penghuailiang/" target="_blank"><i class="icon icon-linkedin"></i></a></li>
+  <li><a href="https://github.com/huailiang" target="_blank"><i class="icon icon-github"></i></a></li>
+</ul>
+    <p class="txt-medium-gray">
+      <small>&copy;2019 All rights reserved. </small>
+    </p>
+  </div>
+</footer>
+    <a href="https://github.com/huailiang" target="_blank" class="github-corner"><svg width="80" height="80" viewBox="0 0 250 250" style="fill:#337ab7; color:#fff; position: absolute; top: 0; border: 0; right: 0;"><path d="M0,0 L115,115 L130,115 L142,142 L250,250 L250,0 Z"></path><path d="M128.3,109.0 C113.8,99.7 119.0,89.6 119.0,89.6 C122.0,82.7 120.5,78.6 120.5,78.6 C119.2,72.0 123.4,76.3 123.4,76.3 C127.3,80.9 125.5,87.3 125.5,87.3 C122.9,97.6 130.6,101.9 134.4,103.2" fill="currentColor" style="transform-origin: 130px 106px;" class="octo-arm"></path><path d="M115.0,115.0 C114.9,115.1 118.7,116.5 119.8,115.4 L133.7,101.6 C136.9,99.2 139.9,98.4 142.2,98.6 C133.8,88.0 127.5,74.4 143.8,58.0 C148.5,53.4 154.0,51.2 159.7,51.0 C160.3,49.4 163.2,43.6 171.4,40.1 C171.4,40.1 176.1,42.5 178.8,56.2 C183.1,58.6 187.2,61.8 190.9,65.4 C194.5,69.0 197.7,73.2 200.1,77.6 C213.8,80.2 216.3,84.9 216.3,84.9 C212.7,93.1 206.9,96.0 205.4,96.6 C205.1,102.4 203.0,107.8 198.3,112.5 C181.9,128.9 168.3,122.5 157.7,114.1 C157.9,116.9 156.7,120.9 152.7,124.9 L141.0,136.5 C139.8,137.7 141.6,141.9 141.8,141.8 Z" fill="currentColor" class="octo-body"></path></svg></a>
+
+
+    <script src="//code.jquery.com/jquery-1.11.3.min.js"></script>
+    <script>
+      $(document).ready(function () {
+        $('.sliding-panel-button,.sliding-panel-fade-screen,.sliding-panel-close').on('click touchstart', function (e) {
+          $('.sliding-panel-content,.sliding-panel-fade-screen').toggleClass('is-visible');
+          e.preventDefault();
+        });
+      });
+    </script>
+  </main>
+</body>
+
+</html>
