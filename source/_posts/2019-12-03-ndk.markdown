@@ -39,18 +39,36 @@ makeJar.dependsOn(build)
 gradlew makejar
 ```
 
+如果你是用的是mac版本的Android studio， 提示报错 gradlew command not found的话， 你可以给gradlew加个权限：
+
+```sh
+# 进入项目根目录
+chmod +x gradlew
+# make
+./gradlew makejar
+```
+
 ![](/img/post-android/and-3.jpeg)
 
 首次生成会慢一点,Success如下图,jar文件会出现在Library工程对应的build->libs->中,同样arr会出现在outputs中。如果你的library工程有依赖第三方的jar， 则可以把相应的jar都拷贝到跟build同级目录的libs目录, 然后sync一下即可。
 
 
+关于gradlew更多的命令：
+
+```
+gradlew -v 版本号
+gradlew clean 清除工程目录下的build文件夹
+gradlew build 检查依赖并编译打包
+```
+
 ## NDK 生成so
 
 首先， 你需要去google官网[下载NDK][i3], 然后就可以使用ndk-build生成so了， 步骤如下：
 
-1. 创建jni目录，把需要编译的cpp和头文件放进去
-2. 编写Android.mk和Application.mk, 相关文档[参考这里][i4]
-3. 在终端执行如下命令：
+1. 将ndk的目录配置到环境变量PATH里去
+2. 创建jni目录，把需要编译的cpp和头文件放进去
+3. 编写Android.mk和Application.mk, 相关文档[参考这里][i4]
+4. 在终端执行如下命令：
    ```
    ndk-build clean
    ndk-build
@@ -96,6 +114,7 @@ LOCAL_LDLIBS += -landroid
 而如果使用忽略的方式编译出来的.so文件
 
 ```sh
+# 设置忽略某些symblos
 LOCAL_ALLOW_UNDEFINED_SYMBOLS := true
 ```
 
@@ -104,8 +123,32 @@ LOCAL_ALLOW_UNDEFINED_SYMBOLS := true
 ```
 12-05 20:31:43.364 25559 25591 E Unity   : Unable to find NativeLib
 12-05 20:31:43.475 25559 25591 E Unity   : DllNotFoundException: NativeLib
-12-05 20:31:43.475 25559 25591 E Unity   :   at (wrapper managed-to-native) NativeRead.Add(int,int)
-12-05 20:31:43.475 25559 25591 E Unity   :   at test.NDKRead (System.String file) [0x00000] in
+12-05 20:31:43.475 25559 25591 E Unity   : at (wrapper managed-to-native) Native
+12-05 20:31:43.475 25559 25591 E Unity   : at test.NDKRead (System.String file) [0x00000]
+```
+
+##### java调用c++代码
+
+c++的函数声明如下：
+
+```c++
+// Java_(包名下划线分割)_类名_函数名
+
+static AAssetManager *assetManager = nullptr;
+
+JNIEXPORT void JNICALL Java_com_sdk_NativeHelper_SetAssetManager
+        (JNIEnv *env, jclass jobj, jobject jassetManager) {
+    LOGD("set asset manager");
+    assetManager = AAssetManager_fromJava(env, jassetManager);
+}
+```
+
+java 测需要声明一个native方法：
+
+```java
+package com.sdk;
+
+public static native void SetAssetManager(AssetManager assetManager);
 ```
 
 ## StreamingAssets同步
@@ -121,7 +164,6 @@ LOCAL_ALLOW_UNDEFINED_SYMBOLS := true
 使用ndk读取assetmanager的代码如下：
 
 ```c++
-#include "nativeread_reset_com_nativeread_NativeHelper.h"
 #include <android/asset_manager_jni.h>
 #include <android/asset_manager.h>
 #include <string>
@@ -133,29 +175,19 @@ LOCAL_ALLOW_UNDEFINED_SYMBOLS := true
 extern "C" {
 #endif
 
-#define TAG    "native-read-bytes" // 这个是自定义的LOG的标识
-#define LOGD(...)  __android_log_print(ANDROID_LOG_DEBUG,TAG,__VA_ARGS__) // 定义LOGD类型
-
-static AAssetManager *assetManager = nullptr;
-
-JNIEXPORT void JNICALL Java_nativeread_reset_com_nativeread_NativeHelper_SetAssetManager
-        (JNIEnv *env, jobject jobj, jobject jassetManager) {
-    LOGD("set asset manager");
-    assetManager = AAssetManager_fromJava(env, jassetManager);
-}
+#define TAG    "native-read-bytes" 
+#define LOGD(...)  __android_log_print(ANDROID_LOG_DEBUG,TAG,__VA_ARGS__) 
 
 JNIEXPORT int32_t JNICALL ReadAssetsBytes(char* fileName, unsigned char** result){
     if(assetManager == nullptr) return -1;
-    
     AAsset* asset = AAssetManager_open(assetManager, fileName, AASSET_MODE_UNKNOWN);
-    if(asset == nullptr) return -1;
+    if(asset == nullptr) return -2;
     off_t size = AAsset_getLength(asset);
     if(size > 0){
         *result = new unsigned char[size];
         AAsset_read(asset, *result, size);
     }
     AAsset_close(asset);
-
     return (int32_t)size;
 }
 
@@ -164,7 +196,7 @@ JNIEXPORT int32_t JNICALL ReadAssetsBytesWithOffset(char* fileName, unsigned cha
     if(assetManager == nullptr) return -1;
     
     AAsset* asset = AAssetManager_open(assetManager, fileName, AASSET_MODE_UNKNOWN);
-    if(asset == nullptr) return -1;
+    if(asset == nullptr) return -2;
     
     off_t size = AAsset_getLength(asset);
     if(size > 0){
@@ -174,11 +206,10 @@ JNIEXPORT int32_t JNICALL ReadAssetsBytesWithOffset(char* fileName, unsigned cha
             AAsset_read(asset, *result, length);
         }catch (std::bad_alloc){
             *result = nullptr;
-            return -1;
+            return -2;
         }
     }
     AAsset_close(asset);
-
     return (int32_t)length;
 }
 
@@ -196,13 +227,8 @@ JNIEXPORT int32_t JNICALL ReadRawBytes(char* fileName, unsigned char** result){
     return size;
 }
 
-
 JNIEXPORT void JNICALL ReleaseBytes(unsigned char* bytes){
     delete[] bytes;
-}
-
-JNIEXPORT int JNICALL Add(int a , int b){
-    return a + b;
 }
 
 #ifdef __cplusplus
