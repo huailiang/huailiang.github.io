@@ -103,15 +103,33 @@ makeJar.dependsOn(build)
 </code></pre>
 </div>
 
+<p>如果你是用的是mac版本的Android studio， 提示报错 gradlew command not found的话， 你可以给gradlew加个权限：</p>
+
+<div class="language-sh highlighter-rouge"><pre class="highlight"><code><span class="c"># 进入项目根目录</span>
+chmod +x gradlew
+<span class="c"># make</span>
+./gradlew makejar
+</code></pre>
+</div>
+
 <p><img src="/img/post-android/and-3.jpeg" alt="" /></p>
 
 <p>首次生成会慢一点,Success如下图,jar文件会出现在Library工程对应的build-&gt;libs-&gt;中,同样arr会出现在outputs中。如果你的library工程有依赖第三方的jar， 则可以把相应的jar都拷贝到跟build同级目录的libs目录, 然后sync一下即可。</p>
+
+<p>关于gradlew更多的命令：</p>
+
+<div class="highlighter-rouge"><pre class="highlight"><code>gradlew -v 版本号
+gradlew clean 清除工程目录下的build文件夹
+gradlew build 检查依赖并编译打包
+</code></pre>
+</div>
 
 <h2 id="ndk-生成so">NDK 生成so</h2>
 
 <p>首先， 你需要去google官网<a href="https://developer.android.google.cn/ndk/downloads/">下载NDK</a>, 然后就可以使用ndk-build生成so了， 步骤如下：</p>
 
 <ol>
+  <li>将ndk的目录配置到环境变量PATH里去</li>
   <li>创建jni目录，把需要编译的cpp和头文件放进去</li>
   <li>编写Android.mk和Application.mk, 相关文档<a href="https://developer.android.google.cn/ndk/guides/ndk-build">参考这里</a></li>
   <li>在终端执行如下命令：
@@ -164,7 +182,8 @@ LOCAL_LDLIBS +<span class="o">=</span> -landroid
 
 <p>而如果使用忽略的方式编译出来的.so文件</p>
 
-<div class="language-sh highlighter-rouge"><pre class="highlight"><code>LOCAL_ALLOW_UNDEFINED_SYMBOLS :<span class="o">=</span> <span class="nb">true</span>
+<div class="language-sh highlighter-rouge"><pre class="highlight"><code><span class="c"># 设置忽略某些symblos</span>
+LOCAL_ALLOW_UNDEFINED_SYMBOLS :<span class="o">=</span> <span class="nb">true</span>
 </code></pre>
 </div>
 
@@ -172,8 +191,32 @@ LOCAL_LDLIBS +<span class="o">=</span> -landroid
 
 <div class="highlighter-rouge"><pre class="highlight"><code>12-05 20:31:43.364 25559 25591 E Unity   : Unable to find NativeLib
 12-05 20:31:43.475 25559 25591 E Unity   : DllNotFoundException: NativeLib
-12-05 20:31:43.475 25559 25591 E Unity   :   at (wrapper managed-to-native) NativeRead.Add(int,int)
-12-05 20:31:43.475 25559 25591 E Unity   :   at test.NDKRead (System.String file) [0x00000] in
+12-05 20:31:43.475 25559 25591 E Unity   : at (wrapper managed-to-native) Native
+12-05 20:31:43.475 25559 25591 E Unity   : at test.NDKRead (System.String file) [0x00000]
+</code></pre>
+</div>
+
+<h5 id="java调用c代码">java调用c++代码</h5>
+
+<p>c++的函数声明如下：</p>
+
+<div class="language-c++ highlighter-rouge"><pre class="highlight"><code><span class="c1">// Java_(包名下划线分割)_类名_函数名
+</span>
+<span class="k">static</span> <span class="n">AAssetManager</span> <span class="o">*</span><span class="n">assetManager</span> <span class="o">=</span> <span class="nb">nullptr</span><span class="p">;</span>
+
+<span class="n">JNIEXPORT</span> <span class="kt">void</span> <span class="n">JNICALL</span> <span class="nf">Java_com_sdk_NativeHelper_SetAssetManager</span>
+        <span class="p">(</span><span class="n">JNIEnv</span> <span class="o">*</span><span class="n">env</span><span class="p">,</span> <span class="n">jclass</span> <span class="n">jobj</span><span class="p">,</span> <span class="n">jobject</span> <span class="n">jassetManager</span><span class="p">)</span> <span class="p">{</span>
+    <span class="n">LOGD</span><span class="p">(</span><span class="s">"set asset manager"</span><span class="p">);</span>
+    <span class="n">assetManager</span> <span class="o">=</span> <span class="n">AAssetManager_fromJava</span><span class="p">(</span><span class="n">env</span><span class="p">,</span> <span class="n">jassetManager</span><span class="p">);</span>
+<span class="p">}</span>
+</code></pre>
+</div>
+
+<p>java 测需要声明一个native方法：</p>
+
+<div class="language-java highlighter-rouge"><pre class="highlight"><code><span class="kn">package</span> <span class="n">com</span><span class="o">.</span><span class="na">sdk</span><span class="o">;</span>
+
+<span class="kd">public</span> <span class="kd">static</span> <span class="kd">native</span> <span class="kt">void</span> <span class="nf">SetAssetManager</span><span class="o">(</span><span class="n">AssetManager</span> <span class="n">assetManager</span><span class="o">);</span>
 </code></pre>
 </div>
 
@@ -188,8 +231,7 @@ LOCAL_LDLIBS +<span class="o">=</span> -landroid
 
 <p>使用ndk读取assetmanager的代码如下：</p>
 
-<div class="language-c++ highlighter-rouge"><pre class="highlight"><code><span class="cp">#include "nativeread_reset_com_nativeread_NativeHelper.h"
-#include &lt;android/asset_manager_jni.h&gt;
+<div class="language-c++ highlighter-rouge"><pre class="highlight"><code><span class="cp">#include &lt;android/asset_manager_jni.h&gt;
 #include &lt;android/asset_manager.h&gt;
 #include &lt;string&gt;
 #include &lt;jni.h&gt;
@@ -200,29 +242,19 @@ LOCAL_LDLIBS +<span class="o">=</span> -landroid
 </span><span class="k">extern</span> <span class="s">"C"</span> <span class="p">{</span>
 <span class="cp">#endif
 </span>
-<span class="cp">#define TAG    "native-read-bytes" // 这个是自定义的LOG的标识
-#define LOGD(...)  __android_log_print(ANDROID_LOG_DEBUG,TAG,__VA_ARGS__) // 定义LOGD类型
+<span class="cp">#define TAG    "native-read-bytes" 
+#define LOGD(...)  __android_log_print(ANDROID_LOG_DEBUG,TAG,__VA_ARGS__) 
 </span>
-<span class="k">static</span> <span class="n">AAssetManager</span> <span class="o">*</span><span class="n">assetManager</span> <span class="o">=</span> <span class="nb">nullptr</span><span class="p">;</span>
-
-<span class="n">JNIEXPORT</span> <span class="kt">void</span> <span class="n">JNICALL</span> <span class="nf">Java_nativeread_reset_com_nativeread_NativeHelper_SetAssetManager</span>
-        <span class="p">(</span><span class="n">JNIEnv</span> <span class="o">*</span><span class="n">env</span><span class="p">,</span> <span class="n">jobject</span> <span class="n">jobj</span><span class="p">,</span> <span class="n">jobject</span> <span class="n">jassetManager</span><span class="p">)</span> <span class="p">{</span>
-    <span class="n">LOGD</span><span class="p">(</span><span class="s">"set asset manager"</span><span class="p">);</span>
-    <span class="n">assetManager</span> <span class="o">=</span> <span class="n">AAssetManager_fromJava</span><span class="p">(</span><span class="n">env</span><span class="p">,</span> <span class="n">jassetManager</span><span class="p">);</span>
-<span class="p">}</span>
-
 <span class="n">JNIEXPORT</span> <span class="kt">int32_t</span> <span class="n">JNICALL</span> <span class="n">ReadAssetsBytes</span><span class="p">(</span><span class="kt">char</span><span class="o">*</span> <span class="n">fileName</span><span class="p">,</span> <span class="kt">unsigned</span> <span class="kt">char</span><span class="o">**</span> <span class="n">result</span><span class="p">){</span>
     <span class="k">if</span><span class="p">(</span><span class="n">assetManager</span> <span class="o">==</span> <span class="nb">nullptr</span><span class="p">)</span> <span class="k">return</span> <span class="o">-</span><span class="mi">1</span><span class="p">;</span>
-    
     <span class="n">AAsset</span><span class="o">*</span> <span class="n">asset</span> <span class="o">=</span> <span class="n">AAssetManager_open</span><span class="p">(</span><span class="n">assetManager</span><span class="p">,</span> <span class="n">fileName</span><span class="p">,</span> <span class="n">AASSET_MODE_UNKNOWN</span><span class="p">);</span>
-    <span class="k">if</span><span class="p">(</span><span class="n">asset</span> <span class="o">==</span> <span class="nb">nullptr</span><span class="p">)</span> <span class="k">return</span> <span class="o">-</span><span class="mi">1</span><span class="p">;</span>
+    <span class="k">if</span><span class="p">(</span><span class="n">asset</span> <span class="o">==</span> <span class="nb">nullptr</span><span class="p">)</span> <span class="k">return</span> <span class="o">-</span><span class="mi">2</span><span class="p">;</span>
     <span class="kt">off_t</span> <span class="n">size</span> <span class="o">=</span> <span class="n">AAsset_getLength</span><span class="p">(</span><span class="n">asset</span><span class="p">);</span>
     <span class="k">if</span><span class="p">(</span><span class="n">size</span> <span class="o">&gt;</span> <span class="mi">0</span><span class="p">){</span>
         <span class="o">*</span><span class="n">result</span> <span class="o">=</span> <span class="k">new</span> <span class="kt">unsigned</span> <span class="kt">char</span><span class="p">[</span><span class="n">size</span><span class="p">];</span>
         <span class="n">AAsset_read</span><span class="p">(</span><span class="n">asset</span><span class="p">,</span> <span class="o">*</span><span class="n">result</span><span class="p">,</span> <span class="n">size</span><span class="p">);</span>
     <span class="p">}</span>
     <span class="n">AAsset_close</span><span class="p">(</span><span class="n">asset</span><span class="p">);</span>
-
     <span class="k">return</span> <span class="p">(</span><span class="kt">int32_t</span><span class="p">)</span><span class="n">size</span><span class="p">;</span>
 <span class="p">}</span>
 
@@ -231,7 +263,7 @@ LOCAL_LDLIBS +<span class="o">=</span> -landroid
     <span class="k">if</span><span class="p">(</span><span class="n">assetManager</span> <span class="o">==</span> <span class="nb">nullptr</span><span class="p">)</span> <span class="k">return</span> <span class="o">-</span><span class="mi">1</span><span class="p">;</span>
     
     <span class="n">AAsset</span><span class="o">*</span> <span class="n">asset</span> <span class="o">=</span> <span class="n">AAssetManager_open</span><span class="p">(</span><span class="n">assetManager</span><span class="p">,</span> <span class="n">fileName</span><span class="p">,</span> <span class="n">AASSET_MODE_UNKNOWN</span><span class="p">);</span>
-    <span class="k">if</span><span class="p">(</span><span class="n">asset</span> <span class="o">==</span> <span class="nb">nullptr</span><span class="p">)</span> <span class="k">return</span> <span class="o">-</span><span class="mi">1</span><span class="p">;</span>
+    <span class="k">if</span><span class="p">(</span><span class="n">asset</span> <span class="o">==</span> <span class="nb">nullptr</span><span class="p">)</span> <span class="k">return</span> <span class="o">-</span><span class="mi">2</span><span class="p">;</span>
     
     <span class="kt">off_t</span> <span class="n">size</span> <span class="o">=</span> <span class="n">AAsset_getLength</span><span class="p">(</span><span class="n">asset</span><span class="p">);</span>
     <span class="k">if</span><span class="p">(</span><span class="n">size</span> <span class="o">&gt;</span> <span class="mi">0</span><span class="p">){</span>
@@ -241,11 +273,10 @@ LOCAL_LDLIBS +<span class="o">=</span> -landroid
             <span class="n">AAsset_read</span><span class="p">(</span><span class="n">asset</span><span class="p">,</span> <span class="o">*</span><span class="n">result</span><span class="p">,</span> <span class="n">length</span><span class="p">);</span>
         <span class="p">}</span><span class="k">catch</span> <span class="p">(</span><span class="n">std</span><span class="o">::</span><span class="n">bad_alloc</span><span class="p">){</span>
             <span class="o">*</span><span class="n">result</span> <span class="o">=</span> <span class="nb">nullptr</span><span class="p">;</span>
-            <span class="k">return</span> <span class="o">-</span><span class="mi">1</span><span class="p">;</span>
+            <span class="k">return</span> <span class="o">-</span><span class="mi">2</span><span class="p">;</span>
         <span class="p">}</span>
     <span class="p">}</span>
     <span class="n">AAsset_close</span><span class="p">(</span><span class="n">asset</span><span class="p">);</span>
-
     <span class="k">return</span> <span class="p">(</span><span class="kt">int32_t</span><span class="p">)</span><span class="n">length</span><span class="p">;</span>
 <span class="p">}</span>
 
@@ -263,13 +294,8 @@ LOCAL_LDLIBS +<span class="o">=</span> -landroid
     <span class="k">return</span> <span class="n">size</span><span class="p">;</span>
 <span class="p">}</span>
 
-
 <span class="n">JNIEXPORT</span> <span class="kt">void</span> <span class="n">JNICALL</span> <span class="n">ReleaseBytes</span><span class="p">(</span><span class="kt">unsigned</span> <span class="kt">char</span><span class="o">*</span> <span class="n">bytes</span><span class="p">){</span>
     <span class="k">delete</span><span class="p">[]</span> <span class="n">bytes</span><span class="p">;</span>
-<span class="p">}</span>
-
-<span class="n">JNIEXPORT</span> <span class="kt">int</span> <span class="n">JNICALL</span> <span class="n">Add</span><span class="p">(</span><span class="kt">int</span> <span class="n">a</span> <span class="p">,</span> <span class="kt">int</span> <span class="n">b</span><span class="p">){</span>
-    <span class="k">return</span> <span class="n">a</span> <span class="o">+</span> <span class="n">b</span><span class="p">;</span>
 <span class="p">}</span>
 
 <span class="cp">#ifdef __cplusplus
