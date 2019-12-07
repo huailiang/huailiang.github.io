@@ -76,21 +76,8 @@ MathJax.Hub.Config({
   </header>
 
   <p><a href="/blog/2019/ndk/" title="Permalink to: NDK同步读取StreamingAssets资源"
-      class="read-more">AndroidStudio 生成jar包
-
-在新建样例工程，鼠标右键点击app-&gt;New-&gt;选择Module
-
-
-
-选择AndroidLibrary-&gt;点击Next
-
-
-
-打开Library工程的build.gardle文件,并添加代码
-
-task makeJar(type: Copy){
-    delete 'build/libs/sdk.jar'
-    from('...</a></p>
+      class="read-more">
+  本文主要介绍Android Studio下， Java与JNI（c/c++)与Unity(c#)之间的交互， 并利用Android原生的接口，解决StreamingAssets目录下资源IO问题。因为默认情况下，Unity StreamingAssets的资源， 在apk安装之后依旧在apk里压缩文件里，只能通过Assetbundle（吐槽）接口来加载，并不能使用File这样的IO的接...</a></p>
 </article>
   
     <article class="post">
