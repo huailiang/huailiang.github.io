@@ -387,7 +387,12 @@ if (size > 0)
 
 ## 总结
 
-受限于Assetsbundle鸡肋的性能开销， 我更推荐于使用File(c#), c++(fopen)这种更原生的方式来进行io操作，我意味着我们可以使用多线程/线程池来加载资源。另一个使用场景是设置lua的搜索路径，我们把压缩成zip的lua文件放在StreamingAssets目录，第一次运行的时候把对应的资源copy到Persistent(SDCard)目录，所有的lua文件都是使用原生的fopen来加载，再也不用unity的Resources.Load/Assetbundle.Load了。
+受限于Assetsbundle鸡肋的性能， 我更推荐于使用File(c#), fopen(c++))这种更原生的方式来进行io操作，这就意味着我们可以使用多线程/线程池来加载资源。
+
+另一个使用场景是设置lua的搜索路径，我们把压缩成zip的lua文件放在StreamingAssets目录，第一次运行的时候把对应的资源copy到Persistent(SDCard， lua的搜索路径)目录，所有的lua文件都是使用原生的fopen来加载，再也不用unity的Resources.Load/Assetbundle.Load了。
+
+平时我们的资源工作路径都是SteamingAssets, 或者打包的时候把资源转移到StreamAssets目录， 然后进行压缩，第一次运行的时候使用多线程解压到磁盘目录。线上版本需要热更的时候，直接下载到磁盘（Persistent目录）上。
+
 
 <br>
 

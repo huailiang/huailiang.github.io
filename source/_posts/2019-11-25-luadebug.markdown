@@ -11,7 +11,7 @@ tags:
 
 原生的lua代码调试支持的工具很多， 这里主要说的是能Attach到Unity进程交互调试的工具。 大多游戏都在使用lua脚本来热更新游戏逻辑，下面介绍两个工具如何调试lua，
 
- * jetbrains旗下软件（IntelliJ IDEA 和 Pycharm）
+ * jetbrains旗下软件（IntelliJ IDEA、 Pycharm、 Rider等）
  * vscode（LuaPanda）
 
 <br><center><img src="/img/post-lua/lua0.jpg"></center><br>
