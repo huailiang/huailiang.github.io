@@ -1,0 +1,493 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <meta http-equiv="X-UA-Compatible" content="IE=edge">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+
+  <title>处理音频信号</title>
+  <meta name="description"
+    content="二十世纪八十年代，有专家研究巴赫《第一勃兰登堡协奏曲》的音乐信号时发现，音乐信号的功率谱与人类大脑生理信号的功率谱相似，符合1/f信号公式。还发现，音乐信号α越靠近数值1越好听，从科学上找到一个近似参数来判定音乐的悦耳度。2012年加拿大麦吉尔大学音乐系主任分析发现，音乐节奏也满足这个规律，α值为0.8。不同音乐...">
+
+  <link rel="shortcut icon" href="/img/favicon.ico">
+  <link rel="stylesheet" href="/css/main.css">
+  <link rel="canonical" href="https://huailiang.github.io/blog/2019/sound/">
+
+</head>
+
+<body>
+  <main>
+    <header class="site-header">
+  <div class="container">
+    <h1><a href="/">Hom<span>e</span></a></h1>
+
+    <button type="button" class="sliding-panel-button">
+      <span></span>
+      <span></span>
+      <span></span>
+    </button>
+
+    <nav class="navbar sliding-panel-content">
+      <ul>
+        
+        <li><a href="/about" title="About">About</a>
+        </li>
+        
+        <li><a href="/blog" title="Blog">Blog</a>
+        </li>
+        
+       <li><a href="/category/" target="_blank"><i class="icon icon-feed"></i></a></li>
+      </ul>
+    </nav>
+  </div>
+</header>
+
+<div class="sliding-panel-fade-screen"></div>
+    <script type="text/javascript" src="/js/MathJax.js?config=TeX-AMS-MML_HTMLorMML"></script>
+
+<script type="text/x-mathjax-config">
+MathJax.Hub.Config({
+  tex2jax: {
+    inlineMath: [['$','$'], ['\\(','\\)']],
+    processEscapes: true
+  }
+});
+</script>
+
+<script type="text/x-mathjax-config">
+  MathJax.Hub.Config({
+    tex2jax: {
+      skipTags: ['script', 'noscript', 'style', 'textarea', 'pre', 'code']
+    }
+  });
+
+</script>
+    <div class="container">
+      <article role="article" class="post">
+
+  <div class="card">
+    <header class="post-header">
+      <h1 class="post-title">处理音频信号</h1>
+      <p class="post-meta">Dec 11, 2019 •
+        Huailiang</p>
+    </header>
+
+    <div class="post-content">
+      <p>二十世纪八十年代，有专家研究巴赫《第一勃兰登堡协奏曲》的音乐信号时发现，音乐信号的功率谱与人类大脑生理信号的功率谱相似，符合1/f信号公式。还发现，音乐信号α越靠近数值1越好听，从科学上找到一个近似参数来判定音乐的悦耳度。2012年加拿大麦吉尔大学音乐系主任分析发现，音乐节奏也满足这个规律，α值为0.8。不同音乐体裁的α值不一样，所以也可以用这个数值反推音乐的风格体裁。不同作曲家风格音乐的α值不一样，但是作曲家们所作出来的各种风格体裁的音乐的参数是相似的。</p>
+
+<p>现在的公司使用音乐分类，既可以向客户提供推荐，也可以仅仅作为产品。确定音乐类型是朝这个方向迈出的第一步。事实证明，机器学习技术在从大量数据库中提取趋势和模式方面非常成功。同样的原则也适用于音乐分析。</p>
+
+<blockquote>
+  <p>在本文中，我们将研究如何用Python处理音频/音乐信号，再利用所学的技能将音乐片段分类为不同的类型。</p>
+</blockquote>
+
+<h2 id="使用python进行音频处理">使用Python进行音频处理</h2>
+
+<p>声音以具有诸如频率、带宽、分贝等参数的音频信号的形式表示，典型的音频信号可以表示为幅度和时间的函数。</p>
+
+<p><br /><center><img src="/img/post-ml/sound1.jpg" /></center><br /></p>
+
+<p>这些声音有多种格式，使计算机可以读取和分析它们。例如：</p>
+
+<p>• mp3格式<br />
+• WMA（Windows Media Audio）格式<br />
+• wav（波形音频文件）格式</p>
+
+<h3 id="音频库">音频库</h3>
+<p>Python有一些很棒的音频处理库，比如Librosa和PyAudio。还有一些内置的模块用于一些基本的音频功能。</p>
+
+<p>我们将主要使用两个库进行音频采集和回放：</p>
+
+<h4 id="1-librosa">1. Librosa</h4>
+
+<p>它是一个Python模块，通常用于分析音频信号，但更倾向于音乐。它包括用于构建MIR（音乐信息检索）系统的nuts 和 bolts。示例和教程：https://librosa.github.io/librosa/</p>
+
+<h4 id="安装">安装</h4>
+
+<div class="language-sh highlighter-rouge"><pre class="highlight"><code>pip install librosa
+<span class="c"># or</span>
+conda install -c conda-forge librosa
+</code></pre>
+</div>
+
+<p>为了提供更多的音频解码能力，您可以安装随许多音频解码器一起提供的ffmpeg。</p>
+
+<h4 id="2-ipythondisplayaudio">2. IPython.display.Audio</h4>
+
+<p>IPython.display.Audio 让您直接在jupyter笔记本中播放音频。</p>
+
+<p>加载音频文件</p>
+
+<div class="language-py highlighter-rouge"><pre class="highlight"><code><span class="kn">import</span> <span class="nn">librosa</span>
+
+<span class="n">audio_path</span> <span class="o">=</span> <span class="s">'../T08-violin.wav'</span>
+<span class="n">x</span> <span class="p">,</span> <span class="n">sr</span> <span class="o">=</span> <span class="n">librosa</span><span class="o">.</span><span class="n">load</span><span class="p">(</span><span class="n">audio_path</span><span class="p">)</span>
+<span class="k">print</span><span class="p">(</span><span class="nb">type</span><span class="p">(</span><span class="n">x</span><span class="p">),</span> <span class="nb">type</span><span class="p">(</span><span class="n">sr</span><span class="p">))</span>
+<span class="c"># &lt;class 'numpy.ndarray'&gt; &lt;class 'int'&gt;</span>
+<span class="k">print</span><span class="p">(</span><span class="n">x</span><span class="o">.</span><span class="n">shape</span><span class="p">,</span> <span class="n">sr</span><span class="p">)</span>
+<span class="c"># (396688,) 22050</span>
+</code></pre>
+</div>
+<p>这会将音频时间序列作为numpy数组返回，默认采样率（sr）为22KHZ mono。我们可以通过以下方式更改此行为：</p>
+
+<div class="language-py highlighter-rouge"><pre class="highlight"><code><span class="n">librosa</span><span class="o">.</span><span class="n">load</span><span class="p">(</span><span class="n">audio_path</span><span class="p">,</span> <span class="n">sr</span><span class="o">=</span><span class="mi">44100</span><span class="p">)</span>
+</code></pre>
+</div>
+
+<p>以44.1KHz重新采样，或禁用重新采样。采样率是每秒传输的音频样本数，以Hz或kHz为单位。</p>
+
+<div class="language-py highlighter-rouge"><pre class="highlight"><code><span class="n">librosa</span><span class="o">.</span><span class="n">load</span><span class="p">(</span><span class="n">audio_path</span><span class="p">,</span> <span class="n">sr</span><span class="o">=</span><span class="bp">None</span><span class="p">)</span>
+</code></pre>
+</div>
+
+<h4 id="播放音频">播放音频</h4>
+<p>使用IPython.display.Audio播放音频。</p>
+
+<div class="language-py highlighter-rouge"><pre class="highlight"><code><span class="kn">import</span> <span class="nn">IPython.display</span> <span class="kn">as</span> <span class="nn">ipd</span>
+<span class="n">ipd</span><span class="o">.</span><span class="n">Audio</span><span class="p">(</span><span class="n">audio_path</span><span class="p">)</span>
+</code></pre>
+</div>
+
+<p>然后返回jupyter笔记本中的音频小部件，如下图所示，这个小部件在这里不起作用，但它可以在你的笔记本中使用，你甚至可以使用mp3或WMA格式作为音频示例。</p>
+
+<p><img src="/img/post-ml/sound10.jpg" alt="" /></p>
+
+<h3 id="可视化音频">可视化音频</h3>
+
+<h5 id="波形">波形</h5>
+
+<p>我们可以绘制音频数组librosa.display.waveplot：</p>
+
+<div class="language-py highlighter-rouge"><pre class="highlight"><code><span class="kn">import</span> <span class="nn">matplotlib.pyplot</span> <span class="kn">as</span> <span class="nn">plt</span>
+<span class="kn">import</span> <span class="nn">librosa.display</span>
+
+<span class="n">plt</span><span class="o">.</span><span class="n">figure</span><span class="p">(</span><span class="n">figsize</span><span class="o">=</span><span class="p">(</span><span class="mi">14</span><span class="p">,</span> <span class="mi">5</span><span class="p">))</span>
+<span class="n">librosa</span><span class="o">.</span><span class="n">display</span><span class="o">.</span><span class="n">waveplot</span><span class="p">(</span><span class="n">x</span><span class="p">,</span> <span class="n">sr</span><span class="o">=</span><span class="n">sr</span><span class="p">)</span>
+</code></pre>
+</div>
+
+<p>这里，我们有波形幅度包络图(amplitude envelope):</p>
+
+<p><img src="/img/post-ml/sound2.png" alt="" /></p>
+
+<h5 id="声谱图spectrogram">声谱图(spectrogram)</h5>
+
+<p>声谱图（spectrogram）是声音或其他信号的频率随时间变化时的频谱（spectrum）的一种直观表示。声谱图有时也称sonographs,voiceprints,或者voicegrams。当数据以三维图形表示时，可称其为瀑布图（waterfalls）。在二维数组中，第一个轴是频率，第二个轴是时间。</p>
+
+<p>我们可以使用显示频谱图： librosa.display.specshow.</p>
+
+<div class="language-py highlighter-rouge"><pre class="highlight"><code><span class="n">X</span> <span class="o">=</span> <span class="n">librosa</span><span class="o">.</span><span class="n">stft</span><span class="p">(</span><span class="n">x</span><span class="p">)</span>
+<span class="n">Xdb</span> <span class="o">=</span> <span class="n">librosa</span><span class="o">.</span><span class="n">amplitude_to_db</span><span class="p">(</span><span class="nb">abs</span><span class="p">(</span><span class="n">X</span><span class="p">))</span>
+<span class="n">plt</span><span class="o">.</span><span class="n">figure</span><span class="p">(</span><span class="n">figsize</span><span class="o">=</span><span class="p">(</span><span class="mi">14</span><span class="p">,</span> <span class="mi">5</span><span class="p">))</span>
+<span class="n">librosa</span><span class="o">.</span><span class="n">display</span><span class="o">.</span><span class="n">specshow</span><span class="p">(</span><span class="n">Xdb</span><span class="p">,</span> <span class="n">sr</span><span class="o">=</span><span class="n">sr</span><span class="p">,</span> <span class="n">x_axis</span><span class="o">=</span><span class="s">'time'</span><span class="p">,</span> <span class="n">y_axis</span><span class="o">=</span><span class="s">'hz'</span><span class="p">)</span>
+<span class="n">plt</span><span class="o">.</span><span class="n">colorbar</span><span class="p">()</span>
+</code></pre>
+</div>
+<p><img src="/img/post-ml/sound3.jpg" alt="" /></p>
+
+<p>纵轴表示频率（从0到10kHz），横轴表示剪辑的时间。由于我们看到所有动作都发生在频谱的底部，我们可以将频率轴转换为对数轴。</p>
+
+<div class="language-py highlighter-rouge"><pre class="highlight"><code><span class="n">librosa</span><span class="o">.</span><span class="n">display</span><span class="o">.</span><span class="n">specshow</span><span class="p">(</span><span class="n">Xdb</span><span class="p">,</span> <span class="n">sr</span><span class="o">=</span><span class="n">sr</span><span class="p">,</span> <span class="n">x_axis</span><span class="o">=</span><span class="s">'time'</span><span class="p">,</span> <span class="n">y_axis</span><span class="o">=</span><span class="s">'log'</span><span class="p">)</span>
+<span class="n">plt</span><span class="o">.</span><span class="n">colorbar</span><span class="p">()</span>
+</code></pre>
+</div>
+
+<p><img src="/img/post-ml/sound4.jpg" alt="" /></p>
+
+<h5 id="写音频">写音频</h5>
+
+<p>librosa.output.write_wav 将NumPy数组保存到WAV文件。</p>
+
+<div class="language-py highlighter-rouge"><pre class="highlight"><code><span class="n">librosa</span><span class="o">.</span><span class="n">output</span><span class="o">.</span><span class="n">write_wav</span><span class="p">(</span><span class="s">'example.wav'</span><span class="p">,</span> <span class="n">x</span><span class="p">,</span> <span class="n">sr</span><span class="p">)</span>
+</code></pre>
+</div>
+
+<h3 id="创建音频信号">创建音频信号</h3>
+
+<p>现在让我们创建一个220Hz的音频信号，音频信号是一个numpy数组，所以我们将创建一个并将其传递给音频函数。</p>
+
+<div class="language-py highlighter-rouge"><pre class="highlight"><code><span class="kn">import</span> <span class="nn">numpy</span> <span class="kn">as</span> <span class="nn">np</span>
+<span class="n">sr</span> <span class="o">=</span> <span class="mi">22050</span> <span class="c"># sample rate</span>
+<span class="n">T</span> <span class="o">=</span> <span class="mf">5.0</span>    <span class="c"># seconds</span>
+<span class="n">t</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">linspace</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="n">T</span><span class="p">,</span> <span class="nb">int</span><span class="p">(</span><span class="n">T</span><span class="o">*</span><span class="n">sr</span><span class="p">),</span> <span class="n">endpoint</span><span class="o">=</span><span class="bp">False</span><span class="p">)</span> <span class="c"># time variable</span>
+<span class="n">x</span> <span class="o">=</span> <span class="mf">0.5</span><span class="o">*</span><span class="n">np</span><span class="o">.</span><span class="n">sin</span><span class="p">(</span><span class="mi">2</span><span class="o">*</span><span class="n">np</span><span class="o">.</span><span class="n">pi</span><span class="o">*</span><span class="mi">220</span><span class="o">*</span><span class="n">t</span><span class="p">)</span><span class="c"># pure sine wave at 220 Hz</span>
+<span class="n">Playing</span> <span class="n">the</span> <span class="n">audio</span>
+<span class="n">ipd</span><span class="o">.</span><span class="n">Audio</span><span class="p">(</span><span class="n">x</span><span class="p">,</span> <span class="n">rate</span><span class="o">=</span><span class="n">sr</span><span class="p">)</span> <span class="c"># load a NumPy array</span>
+<span class="n">Saving</span> <span class="n">the</span> <span class="n">audio</span>
+<span class="n">librosa</span><span class="o">.</span><span class="n">output</span><span class="o">.</span><span class="n">write_wav</span><span class="p">(</span><span class="s">'tone_220.wav'</span><span class="p">,</span> <span class="n">x</span><span class="p">,</span> <span class="n">sr</span><span class="p">)</span>
+</code></pre>
+</div>
+
+<h3 id="特征提取">特征提取</h3>
+
+<p>每个音频信号都包含许多特征。但是，我们必须提取与我们试图解决的问题相关的特征。提取要使用它们进行分析的特征的过程称为特征提取，让我们详细研究一些特征。</p>
+
+<p>我们将提取以下特征：<br />
+• 过零率 Zero Crossing Rate<br />
+• 频谱质心 Spectral Centroid<br />
+• 声谱衰减 Spectral Roll-off<br />
+• 梅尔频率倒谱系数 Mel-frequency cepstral coefficients (MFCC)<br />
+• 色度频率 Chroma Frequencies</p>
+
+<h3 id="过零率-zero-crossing-rate">过零率 Zero Crossing Rate</h3>
+
+<p>过零率（zero crossing rate）是一个信号符号变化的比率，即，在每帧中，语音信号从正变为负或从负变为正的次数。 这个特征已在语音识别和音乐信息检索领域得到广泛使用，通常对类似金属、摇滚等高冲击性的声音的具有更高的价值。</p>
+
+<p>该特征在语音识别和音乐信息检索中都被大量使用。对于像金属和岩石那样的高冲击声，它通常具有更高的值。让我们计算示例音频片段的过零率。</p>
+
+<div class="language-py highlighter-rouge"><pre class="highlight"><code><span class="c"># Load the signal</span>
+<span class="n">x</span><span class="p">,</span> <span class="n">sr</span> <span class="o">=</span> <span class="n">librosa</span><span class="o">.</span><span class="n">load</span><span class="p">(</span><span class="s">'../T08-violin.wav'</span><span class="p">)</span>
+<span class="c">#Plot the signal:</span>
+<span class="n">plt</span><span class="o">.</span><span class="n">figure</span><span class="p">(</span><span class="n">figsize</span><span class="o">=</span><span class="p">(</span><span class="mi">14</span><span class="p">,</span> <span class="mi">5</span><span class="p">))</span>
+<span class="n">librosa</span><span class="o">.</span><span class="n">display</span><span class="o">.</span><span class="n">waveplot</span><span class="p">(</span><span class="n">x</span><span class="p">,</span> <span class="n">sr</span><span class="o">=</span><span class="n">sr</span><span class="p">)</span>
+<span class="c"># Zooming in</span>
+<span class="n">n0</span> <span class="o">=</span> <span class="mi">9000</span>
+<span class="n">n1</span> <span class="o">=</span> <span class="mi">9100</span>
+<span class="n">plt</span><span class="o">.</span><span class="n">figure</span><span class="p">(</span><span class="n">figsize</span><span class="o">=</span><span class="p">(</span><span class="mi">14</span><span class="p">,</span> <span class="mi">5</span><span class="p">))</span>
+<span class="n">plt</span><span class="o">.</span><span class="n">plot</span><span class="p">(</span><span class="n">x</span><span class="p">[</span><span class="n">n0</span><span class="p">:</span><span class="n">n1</span><span class="p">])</span>
+<span class="n">plt</span><span class="o">.</span><span class="n">grid</span><span class="p">()</span>
+</code></pre>
+</div>
+
+<p><img src="/img/post-ml/sound11.jpg" alt="" /></p>
+
+<p>似乎有1个过零点，让我们用librosa验证。</p>
+
+<div class="language-py highlighter-rouge"><pre class="highlight"><code><span class="n">zero_crossings</span> <span class="o">=</span> <span class="n">librosa</span><span class="o">.</span><span class="n">zero_crossings</span><span class="p">(</span><span class="n">x</span><span class="p">[</span><span class="n">n0</span><span class="p">:</span><span class="n">n1</span><span class="p">],</span> <span class="n">pad</span><span class="o">=</span><span class="bp">False</span><span class="p">)</span>
+<span class="k">print</span><span class="p">(</span><span class="nb">sum</span><span class="p">(</span><span class="n">zero_crossings</span><span class="p">))</span>
+</code></pre>
+</div>
+
+<h3 id="光谱质心-spectral-centroid">光谱质心 Spectral Centroid</h3>
+
+<p>频谱质心(Spectral Centroid)指示声音的“质心”位于何处，并按照声音的频率的加权平均值来加以计算。 假设现有两首歌曲，一首是蓝调歌曲，另一首是金属歌曲。现在，与同等长度的蓝调歌曲相比，金属歌曲在接近尾声位置的频率更高。所以蓝调歌曲的频谱质心会在频谱偏中间的位置，而金属歌曲的频谱质心则靠近频谱末端。</p>
+
+<p>librosa.feature.spectral_centroid 计算信号中每帧的光谱质心：</p>
+
+<div class="language-py highlighter-rouge"><pre class="highlight"><code><span class="n">spectral_centroids</span> <span class="o">=</span> <span class="n">librosa</span><span class="o">.</span><span class="n">feature</span><span class="o">.</span><span class="n">spectral_centroid</span><span class="p">(</span><span class="n">x</span><span class="p">,</span> <span class="n">sr</span><span class="o">=</span><span class="n">sr</span><span class="p">)[</span><span class="mi">0</span><span class="p">]</span>
+<span class="k">print</span><span class="p">(</span><span class="n">spectral_centroids</span><span class="o">.</span><span class="n">shape</span><span class="p">)</span>
+<span class="c"># (2647,)</span>
+<span class="c"># Computing the time variable for visualization</span>
+<span class="n">frames</span> <span class="o">=</span> <span class="nb">range</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">spectral_centroids</span><span class="p">))</span>
+<span class="n">t</span> <span class="o">=</span> <span class="n">librosa</span><span class="o">.</span><span class="n">frames_to_time</span><span class="p">(</span><span class="n">frames</span><span class="p">)</span>
+<span class="c"># Normalising the spectral centroid for visualisation</span>
+<span class="k">def</span> <span class="nf">normalize</span><span class="p">(</span><span class="n">x</span><span class="p">,</span> <span class="n">axis</span><span class="o">=</span><span class="mi">0</span><span class="p">):</span>
+    <span class="k">return</span> <span class="n">sklearn</span><span class="o">.</span><span class="n">preprocessing</span><span class="o">.</span><span class="n">minmax_scale</span><span class="p">(</span><span class="n">x</span><span class="p">,</span> <span class="n">axis</span><span class="o">=</span><span class="n">axis</span><span class="p">)</span>
+<span class="c">#Plotting the Spectral Centroid along the waveform</span>
+<span class="n">librosa</span><span class="o">.</span><span class="n">display</span><span class="o">.</span><span class="n">waveplot</span><span class="p">(</span><span class="n">x</span><span class="p">,</span> <span class="n">sr</span><span class="o">=</span><span class="n">sr</span><span class="p">,</span> <span class="n">alpha</span><span class="o">=</span><span class="mf">0.4</span><span class="p">)</span>
+<span class="n">plt</span><span class="o">.</span><span class="n">plot</span><span class="p">(</span><span class="n">t</span><span class="p">,</span> <span class="n">normalize</span><span class="p">(</span><span class="n">spectral_centroids</span><span class="p">),</span> <span class="n">color</span><span class="o">=</span><span class="s">'r'</span><span class="p">)</span>
+</code></pre>
+</div>
+
+<p>到最后，光谱质心上升。</p>
+
+<p><img src="/img/post-ml/sound5.jpg" alt="" /></p>
+
+<h3 id="声谱衰减-spectral-roll-off">声谱衰减 Spectral Roll-off</h3>
+
+<p>它是信号形状的度量。librosa.feature.spectral_rolloff 计算信号中每帧的滚降系数：</p>
+
+<div class="language-py highlighter-rouge"><pre class="highlight"><code><span class="n">spectral_rolloff</span> <span class="o">=</span> <span class="n">librosa</span><span class="o">.</span><span class="n">feature</span><span class="o">.</span><span class="n">spectral_rolloff</span><span class="p">(</span><span class="n">x</span><span class="o">+</span><span class="mf">0.01</span><span class="p">,</span> <span class="n">sr</span><span class="o">=</span><span class="n">sr</span><span class="p">)[</span><span class="mi">0</span><span class="p">]</span>
+<span class="n">librosa</span><span class="o">.</span><span class="n">display</span><span class="o">.</span><span class="n">waveplot</span><span class="p">(</span><span class="n">x</span><span class="p">,</span> <span class="n">sr</span><span class="o">=</span><span class="n">sr</span><span class="p">,</span> <span class="n">alpha</span><span class="o">=</span><span class="mf">0.4</span><span class="p">)</span>
+<span class="n">plt</span><span class="o">.</span><span class="n">plot</span><span class="p">(</span><span class="n">t</span><span class="p">,</span> <span class="n">normalize</span><span class="p">(</span><span class="n">spectral_rolloff</span><span class="p">),</span> <span class="n">color</span><span class="o">=</span><span class="s">'r'</span><span class="p">)</span>
+</code></pre>
+</div>
+
+<h3 id="梅尔频率倒谱系数-mfcc">梅尔频率倒谱系数 MFCC</h3>
+
+<p>信号的Mel频率倒谱系数（MFCC）是一小组特征（通常约10-20），其简明地描述了频谱包络的整体形状，它模拟了人声的特征。让我们这次用一个简单的循环波。</p>
+
+<div class="language-py highlighter-rouge"><pre class="highlight"><code><span class="n">mfccs</span> <span class="o">=</span> <span class="n">librosa</span><span class="o">.</span><span class="n">feature</span><span class="o">.</span><span class="n">mfcc</span><span class="p">(</span><span class="n">x</span><span class="p">,</span> <span class="n">sr</span><span class="o">=</span><span class="n">fs</span><span class="p">)</span>
+<span class="k">print</span> <span class="n">mfccs</span><span class="o">.</span><span class="n">shape</span>
+<span class="c"># (20, 97)</span>
+<span class="c">#Displaying  the MFCCs:</span>
+<span class="n">librosa</span><span class="o">.</span><span class="n">display</span><span class="o">.</span><span class="n">specshow</span><span class="p">(</span><span class="n">mfccs</span><span class="p">,</span> <span class="n">sr</span><span class="o">=</span><span class="n">sr</span><span class="p">,</span> <span class="n">x_axis</span><span class="o">=</span><span class="s">'time'</span><span class="p">)</span>
+</code></pre>
+</div>
+
+<p><img src="/img/post-ml/sound7.jpg" alt="" /></p>
+
+<p>这里mfcc计算了超过97帧的20个MFCC。我们还可以执行特征缩放，使得每个系数维度具有零均值和单位方差：</p>
+
+<div class="language-py highlighter-rouge"><pre class="highlight"><code><span class="kn">import</span> <span class="nn">sklearn</span>
+<span class="n">mfccs</span> <span class="o">=</span> <span class="n">sklearn</span><span class="o">.</span><span class="n">preprocessing</span><span class="o">.</span><span class="n">scale</span><span class="p">(</span><span class="n">mfccs</span><span class="p">,</span> <span class="n">axis</span><span class="o">=</span><span class="mi">1</span><span class="p">)</span>
+<span class="k">print</span><span class="p">(</span><span class="n">mfccs</span><span class="o">.</span><span class="n">mean</span><span class="p">(</span><span class="n">axis</span><span class="o">=</span><span class="mi">1</span><span class="p">))</span>
+<span class="k">print</span><span class="p">(</span><span class="n">mfccs</span><span class="o">.</span><span class="n">var</span><span class="p">(</span><span class="n">axis</span><span class="o">=</span><span class="mi">1</span><span class="p">))</span>
+<span class="n">librosa</span><span class="o">.</span><span class="n">display</span><span class="o">.</span><span class="n">specshow</span><span class="p">(</span><span class="n">mfccs</span><span class="p">,</span> <span class="n">sr</span><span class="o">=</span><span class="n">sr</span><span class="p">,</span> <span class="n">x_axis</span><span class="o">=</span><span class="s">'time'</span><span class="p">)</span>
+</code></pre>
+</div>
+
+<p><img src="/img/post-ml/sound8.jpg" alt="" /></p>
+
+<h3 id="色度频率-chroma-frequencies">色度频率 Chroma Frequencies</h3>
+
+<p>色度频率是音乐音频有趣且强大的表示，其中整个频谱被投影到12个区间，代表音乐八度音的12个不同的半音（或色度），librosa.feature.chroma_stft 用于计算。</p>
+
+<div class="language-py highlighter-rouge"><pre class="highlight"><code><span class="n">x</span><span class="p">,</span> <span class="n">sr</span> <span class="o">=</span> <span class="n">librosa</span><span class="o">.</span><span class="n">load</span><span class="p">(</span><span class="s">'../simple_piano.wav'</span><span class="p">)</span>
+<span class="n">hop_length</span> <span class="o">=</span> <span class="mi">512</span>
+<span class="n">chromagram</span> <span class="o">=</span> <span class="n">librosa</span><span class="o">.</span><span class="n">feature</span><span class="o">.</span><span class="n">chroma_stft</span><span class="p">(</span><span class="n">x</span><span class="p">,</span> <span class="n">sr</span><span class="o">=</span><span class="n">sr</span><span class="p">,</span> <span class="n">hop_length</span><span class="o">=</span><span class="n">hop_length</span><span class="p">)</span>
+<span class="n">plt</span><span class="o">.</span><span class="n">figure</span><span class="p">(</span><span class="n">figsize</span><span class="o">=</span><span class="p">(</span><span class="mi">15</span><span class="p">,</span> <span class="mi">5</span><span class="p">))</span>
+<span class="n">librosa</span><span class="o">.</span><span class="n">display</span><span class="o">.</span><span class="n">specshow</span><span class="p">(</span><span class="n">chromagram</span><span class="p">,</span> <span class="n">x_axis</span><span class="o">=</span><span class="s">'time'</span><span class="p">,</span> <span class="n">y_axis</span><span class="o">=</span><span class="s">'chroma'</span><span class="p">,</span> <span class="n">hop_length</span><span class="o">=</span><span class="n">hop_length</span><span class="p">,</span> <span class="n">cmap</span><span class="o">=</span><span class="s">'coolwarm'</span><span class="p">)</span>
+</code></pre>
+</div>
+
+<p><img src="/img/post-ml/sound9.jpg" alt="" /></p>
+
+<h2 id="音频预处理">音频预处理</h2>
+
+<h3 id="dynamic-range-compression">Dynamic range compression</h3>
+
+<p><a href="https://en.wikipedia.org/wiki/Dynamic_range_compression">动态范围压缩</a>（DRC）或简单地压缩 为一个音频信号处理操作，降低响亮的体积声音或放大安静的声音从而减少或压缩的音频信号的动态范围。压缩通常用于声音的记录和再现，广播，[1] 现场声音增强和某些乐器放大器中。</p>
+
+<div class="language-py highlighter-rouge"><pre class="highlight"><code><span class="k">def</span> <span class="nf">dynamic_range_compression</span><span class="p">(</span><span class="n">x</span><span class="p">,</span> <span class="n">C</span><span class="o">=</span><span class="mi">1</span><span class="p">,</span> <span class="n">clip_val</span><span class="o">=</span><span class="mf">1e-5</span><span class="p">):</span>
+    <span class="k">return</span> <span class="n">torch</span><span class="o">.</span><span class="n">log</span><span class="p">(</span><span class="n">torch</span><span class="o">.</span><span class="n">clamp</span><span class="p">(</span><span class="n">x</span><span class="p">,</span> <span class="nb">min</span><span class="o">=</span><span class="n">clip_val</span><span class="p">)</span> <span class="o">*</span> <span class="n">C</span><span class="p">)</span>
+</code></pre>
+</div>
+
+<p>原始音频：</p>
+
+<p><img src="/img/post-ml/sound13.jpg" alt="" /></p>
+
+<p>放大二倍后的波形：</p>
+
+<p><img src="/img/post-ml/sound14.jpg" alt="" /></p>
+
+<p>放大二倍后经过DRC(简单点说，大值小倍数变化，小值正常倍数变化，之前处理爆音时，本能的就使用过这个思想，没想到这玩意专业术语叫做DRC)处理，防止爆音后的波形。</p>
+
+<p><img src="/img/post-ml/sound15.jpg" alt="" /></p>
+
+
+    </div>
+  </div>
+
+  <style>
+  .post-nav {
+    overflow: hidden;
+    /* margin-top: 60px; */
+    padding: 12px;
+    white-space: nowrap;
+    /* border-top: 1px solid #eee; */
+  }
+
+  .post-nav-item {
+    display: inline-block;
+    width: 50%;
+    white-space: normal;
+  }
+
+  .post-nav-item a {
+    position: relative;
+    display: inline-block;
+    line-height: 25px;
+    font-size: 14px;
+    color: #555;
+    border-bottom: none;
+  }
+
+  .post-nav-item a:hover {
+    color: #222;
+    font-weight: bold;
+    border-bottom: none;
+  }
+
+  .post-nav-item a:active {
+    top: 2px;
+  }
+
+  .post-nav-item a:before,
+  .post-nav-item a:after {
+    display: inline-block;
+    width: 16px;
+    height: 25px;
+    vertical-align: top;
+    opacity: 0.4;
+    background-size: 16px;
+  }
+
+  .post-nav-none a:none {
+    content: ' ';
+    background-size: 8px;
+  }
+
+  .post-nav-none a:hover:none {
+    opacity: 1;
+  }
+
+  .post-nav-prev a:before {
+    content: ' ';
+    background: url("data:image/svg+xml;base64,PD94bWwgdmVyc2lvbj0iMS4wIiA/PjxzdmcgaGVpZ2h0PSIxMnB4IiB2ZXJzaW9uPSIxLjEiIHZpZXdCb3g9IjAgMCA5IDEyIiB3aWR0aD0iOXB4IiB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHhtbG5zOnNrZXRjaD0iaHR0cDovL3d3dy5ib2hlbWlhbmNvZGluZy5jb20vc2tldGNoL25zIiB4bWxuczp4bGluaz0iaHR0cDovL3d3dy53My5vcmcvMTk5OS94bGluayI+PHRpdGxlLz48ZGVzYy8+PGRlZnMvPjxnIGZpbGw9Im5vbmUiIGZpbGwtcnVsZT0iZXZlbm9kZCIgaWQ9IlBhZ2UtMSIgc3Ryb2tlPSJub25lIiBzdHJva2Utd2lkdGg9IjEiPjxnIGZpbGw9IiMwMDAwMDAiIGlkPSJDb3JlIiB0cmFuc2Zvcm09InRyYW5zbGF0ZSgtMjE4LjAwMDAwMCwgLTkwLjAwMDAwMCkiPjxnIGlkPSJjaGV2cm9uLWxlZnQiIHRyYW5zZm9ybT0idHJhbnNsYXRlKDIxOC41MDAwMDAsIDkwLjAwMDAwMCkiPjxwYXRoIGQ9Ik03LjQsMS40IEw2LDAgTC04Ljg4MTc4NDJlLTE2LDYgTDYsMTIgTDcuNCwxMC42IEwyLjgsNiBMNy40LDEuNCBaIiBpZD0iU2hhcGUiLz48L2c+PC9nPjwvZz48L3N2Zz4=") no-repeat 0 50%;
+    background-size: 8px;
+  }
+
+  .post-nav-prev a:hover:before {
+    opacity: 1;
+  }
+
+  .post-nav-next {
+    text-align: right;
+  }
+
+  .post-nav-next a:after {
+    content: ' ';
+    background: url("data:image/svg+xml;base64,PD94bWwgdmVyc2lvbj0iMS4wIiA/PjxzdmcgaGVpZ2h0PSIxMnB4IiB2ZXJzaW9uPSIxLjEiIHZpZXdCb3g9IjAgMCA5IDEyIiB3aWR0aD0iOXB4IiB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHhtbG5zOnNrZXRjaD0iaHR0cDovL3d3dy5ib2hlbWlhbmNvZGluZy5jb20vc2tldGNoL25zIiB4bWxuczp4bGluaz0iaHR0cDovL3d3dy53My5vcmcvMTk5OS94bGluayI+PHRpdGxlLz48ZGVzYy8+PGRlZnMvPjxnIGZpbGw9Im5vbmUiIGZpbGwtcnVsZT0iZXZlbm9kZCIgaWQ9IlBhZ2UtMSIgc3Ryb2tlPSJub25lIiBzdHJva2Utd2lkdGg9IjEiPjxnIGZpbGw9IiMwMDAwMDAiIGlkPSJDb3JlIiB0cmFuc2Zvcm09InRyYW5zbGF0ZSgtMjYwLjAwMDAwMCwgLTkwLjAwMDAwMCkiPjxnIGlkPSJjaGV2cm9uLXJpZ2h0IiB0cmFuc2Zvcm09InRyYW5zbGF0ZSgyNjAuNTAwMDAwLCA5MC4wMDAwMDApIj48cGF0aCBkPSJNMSwwIEwtMC40LDEuNCBMNC4yLDYgTC0wLjQsMTAuNiBMMSwxMiBMNyw2IEwxLDAgWiIgaWQ9IlNoYXBlIi8+PC9nPjwvZz48L2c+PC9zdmc+") no-repeat 100% 50%;
+    background-size: 8px;
+  }
+
+  .post-nav-next a:hover:after {
+    opacity: 1;
+  }
+</style>
+
+
+
+<div class="post-nav">
+
+  
+  <div class="post-nav-none post-nav-item">
+    <a href=""> </a>
+  </div>
+  
+
+  
+  <div class="post-nav-next post-nav-item">
+    
+    <a href="/blog/2019/ndk/"> NDK同步读取StreamingAssets资源</a>
+  </div>
+  
+
+</div>
+
+</article>
+    </div>
+
+    <footer class="site-footer">
+  <div class="container">
+    <ul class="social">
+  <li><a href="https://twitter.com/penghuailiang" target="_blank"><i class="icon icon-twitter"></i></a></li>
+  <li><a href="https://www.zhihu.com/people/huailiangpenguin" target="_blank"><i class="icon icon-zhihu"></i></a></li>
+  <li><a href="https://www.facebook.com/profile.php?id=100004290725320" target="_blank"><i class="icon icon-facebook"></i></a></li>
+  <li><a href="https://weibo.com/6212299692/profile?topnav=1&wvr=6" target="_blank"><i class="icon icon-sina"></i></a></li>
+  <li><a href="https://www.linkedin.com/in/penghuailiang/" target="_blank"><i class="icon icon-linkedin"></i></a></li>
+  <li><a href="https://github.com/huailiang" target="_blank"><i class="icon icon-github"></i></a></li>
+</ul>
+    <p class="txt-medium-gray">
+      <small>&copy;2019 All rights reserved. </small>
+    </p>
+  </div>
+</footer>
+    <a href="https://github.com/huailiang" target="_blank" class="github-corner"><svg width="80" height="80" viewBox="0 0 250 250" style="fill:#337ab7; color:#fff; position: absolute; top: 0; border: 0; right: 0;"><path d="M0,0 L115,115 L130,115 L142,142 L250,250 L250,0 Z"></path><path d="M128.3,109.0 C113.8,99.7 119.0,89.6 119.0,89.6 C122.0,82.7 120.5,78.6 120.5,78.6 C119.2,72.0 123.4,76.3 123.4,76.3 C127.3,80.9 125.5,87.3 125.5,87.3 C122.9,97.6 130.6,101.9 134.4,103.2" fill="currentColor" style="transform-origin: 130px 106px;" class="octo-arm"></path><path d="M115.0,115.0 C114.9,115.1 118.7,116.5 119.8,115.4 L133.7,101.6 C136.9,99.2 139.9,98.4 142.2,98.6 C133.8,88.0 127.5,74.4 143.8,58.0 C148.5,53.4 154.0,51.2 159.7,51.0 C160.3,49.4 163.2,43.6 171.4,40.1 C171.4,40.1 176.1,42.5 178.8,56.2 C183.1,58.6 187.2,61.8 190.9,65.4 C194.5,69.0 197.7,73.2 200.1,77.6 C213.8,80.2 216.3,84.9 216.3,84.9 C212.7,93.1 206.9,96.0 205.4,96.6 C205.1,102.4 203.0,107.8 198.3,112.5 C181.9,128.9 168.3,122.5 157.7,114.1 C157.9,116.9 156.7,120.9 152.7,124.9 L141.0,136.5 C139.8,137.7 141.6,141.9 141.8,141.8 Z" fill="currentColor" class="octo-body"></path></svg></a>
+
+
+    <script src="//code.jquery.com/jquery-1.11.3.min.js"></script>
+    <script>
+      $(document).ready(function () {
+        $('.sliding-panel-button,.sliding-panel-fade-screen,.sliding-panel-close').on('click touchstart', function (e) {
+          $('.sliding-panel-content,.sliding-panel-fade-screen').toggleClass('is-visible');
+          e.preventDefault();
+        });
+      });
+    </script>
+  </main>
+</body>
+
+</html>
