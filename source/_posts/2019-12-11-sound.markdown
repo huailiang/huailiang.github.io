@@ -300,3 +300,96 @@ def dynamic_range_compression(x, C=1, clip_val=1e-5):
 
 [i1]: https://en.wikipedia.org/wiki/Dynamic_range_compression
 
+
+
+## API 解释
+
+### 短时傅里叶变换
+
+```py
+librosa.stft(y, n_fft=2048, hop_length=None, win_length=None, window='hann', center=True, pad_mode='reflect')
+```
+
+短时傅立叶变换（STFT），返回一个复数矩阵使得D(f,t)
+
+复数的实部：np.abs(D(f,t))频率的振幅
+复数的虚部：np.angle(D(f,t))频率的相位
+
+###### 参数：
+
+• y：音频时间序列
+• n_fft：FFT窗口大小，n_fft=hop_length+overlapping
+• hop_length：帧移，如果未指定，则默认win_length / 4。
+• win_length：每一帧音频都由window（）加窗。窗长win_length，然后用零填充以匹配N_FFT。默认win_length=n_fft。
+• window：字符串，元组，数字，函数 shape =（n_fft, )
+    窗口（字符串，元组或数字）；
+    窗函数，例如scipy.signal.hanning
+    长度为n_fft的向量或数组
+• center：bool
+    如果为True，则填充信号y，以使帧 D [:, t]以y [t * hop_length]为中心。
+    如果为False，则D [:, t]从y [t * hop_length]开始
+• dtype：D的复数值类型。默认值为64-bit complex复数
+• pad_mode：如果center = True，则在信号的边缘使用填充模式。默认情况下，STFT使用reflection padding。
+
+##### 返回：
+
+• STFT矩阵 $ shape =（1 + \frac{nfft}{2}，t）$
+
+
+### 短时傅里叶逆变换
+
+```py
+librosa.istft(stft_matrix, hop_length=None, win_length=None, window='hann', center=True, length=None)
+```
+
+短时傅立叶逆变换（ISTFT），将复数值D(f,t)频谱矩阵转换为时间序列y，窗函数、帧移等参数应与stft相同
+
+#### 参数：
+
+• stft_matrix ：经过STFT之后的矩阵
+• hop_length ：帧移，默认为winlength4
+• win_length ：窗长，默认为n_fft
+• window：字符串，元组，数字，函数或shape = (n_fft, )
+    窗口（字符串，元组或数字）
+    窗函数，例如scipy.signal.hanning
+    长度为n_fft的向量或数组
+• center：bool
+    如果为True，则假定D具有居中的帧
+    如果False，则假定D具有左对齐的帧
+• length：如果提供，则输出y为零填充或剪裁为精确长度音频
+
+##### 返回：
+
+• y ：时域信号
+
+
+### 幅度转dB
+```py
+librosa.amplitude_to_db(S, ref=1.0)
+```
+
+将幅度频谱转换为dB标度频谱。也就是对S取对数。与这个函数相反的是librosa.db_to_amplitude(S)
+
+#### 参数：
+
+• S ：输入幅度
+• ref ：参考值，振幅abs（S）相对于ref进行缩放，20∗log10(Sref)
+#### 返回：
+
+• dB为单位的S
+
+
+### 功率转dB
+```py
+librosa.core.power_to_db(S, ref=1.0)
+```
+将功率谱（幅度平方）转换为分贝（dB）单位，与这个函数相反的是librosa.db_to_power(S)
+
+#### 参数：
+
+• S：输入功率
+• ref ：参考值，振幅abs(S)相对于ref进行缩放，10∗log10(Sref)
+
+#### 返回：
+
+• dB为单位的S
