@@ -5,7 +5,7 @@
   <meta http-equiv="X-UA-Compatible" content="IE=edge">
   <meta name="viewport" content="width=device-width, initial-scale=1">
 
-  <title>处理音频信号</title>
+  <title>librosa处理音频信号</title>
   <meta name="description"
     content="二十世纪八十年代，有专家研究巴赫《第一勃兰登堡协奏曲》的音乐信号时发现，音乐信号的功率谱与人类大脑生理信号的功率谱相似，符合1/f信号公式。还发现，音乐信号α越靠近数值1越好听，从科学上找到一个近似参数来判定音乐的悦耳度。2012年加拿大麦吉尔大学音乐系主任分析发现，音乐节奏也满足这个规律，α值为0.8。不同音乐...">
 
@@ -67,7 +67,7 @@ MathJax.Hub.Config({
 
   <div class="card">
     <header class="post-header">
-      <h1 class="post-title">处理音频信号</h1>
+      <h1 class="post-title">librosa处理音频信号</h1>
       <p class="post-meta">Dec 11, 2019 •
         Huailiang</p>
     </header>
@@ -355,6 +355,134 @@ conda install -c conda-forge librosa
 <p>放大二倍后经过DRC(简单点说，大值小倍数变化，小值正常倍数变化，之前处理爆音时，本能的就使用过这个思想，没想到这玩意专业术语叫做DRC)处理，防止爆音后的波形。</p>
 
 <p><img src="/img/post-ml/sound15.jpg" alt="" /></p>
+
+<h2 id="api-附录">API 附录</h2>
+
+<h3 id="短时傅里叶变换">短时傅里叶变换</h3>
+
+<div class="language-py highlighter-rouge"><pre class="highlight"><code><span class="n">librosa</span><span class="o">.</span><span class="n">stft</span><span class="p">(</span><span class="n">y</span><span class="p">,</span> <span class="n">n_fft</span><span class="o">=</span><span class="mi">2048</span><span class="p">,</span> <span class="n">hop_length</span><span class="o">=</span><span class="bp">None</span><span class="p">,</span> <span class="n">win_length</span><span class="o">=</span><span class="bp">None</span><span class="p">,</span> <span class="n">window</span><span class="o">=</span><span class="s">'hann'</span><span class="p">,</span> <span class="n">center</span><span class="o">=</span><span class="bp">True</span><span class="p">,</span> <span class="n">pad_mode</span><span class="o">=</span><span class="s">'reflect'</span><span class="p">)</span>
+</code></pre>
+</div>
+
+<p>短时傅立叶变换（STFT），返回一个复数矩阵使得D(f,t)</p>
+
+<p>复数的实部：np.abs(D(f,t))频率的振幅<br />
+复数的虚部：np.angle(D(f,t))频率的相位</p>
+
+<h6 id="参数">参数：</h6>
+
+<p>• y：音频时间序列<br />
+• n_fft：FFT窗口大小，n_fft=hop_length+overlapping<br />
+• hop_length：帧移，如果未指定，则默认win_length / 4。<br />
+• win_length：每一帧音频都由window（）加窗。窗长win_length，然后用零填充以匹配N_FFT。默认win_length=n_fft。<br />
+• window：字符串，元组，数字，函数 shape =（n_fft, )<br />
+     窗口（字符串，元组或数字）；<br />
+     窗函数，例如scipy.signal.hanning<br />
+     长度为n_fft的向量或数组<br />
+• center：bool<br />
+     如果为True，则填充信号y，以使帧 D [:, t]以y [t * hop_length]为中心。<br />
+     如果为False，则D [:, t]从y [t * hop_length]开始<br />
+• dtype：D的复数值类型。默认值为64-bit complex复数<br />
+• pad_mode：如果center = True，则在信号的边缘使用填充模式。默认情况下，STFT使用reflection padding。</p>
+
+<h5 id="返回">返回：</h5>
+
+<p>• STFT矩阵 $ shape =（1 + \frac{nfft}{2}，t）$</p>
+
+<h3 id="短时傅里叶逆变换">短时傅里叶逆变换</h3>
+
+<div class="language-py highlighter-rouge"><pre class="highlight"><code><span class="n">librosa</span><span class="o">.</span><span class="n">istft</span><span class="p">(</span><span class="n">stft_matrix</span><span class="p">,</span> <span class="n">hop_length</span><span class="o">=</span><span class="bp">None</span><span class="p">,</span> <span class="n">win_length</span><span class="o">=</span><span class="bp">None</span><span class="p">,</span> <span class="n">window</span><span class="o">=</span><span class="s">'hann'</span><span class="p">,</span> <span class="n">center</span><span class="o">=</span><span class="bp">True</span><span class="p">,</span> <span class="n">length</span><span class="o">=</span><span class="bp">None</span><span class="p">)</span>
+</code></pre>
+</div>
+
+<p>短时傅立叶逆变换（ISTFT），将复数值D(f,t)频谱矩阵转换为时间序列y，窗函数、帧移等参数应与stft相同</p>
+
+<h4 id="参数-1">参数：</h4>
+
+<p>• stft_matrix ：经过STFT之后的矩阵<br />
+• hop_length ：帧移，默认为winlength4<br />
+• win_length ：窗长，默认为n_fft<br />
+• window：字符串，元组，数字，函数或shape = (n_fft, )<br />
+     窗口（字符串，元组或数字）<br />
+     窗函数，例如scipy.signal.hanning<br />
+     长度为n_fft的向量或数组<br />
+• center：bool<br />
+     如果为True，则假定D具有居中的帧<br />
+     如果False，则假定D具有左对齐的帧<br />
+• length：如果提供，则输出y为零填充或剪裁为精确长度音频</p>
+
+<h5 id="返回-1">返回：</h5>
+
+<p>• y ：时域信号</p>
+
+<h3 id="幅度转db">幅度转dB</h3>
+<div class="language-py highlighter-rouge"><pre class="highlight"><code><span class="n">librosa</span><span class="o">.</span><span class="n">amplitude_to_db</span><span class="p">(</span><span class="n">S</span><span class="p">,</span> <span class="n">ref</span><span class="o">=</span><span class="mf">1.0</span><span class="p">)</span>
+</code></pre>
+</div>
+
+<p>将幅度频谱转换为dB标度频谱。也就是对S取对数。与这个函数相反的是librosa.db_to_amplitude(S)</p>
+
+<h4 id="参数-2">参数：</h4>
+
+<p>• S ：输入幅度<br />
+• ref ：参考值，振幅abs（S）相对于ref进行缩放，20∗log10(Sref)</p>
+<h4 id="返回-2">返回：</h4>
+
+<p>• dB为单位的S</p>
+
+<h3 id="功率转db">功率转dB</h3>
+<div class="language-py highlighter-rouge"><pre class="highlight"><code><span class="n">librosa</span><span class="o">.</span><span class="n">core</span><span class="o">.</span><span class="n">power_to_db</span><span class="p">(</span><span class="n">S</span><span class="p">,</span> <span class="n">ref</span><span class="o">=</span><span class="mf">1.0</span><span class="p">)</span>
+</code></pre>
+</div>
+<p>将功率谱（幅度平方）转换为分贝（dB）单位，与这个函数相反的是librosa.db_to_power(S)</p>
+
+<h4 id="参数-3">参数：</h4>
+
+<p>• S：输入功率<br />
+• ref ：参考值，振幅abs(S)相对于ref进行缩放，10∗log10(Sref)</p>
+
+<h4 id="返回-3">返回：</h4>
+
+<p>• dB为单位的S</p>
+
+<h3 id="mel滤波器组">Mel滤波器组</h3>
+<div class="language-py highlighter-rouge"><pre class="highlight"><code><span class="n">librosa</span><span class="o">.</span><span class="n">filters</span><span class="o">.</span><span class="n">mel</span><span class="p">(</span><span class="n">sr</span><span class="p">,</span> <span class="n">n_fft</span><span class="p">,</span> <span class="n">n_mels</span><span class="o">=</span><span class="mi">128</span><span class="p">,</span> <span class="n">fmin</span><span class="o">=</span><span class="mf">0.0</span><span class="p">,</span> <span class="n">fmax</span><span class="o">=</span><span class="bp">None</span><span class="p">,</span> <span class="n">htk</span><span class="o">=</span><span class="bp">False</span><span class="p">,</span> <span class="n">norm</span><span class="o">=</span><span class="mi">1</span><span class="p">)</span>
+</code></pre>
+</div>
+
+<p>创建一个滤波器组矩阵以将FFT合并成Mel频率</p>
+
+<h5 id="参数-4">参数：</h5>
+
+<p>• sr ：输入信号的采样率<br />
+• n_fft ：FFT组件数<br />
+• n_mels ：产生的梅尔带数<br />
+• fmin ：最低频率（Hz）<br />
+• fmax：最高频率（以Hz为单位）。如果为None，则使用fmax = sr / 2.0<br />
+• norm：{None，1，np.inf} [标量]<br />
+ 如果为1，则将三角mel权重除以mel带的宽度（区域归一化）。否则，保留所有三角形的峰值为1.0</p>
+
+<h4 id="返回-4">返回：</h4>
+
+<p>• Mel变换矩阵</p>
+
+<h3 id="提取mfcc系数">提取MFCC系数</h3>
+
+<p>MFCC特征是一种在自动语音识别和说话人识别中广泛使用的特征。关于MFCC特征的详细信息，有兴趣的可以参考[博客][3]。在librosa中，提取MFCC特征只需要一个函数：</p>
+
+<div class="language-py highlighter-rouge"><pre class="highlight"><code><span class="n">librosa</span><span class="o">.</span><span class="n">feature</span><span class="o">.</span><span class="n">mfcc</span><span class="p">(</span><span class="n">y</span><span class="o">=</span><span class="bp">None</span><span class="p">,</span> <span class="n">sr</span><span class="o">=</span><span class="mi">22050</span><span class="p">,</span> <span class="n">S</span><span class="o">=</span><span class="bp">None</span><span class="p">,</span> <span class="n">n_mfcc</span><span class="o">=</span><span class="mi">20</span><span class="p">,</span> <span class="n">dct_type</span><span class="o">=</span><span class="mi">2</span><span class="p">,</span> <span class="n">norm</span><span class="o">=</span><span class="s">'ortho'</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">)</span>
+</code></pre>
+</div>
+
+<h4 id="参数-5">参数：</h4>
+<p>• y：音频数据<br />
+• sr：采样率<br />
+• S：np.ndarray，对数功能梅尔谱图<br />
+• n_mfcc：int&gt;0，要返回的MFCC数量<br />
+• dct_type：None, or {1, 2, 3}  离散余弦变换（DCT）类型。默认情况下，使用DCT类型2。<br />
+• norm： None or ‘ortho’ 规范。如果dct_type为2或3，则设置norm =’ortho’使用正交DCT基础。 标准化不支持dct_type = 1。</p>
+<h4 id="返回-5">返回：</h4>
+<p>• M： MFCC序列</p>
 
 
     </div>
