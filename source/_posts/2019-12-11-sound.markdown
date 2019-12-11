@@ -298,11 +298,9 @@ def dynamic_range_compression(x, C=1, clip_val=1e-5):
 
 ![](/img/post-ml/sound15.jpg)
 
-[i1]: https://en.wikipedia.org/wiki/Dynamic_range_compression
 
 
-
-## API 解释
+## API 附录
 
 ### 短时傅里叶变换
 
@@ -322,12 +320,12 @@ librosa.stft(y, n_fft=2048, hop_length=None, win_length=None, window='hann', cen
 • hop_length：帧移，如果未指定，则默认win_length / 4。
 • win_length：每一帧音频都由window（）加窗。窗长win_length，然后用零填充以匹配N_FFT。默认win_length=n_fft。
 • window：字符串，元组，数字，函数 shape =（n_fft, )
-    窗口（字符串，元组或数字）；
-    窗函数，例如scipy.signal.hanning
-    长度为n_fft的向量或数组
+    &emsp;窗口（字符串，元组或数字）；
+    &emsp;窗函数，例如scipy.signal.hanning
+    &emsp;长度为n_fft的向量或数组
 • center：bool
-    如果为True，则填充信号y，以使帧 D [:, t]以y [t * hop_length]为中心。
-    如果为False，则D [:, t]从y [t * hop_length]开始
+    &emsp;如果为True，则填充信号y，以使帧 D [:, t]以y [t * hop_length]为中心。
+    &emsp;如果为False，则D [:, t]从y [t * hop_length]开始
 • dtype：D的复数值类型。默认值为64-bit complex复数
 • pad_mode：如果center = True，则在信号的边缘使用填充模式。默认情况下，STFT使用reflection padding。
 
@@ -350,12 +348,12 @@ librosa.istft(stft_matrix, hop_length=None, win_length=None, window='hann', cent
 • hop_length ：帧移，默认为winlength4
 • win_length ：窗长，默认为n_fft
 • window：字符串，元组，数字，函数或shape = (n_fft, )
-    窗口（字符串，元组或数字）
-    窗函数，例如scipy.signal.hanning
-    长度为n_fft的向量或数组
+    &emsp;窗口（字符串，元组或数字）
+    &emsp;窗函数，例如scipy.signal.hanning
+    &emsp;长度为n_fft的向量或数组
 • center：bool
-    如果为True，则假定D具有居中的帧
-    如果False，则假定D具有左对齐的帧
+    &emsp;如果为True，则假定D具有居中的帧
+    &emsp;如果False，则假定D具有左对齐的帧
 • length：如果提供，则输出y为零填充或剪裁为精确长度音频
 
 ##### 返回：
@@ -393,3 +391,48 @@ librosa.core.power_to_db(S, ref=1.0)
 #### 返回：
 
 • dB为单位的S
+
+
+### Mel滤波器组
+```py
+librosa.filters.mel(sr, n_fft, n_mels=128, fmin=0.0, fmax=None, htk=False, norm=1)
+```
+
+创建一个滤波器组矩阵以将FFT合并成Mel频率
+
+##### 参数：
+
+• sr ：输入信号的采样率
+• n_fft ：FFT组件数
+• n_mels ：产生的梅尔带数
+• fmin ：最低频率（Hz）
+• fmax：最高频率（以Hz为单位）。如果为None，则使用fmax = sr / 2.0
+• norm：{None，1，np.inf} [标量]
+&emsp;如果为1，则将三角mel权重除以mel带的宽度（区域归一化）。否则，保留所有三角形的峰值为1.0
+
+#### 返回：
+
+• Mel变换矩阵
+
+
+### 提取MFCC系数
+
+MFCC特征是一种在自动语音识别和说话人识别中广泛使用的特征。关于MFCC特征的详细信息，有兴趣的可以参考[博客][3]。在librosa中，提取MFCC特征只需要一个函数：
+
+```py
+librosa.feature.mfcc(y=None, sr=22050, S=None, n_mfcc=20, dct_type=2, norm='ortho', **kwargs)
+```
+
+#### 参数：
+• y：音频数据
+• sr：采样率
+• S：np.ndarray，对数功能梅尔谱图
+• n_mfcc：int>0，要返回的MFCC数量
+• dct_type：None, or {1, 2, 3}  离散余弦变换（DCT）类型。默认情况下，使用DCT类型2。
+• norm： None or ‘ortho’ 规范。如果dct_type为2或3，则设置norm =’ortho’使用正交DCT基础。 标准化不支持dct_type = 1。
+#### 返回：
+• M： MFCC序列
+
+[i1]: https://en.wikipedia.org/wiki/Dynamic_range_compression
+[i2]: https://www.cnblogs.com/LXP-Never/p/11561355.html#频谱图
+[i3]: http:// blog.csdn.net/zzc15806/article/details/79246716
