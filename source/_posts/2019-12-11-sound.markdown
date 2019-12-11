@@ -17,7 +17,7 @@ tags:
 
 声音以具有诸如频率、带宽、分贝等参数的音频信号的形式表示，典型的音频信号可以表示为幅度和时间的函数。
 
-<br><center><img src="/img/post-ml/sound1.webp"></center><br>
+<br><center><img src="/img/post-ml/sound1.jpg"></center><br>
 
 这些声音有多种格式，使计算机可以读取和分析它们。例如：
 
@@ -82,7 +82,7 @@ ipd.Audio(audio_path)
 
 然后返回jupyter笔记本中的音频小部件，如下图所示，这个小部件在这里不起作用，但它可以在你的笔记本中使用，你甚至可以使用mp3或WMA格式作为音频示例。
 
-![](/img/post-ml/sound10.webp)
+![](/img/post-ml/sound10.jpg)
 
 ### 可视化音频
 
@@ -274,4 +274,29 @@ librosa.display.specshow(chromagram, x_axis='time', y_axis='chroma', hop_length=
 ![](/img/post-ml/sound9.jpg)
 
 
-## 
+## 音频预处理
+
+### Dynamic range compression
+
+[动态范围压缩][i1]（DRC）或简单地压缩 为一个音频信号处理操作，降低响亮的体积声音或放大安静的声音从而减少或压缩的音频信号的动态范围。压缩通常用于声音的记录和再现，广播，[1] 现场声音增强和某些乐器放大器中。
+
+```py
+def dynamic_range_compression(x, C=1, clip_val=1e-5):
+    return torch.log(torch.clamp(x, min=clip_val) * C)
+```
+
+
+原始音频：
+
+![](/img/post-ml/sound13.jpg)
+
+放大二倍后的波形：
+
+![](/img/post-ml/sound14.jpg)
+
+放大二倍后经过DRC(简单点说，大值小倍数变化，小值正常倍数变化，之前处理爆音时，本能的就使用过这个思想，没想到这玩意专业术语叫做DRC)处理，防止爆音后的波形。
+
+![](/img/post-ml/sound15.jpg)
+
+[i1]: https://en.wikipedia.org/wiki/Dynamic_range_compression
+
