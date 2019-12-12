@@ -413,7 +413,7 @@ librosa.filters.mel(sr, n_fft, n_mels=128, fmin=0.0, fmax=None, htk=False, norm=
 
 ### 提取MFCC系数
 
-MFCC特征是一种在自动语音识别和说话人识别中广泛使用的特征。关于MFCC特征的详细信息，有兴趣的可以参考[博客][3]。在librosa中，提取MFCC特征只需要一个函数：
+MFCC特征是一种在自动语音识别和说话人识别中广泛使用的特征。关于MFCC特征的详细信息，有兴趣的可以参考[博客][i3]。在librosa中，提取MFCC特征只需要一个函数：
 
 ```py
 librosa.feature.mfcc(y=None, sr=22050, S=None, n_mfcc=20, dct_type=2, norm='ortho', **kwargs)
