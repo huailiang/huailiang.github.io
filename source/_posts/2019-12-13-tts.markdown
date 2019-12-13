@@ -18,6 +18,81 @@ Tacotron2是由Google Brain 2017年提出来的一个语音合成框架。Tacotr
 ![](/img/post-ml/tts2.jpg)
 
 
+## 预处理
+
+### 文字处理
+
+文字主要由字幕和标点、空格等组成， 这里先将文字转换成对应的向量， 如果是汉字的话， 可以先转成拼音。 
+
+
+1. 先清除文字里陌生字符， 可以使用正则表达式匹配
+   
+   ```py
+   _curly_re = re.compile(r'(.*?)\{(.+?)\}(.*)')
+   ```
+
+2. 对每个字母进行编码, 得到一个词向量， 然后传给模型
+   ```py
+    _pad = '_'
+    _punctuation = '!\'(),.:;? '
+    _special = '-'
+    _letters = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz'
+
+    # Prepend "@" to ARPAbet symbols to ensure uniqueness (some are the same as uppercase letters):
+    _arpabet = ['@' + s for s in cmudict.valid_symbols]
+
+    # Export all symbols:
+    symbols = [_pad] + list(_special) + list(_punctuation) + list(_letters) + _arpabet
+
+    def sequence_to_text(sequence):
+        result = ''
+        for symbol_id in sequence:
+            if symbol_id in _id_to_symbol:
+                s = _id_to_symbol[symbol_id]
+                if len(s) > 1 and s[0] == '@':
+                    s = '{%s}' % s[1:]
+                result += s
+        return result.replace('}{', ' ')
+   ```
+
+
+### 声音处理
+
+    一般很难直接能从声音的波形图里，提取出声音的特征，需要先进行转换。 一般的话，都是转换为梅尔图谱或者梅尔频率倒谱系数 MFCC， 在骨骼的论文里转换成了梅尔图谱。
+
+    •  使用librosa或者scipy.io.wavfile 加载到内存， 得到numpy array
+
+    ```py
+    from scipy.io.wavfile import read
+    sampling_rate, data = read(full_path)
+    ```
+
+    •  进行加窗、短时傅里叶变换进入复数域
+    
+    ```py
+    from scipy.signal import get_window
+
+    # get window and zero center pad it to filter_length
+    fft_window = get_window(window, win_length, fftbins=True)
+    fft_window = pad_center(fft_window, filter_length)
+    fft_window = torch.from_numpy(fft_window).float()
+    forward_basis *= fft_window
+    inverse_basis *= fft_window
+    
+    forward_transform = F.conv1d(
+            input_data,
+            Variable(self.forward_basis, requires_grad=False),
+            stride=self.hop_length, padding=0)
+            
+    cutoff = int((self.filter_length / 2) + 1)
+    real_part = forward_transform[:, :cutoff, :]  # 实部
+    imag_part = forward_transform[:, cutoff:, :]  # 虚部
+    magnitude = torch.sqrt(real_part ** 2 + imag_part ** 2)
+    mel_output = torch.matmul(self.mel_basis, magnitudes)
+    ```
+   
+
+
 ## 注意力机制
 
 注意力机制是一种在编码器-解码器结构中使用到的机制, 现在已经在多种任务中使用:
@@ -42,7 +117,7 @@ Tacotron2是由Google Brain 2017年提出来的一个语音合成框架。Tacotr
 
 对于编码器-解码器结构的训练, 由于这种结构处处可微, 因此模型的参数θ可以通过训练数据和最大似然估计得到最优解, 最大化对数似然函数以获得最优模型的参数, 即:
 
-$$ {\operatorname{arg\,}}\underset{\theta}{\operatorname{\max}}\, {\sum_{(x,y)}{\log(y|x;\theta)}}  $$
+$$ {\operatorname{arg\,}}\underset{\theta}{\operatorname{\max}}\,  {\sum_{(x,y)}{\log(y|x;\theta)}}  $$
 
 这是一种端到端的训练方法.
 
