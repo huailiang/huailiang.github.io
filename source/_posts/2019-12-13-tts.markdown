@@ -50,7 +50,7 @@ Tacotron2是由Google Brain 2017年提出来的一个语音合成框架。Tacotr
             if symbol_id in _id_to_symbol:
                 s = _id_to_symbol[symbol_id]
                 if len(s) > 1 and s[0] == '@':
-                    s = '{%s}' % s[1:]
+                    s =  s[1:]
                 result += s
         return result.replace('}{', ' ')
    ```
@@ -181,7 +181,7 @@ $ score(h_t,h_i)=h_t^tW_αh_i $
 
 全局注意力需要在序列中所有的时间步上进行计算, 计算的代价是比较高的, 可以使用固定窗口大小的局部注意力机制, 窗口的大小为2D+1. D为超参数, 为窗口边缘距离中心的单方向距离. 上下文向量ct的计算方法如下:
 
-$$     c_t = \sum_{i=p_t-D}^{p_t+D}{\alpha_{t,i}h_i}      $$
+$$   c_t = \sum_{i=p_t-D}^{p_t+D}{\alpha_{t,i}h_i}      $$
 
 
 可以看到, 只是考虑的时间步范围的区别, 其他完全相同. pt作为窗口的中心, 可以直接使其等于当前时间步t, 也可以设置为一个变量, 通过训练获得, 即:
