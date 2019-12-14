@@ -193,7 +193,7 @@ SciPy.fftpack中，提供了离散余弦变换(DCT)与离散余弦逆变换(IDCT
 
 前置知识
 
-双向RNN
+### 双向RNN
 
 双向RNN确保模型能够同时感知前向和后向的信息。双向RNN包含两个独立的RNN，一个前向RNN从前向后读入序列(从f1到$f_{Tx}$)，另一个后向RNN从后向前读入序列(从$f_{Tx}$到f1)，最终的输出为两者的拼接。
 
@@ -225,13 +225,13 @@ $$ Attention(Query,Source)=\sum_{i=1}^{L_x}similarity(Query,Key_i)*Value $$
 
 步骤一：Key和Value相似度度量：
 
- 点积 $Similarity(Query,Key)=Query·Key$ 
-
-cos相似性 $Similarity(Query,Key)=\frac{Query·Key_i}{||Query||*||Key_i||}$
-MLP网络 $Similarity(Query,Key_i)=MLP(Query,Key_i)$
-Key和Value还可以拼接后再内积一个参数向量，甚至权重都不一定要归一化
+• 点积 $Similarity(Query,Key)=Query·Key$ 
+• cos相似性 $Similarity(Query,Key)=\frac{Query·Key_i}{||Query||*||Key_i||}$
+• MLP网络 $Similarity(Query,Key_i)=MLP(Query,Key_i)$
+• Key和Value还可以拼接后再内积一个参数向量，甚至权重都不一定要归一化
 
 步骤二：softmax归一化(alignments/attention weights):
+
 $$ a_i=softmax(sim_i)=\frac{e^{sim_i}}{\sum_{j=1}^{L_x}e^{sim_j}} $$
 
 步骤三：Attention数值(context vector)：
@@ -263,11 +263,11 @@ $$ e_{ij}=score(s_{i-1},h_j)=v_a^Ttanh(W_as_{i-1}+U_ah_j) $$
 
 $$ e_{ij}=score(\alpha_{i-1},h_j)=v_a^Ttanh(Wh_j+Uf_{i,j}) $$
 
-其中，fi,j是之前的注意力权重αi−1经卷积而得的位置特征，$f_i=F∗\alpha_{i−1}$，$v_a$、$W_a$、$U_a$和F是待训练参数。
+其中，$f_{i,j}$是之前的注意力权重αi−1经卷积而得的位置特征，$f_i=F∗\alpha_{i−1}$，$v_a$、$W_a$、$U_a$和F是待训练参数。
 
 基于位置的注意力机制仅关心序列元素的位置和它们之间的距离。基于位置的注意力机制会忽略静音或减少它们，因为该注意力机制没有发现输入的内容。
 
-混合注意力机制(hybrid attention)：
+### 混合注意力机制(hybrid attention)：
 
 顾名思义，混合注意力机制是上述两者注意力机制的结合：
 
@@ -275,13 +275,13 @@ $$ e_{ij}=score(s_{i-1},\alpha_{i-1},h_j)=v_a^T\mathop{tanh}(Ws_{i-1}+Vh_j+Uf_{i
 
 其中，$s_{i−1}$为之前的解码器隐状态，$\alpha_{i−1}$是之前的注意力权重，$h_j$是第j个编码器隐状态。为其添加偏置值b，最终的score函数计算如下：
 
-其中，$v_a$、W、V、U和b为待训练参数，$s_{i−1}$为上一个时间步中解码器隐状态，hj是当前编码器隐状态，$f_{i,j}$是之前的注意力权重$α_{i−1}$经卷积而得的位置特征(location feature)， $f_i=F∗\alpha_{i−1}$。混合注意力机制能够同时考虑内容和输入元素的位置。
+其中，$v_a$、W、V、U和b为待训练参数，$s_{i−1}$为上一个时间步中解码器隐状态，$h_j$是当前编码器隐状态，$f_{i,j}$是之前的注意力权重$α_{i−1}$经卷积而得的位置特征(location feature)， $f_i=F∗\alpha_{i−1}$。混合注意力机制能够同时考虑内容和输入元素的位置。
 
 Tacotron2注意力机制，Location Sensitive Attention
 
 $$ e_{i,j}=score(s_i,c\alpha_{i-1},h_j)=v_a^T\mathop{tanh}(Ws_i+Vh_j+Uf_{i,j}+b) $$
 
-其中，$s_i$为当前解码器隐状态而非上一步解码器隐状态，偏置值b被初始化为0。位置特征$f_i$使用累加注意力权重cαi卷积而来：
+其中，$s_i$为当前解码器隐状态而非上一步解码器隐状态，偏置值b被初始化为0。位置特征$f_i$使用累加注意力权重$c\alpha_i$卷积而来：
 
 $$ f_i=F*c\alpha_{i-1}\\
 c\alpha_i=\sum_{j=1}^{i-1}\alpha_j $$
@@ -325,7 +325,7 @@ $$ y_r=PostNet(y)=W_{ps}f_{ps}+b_{ps} $$
 
 $$ loss=\frac{1}{n}\sum_{i=1}^{n}(y_{real,i}-y_i)^2+\frac{1}{n}\sum_{i=1}^n(y_{real,i}-y_{final,i})^2+\lambda\sum_{j=1}^p w_j^2 $$
 
-其中，yreal,i为真实声谱，yi、yfinal,i分别为进入后处理网络前、后的声谱，n为batch中的样本数，λ为正则化参数，p为参数总数，w​为神经网络中的参数。注意，不需要正则化偏置值。
+其中，$y_{real}$,i为真实声谱，$y_i$、$y_{final}$,i分别为进入后处理网络前、后的声谱，n为batch中的样本数，λ为正则化参数，p为参数总数，w​为神经网络中的参数。注意，不需要正则化偏置值。
 
 [i1]: https://gist.github.com/huailiang/45ccce613e77ce860d4e161ee1ca90fe
 [i2]: https://www.cnblogs.com/jinbuqi/p/11803923.html
