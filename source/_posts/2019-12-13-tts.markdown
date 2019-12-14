@@ -54,7 +54,6 @@ Tacotron2是由Google Brain 2017年提出来的一个语音合成框架。Tacotr
         return result.replace('}{', ' ')
    ```
 
-
 ### 声音处理
 
 一般很难直接能从声音的波形图里，提取出声音的特征，需要先进行转换。 一般的话，都是转换为梅尔图谱或者梅尔频率倒谱系数 MFCC， 在骨骼的论文里转换成了梅尔图谱。
@@ -90,6 +89,83 @@ magnitude = torch.sqrt(real_part ** 2 + imag_part ** 2)
 mel_output = torch.matmul(self.mel_basis, magnitudes)
 ```
 
+## 傅里叶变换
+
+上述处理声音用到短时傅里叶变换，如果已经对傅里叶变换了解可以跳过此小节。
+
+傅立叶变换，表示能将满足一定条件的某个函数表示成三角函数（正弦和/或余弦函数）或者它们的积分的线性组合。在不同的研究领域，傅立叶变换具有多种不同的变体形式，如连续傅立叶变换和离散傅立叶变换。
+
+傅里叶变换把时域信号变为频域信号。在离散傅里叶变换中，频域信号由一系列不同频率的谐波（频率成倍数）组成。scipy.fftpack.fft返回值是一个复数数组，每个复数表示一个正弦波。通常一个波形由振幅，相位，频率三个变量确定，可以从fft的返回值里，获取这些信息。
+
+假设a是时域中的周期信号，采样频率为Fs，采样点数为N。如果A[N] = fft(a[N])，返回值A[N]是一个复数数组，其中：
+
+• A[0]表示频率为0hz的信号，即直流分量
+
+• A[1:N/2]包含正频率项，A[N/2:]包含负频率项。正频率项就是转化后的频域信号，通常我们只需要正频率项，即前面的n/2项，负频率项是计算的中间结果（正频率项的镜像值）
+
+• A[i] = real + j * imag，是一个复数，相位就是复数的辐角，相位 = arg(real/imag)
+
+• 振幅就是复数的模，振幅 = sqrt(real^2+imag^2)。但是fft的返回值的模是放大值，直流分量的振幅放大了N倍，弦波分量的振幅放大了N/2倍
+
+```py
+import numpy as np
+from scipy.fftpack import fft, ifft
+import matplotlib.pyplot as plt
+
+x = np.linspace(0, 1, 800)
+
+# 设置需要采样的信号，频率分量有80，190和300
+y = 7 * np.sin(2 * np.pi * 80 * x) + \
+    2.8 * np.sin(2 * np.pi * 190 * x) + \
+    5.1 * np.sin(2 * np.pi * 300 * x)
+
+yy = fft(y)  # 快速傅里叶变换
+y_real = yy.real  # 获取实数部分
+y_imag = yy.imag  # 获取虚数部分
+
+yf = abs(fft(y))  # 取绝对值
+yf1 = 2 * abs(fft(y)) / len(x)  # 归一化处理
+yf2 = yf1[range(int(len(x) / 2))]  # 由于对称性，只取一半区间
+
+xf = np.arange(len(y))  # 频率
+xf1 = xf
+xf2 = xf[range(int(len(x) / 2))]  # 取一半区间
+
+plt.figure(figsize=(10, 4))
+plt.subplot(231)
+plt.plot(x[0:50], y[0:50])
+
+plt.subplot(232)
+plt.plot(xf, y_real, 'r')
+
+plt.subplot(233)
+plt.plot(xf, y_imag, 'g')
+
+plt.subplot(234)
+plt.plot(xf1, yf, 'g')
+
+plt.subplot(235)
+plt.plot(xf1, yf1, 'r')
+
+plt.subplot(236)
+plt.plot(xf2, yf2, 'b')
+
+plt.show()
+```
+
+代码来源[gist][i1], 运行效果如下：
+
+![](/img/post-ml/tts5.jpg)
+
+(Fig1原始波形，Fig2实数部分, Fig3虚数部分，Fig4绝对值, Fig5归一化，Fig6对称取半)
+
+从上图可以清晰看到傅里叶变换之后， 频域对称性分布， 归一化之后得到每一个频率的振幅。
+
+
+#### STFT
+（STFT，short-time Fourier transform，或 short-term Fourier transform)）是和傅里叶变换相关的一种数学变换，用以确定时变信号其局部区域正弦波的频率与相位。
+
+选择一个时频局部化的窗函数，假定分析窗函数g(t)在一个短时间间隔内是平稳（伪平稳）的，移动窗函数，使f(t)g(t)在不同的有限时间宽度内是平稳信号，从而计算出各个不同时刻的功率谱。短时傅里叶变换使用一个固定的窗函数，窗函数一旦确定了以后，其形状就不再发生改变，短时傅里叶变换的分辨率也就确定了。如果要改变分辨率，则需要重新选择窗函数。短时傅里叶变换用来分析分段平稳信号或者近似平稳信号犹可，但是对于非平稳信号，当信号变化剧烈时，要求窗函数有较高的时间分辨率；而波形变化比较平缓的时刻，主要是低频 信号，则要求窗函数有较高的频率分辨率。
 
 ## 注意力机制
 
@@ -195,3 +271,8 @@ $$ \alpha_{t,i} = \frac{exp(score(h_t, h_i))}{\sum_{j=1}^{T_x}{exp(score(h_t,h_j
 局部注意力机制总结如下图:
 
 ![](/img/post-ml/tts4.jpg)
+
+
+
+
+[i1]: https://gist.github.com/huailiang/45ccce613e77ce860d4e161ee1ca90fe

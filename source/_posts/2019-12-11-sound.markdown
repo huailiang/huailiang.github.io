@@ -334,7 +334,7 @@ librosa.stft(y, n_fft=2048,
 
 ##### 返回：
 
-• STFT矩阵 $ shape =（1 + \frac{n\underlinefft}{2}，t）$
+• STFT矩阵 $ shape =（1 + \frac{n-fft}{2}，t）$
 
 
 ### 短时傅里叶逆变换
@@ -348,10 +348,9 @@ librosa.istft(stft_matrix,
         length=None)
 ```
 
-短时傅立叶逆变换（ISTFT），将复数值D(f,t)频谱矩阵转换为时间序列y，窗函数、帧移等参数应与stft相同
+短时傅立叶逆变换(ISTFT), 将复数值D(f,t)频谱矩阵转换为时间序列y，窗函数、帧移等参数应与stft相同
 
 #### 参数：
-
 • stft_matrix ：经过STFT之后的矩阵
 • hop_length ：帧移，默认为winlength4
 • win_length ：窗长，默认为n_fft
