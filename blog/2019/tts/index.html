@@ -5,9 +5,9 @@
   <meta http-equiv="X-UA-Compatible" content="IE=edge">
   <meta name="viewport" content="width=device-width, initial-scale=1">
 
-  <title>Tacatron2 之文字转语音</title>
+  <title>文字转语音TTS</title>
   <meta name="description"
-    content="声音的概念">
+    content="概述">
 
   <link rel="shortcut icon" href="/img/favicon.ico">
   <link rel="stylesheet" href="/css/main.css">
@@ -67,88 +67,329 @@ MathJax.Hub.Config({
 
   <div class="card">
     <header class="post-header">
-      <h1 class="post-title">Tacatron2 之文字转语音</h1>
-      <p class="post-meta">Dec 1, 2019 •
+      <h1 class="post-title">文字转语音TTS</h1>
+      <p class="post-meta">Dec 13, 2019 •
         Huailiang</p>
     </header>
 
     <div class="post-content">
-      <h2 id="声音的概念">声音的概念</h2>
+      <h2 id="概述">概述</h2>
 
-<blockquote>
-  <p>声音信号本是一维的时域信号，直观上很难看出频率变化规律。如果通过傅里叶变换把它变到频域上，虽然可以看出信号的频率分布，但是丢失了时域信息，无法看出频率分布随时间的变化。为了解决这个问题，很多时频分析手段应运而生。短时傅里叶，小波，Wigner分布等都是常用的时频域分析方法。</p>
-</blockquote>
+<p>Tacotron2是由Google Brain 2017年提出来的一个语音合成框架<a href="https://arxiv.org/abs/1712.05884">Tacotron2</a>:一个完整神经网络语音合成方法。模型主要由三部分组成：<br />
+• 声谱预测网络：一个引入注意力机制（attention）的基于循环的Seq2seq的特征预测网络，用于从输入的字符序列预测梅尔频谱的帧序列。<br />
+• 声码器（vocoder）：一个WaveNet的修订版，用预测的梅尔频谱帧序列来生成时域波形样本。<br />
+• 中间连接层：使用低层次的声学表征-梅尔频率声谱图来衔接系统的两个部分。</p>
 
-<h3 id="spectrogram-声谱图">Spectrogram 声谱图</h3>
+<p><img src="/img/post-ml/tts2.jpg" alt="" /></p>
 
-<h3 id="stft-短时傅里叶变换">STFT 短时傅里叶变换</h3>
+<h2 id="预处理">预处理</h2>
 
-<p>短时傅里叶变换（STFT）是最经典的时频域分析方法。傅里叶变换（FT）想必大家都不陌生，这里不做专门介绍。所谓短时傅里叶变换，顾名思义，是对短时的信号做傅里叶变化。那么短时的信号怎么得到的? 是长时的信号分帧得来的。</p>
+<h3 id="文字处理">文字处理</h3>
 
-<p>STFT的原理非常简单，把一段长信号分帧、加窗，再对每一帧做傅里叶变换（FFT），最后把每一帧的结果沿另一个维度堆叠起来，得到类似于一幅图的二维信号形式。如果我们原始信号是声音信号，那么通过STFT展开得到的二维信号就是所谓的声谱图。</p>
+<p>一般传给模型的编码好的词向量，而不是原始的文字， 因此我们需要对文字进行编码,压缩到一个固定长度的向量。文字主要由字幕和标点、空格等组成， 这里先将文字转换成对应的向量， 如果是汉字的话， 可以先转成拼音。 步骤如下：</p>
 
-<p><img src="/img/post-ml/tts1.jpeg" alt="" /></p>
+<ol>
+  <li>
+    <p>先清除文字里陌生字符， 可以使用正则表达式匹配</p>
 
-<h3 id="dct变换">DCT变换</h3>
+    <div class="language-py highlighter-rouge"><pre class="highlight"><code><span class="n">_curly_re</span> <span class="o">=</span> <span class="n">re</span><span class="o">.</span><span class="nb">compile</span><span class="p">(</span><span class="s">r'(.*?)</span><span class="err">\</span><span class="s">{(.+?)</span><span class="err">\</span><span class="s">}(.*)'</span><span class="p">)</span>
+</code></pre>
+    </div>
+  </li>
+  <li>
+    <p>对每个字母进行编码, 得到一个词向量， 然后传给模型</p>
+    <div class="language-py highlighter-rouge"><pre class="highlight"><code> <span class="n">_pad</span> <span class="o">=</span> <span class="s">'_'</span>
+ <span class="n">_punctuation</span> <span class="o">=</span> <span class="s">'!</span><span class="se">\'</span><span class="s">(),.:;? '</span>
+ <span class="n">_special</span> <span class="o">=</span> <span class="s">'-'</span>
+ <span class="n">_letters</span> <span class="o">=</span> <span class="s">'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz'</span>
 
-<p>即离散余弦转换， DCT能够将空域的信号转换到频域上，因此具有良好的去相关性的性能。DCT变换本身是无损的且具有对称性</p>
+ <span class="c"># Prepend "@" to ARPAbet symbols to ensure uniqueness:</span>
+ <span class="n">_arpabet</span> <span class="o">=</span> <span class="p">[</span><span class="s">'@'</span> <span class="o">+</span> <span class="n">s</span> <span class="k">for</span> <span class="n">s</span> <span class="ow">in</span> <span class="n">cmudict</span><span class="o">.</span><span class="n">valid_symbols</span><span class="p">]</span>
 
-<h3 id="梅尔频谱-mel-spectrum">梅尔频谱 mel-spectrum</h3>
+ <span class="c"># Export all symbols:</span>
+ <span class="n">symbols</span> <span class="o">=</span> <span class="p">[</span><span class="n">_pad</span><span class="p">]</span> <span class="o">+</span> <span class="nb">list</span><span class="p">(</span><span class="n">_special</span><span class="p">)</span> <span class="o">+</span> <span class="nb">list</span><span class="p">(</span><span class="n">_punctuation</span><span class="p">)</span> <span class="o">+</span> <span class="nb">list</span><span class="p">(</span><span class="n">_letters</span><span class="p">)</span> <span class="o">+</span> <span class="n">_arpabet</span>
 
-<p>声谱图往往是很大的一张图，为了得到合适大小的声音特征，往往把它通过梅尔标度滤波器组（mel-scale filter banks），变换为梅尔频谱.</p>
+ <span class="k">def</span> <span class="nf">sequence_to_text</span><span class="p">(</span><span class="n">sequence</span><span class="p">):</span>
+     <span class="n">result</span> <span class="o">=</span> <span class="s">''</span>
+     <span class="k">for</span> <span class="n">symbol_id</span> <span class="ow">in</span> <span class="n">sequence</span><span class="p">:</span>
+         <span class="k">if</span> <span class="n">symbol_id</span> <span class="ow">in</span> <span class="n">_id_to_symbol</span><span class="p">:</span>
+             <span class="n">s</span> <span class="o">=</span> <span class="n">_id_to_symbol</span><span class="p">[</span><span class="n">symbol_id</span><span class="p">]</span>
+             <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">s</span><span class="p">)</span> <span class="o">&gt;</span> <span class="mi">1</span> <span class="ow">and</span> <span class="n">s</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="o">==</span> <span class="s">'@'</span><span class="p">:</span>
+                 <span class="n">s</span> <span class="o">=</span>  <span class="n">s</span><span class="p">[</span><span class="mi">1</span><span class="p">:]</span>
+             <span class="n">result</span> <span class="o">+=</span> <span class="n">s</span>
+     <span class="k">return</span> <span class="n">result</span><span class="o">.</span><span class="n">replace</span><span class="p">(</span><span class="s">'}{'</span><span class="p">,</span> <span class="s">' '</span><span class="p">)</span>
+</code></pre>
+    </div>
+  </li>
+</ol>
 
-<p>梅尔标度，the mel scale，由Stevens，Volkmann和Newman在1937年命名。我们知道，频率的单位是赫兹（Hz），人耳能听到的频率范围是20-20000Hz，但人耳对Hz这种标度单位并不是线性感知关系。例如如果我们适应了1000Hz的音调，如果把音调频率提高到2000Hz，我们的耳朵只能觉察到频率提高了一点点，根本察觉不到频率提高了一倍。如果将普通的频率标度转化为梅尔频率标度，映射关系如下式所示：</p>
+<h3 id="声音处理">声音处理</h3>
 
-<script type="math/tex; mode=display">mel(f) = 2595 * \log_{10}(1+f/700)</script>
+<p>一般很难直接能从声音的波形图里，提取出声音的特征，需要先进行转换。 一般的话，都是转换为梅尔图谱或者梅尔频率倒谱系数 MFCC， 在骨骼的论文里转换成了梅尔图谱。</p>
 
-<h3 id="梅尔倒频谱-mfc">梅尔倒频谱 MFC</h3>
+<p>使用librosa或者scipy.io.wavfile 加载到内存， 得到numpy array</p>
 
-<p>梅尔倒频谱(Mel-Frequency Spectrum, MFC)系一个可用来代表短期音讯的频谱，其原理根基于以非线性的梅尔刻度(mel scale)表示的对数频谱(spectrum)及其线性余弦转换(linear cosine transform)之上</p>
-
-<p>梅尔倒频谱系数通常是用以下方法得到的：</p>
-<div class="highlighter-rouge"><pre class="highlight"><code>* 将一讯号进行傅里叶转换（Fourier transform）
-* 将频谱映射（mapping）至梅尔刻度，利用三角窗函数（triangular overlapping window）
-* 取对数（logarithm）
-* 取离散余弦转换（discrete cosine transform）
-* MFCC是转换后的频谱
+<div class="language-py highlighter-rouge"><pre class="highlight"><code><span class="kn">from</span> <span class="nn">scipy.io.wavfile</span> <span class="kn">import</span> <span class="n">read</span>
+<span class="n">sampling_rate</span><span class="p">,</span> <span class="n">data</span> <span class="o">=</span> <span class="n">read</span><span class="p">(</span><span class="n">full_path</span><span class="p">)</span>
 </code></pre>
 </div>
 
-<h5 id="系数推导">系数推导:</h5>
+<p>进行加窗、短时傅里叶变换进入复数域</p>
 
-<ol>
-  <li>对该信号做傅立叶变换</li>
-</ol>
+<div class="language-py highlighter-rouge"><pre class="highlight"><code><span class="kn">from</span> <span class="nn">scipy.signal</span> <span class="kn">import</span> <span class="n">get_window</span>
 
-<script type="math/tex; mode=display">X[k] = FTx[n]</script>
+<span class="c"># get window and zero center pad it to filter_length</span>
+<span class="n">fft_window</span> <span class="o">=</span> <span class="n">get_window</span><span class="p">(</span><span class="n">window</span><span class="p">,</span> <span class="n">win_length</span><span class="p">,</span> <span class="n">fftbins</span><span class="o">=</span><span class="bp">True</span><span class="p">)</span>
+<span class="n">fft_window</span> <span class="o">=</span> <span class="n">pad_center</span><span class="p">(</span><span class="n">fft_window</span><span class="p">,</span> <span class="n">filter_length</span><span class="p">)</span>
+<span class="n">fft_window</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">from_numpy</span><span class="p">(</span><span class="n">fft_window</span><span class="p">)</span><span class="o">.</span><span class="nb">float</span><span class="p">()</span>
+<span class="n">forward_basis</span> <span class="o">*=</span> <span class="n">fft_window</span>
+<span class="n">inverse_basis</span> <span class="o">*=</span> <span class="n">fft_window</span>
+<span class="c"># 加窗</span>
+<span class="n">forward_transform</span> <span class="o">=</span> <span class="n">F</span><span class="o">.</span><span class="n">conv1d</span><span class="p">(</span>
+        <span class="n">input_data</span><span class="p">,</span>
+        <span class="n">Variable</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">forward_basis</span><span class="p">,</span> <span class="n">requires_grad</span><span class="o">=</span><span class="bp">False</span><span class="p">),</span>
+        <span class="n">stride</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">hop_length</span><span class="p">,</span> <span class="n">padding</span><span class="o">=</span><span class="mi">0</span><span class="p">)</span>
+<span class="c"># 短时傅里叶变换       </span>
+<span class="n">cutoff</span> <span class="o">=</span> <span class="nb">int</span><span class="p">((</span><span class="bp">self</span><span class="o">.</span><span class="n">filter_length</span> <span class="o">/</span> <span class="mi">2</span><span class="p">)</span> <span class="o">+</span> <span class="mi">1</span><span class="p">)</span>
+<span class="n">real_part</span> <span class="o">=</span> <span class="n">forward_transform</span><span class="p">[:,</span> <span class="p">:</span><span class="n">cutoff</span><span class="p">,</span> <span class="p">:]</span>  <span class="c"># 实部</span>
+<span class="n">imag_part</span> <span class="o">=</span> <span class="n">forward_transform</span><span class="p">[:,</span> <span class="n">cutoff</span><span class="p">:,</span> <span class="p">:]</span>  <span class="c"># 虚部</span>
+<span class="n">magnitude</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">sqrt</span><span class="p">(</span><span class="n">real_part</span> <span class="o">**</span> <span class="mi">2</span> <span class="o">+</span> <span class="n">imag_part</span> <span class="o">**</span> <span class="mi">2</span><span class="p">)</span>
+<span class="n">mel_output</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">matmul</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">mel_basis</span><span class="p">,</span> <span class="n">magnitudes</span><span class="p">)</span>
+</code></pre>
+</div>
 
-<ol>
-  <li>根据下面公式算出Y[m]</li>
-</ol>
+<h2 id="傅里叶变换">傅里叶变换</h2>
 
-<script type="math/tex; mode=display">Y[M] = \log\left( \sum_{k=f_{m-1}}^{f_{m+1}} \left|X[k] \right|^2 B_m[k] \right)</script>
+<p>上述处理声音用到短时傅里叶变换，如果已经对傅里叶变换了解可以跳过此小节。</p>
 
-<p>其中 $ B_m[k] $ 是梅尔频率倒频谱的遮罩</p>
+<p>傅立叶变换，表示能将满足一定条件的某个函数表示成三角函数（正弦和/或余弦函数）或者它们的积分的线性组合。在不同的研究领域，傅立叶变换具有多种不同的变体形式，如连续傅立叶变换和离散傅立叶变换。</p>
 
-<script type="math/tex; mode=display">% <![CDATA[
-c(u) = 
-\begin{cases}
-0  & k < f_{m-1} and k > f_{m+1}\\
-\frac{k - f_{m-1}}{f_m - f_{m-1}} & f_{m-1} \leqslant k \leqslant f_{m+1} \\
-\frac{f_{m+1} - k}{f_{m+1} - f_m} & f_m \leqslant k \leqslant f_{m+1}
-\end{cases} %]]></script>
+<p>傅里叶变换把时域信号变为频域信号。在离散傅里叶变换中，频域信号由一系列不同频率的谐波（频率成倍数）组成。scipy.fftpack.fft返回值是一个复数数组，每个复数表示一个正弦波。通常一个波形由振幅，相位，频率三个变量确定，可以从fft的返回值里，获取这些信息。</p>
 
-<p>对Y[m]做IDCT得 ，因为Y[m]是偶函数,故用IDCT(反离散余弦变换)取代IDFT(反离散傅立叶变换)</p>
+<p>假设a是时域中的周期信号，采样频率为Fs，采样点数为N。如果A[N] = fft(a[N])，返回值A[N]是一个复数数组，其中：</p>
 
-<script type="math/tex; mode=display">c_x[n] = \frac{1}{M} \sum_{m=1}^{M}Y[m]cos\left( \frac{\pi n(m-1/2)}{M} \right)</script>
+<p>• A[0]表示频率为0hz的信号，即直流分量</p>
 
-<h2 id="librosa-音频处理库">librosa 音频处理库</h2>
+<p>• A[1:N/2]包含正频率项，A[N/2:]包含负频率项。正频率项就是转化后的频域信号，通常我们只需要正频率项，即前面的n/2项，负频率项是计算的中间结果（正频率项的镜像值）</p>
 
-<h2 id="写在最后">写在最后</h2>
+<p>• A[i] = real + j * imag，是一个复数，相位就是复数的辐角，相位 = arg(real/imag)</p>
 
-<p>由于作者经常使用pycharm写python脚本， 已经很熟悉Jetbrains的那一套环境了，所以我更倾向于使用第一种方式来调试lua。 然而vscode显然更轻量级一些， 读者喜欢使用哪一款，萝卜青菜 各有所爱吧。</p>
+<p>• 振幅就是复数的模，振幅 = sqrt(real^2+imag^2)。但是fft的返回值的模是放大值，直流分量的振幅放大了N倍，弦波分量的振幅放大了N/2倍</p>
 
-<p><br /></p>
+<div class="language-py highlighter-rouge"><pre class="highlight"><code><span class="kn">import</span> <span class="nn">numpy</span> <span class="kn">as</span> <span class="nn">np</span>
+<span class="kn">from</span> <span class="nn">scipy.fftpack</span> <span class="kn">import</span> <span class="n">fft</span><span class="p">,</span> <span class="n">ifft</span>
+<span class="kn">import</span> <span class="nn">matplotlib.pyplot</span> <span class="kn">as</span> <span class="nn">plt</span>
+
+<span class="n">x</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">linspace</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="mi">1</span><span class="p">,</span> <span class="mi">800</span><span class="p">)</span>
+
+<span class="c"># 设置需要采样的信号，频率分量有80，190和300</span>
+<span class="n">y</span> <span class="o">=</span> <span class="mi">7</span> <span class="o">*</span> <span class="n">np</span><span class="o">.</span><span class="n">sin</span><span class="p">(</span><span class="mi">2</span> <span class="o">*</span> <span class="n">np</span><span class="o">.</span><span class="n">pi</span> <span class="o">*</span> <span class="mi">80</span> <span class="o">*</span> <span class="n">x</span><span class="p">)</span> <span class="o">+</span> \
+    <span class="mf">2.8</span> <span class="o">*</span> <span class="n">np</span><span class="o">.</span><span class="n">sin</span><span class="p">(</span><span class="mi">2</span> <span class="o">*</span> <span class="n">np</span><span class="o">.</span><span class="n">pi</span> <span class="o">*</span> <span class="mi">190</span> <span class="o">*</span> <span class="n">x</span><span class="p">)</span> <span class="o">+</span> \
+    <span class="mf">5.1</span> <span class="o">*</span> <span class="n">np</span><span class="o">.</span><span class="n">sin</span><span class="p">(</span><span class="mi">2</span> <span class="o">*</span> <span class="n">np</span><span class="o">.</span><span class="n">pi</span> <span class="o">*</span> <span class="mi">300</span> <span class="o">*</span> <span class="n">x</span><span class="p">)</span>
+
+<span class="n">yy</span> <span class="o">=</span> <span class="n">fft</span><span class="p">(</span><span class="n">y</span><span class="p">)</span>  <span class="c"># 快速傅里叶变换</span>
+<span class="n">y_real</span> <span class="o">=</span> <span class="n">yy</span><span class="o">.</span><span class="n">real</span>  <span class="c"># 获取实数部分</span>
+<span class="n">y_imag</span> <span class="o">=</span> <span class="n">yy</span><span class="o">.</span><span class="n">imag</span>  <span class="c"># 获取虚数部分</span>
+
+<span class="n">yf</span> <span class="o">=</span> <span class="nb">abs</span><span class="p">(</span><span class="n">fft</span><span class="p">(</span><span class="n">y</span><span class="p">))</span>  <span class="c"># 取绝对值</span>
+<span class="n">yf1</span> <span class="o">=</span> <span class="mi">2</span> <span class="o">*</span> <span class="nb">abs</span><span class="p">(</span><span class="n">fft</span><span class="p">(</span><span class="n">y</span><span class="p">))</span> <span class="o">/</span> <span class="nb">len</span><span class="p">(</span><span class="n">x</span><span class="p">)</span>  <span class="c"># 归一化处理</span>
+<span class="n">yf2</span> <span class="o">=</span> <span class="n">yf1</span><span class="p">[</span><span class="nb">range</span><span class="p">(</span><span class="nb">int</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">x</span><span class="p">)</span> <span class="o">/</span> <span class="mi">2</span><span class="p">))]</span>  <span class="c"># 由于对称性，只取一半区间</span>
+
+<span class="n">xf</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">arange</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">y</span><span class="p">))</span>  <span class="c"># 频率</span>
+<span class="n">xf1</span> <span class="o">=</span> <span class="n">xf</span>
+<span class="n">xf2</span> <span class="o">=</span> <span class="n">xf</span><span class="p">[</span><span class="nb">range</span><span class="p">(</span><span class="nb">int</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">x</span><span class="p">)</span> <span class="o">/</span> <span class="mi">2</span><span class="p">))]</span>  <span class="c"># 取一半区间</span>
+
+<span class="n">plt</span><span class="o">.</span><span class="n">figure</span><span class="p">(</span><span class="n">figsize</span><span class="o">=</span><span class="p">(</span><span class="mi">10</span><span class="p">,</span> <span class="mi">4</span><span class="p">))</span>
+<span class="n">plt</span><span class="o">.</span><span class="n">subplot</span><span class="p">(</span><span class="mi">231</span><span class="p">)</span>
+<span class="n">plt</span><span class="o">.</span><span class="n">plot</span><span class="p">(</span><span class="n">x</span><span class="p">[</span><span class="mi">0</span><span class="p">:</span><span class="mi">50</span><span class="p">],</span> <span class="n">y</span><span class="p">[</span><span class="mi">0</span><span class="p">:</span><span class="mi">50</span><span class="p">])</span>
+
+<span class="n">plt</span><span class="o">.</span><span class="n">subplot</span><span class="p">(</span><span class="mi">232</span><span class="p">)</span>
+<span class="n">plt</span><span class="o">.</span><span class="n">plot</span><span class="p">(</span><span class="n">xf</span><span class="p">,</span> <span class="n">y_real</span><span class="p">,</span> <span class="s">'r'</span><span class="p">)</span>
+
+<span class="n">plt</span><span class="o">.</span><span class="n">subplot</span><span class="p">(</span><span class="mi">233</span><span class="p">)</span>
+<span class="n">plt</span><span class="o">.</span><span class="n">plot</span><span class="p">(</span><span class="n">xf</span><span class="p">,</span> <span class="n">y_imag</span><span class="p">,</span> <span class="s">'g'</span><span class="p">)</span>
+
+<span class="n">plt</span><span class="o">.</span><span class="n">subplot</span><span class="p">(</span><span class="mi">234</span><span class="p">)</span>
+<span class="n">plt</span><span class="o">.</span><span class="n">plot</span><span class="p">(</span><span class="n">xf1</span><span class="p">,</span> <span class="n">yf</span><span class="p">,</span> <span class="s">'g'</span><span class="p">)</span>
+
+<span class="n">plt</span><span class="o">.</span><span class="n">subplot</span><span class="p">(</span><span class="mi">235</span><span class="p">)</span>
+<span class="n">plt</span><span class="o">.</span><span class="n">plot</span><span class="p">(</span><span class="n">xf1</span><span class="p">,</span> <span class="n">yf1</span><span class="p">,</span> <span class="s">'r'</span><span class="p">)</span>
+
+<span class="n">plt</span><span class="o">.</span><span class="n">subplot</span><span class="p">(</span><span class="mi">236</span><span class="p">)</span>
+<span class="n">plt</span><span class="o">.</span><span class="n">plot</span><span class="p">(</span><span class="n">xf2</span><span class="p">,</span> <span class="n">yf2</span><span class="p">,</span> <span class="s">'b'</span><span class="p">)</span>
+
+<span class="n">plt</span><span class="o">.</span><span class="n">show</span><span class="p">()</span>
+</code></pre>
+</div>
+
+<p>代码来源<a href="https://gist.github.com/huailiang/45ccce613e77ce860d4e161ee1ca90fe">gist</a>, 运行效果如下：</p>
+
+<p><img src="/img/post-ml/tts5.jpg" alt="" /></p>
+
+<p>(Fig1原始波形，Fig2实数部分, Fig3虚数部分，Fig4绝对值, Fig5归一化，Fig6对称取半)</p>
+
+<p>从上图可以清晰看到傅里叶变换之后， 频域对称性分布(傅立叶变换的共轭对称性)， 归一化之后得到每一个频率的振幅。</p>
+
+<h4 id="stft">STFT</h4>
+<p>（STFT，short-time Fourier transform，或 short-term Fourier transform)）是和傅里叶变换相关的一种数学变换，用以确定时变信号其局部区域正弦波的频率与相位。</p>
+
+<p>选择一个时频局部化的窗函数，假定分析窗函数g(t)在一个短时间间隔内是平稳（伪平稳）的，移动窗函数，使f(t)g(t)在不同的有限时间宽度内是平稳信号，从而计算出各个不同时刻的功率谱。短时傅里叶变换使用一个固定的窗函数，窗函数一旦确定了以后，其形状就不再发生改变，短时傅里叶变换的分辨率也就确定了。如果要改变分辨率，则需要重新选择窗函数。短时傅里叶变换用来分析分段平稳信号或者近似平稳信号犹可，但是对于非平稳信号，当信号变化剧烈时，要求窗函数有较高的时间分辨率；而波形变化比较平缓的时刻，主要是低频 信号，则要求窗函数有较高的频率分辨率。</p>
+
+<h4 id="dct">DCT</h4>
+
+<p>由于许多要处理的信号都是实信号，在使用FFT时，对于实信号，傅立叶变换的共轭对称性导致在频域中有一半的数据冗余。</p>
+
+<p>离散余弦变换（DCT）是对实信号定义的一种变换，变换后在频域中得到的也是一个实信号，相比离散傅里叶变换DFT而言, DCT可以减少一半以上的计算。DCT还有一个很重要的性质（能量集中特性）：大多书自然信号（声音、图像）的能量都集中在离散余弦变换后的低频部分，因而DCT在（声音、图像）数据压缩中得到了广泛的使用。由于DCT是从DFT推导出来的另一种变换，因此许多DFT的属性在DCT中仍然是保留下来的。</p>
+
+<p>SciPy.fftpack中，提供了离散余弦变换(DCT)与离散余弦逆变换(IDCT)的实现。我们将上面fft运算改成dct运算， <br />
+修改后的<a href="https://gist.github.com/huailiang/343da329a0f1d44b82bc1e8d2c0a08ef">代码</a>运行效果如下:</p>
+
+<p><img src="/img/post-ml/tts6.jpg" alt="" /></p>
+
+<h2 id="编码器-解码器encoder-decoder结构">编码器-解码器(Encoder-Decoder)结构</h2>
+
+<p>在原始的编码器-解码器结构中，编码器(encoder)输入一个序列或句子，然后将其压缩到一个固定长度的向量(向量也可以理解为一种形式的序列)中；解码器(decoder)使用固定长度的向量，将其解压成一个序列。</p>
+
+<p><img src="/img/post-ml/tts1.jpg" alt="" /></p>
+
+<p>最普遍的方式是使用RNN实现编码器和解码器。</p>
+
+<p>编码器将输入序列映射成固定长度的向量，解码器在生成输出序列阶段，利用注意力机制“关注”向量的不同部分。</p>
+
+<h2 id="编码器">编码器</h2>
+
+<p>前置知识</p>
+
+<h3 id="双向rnn">双向RNN</h3>
+
+<p>双向RNN确保模型能够同时感知前向和后向的信息。双向RNN包含两个独立的RNN，一个前向RNN从前向后读入序列(从f1到$f_{Tx}$)，另一个后向RNN从后向前读入序列(从$f_{Tx}$到f1)，最终的输出为两者的拼接。</p>
+
+<p>在Tacotron2中，编码器将输入序列X=[x1,x2,…,xTx]映射成序列H=[h1,h2,…,hTx],其中序列H被称作“编码器隐状态”(encoder hidden states)。注意：编码器的输入输出序列都拥有相同的长度，hi之于相邻分量hj拥有的信息等价于xi之于xj所拥有的信息。</p>
+
+<p>在Tacotron2中，每一个输入分量xi就是一个字符。Tacotron2的编码器是一个3层卷积层后跟一个双向LSTM层形成的模块，在Tacotron2中卷积层给予了神经网络类似于N−gram感知上下文的能力。这里使用卷积层获取上下文主要是由于实践中RNN很难捕获长时依赖，并且卷积层的使用使得模型对不发音字符更为鲁棒(如’know’中的’k’)。</p>
+
+<p>经词嵌入(word embedding)的字符序列先送入三层卷积层以提取上下文信息，然后送入一个双向的LSTM中生成编码器隐状态，即：</p>
+
+<script type="math/tex; mode=display">f_{e}=ReLU(F_3*ReLU(F_2*ReLU(F_1*\overline{E}(X))))\\
+H=EncoderRecurrency(f_{e})</script>
+
+<p>其中，F1、F2、F3为3个卷积核，ReLU为每一个卷积层上的非线性激活，$\overline{E}$表示对字符序列X做embedding，EncoderRecurrency表示双向LSTM。</p>
+
+<p>编码器隐状态生成后，就会将其送入注意力网络(attention network)中生成上下文向量(context vector)。</p>
+
+<p>注意力机制</p>
+
+<p>注意力(attention)用作编码器和解码器的桥接，本质是一个上下文权重向量组成的矩阵。</p>
+
+<p><img src="/img/post-ml/tts7.jpg" alt="" /></p>
+
+<script type="math/tex; mode=display">Attention(Query,Source)=\sum_{i=1}^{L_x}similarity(Query,Key_i)*Value</script>
+
+<p>如果在机器翻译(NMT)中，Souce中的Key和Value合二为一，指的是同一个东西，即输入句子中每个单词对应的语义编码。</p>
+
+<h5 id="一般的计算步骤">一般的计算步骤：</h5>
+
+<p>步骤一：Key和Value相似度度量：</p>
+
+<p>• 点积 $Similarity(Query,Key)=Query·Key$ <br />
+• cos相似性 $Similarity(Query,Key)=\frac{Query·Key_i}{||Query||*||Key_i||}$<br />
+• MLP网络 $Similarity(Query,Key_i)=MLP(Query,Key_i)$<br />
+• Key和Value还可以拼接后再内积一个参数向量，甚至权重都不一定要归一化</p>
+
+<p>步骤二：softmax归一化(alignments/attention weights):</p>
+
+<script type="math/tex; mode=display">a_i=softmax(sim_i)=\frac{e^{sim_i}}{\sum_{j=1}^{L_x}e^{sim_j}}</script>
+
+<p>步骤三：Attention数值(context vector)：</p>
+
+<script type="math/tex; mode=display">Attention(Query,Key)=\sum^{L_x}_{i=1}a_i·Value_i</script>
+
+<p>在Tacotron中，注意力计算(attention computation)发生在每一个解码器时间步上，其包含以下阶段：</p>
+
+<p>目标隐状态(上图绿框所示)与每一个源状态(上图蓝框所示)“相比”，以生成注意力权重(attention weights)或称对齐(alignments)：</p>
+
+<p>其中，$h_t$为目标隐状态，$\overline{h_s}$为源状态，score函数常被称作“能量”(energy)，因此可以表示为e。不同的score函数决定了不同类型的注意力机制。</p>
+
+<p>基于注意力权重，计算上下文向量(context vector)作为源状态的加权平均：</p>
+
+<script type="math/tex; mode=display">c_t=\sum_s\alpha_{ts}\overline{h_s}</script>
+
+<p>注意力向量作为下一个时间步的输入</p>
+
+<p>以下是不同的score函数：</p>
+
+<p>基于内容的注意力机制(content-based attention)：</p>
+
+<script type="math/tex; mode=display">e_{ij}=score(s_{i-1},h_j)=v_a^Ttanh(W_as_{i-1}+U_ah_j)</script>
+
+<p>其中，$s_{i−1}$为上一个时间步中解码器的输出(解码器隐状态，decoder hidden states)，$h_j$是编码器此刻输入(编码器隐状态，encoder hidden state j)，$v_a$、$W_a$和$U_a$是待训练参数张量。由于$U_ah_j$是独立于解码步i的，因此可以独立提前计算。基于内容的注意力机制能够将不同的输出与相应的输入元素连接，而与其位置无关。在Tacotron2中使用基于内容的注意力机制时，当输出对应于’s’的Mel频谱帧，模型会寻找所有所有对应于’s’的输入。</p>
+
+<p>基于位置的注意力机制(location-based attention)：</p>
+
+<script type="math/tex; mode=display">e_{ij}=score(\alpha_{i-1},h_j)=v_a^Ttanh(Wh_j+Uf_{i,j})</script>
+
+<p>其中，$f_{i,j}$是之前的注意力权重αi−1经卷积而得的位置特征，$f_i=F∗\alpha_{i−1}$，$v_a$、$W_a$、$U_a$和F是待训练参数。</p>
+
+<p>基于位置的注意力机制仅关心序列元素的位置和它们之间的距离。基于位置的注意力机制会忽略静音或减少它们，因为该注意力机制没有发现输入的内容。</p>
+
+<h3 id="混合注意力机制hybrid-attention">混合注意力机制(hybrid attention)：</h3>
+
+<p>顾名思义，混合注意力机制是上述两者注意力机制的结合：</p>
+
+<script type="math/tex; mode=display">e_{ij}=score(s_{i-1},\alpha_{i-1},h_j)=v_a^T\mathop{tanh}(Ws_{i-1}+Vh_j+Uf_{i,j})</script>
+
+<p>其中，$s_{i−1}$为之前的解码器隐状态，$\alpha_{i−1}$是之前的注意力权重，$h_j$是第j个编码器隐状态。为其添加偏置值b，最终的score函数计算如下：</p>
+
+<p>其中，$v_a$、W、V、U和b为待训练参数，$s_{i−1}$为上一个时间步中解码器隐状态，$h_j$是当前编码器隐状态，$f_{i,j}$是之前的注意力权重$α_{i−1}$经卷积而得的位置特征(location feature)， $f_i=F∗\alpha_{i−1}$。混合注意力机制能够同时考虑内容和输入元素的位置。</p>
+
+<p>Tacotron2注意力机制，Location Sensitive Attention</p>
+
+<script type="math/tex; mode=display">e_{i,j}=score(s_i,c\alpha_{i-1},h_j)=v_a^T\mathop{tanh}(Ws_i+Vh_j+Uf_{i,j}+b)</script>
+
+<p>其中，$s_i$为当前解码器隐状态而非上一步解码器隐状态，偏置值b被初始化为0。位置特征$f_i$使用累加注意力权重$c\alpha_i$卷积而来：</p>
+
+<script type="math/tex; mode=display">f_i=F*c\alpha_{i-1}\\
+c\alpha_i=\sum_{j=1}^{i-1}\alpha_j</script>
+
+<p>之所以使用加法累加而非乘法累积，原因如图：</p>
+
+<p><img src="/img/post-ml/tts8.jpg" alt="" /></p>
+
+<p>累加注意力权重，可以使得注意力权重网络了解它已经学习到的注意力信息，使得模型能在序列中持续进行并且避免重复未预料的语音。</p>
+
+<p>整个注意力机制如图：</p>
+
+<p><img src="/img/post-ml/tts10.jpg" alt="" /></p>
+
+<h2 id="解码器">解码器</h2>
+
+<p>解码过程从输入上一步的输出声谱或上一步的真实声谱到PreNet开始，解码过程如图：</p>
+
+<p><img src="/img/post-ml/tts9.jpg" alt="" /></p>
+
+<p>PreNet的输出与使用上一个解码步输出计算而得的上下文向量做拼接，然后整个送入RNN解码器中，RNN解码器的输出用来计算新的上下文向量，最后新计算出来的上下文向量与解码器输出做拼接，送入投影层(projection layer)以预测输出。输出有两种形式，一种是声谱帧，一种是<stop token="">的概率，后者是一个简单二分类问题，决定解码过程是否结束。使用缩减因子(reduction factor)即每一个解码步仅允许预测r(缩减因子)Mel谱帧，能够有效加速计算，减小内存占用。</stop></p>
+
+<h2 id="后处理网络">后处理网络</h2>
+
+<p>一旦解码器完成解码，预测得到的Mel谱被送入一系列的卷积层中以提高生成质量。</p>
+
+<p>后处理网络使用残差(residual)计算：</p>
+
+<script type="math/tex; mode=display">y_{final}=y+y_r</script>
+
+<p>其中，y为原始输入</p>
+
+<p>上式中，</p>
+
+<script type="math/tex; mode=display">y_r=PostNet(y)=W_{ps}f_{ps}+b_{ps}</script>
+
+<p>其中，$f_{ps}=F_{ps,i}*x$，x为上一个卷积层的输出或解码器输出，F为卷积</p>
+
+<h3 id="训练">训练</h3>
+
+<script type="math/tex; mode=display">loss=\frac{1}{n}\sum_{i=1}^{n}(y_{real,i}-y_i)^2+\frac{1}{n}\sum_{i=1}^n(y_{real,i}-y_{final,i})^2+\lambda\sum_{j=1}^p w_j^2</script>
+
+<p>其中，$y_{real}$,i为真实声谱，$y_i$、$y_{final}$,i分别为进入后处理网络前、后的声谱，n为batch中的样本数，λ为正则化参数，p为参数总数，w​为神经网络中的参数。注意，不需要正则化偏置值。</p>
 
 
     </div>
@@ -245,7 +486,7 @@ c(u) =
   
   <div class="post-nav-next post-nav-item">
     
-    <a href="/blog/2019/luadebug/"> Unity lua脚本调试</a>
+    <a href="/blog/2019/sound/"> librosa处理音频信号</a>
   </div>
   
 
