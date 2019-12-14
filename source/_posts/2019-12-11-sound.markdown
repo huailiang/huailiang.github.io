@@ -18,7 +18,7 @@ tags:
 这些声音有多种格式，使计算机可以读取和分析它们。例如：
 
 • mp3格式
-• WMA（Windows Media Audio）格式
+• wma（Windows Media Audio）格式
 • wav（波形音频文件）格式
 
 ### 音频库
@@ -301,7 +301,12 @@ def dynamic_range_compression(x, C=1, clip_val=1e-5):
 ### 短时傅里叶变换
 
 ```py
-librosa.stft(y, n_fft=2048, hop_length=None, win_length=None, window='hann', center=True, pad_mode='reflect')
+librosa.stft(y, n_fft=2048, 
+            hop_length=None, 
+            win_length=None, 
+            window='hann', 
+            center=True, 
+            pad_mode='reflect')
 ```
 
 短时傅立叶变换（STFT），返回一个复数矩阵使得D(f,t)
@@ -313,27 +318,34 @@ librosa.stft(y, n_fft=2048, hop_length=None, win_length=None, window='hann', cen
 
 • y：音频时间序列
 • n_fft：FFT窗口大小，n_fft=hop_length+overlapping
-• hop_length：帧移，如果未指定，则默认win_length / 4。
-• win_length：每一帧音频都由window（）加窗。窗长win_length，然后用零填充以匹配N_FFT。默认win_length=n_fft。
+• hop_length：帧移，如果未指定，则默认win_length / 4
+• win_length：每一帧音频都由window()加窗。窗长win_length，然后用零填充以匹配n_fft 
+    &emsp;默认win_length=n_fft。
 • window：字符串，元组，数字，函数 shape =（n_fft, )
-    &emsp;窗口（字符串，元组或数字）；
+    &emsp;窗口（字符串，元组或数字）
     &emsp;窗函数，例如scipy.signal.hanning
     &emsp;长度为n_fft的向量或数组
 • center：bool
-    &emsp;如果为True，则填充信号y，以使帧 D [:, t]以y [t * hop_length]为中心。
+    &emsp;如果为True，则填充信号y，以使帧 D [:, t]以y [t * hop_length]为中心
     &emsp;如果为False，则D [:, t]从y [t * hop_length]开始
 • dtype：D的复数值类型。默认值为64-bit complex复数
-• pad_mode：如果center = True，则在信号的边缘使用填充模式。默认情况下，STFT使用reflection padding。
+• pad_mode：如果center = True，则在信号的边缘使用填充模式
+    &emsp;默认情况下，STFT使用reflection padding
 
 ##### 返回：
 
-• STFT矩阵 $ shape =（1 + \frac{nfft}{2}，t）$
+• STFT矩阵 $ shape =（1 + \frac{n\underlinefft}{2}，t）$
 
 
 ### 短时傅里叶逆变换
 
 ```py
-librosa.istft(stft_matrix, hop_length=None, win_length=None, window='hann', center=True, length=None)
+librosa.istft(stft_matrix, 
+        hop_length=None, 
+        win_length=None, 
+        window='hann', 
+        center=True, 
+        length=None)
 ```
 
 短时傅立叶逆变换（ISTFT），将复数值D(f,t)频谱矩阵转换为时间序列y，窗函数、帧移等参数应与stft相同
@@ -388,7 +400,6 @@ librosa.core.power_to_db(S, ref=1.0)
 
 • dB为单位的S
 
-
 ### Mel滤波器组
 ```py
 librosa.filters.mel(sr, n_fft, n_mels=128, fmin=0.0, fmax=None, htk=False, norm=1)
@@ -397,14 +408,13 @@ librosa.filters.mel(sr, n_fft, n_mels=128, fmin=0.0, fmax=None, htk=False, norm=
 创建一个滤波器组矩阵以将FFT合并成Mel频率
 
 ##### 参数：
-
 • sr ：输入信号的采样率
 • n_fft ：FFT组件数
 • n_mels ：产生的梅尔带数
 • fmin ：最低频率（Hz）
 • fmax：最高频率（以Hz为单位）。如果为None，则使用fmax = sr / 2.0
 • norm：{None，1，np.inf} [标量]
-&emsp;如果为1，则将三角mel权重除以mel带的宽度（区域归一化）。否则，保留所有三角形的峰值为1.0
+&emsp;如果为1，则将三角mel权重除以mel带的宽度（区域归一化） 否则，保留所有三角形的峰值为1.0
 
 #### 返回：
 
@@ -416,7 +426,13 @@ librosa.filters.mel(sr, n_fft, n_mels=128, fmin=0.0, fmax=None, htk=False, norm=
 MFCC特征是一种在自动语音识别和说话人识别中广泛使用的特征。关于MFCC特征的详细信息，有兴趣的可以参考[博客][i3]。在librosa中，提取MFCC特征只需要一个函数：
 
 ```py
-librosa.feature.mfcc(y=None, sr=22050, S=None, n_mfcc=20, dct_type=2, norm='ortho', **kwargs)
+librosa.feature.mfcc(y=None, 
+        sr=22050, 
+        S=None, 
+        n_mfcc=20, 
+        dct_type=2, 
+        norm='ortho', 
+        **kwargs)
 ```
 
 #### 参数：
@@ -425,7 +441,8 @@ librosa.feature.mfcc(y=None, sr=22050, S=None, n_mfcc=20, dct_type=2, norm='orth
 • S：np.ndarray，对数功能梅尔谱图
 • n_mfcc：int>0，要返回的MFCC数量
 • dct_type：None, or {1, 2, 3}  离散余弦变换（DCT）类型。默认情况下，使用DCT类型2。
-• norm： None or ‘ortho’ 规范。如果dct_type为2或3，则设置norm =’ortho’使用正交DCT基础。 标准化不支持dct_type = 1。
+• norm： None or ‘ortho’ 规范。如果dct_type为2或3，则设置norm =’ortho’使用正交DCT基础
+    &emsp;标准化不支持dct_type = 1。
 #### 返回：
 • M： MFCC序列
 
