@@ -195,7 +195,7 @@ SciPy.fftpack中，提供了离散余弦变换(DCT)与离散余弦逆变换(IDCT
 
 双向RNN
 
-双向RNN确保模型能够同时感知前向和后向的信息。双向RNN包含两个独立的RNN，一个前向RNN从前向后读入序列(从f1到fTx)，另一个后向RNN从后向前读入序列(从fTx到f1)，最终的输出为两者的拼接。
+双向RNN确保模型能够同时感知前向和后向的信息。双向RNN包含两个独立的RNN，一个前向RNN从前向后读入序列(从f1到$f_{Tx}$)，另一个后向RNN从后向前读入序列(从$f_{Tx}$到f1)，最终的输出为两者的拼接。
 
 在Tacotron2中，编码器将输入序列X=[x1,x2,...,xTx]映射成序列H=[h1,h2,...,hTx],其中序列H被称作“编码器隐状态”(encoder hidden states)。注意：编码器的输入输出序列都拥有相同的长度，hi之于相邻分量hj拥有的信息等价于xi之于xj所拥有的信息。
 
@@ -206,7 +206,7 @@ SciPy.fftpack中，提供了离散余弦变换(DCT)与离散余弦逆变换(IDCT
 $$ f_{e}=ReLU(F_3*ReLU(F_2*ReLU(F_1*\overline{E}(X))))\\
 H=EncoderRecurrency(f_{e}) $$
 
-其中，F1、F2、F3为3个卷积核，ReLU为每一个卷积层上的非线性激活，E¯¯¯¯表示对字符序列X做embedding，EncoderRecurrency表示双向LSTM。
+其中，F1、F2、F3为3个卷积核，ReLU为每一个卷积层上的非线性激活，$\overline{E}$表示对字符序列X做embedding，EncoderRecurrency表示双向LSTM。
 
 编码器隐状态生成后，就会将其送入注意力网络(attention network)中生成上下文向量(context vector)。
 
@@ -243,7 +243,7 @@ $$ Attention(Query,Key)=\sum^{L_x}_{i=1}a_i·Value_i $$
 目标隐状态(上图绿框所示)与每一个源状态(上图蓝框所示)“相比”，以生成注意力权重(attention weights)或称对齐(alignments)：
 
 
-其中，ht为目标隐状态，hs¯¯¯¯¯为源状态，score函数常被称作“能量”(energy)，因此可以表示为e。不同的score函数决定了不同类型的注意力机制。
+其中，$h_t$为目标隐状态，$\overline{h_s}$为源状态，score函数常被称作“能量”(energy)，因此可以表示为e。不同的score函数决定了不同类型的注意力机制。
 
 基于注意力权重，计算上下文向量(context vector)作为源状态的加权平均：
 
@@ -257,7 +257,7 @@ $$ c_t=\sum_s\alpha_{ts}\overline{h_s} $$
 
 $$ e_{ij}=score(s_{i-1},h_j)=v_a^Ttanh(W_as_{i-1}+U_ah_j) $$
 
-其中，$s_{i−1}$为上一个时间步中解码器的输出(解码器隐状态，decoder hidden states)，hj是编码器此刻输入(编码器隐状态，encoder hidden state j)，va、Wa和Ua是待训练参数张量。由于$U_ah_j$是独立于解码步i的，因此可以独立提前计算。基于内容的注意力机制能够将不同的输出与相应的输入元素连接，而与其位置无关。在Tacotron2中使用基于内容的注意力机制时，当输出对应于's'的Mel频谱帧，模型会寻找所有所有对应于's'的输入。
+其中，$s_{i−1}$为上一个时间步中解码器的输出(解码器隐状态，decoder hidden states)，$h_j$是编码器此刻输入(编码器隐状态，encoder hidden state j)，$v_a$、$W_a$和$U_a$是待训练参数张量。由于$U_ah_j$是独立于解码步i的，因此可以独立提前计算。基于内容的注意力机制能够将不同的输出与相应的输入元素连接，而与其位置无关。在Tacotron2中使用基于内容的注意力机制时，当输出对应于's'的Mel频谱帧，模型会寻找所有所有对应于's'的输入。
 
 基于位置的注意力机制(location-based attention)：
 
@@ -281,7 +281,7 @@ Tacotron2注意力机制，Location Sensitive Attention
 
 $$ e_{i,j}=score(s_i,c\alpha_{i-1},h_j)=v_a^T\mathop{tanh}(Ws_i+Vh_j+Uf_{i,j}+b) $$
 
-其中，$s_i$为当前解码器隐状态而非上一步解码器隐状态，偏置值b被初始化为0。位置特征fi使用累加注意力权重cαi卷积而来：
+其中，$s_i$为当前解码器隐状态而非上一步解码器隐状态，偏置值b被初始化为0。位置特征$f_i$使用累加注意力权重cαi卷积而来：
 
 $$ f_i=F*c\alpha_{i-1}\\
 c\alpha_i=\sum_{j=1}^{i-1}\alpha_j $$
@@ -319,7 +319,7 @@ $$ y_{final}=y+y_r $$
 
 $$ y_r=PostNet(y)=W_{ps}f_{ps}+b_{ps} $$
 
-其中，fps=Fps,i∗x，x为上一个卷积层的输出或解码器输出，F为卷积
+其中，$f_{ps}=F_{ps,i}*x$，x为上一个卷积层的输出或解码器输出，F为卷积
 
 ### 训练
 
