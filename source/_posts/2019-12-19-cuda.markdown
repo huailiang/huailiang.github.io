@@ -1,0 +1,735 @@
+---
+layout:     post
+title:      "cuda学习笔记"
+date:       2019-12-19 03:00:00
+author:     "Huailiang"
+tags:
+    - 人工智能
+---
+
+
+
+> 传统的中央处理器（CPU，Central Processing Unit) 内部结构异常复杂，主要是因为其需要很强的通用性来处理各种不同的数据类型，同时又要逻辑判断又会引入大量的分支跳转和中断的处理。 为了提高计算能力，CPU通常会采取提高时钟频率或增加处理器核数量的策略。为了进一步获得更高效的计算，图形处理器（GPU, Graphics Processing Unit）应运而生。 GPU可以在无需中断的纯净环境下处理类型高度统一的、相互无依赖的大规模数据。
+
+![](/img/post-ml/cuda1.png)
+
+GPU的高效在于可以高度并行处理。 以两个向量相加为例，CPU可能采取循环处理，每个循环对一个分量做加法。GPU则可以开多个线程，每个线程同时对一个分量做加法。CPU加法的速度一般快于GPU，但因为GPU可以同时开大量线程并行跑，因此更加高效。为了降低GPU程序的开发难度，NVIDIA推出了 CUDA（Compute Unified Device Architecture，统一计算设备架构）这一编程模型。
+
+
+## 一. 环境配置
+
+在保证NVIDIA显卡驱动成功安装的条件下，从下面链接下载并安装对应版本的CUDA Toolkit.（注意：最好已经安装好VS）, 建议右键复制[下载链接][i2], 然后迅雷下载。
+
+通过在命令窗中执行 nvcc -V初步判断是否安装成功：
+
+```sh
+nvcc -V
+```
+
+安装成功后(默认安装)系统会增加如下环境变量
+
+
+```sh
+CUDA_PATH：  C:\Program Files\NVIDIA GPU Computing Toolkit\CUDA\v8.0
+CUDA_PATH_V8_0：  C:\Program Files\NVIDIA GPU Computing Toolkit\CUDA\v8.0
+NUMBER_OF_PROCESSORS： 4
+NVTOOLSEXT_PATH：  C:\Program Files\NVIDIA Corporation\NvToolsExt\
+```
+
+CUDA Toolkit安装成功后会自动和系统的编译器进行绑定。 “新建项目”下增加了 “NVIDIA”选项。
+
+![](/img/post-ml/cuda2.jpg)
+
+
+之后发现项目里多了一个 “kernel.cu”的文件，该文件内容是一个经典的 矢量相加 的GPU程序。
+
+可以暂时全部注释该代码，并尝试编译运行下面的我们经常见到的编程入门示例：
+
+```c
+#include <iostream>
+
+int main()
+{
+    std::cout<<"Hello, World!"<<std::endl;
+    system("pause");
+    return 0;
+}
+```
+
+这看起来和普通的C++程序并没什么区别。 这个示例只是为了说明CUDA C编程和我们熟悉的标准C在很大程度上是没有区别的。 同时，这段程序直接运行在 主机上。
+
+接下来，我们看看如何使用GPU来执行代码。如下：
+
+```c
+#include <iostream>
+
+__global__  void mkernel(void){}
+
+int main()
+{
+    mkernel <<<1,1>>>();
+    std::cout<<"Hello, World!"<<std::endl;
+    system("pause");
+    return 0;
+}
+```
+
+与之前的代码相比， 这里主要增加了
+
+一个空的函数mkernel()， 并带有修饰符 global
+对空函数的调用， 并带有修饰符 <<<1,1>>>
+_global_ 为CUDA C为标准C增加的修饰符，表示该函数将会交给编译设备代码的编译器(NVCC)并最终在设备上运行。 而 main函数则依旧交给系统编译器(vs)。其实，CUDA就是通过直接提供API接口或者在语言层面集成一些新的东西来实现在主机代码中调用设备代码。
+
+
+
+## 二. CUDA核函数运行参数
+
+### 2.1 核函数运行参数
+
+当我们使用 gloabl 声明核函数后
+```c
+__global__ void kernel(param list){  }
+```
+在主机端(Host)调用时采用如下的形式：
+
+```c
+kernel<<<Dg,Db, Ns, S>>>(param list);
+```
+
+* Dg： int型或者dim3类型(x,y,z)。 用于定义一个grid中的block是如何组织的。 int型则直接表示为1维组织结构。
+* Db： int型或者dim3类型(x,y,z)。 用于定义一个block中的thread是如何组织的。 int型则直接表示为1维组织结构。
+* Ns： size_t类型，可缺省，默认为0。 用于设置每个block除了静态分配的共享内存外，最多能动态分配的共享内存大小，单位为byte。 0表示不需要动态分配。
+* S： cudaStream_t类型，可缺省，默认为0。 表示该核函数位于哪个流。
+
+### 2.2 线程结构
+关于CUDA的线程结构，有着三个重要的概念： Grid, Block, Thread
+
+* GPU工作时的最小单位是 thread。
+* 多个 thread 可以组成一个 block，但每一个 block 所能包含的 thread 数目是有限的。因为一个block的所有线程最好应当位于同一个处理器核心上，同时共享同一块内存。 于是一个 block中的所有thread可以快速进行同步的动作而不用担心数据通信壁垒。
+* 执行相同程序的多个 block，可以组成 grid。 不同 block 中的 thread 无法存取同一块共享的内存，无法直接互通或进行同步。因此，不同 block 中的 thread 能合作的程度是比较低的。不过，利用这个模式，可以让程序不用担心显示芯片实际上能同时执行的 thread 数目限制。例如，一个具有很少量执行单元的显示芯片，可能会把各个 block 中的 thread 顺序执行，而非同时执行。不同的 grid 则可以执行不同的程序(即 kernel)。
+
+下图是一个结构关系图：
+
+![](/img/post-ml/cuda3.png)
+
+
+此外，Block, Thread的组织结构可以是可以是一维，二维或者三维。以上图为例，Block, Thread的结构分别为二维和三维。
+
+CUDA中每一个线程都有一个唯一标识ThreadIdx，这个ID随着组织结构形式的变化而变化。 (注意：ID的计算，同计算行优先排列的矩阵元素ID思路一样。)
+
+```c
+// Block是一维的，Thread也是一维的
+__global__ void addKernel(int *c, const int *a, const int *b)
+{
+    int i = blockIdx.x *blockDim.x + threadIdx.x;  
+    c[i] = a[i] + b[i];
+}
+
+// Block是一维的，Thread是二维的
+__global__ void addKernel(int *c, int *a, int *b)
+{
+    int i = blockIdx.x * blockDim.x * blockDim.y + \
+        threadIdx.y * blockDim.x + threadIdx.x;
+    c[i] = a[i] + b[i];
+}
+
+// Block是二维的，Thread是三维的
+__global__ void addKernel(int *c, int *a, int *b)
+{
+    int blockId = blockIdx.x + blockIdx.y * gridDim.x;  
+    int i = blockId * (blockDim.x * blockDim.y * blockDim.z)  
+        + (threadIdx.z * (blockDim.x * blockDim.y))  
+        + (threadIdx.y * blockDim.x) + threadIdx.x; 
+    c[i] = a[i] + b[i];
+}
+```
+
+当然也可以通过下面的代码来直接查询自己GPU的具体指标：
+
+```c
+#include "cuda_runtime.h"
+#include <iostream>
+
+int main()
+{
+    cudaError_t cudaStatus;
+
+    // 初获取设备数量
+    int num = 0;
+    cudaStatus = cudaGetDeviceCount(&num);
+    std::cout << "Number of GPU: " << num << std::endl;
+
+    // 获取GPU设备属性
+    cudaDeviceProp prop;
+    if (num > 0)
+    {
+        cudaGetDeviceProperties(&prop, 0);
+        // 打印设备名称
+        std::cout << "Device: " <<prop.name << std::endl;
+    }
+
+    system("pause");
+    return 0;
+}
+```
+
+其中 cudaDeviceProp是一个定义在driver_types.h中的结构体，大家可以自行查看其定义。
+
+### 2.3 内存结构
+
+如下图所示,每个 thread 都有自己的一份 register 和 local memory 的空间。同一个 block 中的每个 thread 则有共享的一份 share memory。此外，所有的 thread(包括不同 block 的 thread)都共享一份 global memory、constant memory、和 texture memory。不同的 grid 则有各自的 global memory、constant memory 和 texture memory。
+
+![](/img/post-ml/cuda4.png)
+
+
+## 三. 线程协作
+
+### 3.1 并行程序块的分解
+
+首先回顾我们之前实现的矢量相加程序：
+
+```c
+// 核函数：每个线程负责一个分量的加法
+__global__ void addKernel(int *c, const int *a, const int *b)
+{
+    int i = threadIdx.x; // 获取线程ID
+    c[i] = a[i] + b[i];
+}
+
+// 运行核函数，运行设置为1个block，每个block中size个线程
+addKernel << <1, size >> >(dev_c, dev_a, dev_b);
+```
+
+我们知道一个Block中的可开辟的线程数量是有限的(不超过1024)。如果矢量特别长，上面的操作是会出现问题的。于是我们可以采用多个线程块(Block)来解决线程不足的问题。 假如我们设定每个线程块包含128个线程，则需要的线程块的数量为 size / 128。 为了避免不能整除带来的问题，我们可以稍微多开一点 (size + 127) / 128，但需要增加判断条件来避免越界。
+
+```c
+// 核函数：每个线程负责一个分量的加法
+__global__ void addKernel(int *c, const int *a, const int *b, const int size)
+{
+    int i = blockIdx.x * blockDim.x + threadIdx.x; // 获取线程ID
+    if (i < size)
+        c[i] = a[i] + b[i];
+}
+
+// 运行核函数，运行设置为多个block，每个block中128个线程
+addKernel <<<(size + 127) / 128, 128 >>>(dev_c, dev_a, dev_b, size);
+```
+
+通过前面小节，我们同时也知道一个Grid中可开辟的Block数量也是有限的。
+
+如果数据量大于 Block_num * Thread_num，那么我们就无法为每个分量单独分配一个线程了。 不过，一个简单的解决办法就是在核函数中增加循环。
+
+```c
+// 核函数：每个线程负责多个分量的加法
+__global__ void addKernel(int *c, const int *a, const int *b, const int size)
+{
+    int i = blockIdx.x * blockDim.x + threadIdx.x; 
+    while (i < size)
+    {
+        c[i] = a[i] + b[i];
+        // 偏移分量等于一个Grid中包含的线程数量
+        i += blockDim.x * gridDim.x;
+    }
+}
+
+// 运行核函数，运行设置为1个Grid包含128个block，每个block包含128个线程
+// 其中已经假设 size > 128*128
+addKernel <<<128, 128 >>>(dev_c, dev_a, dev_b, size);
+```
+
+### 3.2 共享内存与同步
+
+上面提到线程块的分解似乎是为了增加可用的线程数量，但这种说法并不靠谱，因为这完全可以由CUDA在幕后全权控制。 其实，分解线程块的重要原因是因为内存。
+
+在“4.3 内存结构”中我们已经知道，同一个Block中的线程可以访问一块共享内存。由于共享内存缓冲区驻留在物理GPU上，而不是GPU之外的系统内存上，因此访问共享内存的延迟要远远低于访问普通缓冲区的延迟。
+
+不同Block之间存在隔离，如果我们需要不同线程之间进行通信，那么还需要考虑线程同步的问题。比如线程A将某个数值写入内存，然后线程B会对该数值进行一些操作，那么显然必须等A完成之后B才可以操作，如果没有同步，程序将会因进入“竞态条件”而产生意想不到的错误。
+
+接下来我们通过一个矢量点积的例子来说明上述问题。
+
+矢量点积的定义如下：
+
+$$ (x_1,x_2,x_3,x_4)\cdot (y_1,y_2,y_3,y_4)=x_1y_1+x_2y_2+x_3y_3+x_4y_4 $$
+
+由上面的定义来看，点积的实现可以分为两步：
+
+* （1）计算每个分量的乘积，并暂存该结果；
+* （2）将所有临时结果加和。
+
+```c
+// 定义我们的矢量长度
+const int N = 64 * 256; 
+
+// 定义每个Block中包含的Thread数量 
+const int threadsPerBlock = 256;  
+
+// 定义每个Grid中包含的Block数量, 这里32 < 64， 是为了模拟线程数量不足的情况
+const int blocksPerGrid = 32;
+
+__global__ void dot( float *a, float *b, float *c ) 
+{  
+    // 声明共享内存用于存储临时乘积结果，内存大小为1个Block中的线程数量
+    // PS. 每个Block都相当于有一份程序副本，因此相当于每个Block都有这样的一份共享内存
+    __shared__ float cache[threadsPerBlock];  
+
+    // 线程索引
+    int tid = threadIdx.x + blockIdx.x * blockDim.x;  
+
+    // 一个Block中的线程索引 
+    int cacheIndex = threadIdx.x;  
+
+    // 计算分量乘积，同时处理线程不足的问题
+    float   temp = 0;  
+    while (tid < N) {  
+        temp += a[tid] * b[tid];  
+        tid += blockDim.x * gridDim.x;  
+    }  
+
+    // 存储临时乘积结果
+    cache[cacheIndex] = temp; 
+}
+```
+
+执行完上面的部分，我们剩下的就是把cache中的值相加求和。 但是，我们必须要保证所有乘积都已经计算完成，才能去计算求和。 命令如下：
+
+```c
+// 对线程块中的所有线程进行同步
+// 线程块中的所有线程都执行完前面的代码后才会继续往后执行
+__syncthreads();
+```
+
+求和最直接的方式就是循环累加，此时复杂度与数组长度成正比。不过我们可以再用一种更加高效的方法，其复杂度与数组长度的log成正比：将值两两合并，于是数据量减小一半，再重复两两合并直至全部计算完成。代码如下：
+
+```c
+// 合并算法要求长度为2的指数倍
+int i = blockDim.x/2;  
+while (i != 0) 
+{  
+    if (cacheIndex < i)  
+        cache[cacheIndex] += cache[cacheIndex + i];  
+    __syncthreads();  
+    i /= 2;  
+} 
+
+// 最后将一个Block的求和结果进行保存
+if (cacheIndex == 0)  
+        c[blockIdx.x] = cache[0]; 
+```
+
+## 四、 函数与变量类型限定符
+
+### 4.1 函数类型限定符
+
+函数类型限定符用来标识函数运行在主机还是设备上，函数由主机还是设备调用。
+
+##### \_\_global\_\_
+
+* __global__修饰的函数为 核函数。
+* 运行在设备上；
+* 可以由主机调用；
+* 可以由计算能力大于3.2的设备调用；
+* 必须有void返回类型；
+* 调用时必须制定运行参数(<<< >>>)
+* 该函数的调用时异步的，即可以不必等候该函数全部完成，便可以在CPU上继续工作
+
+##### \_\_device\_\_
+
+* 运行在设备上；
+* 只能由设备调用；
+* 编译器会内联所有认为合适的__device__修饰的函数
+
+##### \_\_host\_\_
+
+* 运行在主机上；
+* 只能由主机调用；
+* 效果等同于函数不加任何限定符；
+* 不能与__global__共同使用， 但可以和__device__联合使用
+
+##### \_\_noinline\_\_
+
+* 声明不允许内联
+
+##### \_\_forceinline\_\_
+
+* 强制编译器内联该函数
+
+### 4.2 变量类型限定符
+
+变量类型限定符用来标识变量在设备上的内存位置。
+
+##### \_\_device\_\_ (单独使用时)
+
+* 位于 global memory space
+* 生命周期为整个应用期间(即与application同生死)
+* 可以被grid内的所有threads读取
+* 可以在主机中由以下函数读取
+  * cudaGetSymbolAddress()
+  * cudaGetSymbolSize()
+  * cudaMemcpyToSymbol()
+  * cudaMemcpyFromSymbol()
+
+##### \_\_constant\_\_
+
+* 可以和 \_\_device\_\_ 联合使用
+* 位于 constant memory space
+* 生命周期为整个应用期间
+* 可以被grid内的所有threads读取
+* 可以在主机中由以下函数读取
+  * cudaGetSymbolAddress()
+  * cudaGetSymbolSize()
+  * cudaMemcpyToSymbol()
+  * cudaMemcpyFromSymbol()
+
+##### \_\_shared\_\_
+
+* 可以和 __device__ 联合使用
+* 位于一个Block的shared memory space
+* 生命周期为整个Block
+* 只能被同一block内的threads读写
+
+##### \_\_managed\_\_
+
+* 可以和 \_\_device\_\_ 联合使用
+* 可以被主机和设备引用，主机或者设备函数可以获取其地址或者读写其值
+* 生命周期为整个应用期间
+
+##### \_\_restrict\_\_
+
+* 该关键字用来对指针进行限制性说明，目的是为了减少指针别名带来的问题。
+
+
+## 附录
+
+* NVIDIA 型号对应的计算能力(Compute Capabilities)表
+
+### Quadro Desktop Products
+<table class="table table-striped">
+    <thead>
+        <tr>
+            <th>GPU</th>
+            <th> Compute Capability</th>
+        </tr>
+    </thead>
+    <tbody>
+        <tr>
+            <td><a href="http://www.nvidia.com/object/quadro-desktop-gpus.html">Quadro RTX 8000</a></td>
+            <td>7.5</td>
+        </tr>
+        <tr>
+            <td><a href="http://www.nvidia.com/object/quadro-desktop-gpus.html">Quadro RTX 6000</a></td>
+            <td>7.5</td>
+        </tr>
+        <tr>
+            <td><a href="http://www.nvidia.com/object/quadro-desktop-gpus.html">Quadro RTX 5000</a></td>
+            <td>7.5</td>
+        </tr>
+        <tr>
+            <td><a href="http://www.nvidia.com/object/quadro-desktop-gpus.html">Quadro RTX 4000</a></td>
+            <td>7.5</td>
+        </tr>
+        <tr>
+            <td><a href="http://www.nvidia.com/object/quadro-desktop-gpus.html">Quadro GV100</a></td>
+            <td>7.0</td>
+        </tr>
+        <tr>
+            <td><a href="http://www.nvidia.com/object/quadro-desktop-gpus.html">Quadro GP100</a></td>
+            <td>6.0</td>
+        </tr>
+        <tr>
+            <td><a href="http://www.nvidia.com/object/quadro-desktop-gpus.html">Quadro P6000</a></td>
+            <td>6.1</td>
+        </tr>
+        <tr>
+            <td><a href="http://www.nvidia.com/object/quadro-desktop-gpus.html">Quadro P5000</a></td>
+            <td>6.1</td>
+        </tr>
+                                <tr>
+            <td><a href="http://www.nvidia.com/object/quadro-desktop-gpus.html">Quadro P4000</a></td>
+            <td>6.1</td>
+        </tr>
+        <tr>
+            <td><a href="https://www.nvidia.com/en-us/design-visualization/quadro-desktop-gpus/">Quadro P2200</a></td>
+            <td>6.1</td>
+        </tr>
+         <tr>
+            <td><a href="http://www.nvidia.com/object/quadro-desktop-gpus.html">Quadro P2000</a></td>
+            <td>6.1</td>
+        </tr>
+        <tr>
+            <td><a href="http://www.nvidia.com/object/quadro-desktop-gpus.html">Quadro P1000</a></td>
+            <td>6.1</td>
+        </tr>
+        <tr>
+            <td><a href="http://www.nvidia.com/object/quadro-desktop-gpus.html">Quadro P620</a></td>
+            <td>6.1</td>
+        </tr>
+        <tr>
+            <td><a href="http://www.nvidia.com/object/quadro-desktop-gpus.html">Quadro P600</a></td>
+            <td>6.1</td>
+        </tr>
+        <tr>
+            <td><a href="http://www.nvidia.com/object/quadro-desktop-gpus.html">Quadro P400</a></td>
+            <td>6.1</td>
+        </tr>						
+        <tr>
+            <td><a href="http://www.nvidia.com/object/quadro-desktop-gpus.html">Quadro M6000 24GB</a></td>
+            <td>5.2</td>
+        </tr>
+        <tr>
+            <td><a href="http://www.nvidia.com/object/quadro-desktop-gpus.html">Quadro M6000</a></td>
+            <td>5.2</td>
+        </tr>
+        <tr>
+        <tr>
+            <td><a href="http://www.nvidia.com/object/quadro-desktop-gpus.html">Quadro K6000</a></td>
+            <td>3.5</td>
+        </tr>
+        <tr>
+            <td><a href="http://www.nvidia.com/object/quadro-desktop-gpus.html">Quadro M5000</a></td>
+            <td>5.2</td>
+        </tr>
+        <tr>
+            <td><a href="http://www.nvidia.com/object/quadro-desktop-gpus.html">Quadro K5200</a></td>
+            <td>3.5</td>
+        </tr>
+        <tr>
+            <td><a href="http://www.nvidia.com/object/quadro-k5000.html">Quadro K5000</a></td>
+            <td>3.0</td>
+        </tr>
+        <tr>
+            <td><a href="http://www.nvidia.com/object/quadro-desktop-gpus.html">Quadro M4000</a></td>
+            <td>5.2</td>
+        </tr>
+        <tr>
+            <td><a href="http://www.nvidia.com/object/quadro-desktop-gpus.html">Quadro K4200</a></td>
+            <td>3.0</td>
+        </tr>
+        <tr>
+            <td><a href="http://www.nvidia.com/object/quadro-desktop-gpus.html">Quadro K4000</a></td>
+            <td>3.0</td>
+        </tr>
+        <tr>
+            <td><a href="http://www.nvidia.com/object/quadro-desktop-gpus.html">Quadro M2000</a></td>
+            <td>5.2</td>
+        </tr>
+        <tr>
+            <td><a href="http://www.nvidia.com/object/quadro-desktop-gpus.html">Quadro K2200</a></td>
+            <td>3.0</td>
+        </tr>
+        <tr>
+            <td><a href="http://www.nvidia.com/object/quadro-desktop-gpus.html">Quadro K2000</a></td>
+            <td>3.0</td>
+        </tr>
+        <tr>
+            <td><a href="http://www.nvidia.com/object/quadro-desktop-gpus.html">Quadro K2000D</a></td>
+            <td>3.0</td>
+        </tr>
+        <tr>
+            <td><a href="http://www.nvidia.com/object/quadro-desktop-gpus.html">Quadro K1200</a></td>
+            <td>5.0</td>
+        </tr>
+        <tr>
+            <td><a href="http://www.nvidia.com/object/quadro-desktop-gpus.html">Quadro K620</a></td>
+            <td>5.0</td>
+        </tr>
+        <tr>
+            <td><a href="http://www.nvidia.com/object/quadro-desktop-gpus.html">Quadro K600</a></td>
+            <td>3.0</td>
+        </tr>
+        <tr>
+            <td><a href="http://www.nvidia.com/object/quadro-desktop-gpus.html">Quadro K420</a></td>
+            <td>3.0</td>
+        </tr>
+        <tr>
+            <td><a href="http://www.nvidia.com/object/quadro-desktop-gpus.html">Quadro 410</a></td>
+            <td>3.0</td>
+        </tr>
+        <tr>
+            <td><a href="http://www.nvidia.com/object/product-quadroplex-7000-us.html">Quadro Plex 7000</a></td>
+            <td>2.0</td>
+        </tr>
+    </tbody>
+</table>
+
+### Quadro Mobile  Products
+<table class="table table-striped">
+    <thead>
+        <tr>
+            <th>GPU</th>
+            <th>Compute Capability</th>
+        </tr>
+    </thead>
+    <tbody>
+        <tr>
+        <td><a href="https://www.nvidia.com/en-us/design-visualization/quadro-in-laptops/">RTX 5000</a></td>
+            <td>7.5</td>
+        </tr><tr>
+        <td><a href="https://www.nvidia.com/en-us/design-visualization/quadro-in-laptops/">RTX 4000</a></td>
+            <td>7.5</td>
+        </tr><tr>
+        <td><a href="https://www.nvidia.com/en-us/design-visualization/quadro-in-laptops/">RTX 3000</a></td>
+            <td>7.5</td>
+        </tr><tr>
+        <td><a href="https://www.nvidia.com/en-us/design-visualization/quadro-in-laptops/">T2000</a></td>
+            <td>7.5</td>
+        </tr><tr>
+        <td><a href="https://www.nvidia.com/en-us/design-visualization/quadro-in-laptops/">T1000</a></td>
+            <td>7.5</td>
+        </tr><tr>
+        <td><a href="https://www.nvidia.com/en-us/design-visualization/quadro-in-laptops/">P620</a></td>
+            <td>6.1</td>
+        </tr><tr>
+        <td><a href="https://www.nvidia.com/en-us/design-visualization/quadro-in-laptops/">P520</a></td>
+            <td>6.1</td>
+        </tr>
+        <tr>
+        <td><a href="http://www.nvidia.com/object/quadro-for-mobile-workstations.html">Quadro P5200</a></td>
+            <td>6.1</td>
+        </tr>
+        <tr>
+            <td><a href="http://www.nvidia.com/object/quadro-for-mobile-workstations.html">Quadro P4200</a></td>
+            <td>6.1</td>
+        </tr>
+        <tr>
+        <td><a href="http://www.nvidia.com/object/quadro-for-mobile-workstations.html">Quadro P3200</a></td>
+            <td>6.1</td>
+        </tr>
+        <tr>
+        <td><a href="http://www.nvidia.com/object/quadro-for-mobile-workstations.html">Quadro P5000</a></td>
+            <td>6.1</td>
+        </tr>
+        <tr>
+        <td><a href="http://www.nvidia.com/object/quadro-for-mobile-workstations.html">Quadro P4000</a></td>
+            <td>6.1</td>
+        </tr>
+        <tr>
+        <td><a href="http://www.nvidia.com/object/quadro-for-mobile-workstations.html">Quadro P3000</a></td>
+            <td>6.1</td>
+        </tr>
+        <tr>
+        <td><a href="http://www.nvidia.com/object/quadro-for-mobile-workstations.html">Quadro P2000</a></td>
+            <td>6.1</td>
+        </tr>
+        <tr>
+        <td><a href="http://www.nvidia.com/object/quadro-for-mobile-workstations.html">Quadro P1000</a></td>
+            <td>6.1</td>
+        </tr>
+        <tr>
+        <td><a href="http://www.nvidia.com/object/quadro-for-mobile-workstations.html">Quadro P600</a></td>
+            <td>6.1</td>
+        </tr>
+        <tr>
+        <td><a href="http://www.nvidia.com/object/quadro-for-mobile-workstations.html">Quadro P500</a></td>
+            <td>6.1</td>
+        </tr>
+        <tr>
+            <td><a href="http://www.nvidia.com/object/quadro-for-mobile-workstations.html">Quadro M5500M</a></td>
+            <td>5.2</td>
+        </tr>
+        <tr>
+            <td><a href="http://www.nvidia.com/object/quadro-for-mobile-workstations.html">Quadro M2200</a></td>
+            <td>5.2</td>
+        </tr>
+        <tr>
+            <td><a href="http://www.nvidia.com/object/quadro-for-mobile-workstations.html">Quadro M1200</a></td>
+            <td>5.0</td>
+        </tr>
+        <tr>
+            <td><a href="http://www.nvidia.com/object/quadro-for-mobile-workstations.html">Quadro M620</a></td>
+            <td>5.2</td>
+        </tr>
+        <tr>
+            <td><a href="http://www.nvidia.com/object/quadro-for-mobile-workstations.html">Quadro M520</a></td>
+            <td>5.0</td>
+        </tr>
+        <tr>
+            <td><a href="http://www.nvidia.com/object/quadro-for-mobile-workstations.html">Quadro K6000M</a></td>
+            <td>3.0</td>
+        </tr>
+        <tr>
+            <td><a href="http://www.nvidia.com/object/quadro-for-mobile-workstations.html">Quadro K5200M</a></td>
+            <td>3.0</td>
+        </tr>
+        <tr>
+            <td><a href="http://www.nvidia.com/object/quadro-for-mobile-workstations.html">Quadro K5100M</a></td>
+            <td>3.0</td>
+        </tr>
+        <tr>
+            <td><a href="http://www.nvidia.com/object/quadro-for-mobile-workstations.html">Quadro M5000M</a></td>
+            <td>5.0</td>
+        </tr>
+        <tr>
+        <tr>
+            <td><a href="http://www.nvidia.com/object/quadro-for-mobile-workstations.html">Quadro K500M</a></td>
+            <td>3.0</td>
+        </tr>
+        <tr>
+            <td><a href="http://www.nvidia.com/object/quadro-for-mobile-workstations.html">Quadro K4200M</a></td>
+            <td>3.0</td>
+        </tr>
+        <tr>
+            <td><a href="http://www.nvidia.com/object/quadro-for-mobile-workstations.html">Quadro K4100M</a></td>
+            <td>3.0</td>
+        </tr>
+        <tr>
+            <td><a href="http://www.nvidia.com/object/quadro-for-mobile-workstations.html">Quadro M4000M</a></td>
+            <td>5.0</td>
+        </tr>
+        <tr>
+            <td><a href="http://www.nvidia.com/object/quadro-for-mobile-workstations.html">Quadro K3100M</a></td>
+            <td>3.0</td>
+        </tr>
+        <tr>
+        <tr>
+            <td><a href="http://www.nvidia.com/object/quadro-for-mobile-workstations.html">Quadro M3000M</a></td>
+            <td>5.0</td>
+        </tr>
+        <tr>
+            <td><a href="http://www.nvidia.com/object/quadro-for-mobile-workstations.html">Quadro K2200M</a></td>
+            <td>3.0</td>
+        </tr>
+        <tr>
+            <td><a href="http://www.nvidia.com/object/quadro-for-mobile-workstations.html">Quadro K2100M</a></td>
+            <td>3.0</td>
+        </tr>
+        <tr>
+            <td><a href="http://www.nvidia.com/object/quadro-for-mobile-workstations.html">Quadro M2000M</a></td>
+            <td>5.0</td>
+        </tr>
+        <tr>
+            <td><a href="http://www.nvidia.com/object/quadro-for-mobile-workstations.html">Quadro K1100M</a></td>
+            <td>3.0</td>
+        </tr>
+        <tr>
+            <td><a href="http://www.nvidia.com/object/quadro-for-mobile-workstations.html">Quadro M1000M</a></td>
+            <td>5.0</td>
+        </tr>
+        <tr>
+            <td><a href="http://www.nvidia.com/object/quadro-for-mobile-workstations.html">Quadro K620M</a></td>
+            <td>5.0</td>
+        </tr>
+        <tr>
+            <td><a href="http://www.nvidia.com/object/quadro-for-mobile-workstations.html">Quadro K610M</a></td>
+            <td>3.5</td>
+        </tr>
+        <tr>
+            <td><a href="http://www.nvidia.com/object/quadro-for-mobile-workstations.html">Quadro M600M</a></td>
+            <td>5.0</td>
+        </tr>
+        <tr>
+            <td><a href="http://www.nvidia.com/object/quadro-for-mobile-workstations.html">Quadro K510M</a></td>
+            <td>3.5</td>
+        </tr>
+        <tr>
+            <td><a href="http://www.nvidia.com/object/quadro-for-mobile-workstations.html">Quadro M500M</a></td>
+            <td>5.0</td>
+        </tr>
+    </tbody>
+</table>
+
+
+
+[i1]: https://docs.nvidia.com/cuda/cuda-c-programming-guide/index.html
+[i2]: https://developer.nvidia.com/cuda-downloads
+[i3]: https://github.com/huailiang/cuda_proj
+[i4]: https://docs.nvidia.com/cuda/cuda-c-programming-guide/index.html#features-and-technical-specifications
