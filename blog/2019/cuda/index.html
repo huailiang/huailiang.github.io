@@ -1,0 +1,931 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <meta http-equiv="X-UA-Compatible" content="IE=edge">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+
+  <title>cuda学习笔记</title>
+  <meta name="description"
+    content="  传统的中央处理器（CPU，Central Processing Unit) 内部结构异常复杂，主要是因为其需要很强的通用性来处理各种不同的数据类型，同时又要逻辑判断又会引入大量的分支跳转和中断的处理。 为了提高计算能力，CPU通常会采取提高时钟频率或增加处理器核数量的策略。为了进一步获得更高效的计算，图形处理...">
+
+  <link rel="shortcut icon" href="/img/favicon.ico">
+  <link rel="stylesheet" href="/css/main.css">
+  <link rel="canonical" href="https://huailiang.github.io/blog/2019/cuda/">
+
+</head>
+
+<body>
+  <main>
+    <header class="site-header">
+  <div class="container">
+    <h1><a href="/">Hom<span>e</span></a></h1>
+
+    <button type="button" class="sliding-panel-button">
+      <span></span>
+      <span></span>
+      <span></span>
+    </button>
+
+    <nav class="navbar sliding-panel-content">
+      <ul>
+        
+        <li><a href="/about" title="About">About</a>
+        </li>
+        
+        <li><a href="/blog" title="Blog">Blog</a>
+        </li>
+        
+       <li><a href="/category/" target="_blank"><i class="icon icon-feed"></i></a></li>
+      </ul>
+    </nav>
+  </div>
+</header>
+
+<div class="sliding-panel-fade-screen"></div>
+    <script type="text/javascript" src="/js/MathJax.js?config=TeX-AMS-MML_HTMLorMML"></script>
+
+<script type="text/x-mathjax-config">
+MathJax.Hub.Config({
+  tex2jax: {
+    inlineMath: [['$','$'], ['\\(','\\)']],
+    processEscapes: true
+  }
+});
+</script>
+
+<script type="text/x-mathjax-config">
+  MathJax.Hub.Config({
+    tex2jax: {
+      skipTags: ['script', 'noscript', 'style', 'textarea', 'pre', 'code']
+    }
+  });
+
+</script>
+    <div class="container">
+      <article role="article" class="post">
+
+  <div class="card">
+    <header class="post-header">
+      <h1 class="post-title">cuda学习笔记</h1>
+      <p class="post-meta">Dec 19, 2019 •
+        Huailiang</p>
+    </header>
+
+    <div class="post-content">
+      <blockquote>
+  <p>传统的中央处理器（CPU，Central Processing Unit) 内部结构异常复杂，主要是因为其需要很强的通用性来处理各种不同的数据类型，同时又要逻辑判断又会引入大量的分支跳转和中断的处理。 为了提高计算能力，CPU通常会采取提高时钟频率或增加处理器核数量的策略。为了进一步获得更高效的计算，图形处理器（GPU, Graphics Processing Unit）应运而生。 GPU可以在无需中断的纯净环境下处理类型高度统一的、相互无依赖的大规模数据。</p>
+</blockquote>
+
+<p><img src="/img/post-ml/cuda1.png" alt="" /></p>
+
+<p>GPU的高效在于可以高度并行处理。 以两个向量相加为例，CPU可能采取循环处理，每个循环对一个分量做加法。GPU则可以开多个线程，每个线程同时对一个分量做加法。CPU加法的速度一般快于GPU，但因为GPU可以同时开大量线程并行跑，因此更加高效。为了降低GPU程序的开发难度，NVIDIA推出了 CUDA（Compute Unified Device Architecture，统一计算设备架构）这一编程模型。</p>
+
+<h2 id="一-环境配置">一. 环境配置</h2>
+
+<p>在保证NVIDIA显卡驱动成功安装的条件下，从下面链接下载并安装对应版本的<a href="https://developer.nvidia.com/cuda-downloads">CUDA Toolkit</a>（注意：最好已经安装好VS), 通过在命令窗中执行 nvcc -V初步判断是否安装成功：</p>
+
+<div class="language-sh highlighter-rouge"><pre class="highlight"><code>nvcc -V
+</code></pre>
+</div>
+
+<p>安装成功后(默认安装)系统会增加如下环境变量</p>
+
+<div class="language-sh highlighter-rouge"><pre class="highlight"><code>CUDA_PATH：  C:<span class="se">\P</span>rogram Files<span class="se">\N</span>VIDIA GPU Computing Toolkit<span class="se">\C</span>UDA<span class="se">\v</span>8.0
+CUDA_PATH_V8_0：  C:<span class="se">\P</span>rogram Files<span class="se">\N</span>VIDIA GPU Computing Toolkit<span class="se">\C</span>UDA<span class="se">\v</span>8.0
+NUMBER_OF_PROCESSORS： 4
+NVTOOLSEXT_PATH：  C:<span class="se">\P</span>rogram Files<span class="se">\N</span>VIDIA Corporation<span class="se">\N</span>vToolsExt<span class="se">\</span>
+</code></pre>
+</div>
+
+<p>CUDA Toolkit安装成功后会自动和系统的编译器进行绑定。 “新建项目”下增加了 “NVIDIA”选项。</p>
+
+<p><img src="/img/post-ml/cuda2.jpg" alt="" /></p>
+
+<p>之后发现项目里多了一个 “kernel.cu”的文件，该文件内容是一个经典的 矢量相加 的GPU程序。 CUDA C编程和我们熟悉的标准C在很大程度上是没有区别的。 同时，这段程序直接运行在 主机上。</p>
+
+<p>接下来，我们看看如何使用GPU来执行代码。如下：</p>
+
+<div class="language-c highlighter-rouge"><pre class="highlight"><code><span class="n">__global__</span>  <span class="kt">void</span> <span class="nf">mkernel</span><span class="p">(</span><span class="kt">void</span><span class="p">){}</span>
+
+<span class="kt">int</span> <span class="n">main</span><span class="p">()</span>
+<span class="p">{</span>
+    <span class="n">mkernel</span> <span class="o">&lt;&lt;&lt;</span><span class="mi">1</span><span class="p">,</span><span class="mi">1</span><span class="o">&gt;&gt;&gt;</span><span class="p">();</span>
+    <span class="n">std</span><span class="o">::</span><span class="n">cout</span><span class="o">&lt;&lt;</span><span class="s">"Hello, World!"</span><span class="o">&lt;&lt;</span><span class="n">std</span><span class="o">::</span><span class="n">endl</span><span class="p">;</span>
+    <span class="n">system</span><span class="p">(</span><span class="s">"pause"</span><span class="p">);</span>
+    <span class="k">return</span> <span class="mi">0</span><span class="p">;</span>
+<span class="p">}</span>
+</code></pre>
+</div>
+
+<p>这里主要有一个空的函数mkernel()， 并带有修饰符 __global__ 对空函数的调用， 并带有修饰符 &lt;&lt;&lt;1,1&gt;&gt;&gt;_global_ 为CUDA C为标准C增加的修饰符，表示该函数将会交给编译设备代码的编译器(NVCC)并最终在设备上运行。 而 main函数则依旧交给系统编译器(vs)。其实，CUDA就是通过直接提供API接口或者在语言层面集成一些新的东西来实现在主机代码中调用设备代码。</p>
+
+<h2 id="二-cuda核函数运行参数">二. CUDA核函数运行参数</h2>
+
+<h3 id="21-核函数运行参数">2.1 核函数运行参数</h3>
+
+<p>当我们使用 gloabl 声明核函数后</p>
+<div class="language-c highlighter-rouge"><pre class="highlight"><code><span class="n">__global__</span> <span class="kt">void</span> <span class="n">kernel</span><span class="p">(</span><span class="n">param</span> <span class="n">list</span><span class="p">){</span>  <span class="p">}</span>
+</code></pre>
+</div>
+<p>在主机端(Host)调用时采用如下的形式：</p>
+
+<div class="language-c highlighter-rouge"><pre class="highlight"><code><span class="n">kernel</span><span class="o">&lt;&lt;&lt;</span><span class="n">Dg</span><span class="p">,</span> <span class="n">Db</span><span class="p">,</span> <span class="n">Ns</span><span class="p">,</span> <span class="n">S</span><span class="o">&gt;&gt;&gt;</span><span class="p">(</span><span class="n">param</span> <span class="n">list</span><span class="p">);</span>
+</code></pre>
+</div>
+
+<ul>
+  <li>Dg：int型或者dim3类型(x,y,z)。 用于定义一个grid中的block是如何组织的。 int型则直接表示为1维组织结构。</li>
+  <li>Db int型或者dim3类型(x,y,z)。 用于定义一个block中的thread是如何组织的。 int型则直接表示为1维组织结构。</li>
+  <li>Ns size_t类型，可缺省，默认为0。 用于设置每个block除了静态分配的共享内存外，最多能动态分配的共享内存大小，单位为byte。 0表示不需要动态分配。</li>
+  <li>S：cudaStream_t类型，可缺省，默认为0。 表示该核函数位于哪个流。</li>
+</ul>
+
+<h3 id="22-线程结构">2.2 线程结构</h3>
+<p>关于CUDA的线程结构，有着三个重要的概念： Grid, Block, Thread</p>
+
+<ul>
+  <li>GPU工作时的最小单位是 thread。</li>
+  <li>多个 thread 可以组成一个 block，但每一个 block 所能包含的 thread 数目是有限的。因为一个block的所有线程最好应当位于同一个处理器核心上，同时共享同一块内存。 于是一个 block中的所有thread可以快速进行同步的动作而不用担心数据通信壁垒。</li>
+  <li>执行相同程序的多个 block，可以组成 grid。 不同 block 中的 thread 无法存取同一块共享的内存，无法直接互通或进行同步。因此，不同 block 中的 thread 能合。不过，利用这个模式，可以让程序不用担心显示芯片实际上能同时执行的 thread 数目限制。例如，一个具有很少量执行单元的显示芯片，可能会把各个 block 中的 thread 顺序执行，而非同时执行。不同的 grid 则可以执行不同的程序(即 kernel)。</li>
+</ul>
+
+<p>下图是一个结构关系图：</p>
+
+<p><img src="/img/post-ml/cuda3.png" alt="" /></p>
+
+<p>此外，Block, Thread的组织结构可以是可以是一维，二维或者三维。以上图为例，Block, Thread的结构分别为二维和三维。</p>
+
+<p>CUDA中每一个线程都有一个唯一标识ThreadIdx，这个ID随着组织结构形式的变化而变化。 (注意：ID的计算，同计算行优先排列的矩阵元素ID思路一样。)</p>
+
+<div class="language-c highlighter-rouge"><pre class="highlight"><code><span class="c1">// Block是一维的，Thread也是一维的
+</span><span class="n">__global__</span> <span class="kt">void</span> <span class="nf">addKernel</span><span class="p">(</span><span class="kt">int</span> <span class="o">*</span><span class="n">c</span><span class="p">,</span> <span class="k">const</span> <span class="kt">int</span> <span class="o">*</span><span class="n">a</span><span class="p">,</span> <span class="k">const</span> <span class="kt">int</span> <span class="o">*</span><span class="n">b</span><span class="p">)</span>
+<span class="p">{</span>
+    <span class="kt">int</span> <span class="n">i</span> <span class="o">=</span> <span class="n">blockIdx</span><span class="p">.</span><span class="n">x</span> <span class="o">*</span><span class="n">blockDim</span><span class="p">.</span><span class="n">x</span> <span class="o">+</span> <span class="n">threadIdx</span><span class="p">.</span><span class="n">x</span><span class="p">;</span>  
+    <span class="n">c</span><span class="p">[</span><span class="n">i</span><span class="p">]</span> <span class="o">=</span> <span class="n">a</span><span class="p">[</span><span class="n">i</span><span class="p">]</span> <span class="o">+</span> <span class="n">b</span><span class="p">[</span><span class="n">i</span><span class="p">];</span>
+<span class="p">}</span>
+
+<span class="c1">// Block是一维的，Thread是二维的
+</span><span class="n">__global__</span> <span class="kt">void</span> <span class="nf">addKernel</span><span class="p">(</span><span class="kt">int</span> <span class="o">*</span><span class="n">c</span><span class="p">,</span> <span class="kt">int</span> <span class="o">*</span><span class="n">a</span><span class="p">,</span> <span class="kt">int</span> <span class="o">*</span><span class="n">b</span><span class="p">)</span>
+<span class="p">{</span>
+    <span class="kt">int</span> <span class="n">i</span> <span class="o">=</span> <span class="n">blockIdx</span><span class="p">.</span><span class="n">x</span> <span class="o">*</span> <span class="n">blockDim</span><span class="p">.</span><span class="n">x</span> <span class="o">*</span> <span class="n">blockDim</span><span class="p">.</span><span class="n">y</span> <span class="o">+</span> \
+        <span class="n">threadIdx</span><span class="p">.</span><span class="n">y</span> <span class="o">*</span> <span class="n">blockDim</span><span class="p">.</span><span class="n">x</span> <span class="o">+</span> <span class="n">threadIdx</span><span class="p">.</span><span class="n">x</span><span class="p">;</span>
+    <span class="n">c</span><span class="p">[</span><span class="n">i</span><span class="p">]</span> <span class="o">=</span> <span class="n">a</span><span class="p">[</span><span class="n">i</span><span class="p">]</span> <span class="o">+</span> <span class="n">b</span><span class="p">[</span><span class="n">i</span><span class="p">];</span>
+<span class="p">}</span>
+
+<span class="c1">// Block是二维的，Thread是三维的
+</span><span class="n">__global__</span> <span class="kt">void</span> <span class="nf">addKernel</span><span class="p">(</span><span class="kt">int</span> <span class="o">*</span><span class="n">c</span><span class="p">,</span> <span class="kt">int</span> <span class="o">*</span><span class="n">a</span><span class="p">,</span> <span class="kt">int</span> <span class="o">*</span><span class="n">b</span><span class="p">)</span>
+<span class="p">{</span>
+    <span class="kt">int</span> <span class="n">blockId</span> <span class="o">=</span> <span class="n">blockIdx</span><span class="p">.</span><span class="n">x</span> <span class="o">+</span> <span class="n">blockIdx</span><span class="p">.</span><span class="n">y</span> <span class="o">*</span> <span class="n">gridDim</span><span class="p">.</span><span class="n">x</span><span class="p">;</span>  
+    <span class="kt">int</span> <span class="n">i</span> <span class="o">=</span> <span class="n">blockId</span> <span class="o">*</span> <span class="p">(</span><span class="n">blockDim</span><span class="p">.</span><span class="n">x</span> <span class="o">*</span> <span class="n">blockDim</span><span class="p">.</span><span class="n">y</span> <span class="o">*</span> <span class="n">blockDim</span><span class="p">.</span><span class="n">z</span><span class="p">)</span>  
+        <span class="o">+</span> <span class="p">(</span><span class="n">threadIdx</span><span class="p">.</span><span class="n">z</span> <span class="o">*</span> <span class="p">(</span><span class="n">blockDim</span><span class="p">.</span><span class="n">x</span> <span class="o">*</span> <span class="n">blockDim</span><span class="p">.</span><span class="n">y</span><span class="p">))</span>  
+        <span class="o">+</span> <span class="p">(</span><span class="n">threadIdx</span><span class="p">.</span><span class="n">y</span> <span class="o">*</span> <span class="n">blockDim</span><span class="p">.</span><span class="n">x</span><span class="p">)</span> <span class="o">+</span> <span class="n">threadIdx</span><span class="p">.</span><span class="n">x</span><span class="p">;</span> 
+    <span class="n">c</span><span class="p">[</span><span class="n">i</span><span class="p">]</span> <span class="o">=</span> <span class="n">a</span><span class="p">[</span><span class="n">i</span><span class="p">]</span> <span class="o">+</span> <span class="n">b</span><span class="p">[</span><span class="n">i</span><span class="p">];</span>
+<span class="p">}</span>
+</code></pre>
+</div>
+
+<p>当然也可以通过下面的代码来直接查询自己GPU的具体指标：</p>
+
+<div class="language-c highlighter-rouge"><pre class="highlight"><code><span class="n">cudaError_t</span> <span class="n">cudaStatus</span><span class="p">;</span>
+
+<span class="c1">// 初获取设备数量
+</span><span class="kt">int</span> <span class="n">num</span> <span class="o">=</span> <span class="mi">0</span><span class="p">;</span>
+<span class="n">cudaStatus</span> <span class="o">=</span> <span class="n">cudaGetDeviceCount</span><span class="p">(</span><span class="o">&amp;</span><span class="n">num</span><span class="p">);</span>
+<span class="n">std</span><span class="o">::</span><span class="n">cout</span> <span class="o">&lt;&lt;</span> <span class="s">"Number of GPU: "</span> <span class="o">&lt;&lt;</span> <span class="n">num</span> <span class="o">&lt;&lt;</span> <span class="n">std</span><span class="o">::</span><span class="n">endl</span><span class="p">;</span>
+
+<span class="c1">// 获取GPU设备属性
+</span><span class="n">cudaDeviceProp</span> <span class="n">prop</span><span class="p">;</span>
+<span class="k">if</span> <span class="p">(</span><span class="n">num</span> <span class="o">&gt;</span> <span class="mi">0</span><span class="p">)</span>
+<span class="p">{</span>
+    <span class="n">cudaGetDeviceProperties</span><span class="p">(</span><span class="o">&amp;</span><span class="n">prop</span><span class="p">,</span> <span class="mi">0</span><span class="p">);</span>
+    <span class="c1">// 打印设备名称
+</span>    <span class="n">std</span><span class="o">::</span><span class="n">cout</span> <span class="o">&lt;&lt;</span> <span class="s">"Device: "</span> <span class="o">&lt;&lt;</span><span class="n">prop</span><span class="p">.</span><span class="n">name</span> <span class="o">&lt;&lt;</span> <span class="n">std</span><span class="o">::</span><span class="n">endl</span><span class="p">;</span>
+<span class="p">}</span>
+</code></pre>
+</div>
+
+<p>其中 cudaDeviceProp是一个定义在driver_types.h中的结构体，大家可以自行查看其定义。</p>
+
+<h3 id="23-内存结构">2.3 内存结构</h3>
+
+<p>如下图所示,每个 thread 都有自己的一份 register 和 local memory 的空间。同一个 block 中的每个 thread 则有共享的一份 share memory。此外，所有的 thread(包括不同 block 的 thread)都共享一份 global memory、constant memory、和 texture memory。不同的 grid 则有各自的 global memory、constant memory 和 texture memory。</p>
+
+<p><img src="/img/post-ml/cuda4.png" alt="" /></p>
+
+<h2 id="三-线程协作">三. 线程协作</h2>
+
+<h3 id="31-并行程序块的分解">3.1 并行程序块的分解</h3>
+
+<p>首先回顾我们之前实现的矢量相加程序：</p>
+
+<div class="language-c highlighter-rouge"><pre class="highlight"><code><span class="c1">// 核函数：每个线程负责一个分量的加法
+</span><span class="n">__global__</span> <span class="kt">void</span> <span class="nf">addKernel</span><span class="p">(</span><span class="kt">int</span> <span class="o">*</span><span class="n">c</span><span class="p">,</span> <span class="k">const</span> <span class="kt">int</span> <span class="o">*</span><span class="n">a</span><span class="p">,</span> <span class="k">const</span> <span class="kt">int</span> <span class="o">*</span><span class="n">b</span><span class="p">)</span>
+<span class="p">{</span>
+    <span class="kt">int</span> <span class="n">i</span> <span class="o">=</span> <span class="n">threadIdx</span><span class="p">.</span><span class="n">x</span><span class="p">;</span> <span class="c1">// 获取线程ID
+</span>    <span class="n">c</span><span class="p">[</span><span class="n">i</span><span class="p">]</span> <span class="o">=</span> <span class="n">a</span><span class="p">[</span><span class="n">i</span><span class="p">]</span> <span class="o">+</span> <span class="n">b</span><span class="p">[</span><span class="n">i</span><span class="p">];</span>
+<span class="p">}</span>
+
+<span class="c1">// 运行核函数，运行设置为1个block，每个block中size个线程
+</span><span class="n">addKernel</span> <span class="o">&lt;&lt;</span> <span class="o">&lt;</span><span class="mi">1</span><span class="p">,</span> <span class="n">size</span> <span class="o">&gt;&gt;</span> <span class="o">&gt;</span><span class="p">(</span><span class="n">dev_c</span><span class="p">,</span> <span class="n">dev_a</span><span class="p">,</span> <span class="n">dev_b</span><span class="p">);</span>
+</code></pre>
+</div>
+
+<p>我们知道一个Block中的可开辟的线程数量是有限的(不超过1024)。如果矢量特别长，上面的操作是会出现问题的。于是我们可以采用多个线程块(Block)来解决线程不足的问题。 假如我们设定每个线程块包含128个线程，则需要的线程块的数量为 size / 128。 为了避免不能整除带来的问题，我们可以稍微多开一点 (size + 127) / 128，但需要增加判断条件来避免越界。</p>
+
+<div class="language-c highlighter-rouge"><pre class="highlight"><code><span class="c1">// 核函数：每个线程负责一个分量的加法
+</span><span class="n">__global__</span> <span class="kt">void</span> <span class="nf">addKernel</span><span class="p">(</span><span class="kt">int</span> <span class="o">*</span><span class="n">c</span><span class="p">,</span> <span class="k">const</span> <span class="kt">int</span> <span class="o">*</span><span class="n">a</span><span class="p">,</span> <span class="k">const</span> <span class="kt">int</span> <span class="o">*</span><span class="n">b</span><span class="p">,</span> <span class="k">const</span> <span class="kt">int</span> <span class="n">size</span><span class="p">)</span>
+<span class="p">{</span>
+    <span class="kt">int</span> <span class="n">i</span> <span class="o">=</span> <span class="n">blockIdx</span><span class="p">.</span><span class="n">x</span> <span class="o">*</span> <span class="n">blockDim</span><span class="p">.</span><span class="n">x</span> <span class="o">+</span> <span class="n">threadIdx</span><span class="p">.</span><span class="n">x</span><span class="p">;</span> <span class="c1">// 获取线程ID
+</span>    <span class="k">if</span> <span class="p">(</span><span class="n">i</span> <span class="o">&lt;</span> <span class="n">size</span><span class="p">)</span>
+        <span class="n">c</span><span class="p">[</span><span class="n">i</span><span class="p">]</span> <span class="o">=</span> <span class="n">a</span><span class="p">[</span><span class="n">i</span><span class="p">]</span> <span class="o">+</span> <span class="n">b</span><span class="p">[</span><span class="n">i</span><span class="p">];</span>
+<span class="p">}</span>
+
+<span class="c1">// 运行核函数，运行设置为多个block，每个block中128个线程
+</span><span class="n">addKernel</span> <span class="o">&lt;&lt;&lt;</span><span class="p">(</span><span class="n">size</span> <span class="o">+</span> <span class="mi">127</span><span class="p">)</span> <span class="o">/</span> <span class="mi">128</span><span class="p">,</span> <span class="mi">128</span> <span class="o">&gt;&gt;&gt;</span><span class="p">(</span><span class="n">dev_c</span><span class="p">,</span> <span class="n">dev_a</span><span class="p">,</span> <span class="n">dev_b</span><span class="p">,</span> <span class="n">size</span><span class="p">);</span>
+</code></pre>
+</div>
+
+<p>通过前面小节，我们同时也知道一个Grid中可开辟的Block数量也是有限的。</p>
+
+<p>如果数据量大于 Block_num * Thread_num，那么我们就无法为每个分量单独分配一个线程了。 不过，一个简单的解决办法就是在核函数中增加循环。</p>
+
+<div class="language-c highlighter-rouge"><pre class="highlight"><code><span class="c1">// 核函数：每个线程负责多个分量的加法
+</span><span class="n">__global__</span> <span class="kt">void</span> <span class="nf">addKernel</span><span class="p">(</span><span class="kt">int</span> <span class="o">*</span><span class="n">c</span><span class="p">,</span> <span class="k">const</span> <span class="kt">int</span> <span class="o">*</span><span class="n">a</span><span class="p">,</span> <span class="k">const</span> <span class="kt">int</span> <span class="o">*</span><span class="n">b</span><span class="p">,</span> <span class="k">const</span> <span class="kt">int</span> <span class="n">size</span><span class="p">)</span>
+<span class="p">{</span>
+    <span class="kt">int</span> <span class="n">i</span> <span class="o">=</span> <span class="n">blockIdx</span><span class="p">.</span><span class="n">x</span> <span class="o">*</span> <span class="n">blockDim</span><span class="p">.</span><span class="n">x</span> <span class="o">+</span> <span class="n">threadIdx</span><span class="p">.</span><span class="n">x</span><span class="p">;</span> 
+    <span class="k">while</span> <span class="p">(</span><span class="n">i</span> <span class="o">&lt;</span> <span class="n">size</span><span class="p">)</span>
+    <span class="p">{</span>
+        <span class="n">c</span><span class="p">[</span><span class="n">i</span><span class="p">]</span> <span class="o">=</span> <span class="n">a</span><span class="p">[</span><span class="n">i</span><span class="p">]</span> <span class="o">+</span> <span class="n">b</span><span class="p">[</span><span class="n">i</span><span class="p">];</span>
+        <span class="c1">// 偏移分量等于一个Grid中包含的线程数量
+</span>        <span class="n">i</span> <span class="o">+=</span> <span class="n">blockDim</span><span class="p">.</span><span class="n">x</span> <span class="o">*</span> <span class="n">gridDim</span><span class="p">.</span><span class="n">x</span><span class="p">;</span>
+    <span class="p">}</span>
+<span class="p">}</span>
+
+<span class="c1">// 运行核函数，运行设置为1个Grid包含128个block，每个block包含128个线程
+// 其中已经假设 size &gt; 128*128
+</span><span class="n">addKernel</span> <span class="o">&lt;&lt;&lt;</span><span class="mi">128</span><span class="p">,</span> <span class="mi">128</span> <span class="o">&gt;&gt;&gt;</span><span class="p">(</span><span class="n">dev_c</span><span class="p">,</span> <span class="n">dev_a</span><span class="p">,</span> <span class="n">dev_b</span><span class="p">,</span> <span class="n">size</span><span class="p">);</span>
+</code></pre>
+</div>
+
+<h3 id="32-共享内存与同步">3.2 共享内存与同步</h3>
+
+<p>上面提到线程块的分解似乎是为了增加可用的线程数量，但这种说法并不靠谱，因为这完全可以由CUDA在幕后全权控制。 其实，分解线程块的重要原因是因为内存。</p>
+
+<p>在“4.3 内存结构”中我们已经知道，同一个Block中的线程可以访问一块共享内存。由于共享内存缓冲区驻留在物理GPU上，而不是GPU之外的系统内存上，因此访问共享内存的延迟要远远低于访问普通缓冲区的延迟。</p>
+
+<p>不同Block之间存在隔离，如果我们需要不同线程之间进行通信，那么还需要考虑线程同步的问题。比如线程A将某个数值写入内存，然后线程B会对该数值进行一些操作，那么显然必须等A完成之后B才可以操作，如果没有同步，程序将会因进入“竞态条件”而产生意想不到的错误。</p>
+
+<p>接下来我们通过一个矢量点积的例子来说明上述问题。</p>
+
+<p>矢量点积的定义如下：</p>
+
+<script type="math/tex; mode=display">(x_1,x_2,x_3,x_4)\cdot (y_1,y_2,y_3,y_4)=x_1y_1+x_2y_2+x_3y_3+x_4y_4</script>
+
+<p>由上面的定义来看，点积的实现可以分为两步：</p>
+
+<ul>
+  <li>（1）计算每个分量的乘积，并暂存该结果；</li>
+  <li>（2）将所有临时结果加和。</li>
+</ul>
+
+<div class="language-c highlighter-rouge"><pre class="highlight"><code><span class="c1">// 定义我们的矢量长度
+</span><span class="k">const</span> <span class="kt">int</span> <span class="n">N</span> <span class="o">=</span> <span class="mi">64</span> <span class="o">*</span> <span class="mi">256</span><span class="p">;</span> 
+
+<span class="c1">// 定义每个Block中包含的Thread数量 
+</span><span class="k">const</span> <span class="kt">int</span> <span class="n">threadsPerBlock</span> <span class="o">=</span> <span class="mi">256</span><span class="p">;</span>  
+
+<span class="c1">// 定义每个Grid中包含的Block数量, 这里32 &lt; 64， 是为了模拟线程数量不足的情况
+</span><span class="k">const</span> <span class="kt">int</span> <span class="n">blocksPerGrid</span> <span class="o">=</span> <span class="mi">32</span><span class="p">;</span>
+
+<span class="n">__global__</span> <span class="kt">void</span> <span class="nf">dot</span><span class="p">(</span> <span class="kt">float</span> <span class="o">*</span><span class="n">a</span><span class="p">,</span> <span class="kt">float</span> <span class="o">*</span><span class="n">b</span><span class="p">,</span> <span class="kt">float</span> <span class="o">*</span><span class="n">c</span> <span class="p">)</span> 
+<span class="p">{</span>  
+    <span class="c1">// 声明共享内存用于存储临时乘积结果，内存大小为1个Block中的线程数量
+</span>    <span class="n">__shared__</span> <span class="kt">float</span> <span class="n">cache</span><span class="p">[</span><span class="n">threadsPerBlock</span><span class="p">];</span>  
+
+    <span class="c1">// 线程索引
+</span>    <span class="kt">int</span> <span class="n">tid</span> <span class="o">=</span> <span class="n">threadIdx</span><span class="p">.</span><span class="n">x</span> <span class="o">+</span> <span class="n">blockIdx</span><span class="p">.</span><span class="n">x</span> <span class="o">*</span> <span class="n">blockDim</span><span class="p">.</span><span class="n">x</span><span class="p">;</span>  
+
+    <span class="c1">// 一个Block中的线程索引 
+</span>    <span class="kt">int</span> <span class="n">cacheIndex</span> <span class="o">=</span> <span class="n">threadIdx</span><span class="p">.</span><span class="n">x</span><span class="p">;</span>  
+
+    <span class="c1">// 计算分量乘积，同时处理线程不足的问题
+</span>    <span class="kt">float</span>   <span class="n">temp</span> <span class="o">=</span> <span class="mi">0</span><span class="p">;</span>  
+    <span class="k">while</span> <span class="p">(</span><span class="n">tid</span> <span class="o">&lt;</span> <span class="n">N</span><span class="p">)</span> <span class="p">{</span>  
+        <span class="n">temp</span> <span class="o">+=</span> <span class="n">a</span><span class="p">[</span><span class="n">tid</span><span class="p">]</span> <span class="o">*</span> <span class="n">b</span><span class="p">[</span><span class="n">tid</span><span class="p">];</span>  
+        <span class="n">tid</span> <span class="o">+=</span> <span class="n">blockDim</span><span class="p">.</span><span class="n">x</span> <span class="o">*</span> <span class="n">gridDim</span><span class="p">.</span><span class="n">x</span><span class="p">;</span>  
+    <span class="p">}</span>  
+
+    <span class="c1">// 存储临时乘积结果
+</span>    <span class="n">cache</span><span class="p">[</span><span class="n">cacheIndex</span><span class="p">]</span> <span class="o">=</span> <span class="n">temp</span><span class="p">;</span> 
+<span class="p">}</span>
+</code></pre>
+</div>
+
+<p>执行完上面的部分，我们剩下的就是把cache中的值相加求和。 但是，我们必须要保证所有乘积都已经计算完成，才能去计算求和。 命令如下：</p>
+
+<div class="language-c highlighter-rouge"><pre class="highlight"><code><span class="c1">// 对线程块中的所有线程进行同步
+// 线程块中的所有线程都执行完前面的代码后才会继续往后执行
+</span><span class="n">__syncthreads</span><span class="p">();</span>
+</code></pre>
+</div>
+
+<p>求和最直接的方式就是循环累加，此时复杂度与数组长度成正比。不过我们可以再用一种更加高效的方法，其复杂度与数组长度的log成正比：将值两两合并，于是数据量减小一半，再重复两两合并直至全部计算完成。代码如下：</p>
+
+<div class="language-c highlighter-rouge"><pre class="highlight"><code><span class="c1">// 合并算法要求长度为2的指数倍
+</span><span class="kt">int</span> <span class="n">i</span> <span class="o">=</span> <span class="n">blockDim</span><span class="p">.</span><span class="n">x</span><span class="o">/</span><span class="mi">2</span><span class="p">;</span>  
+<span class="k">while</span> <span class="p">(</span><span class="n">i</span> <span class="o">!=</span> <span class="mi">0</span><span class="p">)</span> 
+<span class="p">{</span>  
+    <span class="k">if</span> <span class="p">(</span><span class="n">cacheIndex</span> <span class="o">&lt;</span> <span class="n">i</span><span class="p">)</span>  
+        <span class="n">cache</span><span class="p">[</span><span class="n">cacheIndex</span><span class="p">]</span> <span class="o">+=</span> <span class="n">cache</span><span class="p">[</span><span class="n">cacheIndex</span> <span class="o">+</span> <span class="n">i</span><span class="p">];</span>  
+    <span class="n">__syncthreads</span><span class="p">();</span>  
+    <span class="n">i</span> <span class="o">/=</span> <span class="mi">2</span><span class="p">;</span>  
+<span class="p">}</span> 
+
+<span class="c1">// 最后将一个Block的求和结果进行保存
+</span><span class="k">if</span> <span class="p">(</span><span class="n">cacheIndex</span> <span class="o">==</span> <span class="mi">0</span><span class="p">)</span>  
+        <span class="n">c</span><span class="p">[</span><span class="n">blockIdx</span><span class="p">.</span><span class="n">x</span><span class="p">]</span> <span class="o">=</span> <span class="n">cache</span><span class="p">[</span><span class="mi">0</span><span class="p">];</span> 
+</code></pre>
+</div>
+
+<h2 id="四-函数与变量类型限定符">四、 函数与变量类型限定符</h2>
+
+<h3 id="41-函数类型限定符">4.1 函数类型限定符</h3>
+
+<p>函数类型限定符用来标识函数运行在主机还是设备上，函数由主机还是设备调用。</p>
+
+<h5 id="__global__">__global__</h5>
+
+<ul>
+  <li>__global__修饰的函数为 核函数。</li>
+  <li>运行在设备上</li>
+  <li>可以由主机调用</li>
+  <li>可以由计算能力大于3.2的设备调用</li>
+  <li>必须有void返回类型</li>
+  <li>调用时必须制定运行参数(&lt;&lt;&lt; &gt;&gt;&gt;)</li>
+  <li>该函数的调用时异步的，即可以不必等候该函数全部完成，便可以在CPU上继续工作</li>
+</ul>
+
+<h5 id="__device__">__device__</h5>
+
+<ul>
+  <li>运行在设备上</li>
+  <li>只能由设备调用</li>
+  <li>编译器会内联所有认为合适的__device__修饰的函数</li>
+</ul>
+
+<h5 id="__host__">__host__</h5>
+
+<ul>
+  <li>运行在主机上</li>
+  <li>只能由主机调用</li>
+  <li>效果等同于函数不加任何限定符</li>
+  <li>不能与__global__共同使用， 但可以和__device__联合使用</li>
+</ul>
+
+<h5 id="__noinline__">__noinline__</h5>
+
+<ul>
+  <li>声明不允许内联</li>
+</ul>
+
+<h5 id="__forceinline__">__forceinline__</h5>
+
+<ul>
+  <li>强制编译器内联该函数</li>
+</ul>
+
+<h3 id="42-变量类型限定符">4.2 变量类型限定符</h3>
+
+<p>变量类型限定符用来标识变量在设备上的内存位置。</p>
+
+<h5 id="__device__-单独使用时">__device__ (单独使用时)</h5>
+
+<ul>
+  <li>位于 global memory space</li>
+  <li>生命周期为整个应用期间(即与application同生死)</li>
+  <li>可以被grid内的所有threads读取</li>
+  <li>可以在主机中由以下函数读取
+    <ul>
+      <li>cudaGetSymbolAddress()</li>
+      <li>cudaGetSymbolSize()</li>
+      <li>cudaMemcpyToSymbol()</li>
+      <li>cudaMemcpyFromSymbol()</li>
+    </ul>
+  </li>
+</ul>
+
+<h5 id="__constant__">__constant__</h5>
+
+<ul>
+  <li>可以和 __device__ 联合使用</li>
+  <li>位于 constant memory space</li>
+  <li>生命周期为整个应用期间</li>
+  <li>可以被grid内的所有threads读取</li>
+  <li>可以在主机中由以下函数读取
+    <ul>
+      <li>cudaGetSymbolAddress()</li>
+      <li>cudaGetSymbolSize()</li>
+      <li>cudaMemcpyToSymbol()</li>
+      <li>cudaMemcpyFromSymbol()</li>
+    </ul>
+  </li>
+</ul>
+
+<h5 id="__shared__">__shared__</h5>
+
+<ul>
+  <li>可以和 <strong>device</strong> 联合使用</li>
+  <li>位于一个Block的shared memory space</li>
+  <li>生命周期为整个Block</li>
+  <li>只能被同一block内的threads读写</li>
+</ul>
+
+<h5 id="__managed__">__managed__</h5>
+
+<ul>
+  <li>可以和 __device__ 联合使用</li>
+  <li>可以被主机和设备引用，主机或者设备函数可以获取其地址或者读写其值</li>
+  <li>生命周期为整个应用期间</li>
+</ul>
+
+<h5 id="__restrict__">__restrict__</h5>
+
+<ul>
+  <li>该关键字用来对指针进行限制性说明，目的是为了减少指针别名带来的问题。</li>
+</ul>
+
+<h2 id="五-常量内存与事件">五、 常量内存与事件</h2>
+
+<p>GPU通常包含大量的数学计算单元，因此性能瓶颈往往不在于芯片的数学计算吞吐量，而在于芯片的内存带宽，即有时候输入数据的速率甚至不能维持满负荷的运算。 于是我们需要一些手段来减少内存通信量。 目前的GPU均提供了64KB的常量内存，并且对常量内存采取了不同于全局内存的处理方式。 在某些场景下，使用常量内存来替换全局内存可以有效地提高通信效率。</p>
+
+<h3 id="常量内存">常量内存</h3>
+<p>常量内存具有以下特点：</p>
+
+<ul>
+  <li>需要由 __constant__ 限定符来声明</li>
+  <li>只读</li>
+  <li>硬件上并没有特殊的常量内存块，常量内存只是只是全局内存的一种虚拟地址形式</li>
+  <li>目前的GPU常量内存大小都只有64K，主要是因为常量内存采用了更快速的16位地址寻址(2^16)</li>
+  <li>对于数据不太集中或者重用率不高的内存访问，尽量不要使用常量内存，否则甚至会慢于使用全局内存</li>
+  <li>常量内存无需cudaMalloc()来开辟，而是在声明时直接提交一个固定大小，比如 __constant__ float mdata[1000]</li>
+  <li>常量内存的赋值不能再用cudaMemcpy()，而是使用cudaMemcpyToSymbol()</li>
+</ul>
+
+<h3 id="常量内存带来性能提升的原因主要有两个">常量内存带来性能提升的原因主要有两个：</h3>
+
+<ul>
+  <li>对常量内存的单次读操作可以广播到其他的“邻近(nearby)”线程，这将节约15次读取操作</li>
+  <li>常量内存的数据将缓存起来，因此对于相同地址的连续操作将不会产生额外的内存通信量。</li>
+</ul>
+
+<h4 id="对于原因1涉及到-线程束warp的概念">对于原因1，涉及到 线程束(Warp)的概念。</h4>
+
+<p>在CUDA架构中，线程束是指一个包含32个线程的集合，这个线程集合被“编织在一起”并且以“步调一致(Lockstep)”的形式执行。 即线程束中的每个线程都将在不同数据上执行相同的指令。</p>
+
+<p>当处理常量内存时，NVIDIA硬件将把单次内存读取操作广播到每个半线程束(Half-Warp)。在半线程束中包含16个线程，即线程束中线程数量的一半。如果在半线程束中的每个线程从常量内存的相同地址上读取数据，那么GPU只会产生一次读取请求并在随后将数据广播到每个线程。如果从常量内存中读取大量数据，那么这种方式产生的内存流量只是使用全局内存时的1/16。</p>
+
+<h4 id="对于原因2涉及到缓存的管理">对于原因2，涉及到缓存的管理</h4>
+
+<p>由于常量内存的内容是不发生变化的，因此硬件将主动把这个常量数据缓存在GPU上。在第一次从常量内存的某个地址上读取后，当其他半线程束请求同一个地址时，那么将命中缓存，这同样减少了额外的内存流量。</p>
+
+<p>另一方面, 常量内存的使用也可能会对性能产生负面的影响。半线程束广播功能实际上是一把双刃剑。虽然当所有16个线程都读取相同地址时，这个功能可以极大提升性能，但当所有16个线程分别读取不同的地址时，它实际上会降低性能。因为这16次不同的读取操作会被串行化，从而需要16倍的时间来发出请求。但如果从全局内存中读取，那么这些请求会同时发出。</p>
+
+<h2 id="六-原子操作">六、 原子操作</h2>
+<p>原子操作 是指对全局和共享内存中的32位或者64位数据进行 “读取-修改-覆写”这一操作。</p>
+
+<p>原子操作可以看作是一种最小单位的执行过程。 在其执行过程中，不允许其他并行线程对该变量进行读取和写入的操作。 如果发生竞争，则其他线程必须等待。</p>
+
+<p>下面先给出原子操作函数的列表，后续会给出一个应用例子。</p>
+
+<h3 id="原子操作函数列表">原子操作函数列表</h3>
+
+<h5 id="61-atomicadd">6.1 atomicAdd()</h5>
+<div class="language-c highlighter-rouge"><pre class="highlight"><code><span class="kt">int</span> <span class="n">atomicAdd</span><span class="p">(</span><span class="kt">int</span><span class="o">*</span> <span class="n">address</span><span class="p">,</span> <span class="kt">int</span> <span class="n">val</span><span class="p">);</span>
+<span class="kt">unsigned</span> <span class="kt">int</span> <span class="n">atomicAdd</span><span class="p">(</span><span class="kt">unsigned</span> <span class="kt">int</span><span class="o">*</span> <span class="n">address</span><span class="p">,</span> <span class="kt">unsigned</span> <span class="kt">int</span> <span class="n">val</span><span class="p">);</span>
+<span class="kt">unsigned</span> <span class="kt">long</span> <span class="kt">long</span> <span class="kt">int</span> <span class="n">atomicAdd</span><span class="p">(</span><span class="kt">unsigned</span> <span class="kt">long</span> <span class="kt">long</span> <span class="kt">int</span><span class="o">*</span> <span class="n">address</span><span class="p">,</span> <span class="kt">unsigned</span> <span class="kt">long</span> <span class="kt">long</span> <span class="kt">int</span> <span class="n">val</span><span class="p">);</span>
+<span class="kt">float</span> <span class="n">atomicAdd</span><span class="p">(</span><span class="kt">float</span><span class="o">*</span> <span class="n">address</span><span class="p">,</span> <span class="kt">float</span> <span class="n">val</span><span class="p">);</span>
+<span class="kt">double</span> <span class="n">atomicAdd</span><span class="p">(</span><span class="kt">double</span><span class="o">*</span> <span class="n">address</span><span class="p">,</span> <span class="kt">double</span> <span class="n">val</span><span class="p">);</span>
+</code></pre>
+</div>
+
+<p>读取位于全局或共享存储器中地址address处的32位或64位字old，计算(old + val)，并将结果存储在存储器的同一地址中。这三项操作在一次原子事务中执行。该函数将返回old。</p>
+
+<p>注意：</p>
+
+<ul>
+  <li>32位浮点数的操作只适用于计算能力大于2.0的GPU</li>
+  <li>64位浮点数的操作只适用于计算能力大于6.0的GPU</li>
+</ul>
+
+<p>但可以通过以下操作在计算能力不足的GPU上实现浮点数原子操作：</p>
+<div class="language-c highlighter-rouge"><pre class="highlight"><code><span class="cp">#if __CUDA_ARCH__ &lt; 600 
+</span><span class="n">__device__</span> <span class="kt">double</span> <span class="nf">atomicAdd</span><span class="p">(</span><span class="kt">double</span><span class="o">*</span> <span class="n">address</span><span class="p">,</span> <span class="kt">double</span> <span class="n">val</span><span class="p">)</span> 
+<span class="p">{</span> 
+    <span class="kt">unsigned</span> <span class="kt">long</span> <span class="kt">long</span> <span class="kt">int</span><span class="o">*</span> <span class="n">address_as_ull</span> <span class="o">=</span> <span class="p">(</span><span class="kt">unsigned</span> <span class="kt">long</span> <span class="kt">long</span> <span class="kt">int</span><span class="o">*</span><span class="p">)</span><span class="n">address</span><span class="p">;</span> <span class="kt">unsigned</span> <span class="kt">long</span> <span class="kt">long</span> <span class="kt">int</span> <span class="n">old</span> <span class="o">=</span> <span class="o">*</span><span class="n">address_as_ull</span><span class="p">,</span> <span class="n">assumed</span><span class="p">;</span> 
+    <span class="k">do</span> <span class="p">{</span> 
+        <span class="n">assumed</span> <span class="o">=</span> <span class="n">old</span><span class="p">;</span> 
+        <span class="n">old</span> <span class="o">=</span> <span class="n">atomicCAS</span><span class="p">(</span><span class="n">address_as_ull</span><span class="p">,</span> <span class="n">assumed</span><span class="p">,</span> <span class="n">__double_as_longlong</span><span class="p">(</span><span class="n">val</span> <span class="o">+</span> <span class="n">__longlong_as_double</span><span class="p">(</span><span class="n">assumed</span><span class="p">)));</span> 
+        <span class="c1">// Note: uses integer comparison to avoid hang in case of NaN (since NaN != NaN) 
+</span>        <span class="p">}</span> 
+        <span class="k">while</span> <span class="p">(</span><span class="n">assumed</span> <span class="o">!=</span> <span class="n">old</span><span class="p">);</span> 
+        <span class="k">return</span> <span class="n">__longlong_as_double</span><span class="p">(</span><span class="n">old</span><span class="p">);</span> 
+<span class="p">}</span> 
+<span class="cp">#endif
+</span></code></pre>
+</div>
+<h5 id="62-atomicsub">6.2 atomicSub()</h5>
+<div class="language-c highlighter-rouge"><pre class="highlight"><code><span class="kt">int</span> <span class="n">atomicSub</span><span class="p">(</span><span class="kt">int</span><span class="o">*</span> <span class="n">address</span><span class="p">,</span> <span class="kt">int</span> <span class="n">val</span><span class="p">);</span> 
+<span class="kt">unsigned</span> <span class="kt">int</span> <span class="n">atomicSub</span><span class="p">(</span><span class="kt">unsigned</span> <span class="kt">int</span><span class="o">*</span> <span class="n">address</span><span class="p">,</span> <span class="kt">unsigned</span> <span class="kt">int</span> <span class="n">val</span><span class="p">);</span>
+</code></pre>
+</div>
+
+<p>读取位于全局或共享存储器中地址address处的32位字old，计算(old - val)，并将结果存储在存储器的同一地址中。这三项操作在一次原子事务中执行。该函数将返回old。</p>
+
+<h5 id="63-atomicexch">6.3 atomicExch()</h5>
+<div class="language-c highlighter-rouge"><pre class="highlight"><code><span class="kt">int</span> <span class="n">atomicExch</span><span class="p">(</span><span class="kt">int</span><span class="o">*</span> <span class="n">address</span><span class="p">,</span> <span class="kt">int</span> <span class="n">val</span><span class="p">);</span> 
+<span class="kt">unsigned</span> <span class="kt">int</span> <span class="n">atomicExch</span><span class="p">(</span><span class="kt">unsigned</span> <span class="kt">int</span><span class="o">*</span> <span class="n">address</span><span class="p">,</span> <span class="kt">unsigned</span> <span class="kt">int</span> <span class="n">val</span><span class="p">);</span> 
+<span class="kt">unsigned</span> <span class="kt">long</span> <span class="kt">long</span> <span class="kt">int</span> <span class="n">atomicExch</span><span class="p">(</span><span class="kt">unsigned</span> <span class="kt">long</span> <span class="kt">long</span> <span class="kt">int</span><span class="o">*</span> <span class="n">address</span><span class="p">,</span> <span class="kt">unsigned</span> <span class="kt">long</span> <span class="kt">long</span> <span class="kt">int</span> <span class="n">val</span><span class="p">);</span> 
+<span class="kt">float</span> <span class="n">atomicExch</span><span class="p">(</span><span class="kt">float</span><span class="o">*</span> <span class="n">address</span><span class="p">,</span> <span class="kt">float</span> <span class="n">val</span><span class="p">);</span>
+</code></pre>
+</div>
+<p>读取位于全局或共享存储器中地址address处的32位或64位字old，并将val 存储在存储器的同一地址中。这两项操作在一次原子事务中执行。该函数将返回old。</p>
+
+<h5 id="64-atomicmin">6.4 atomicMin()</h5>
+<div class="language-c highlighter-rouge"><pre class="highlight"><code><span class="kt">int</span> <span class="n">atomicMin</span><span class="p">(</span><span class="kt">int</span><span class="o">*</span> <span class="n">address</span><span class="p">,</span> <span class="kt">int</span> <span class="n">val</span><span class="p">);</span> 
+<span class="kt">unsigned</span> <span class="kt">int</span> <span class="n">atomicMin</span><span class="p">(</span><span class="kt">unsigned</span> <span class="kt">int</span><span class="o">*</span> <span class="n">address</span><span class="p">,</span> <span class="kt">unsigned</span> <span class="kt">int</span> <span class="n">val</span><span class="p">);</span> 
+<span class="kt">unsigned</span> <span class="kt">long</span> <span class="kt">long</span> <span class="kt">int</span> <span class="n">atomicMin</span><span class="p">(</span><span class="kt">unsigned</span> <span class="kt">long</span> <span class="kt">long</span> <span class="kt">int</span><span class="o">*</span> <span class="n">address</span><span class="p">,</span> <span class="kt">unsigned</span> <span class="kt">long</span> <span class="kt">long</span> <span class="kt">int</span> <span class="n">val</span><span class="p">);</span>
+</code></pre>
+</div>
+<p>读取位于全局或共享存储器中地址address处的32位字或64位字old，计算old 和val 的最小值，并将结果存储在存储器的同一地址中。这三项操作在一次原子事务中执行。该函数将返回old&gt;</p>
+
+<p>注意：</p>
+
+<p>64位的操作只适用于计算能力大于3.5的GPU</p>
+<h5 id="65-atomicmax">6.5 atomicMax()</h5>
+<p>同atomicMin()。</p>
+
+<h5 id="66-atomicinc">6.6 atomicInc()</h5>
+<div class="language-c highlighter-rouge"><pre class="highlight"><code><span class="kt">unsigned</span> <span class="kt">int</span> <span class="n">atomicInc</span><span class="p">(</span><span class="kt">unsigned</span> <span class="kt">int</span><span class="o">*</span> <span class="n">address</span><span class="p">,</span> <span class="kt">unsigned</span> <span class="kt">int</span> <span class="n">val</span><span class="p">);</span>
+</code></pre>
+</div>
+<p>读取位于全局或共享存储器中地址address处的32位字old，计算 ((old &gt;= val) ? 0 : (old+1))，并将结果存储在存储器的同一地址中。这三项操作在一次原子事务中执行。该函数将返回old。</p>
+
+<h5 id="67-atomicdec">6.7 atomicDec()</h5>
+<div class="language-c highlighter-rouge"><pre class="highlight"><code><span class="kt">unsigned</span> <span class="kt">int</span> <span class="n">atomicDec</span><span class="p">(</span><span class="kt">unsigned</span> <span class="kt">int</span><span class="o">*</span> <span class="n">address</span><span class="p">,</span> <span class="kt">unsigned</span> <span class="kt">int</span> <span class="n">val</span><span class="p">);</span>
+</code></pre>
+</div>
+<p>读取位于全局或共享存储器中地址address处的32位字old，计算 (((old == 0) | (old &gt; val)) ? val : (old-1))，并将结果存储在存储器的同一地址中。这三项操作在一次原子事务中执行。该函数将返回old。</p>
+
+<h5 id="68-atomiccas">6.8 atomicCAS()</h5>
+<div class="language-c highlighter-rouge"><pre class="highlight"><code><span class="kt">int</span> <span class="n">atomicCAS</span><span class="p">(</span><span class="kt">int</span><span class="o">*</span> <span class="n">address</span><span class="p">,</span> <span class="kt">int</span> <span class="n">compare</span><span class="p">,</span> <span class="kt">int</span> <span class="n">val</span><span class="p">);</span> 
+<span class="kt">unsigned</span> <span class="kt">int</span> <span class="n">atomicCAS</span><span class="p">(</span><span class="kt">unsigned</span> <span class="kt">int</span><span class="o">*</span> <span class="n">address</span><span class="p">,</span> <span class="kt">unsigned</span> <span class="kt">int</span> <span class="n">compare</span><span class="p">,</span> <span class="kt">unsigned</span> <span class="kt">int</span> <span class="n">val</span><span class="p">);</span> 
+<span class="kt">unsigned</span> <span class="kt">long</span> <span class="kt">long</span> <span class="kt">int</span> <span class="n">atomicCAS</span><span class="p">(</span><span class="kt">unsigned</span> <span class="kt">long</span> <span class="kt">long</span> <span class="kt">int</span><span class="o">*</span> <span class="n">address</span><span class="p">,</span> <span class="kt">unsigned</span> <span class="kt">long</span> <span class="kt">long</span> <span class="kt">int</span> <span class="n">compare</span><span class="p">,</span> <span class="kt">unsigned</span> <span class="kt">long</span> <span class="kt">long</span> <span class="kt">int</span> <span class="n">val</span><span class="p">);</span>
+</code></pre>
+</div>
+<p>读取位于全局或共享存储器中地址address处的32位或64位字old，计算 (old == compare ? val : old)，并将结果存储在存储器的同一地址中。这三项操作在一次原子事务中执行。该函数将返回old（比较并交换）。</p>
+
+<h5 id="69-atomicand">6.9 atomicAnd()</h5>
+<div class="language-c highlighter-rouge"><pre class="highlight"><code><span class="kt">int</span> <span class="n">atomicAnd</span><span class="p">(</span><span class="kt">int</span><span class="o">*</span> <span class="n">address</span><span class="p">,</span> <span class="kt">int</span> <span class="n">val</span><span class="p">);</span> 
+<span class="kt">unsigned</span> <span class="kt">int</span> <span class="n">atomicAnd</span><span class="p">(</span><span class="kt">unsigned</span> <span class="kt">int</span><span class="o">*</span> <span class="n">address</span><span class="p">,</span> <span class="kt">unsigned</span> <span class="kt">int</span> <span class="n">val</span><span class="p">);</span> 
+<span class="kt">unsigned</span> <span class="kt">long</span> <span class="kt">long</span> <span class="kt">int</span> <span class="n">atomicAnd</span><span class="p">(</span><span class="kt">unsigned</span> <span class="kt">long</span> <span class="kt">long</span> <span class="kt">int</span><span class="o">*</span> <span class="n">address</span><span class="p">,</span> <span class="kt">unsigned</span> <span class="kt">long</span> <span class="kt">long</span> <span class="kt">int</span> <span class="n">val</span><span class="p">);</span>
+</code></pre>
+</div>
+<p>读取位于全局或共享存储器中地址address处的32位字或64位字old，计算 (old &amp; val)，并将结果存储在存储器的同一地址中。这三项操作在一次原子事务中执行。该函数将返回old。</p>
+
+<p>注意：</p>
+
+<p>64位的操作只适用于计算能力大于3.5的GPU</p>
+
+<h5 id="610-atomicor">6.10 atomicOr()</h5>
+<div class="language-c highlighter-rouge"><pre class="highlight"><code><span class="kt">int</span> <span class="n">atomicOr</span><span class="p">(</span><span class="kt">int</span><span class="o">*</span> <span class="n">address</span><span class="p">,</span> <span class="kt">int</span> <span class="n">val</span><span class="p">);</span> 
+<span class="kt">unsigned</span> <span class="kt">int</span> <span class="n">atomicOr</span><span class="p">(</span><span class="kt">unsigned</span> <span class="kt">int</span><span class="o">*</span> <span class="n">address</span><span class="p">,</span> <span class="kt">unsigned</span> <span class="kt">int</span> <span class="n">val</span><span class="p">);</span> 
+<span class="kt">unsigned</span> <span class="kt">long</span> <span class="kt">long</span> <span class="kt">int</span> <span class="n">atomicOr</span><span class="p">(</span><span class="kt">unsigned</span> <span class="kt">long</span> <span class="kt">long</span> <span class="kt">int</span><span class="o">*</span> <span class="n">address</span><span class="p">,</span> <span class="kt">unsigned</span> <span class="kt">long</span> <span class="kt">long</span> <span class="kt">int</span> <span class="n">val</span><span class="p">);</span>
+</code></pre>
+</div>
+<p>读取位于全局或共享存储器中地址address处的32位字或64位字old，计算 (old | val)，并将结果存储在存储器的同一地址中。这三项操作在一次原子事务中执行。该函数将返回old。</p>
+
+<p>注意：</p>
+
+<p>64位的操作只适用于计算能力大于3.5的GPU</p>
+
+<h5 id="611-atomicxor">6.11 atomicXor()</h5>
+<div class="language-c highlighter-rouge"><pre class="highlight"><code><span class="kt">int</span> <span class="n">atomicXor</span><span class="p">(</span><span class="kt">int</span><span class="o">*</span> <span class="n">address</span><span class="p">,</span> <span class="kt">int</span> <span class="n">val</span><span class="p">);</span> 
+<span class="kt">unsigned</span> <span class="kt">int</span> <span class="n">atomicXor</span><span class="p">(</span><span class="kt">unsigned</span> <span class="kt">int</span><span class="o">*</span> <span class="n">address</span><span class="p">,</span> <span class="kt">unsigned</span> <span class="kt">int</span> <span class="n">val</span><span class="p">);</span> 
+<span class="kt">unsigned</span> <span class="kt">long</span> <span class="kt">long</span> <span class="kt">int</span> <span class="n">atomicXor</span><span class="p">(</span><span class="kt">unsigned</span> <span class="kt">long</span> <span class="kt">long</span> <span class="kt">int</span><span class="o">*</span> <span class="n">address</span><span class="p">,</span> <span class="kt">unsigned</span> <span class="kt">long</span> <span class="kt">long</span> <span class="kt">int</span> <span class="n">val</span><span class="p">);</span>
+</code></pre>
+</div>
+<p>读取位于全局或共享存储器中地址address处的32位字或64位字old，计算 (old ^ val)，并将结果存储在存储器的同一地址中。这三项操作在一次原子事务中执行。该函数将返回old。</p>
+
+<p>注意：</p>
+
+<p>64位的操作只适用于计算能力大于3.5的GPU</p>
+
+<h2 id="七-流并行">七. 流并行</h2>
+
+<p>我们前面学习的CUDA并行程序设计，基本上都是在一批数据上利用大量线程实现并行。 除此之外， NVIDIA系列GPU还支持另外一种类型的并行性 —— 流。</p>
+
+<p>GPU中的流并行类似于CPU上的任务并行，即每个流都可以看作是一个独立的任务，每个流中的代码操作顺序执行。</p>
+
+<p>下面从流并行的基础到使用来说明。</p>
+
+<h3 id="71-页锁定内存">7.1 页锁定内存</h3>
+<p>流并行的使用需要有硬件支持：即必须是支持设备重叠功能的GPU。</p>
+
+<p>通过下面的代码查询设备是否支持设备重叠功能：</p>
+
+<div class="language-c highlighter-rouge"><pre class="highlight"><code><span class="n">cudaDeviceProp</span> <span class="n">mprop</span><span class="p">;</span>
+<span class="n">cudaGetDeviceProperties</span><span class="p">(</span><span class="o">&amp;</span><span class="n">mprop</span><span class="p">,</span><span class="mi">0</span><span class="p">);</span>
+<span class="k">if</span> <span class="p">(</span><span class="o">!</span><span class="n">mprop</span><span class="p">.</span><span class="n">deviceOverlap</span><span class="p">)</span>
+<span class="p">{</span>
+    <span class="n">cout</span> <span class="o">&lt;&lt;</span> <span class="s">"Device not support overlaps, so stream is invalid!"</span> <span class="o">&lt;&lt;</span> <span class="n">endl</span><span class="p">;</span>
+<span class="p">}</span>
+</code></pre>
+</div>
+
+<p>只有支持设备重叠，GPU在执行一个核函数的同时，才可以同时在设备与主机之间执行复制操作。 当然，这种复制操作需要在一种特殊的内存上才可以进行 —— 页锁定内存。</p>
+
+<p>页锁定内存： 需要由cudaHostAlloc()分配，又称为固定内存（Pinned Memory）或者不可分页内存。 操作系统将不会对这块内存分页并交换到磁盘上，从而确保了该内存始终驻留在物理内存中，因为这块内存将不会被破坏或者重新定位。 由于gpu知道内存的物理地址，因此可以通过“直接内存访问（Direct Memory Access，DMA）” 直接在gpu和主机之间复制数据。<br />
+可分页内存： malloc()分配的内存是标准的、可分页的（Pagable）主机内存。 可分页内存面临着重定位的问题，因此使用可分页内存进行复制时，复制可能执行两次操作：从可分页内存复制到一块“临时”页锁定内存，然后从页锁定内存复制到GPU。<br />
+虽然在页锁定内存上执行复制操作效率比较高，但消耗物理内存更多。因此，通常对cudaMemcpy()调用的源内存或者目标内存才使用，而且使用完毕立即释放。</p>
+
+<h3 id="72-流并行机制">7.2 流并行机制</h3>
+
+<p>流并行是指我们可以创建多个流来执行多个任务， 但每个流都是一个需要按照顺序执行的操作队列。 那么我们如何实现程序加速？ 其核心就在于，在页锁定内存上的数据复制是独立于核函数执行的，即我们可以在执行核函数的同时进行数据复制。</p>
+
+<p>这里的复制需要使用cudaMemcpyAsync()，一个以异步执行的函数。调用cudaMemcpyAsync()时，只是放置一个请求，表示在流中执行一次内存复制操作。当函数返回时，我们无法确保复制操作已经结束。我们能够得到的保证是，复制操作肯定会当下一个被放入流中的操作之前执行。(相比之下，cudaMemcpy()是一个同步执行函数。当函数返回时，复制操作已完成。)</p>
+
+<p>以计算 a + b = c为例，假如我们创建了两个流，每个流都是按顺序执行：</p>
+
+<p>复制a(主机到GPU) -&gt; 复制b(主机到GPU) -&gt; 核函数计算 -&gt; 复制c(GPU到主机)</p>
+
+<p><img src="/img/post-ml/cuda7.png" alt="" /></p>
+
+<p>如上图，复制操作和核函数执行是分开的，但由于每个流内部需要按顺序执行，因此复制c的操作需要等待核函数执行完毕。 于是，整个程序执行的时间线如下图：(箭头表示需要等待)</p>
+
+<p><img src="/img/post-ml/cuda8.png" alt="" /></p>
+
+<p>从上面的时间线我们可以启发式的思考下：如何调整每个流当中的操作顺序来获得最大的收益？ 提高重叠率。</p>
+
+<p>如下图所示，假如复制一份数据的时间和执行一次核函数的时间差不多，那么我们可以采用交叉执行的策略：</p>
+
+<p><img src="/img/post-ml/cuda9.png" alt="" /></p>
+
+<p>由于流0的a和b已经准备完成，因此当复制流1的b时，可以同步执行流0的核函数。 这样整个时间线，相较于之前的操作很明显少掉了两块操作。</p>
+
+<h3 id="73-流并行示例">7.3 流并行示例</h3>
+<p>与流相关的常用函数如下</p>
+<div class="language-c highlighter-rouge"><pre class="highlight"><code><span class="c1">// 创建与销毁
+</span><span class="n">cudaStream_t</span> <span class="n">stream</span><span class="c1">//定义流 
+</span><span class="n">cudaStreamCreate</span><span class="p">(</span><span class="n">cudaStream_t</span> <span class="o">*</span> <span class="n">s</span><span class="p">)</span><span class="c1">//创建流 
+</span><span class="n">cudaStreamDestroy</span><span class="p">(</span><span class="n">cudaStream_t</span> <span class="n">s</span><span class="p">)</span><span class="c1">//销毁流 
+</span>
+<span class="c1">//同步 
+</span><span class="n">cudaStreamSynchronize</span><span class="p">()</span><span class="c1">//同步单个流：等待该流上的命令都完成 
+</span><span class="n">cudaDeviceSynchronize</span><span class="p">()</span><span class="c1">//同步所有流：等待整个设备上流都完成 
+</span><span class="n">cudaStreamWaitEvent</span><span class="p">()</span><span class="c1">//等待某个事件结束后执行该流上的命令 
+</span><span class="n">cudaStreamQuery</span><span class="p">()</span><span class="c1">//查询一个流任务是否完成 
+</span>
+<span class="c1">//回调 
+</span><span class="n">cudaStreamAddCallback</span><span class="p">()</span><span class="c1">//在任何点插入回调函数 
+</span>
+<span class="c1">//优先级 
+</span><span class="n">cudaStreamCreateWithPriority</span><span class="p">()</span> 
+<span class="n">cudaDeviceGetStreamPriorityRange</span><span class="p">()</span>
+</code></pre>
+</div>
+
+<h2 id="附录">附录</h2>
+
+<ul>
+  <li>NVIDIA 型号对应的计算能力(Compute Capabilities)表</li>
+</ul>
+
+<h3 id="quadro-desktop-products">Quadro Desktop Products</h3>
+
+<table>
+    <tr>
+        <th>GPU</th>
+        <th> Compute Capability</th>
+    </tr>
+    <tr><td>Quadro RTX 8000</td><td>7.5</td></tr>
+    <tr><td>Quadro RTX 6000</td><td>7.5</td></tr>
+    <tr><td>Quadro RTX 5000</td><td>7.5</td></tr>
+    <tr><td>Quadro RTX 4000</td><td>7.5</td></tr>
+    <tr><td>Quadro GV100</td><td>7.0</td></tr>
+    <tr><td>Quadro GP100</td><td>6.0</td></tr>
+    <tr><td>Quadro P6000</td><td>6.1</td></tr>
+    <tr><td>Quadro P5000</td><td>6.1</td></tr>
+    <tr><td>Quadro P4000</td><td>6.1</td></tr>
+    <tr><td>Quadro P2200</td><td>6.1</td></tr>
+    <tr><td>Quadro P2000</td><td>6.1</td></tr>
+    <tr><td>Quadro P1000</td><td>6.1</td></tr>
+    <tr><td>Quadro P620</td><td>6.1</td></tr>
+    <tr><td>Quadro P600</td><td>6.1</td></tr>
+    <tr><td>Quadro P400</td><td>6.1</td></tr>						
+    <tr><td>Quadro M6000 24GB</td><td>5.2</td></tr>
+    <tr><td>Quadro M6000</td><td>5.2</td></tr>
+    <tr><td>Quadro K6000</td><td>3.5</td></tr>
+    <tr><td>Quadro M5000</td><td>5.2</td></tr>
+    <tr><td>Quadro K5200</td><td>3.5</td></tr>
+    <tr><td>Quadro K5000</td><td>3.0</td></tr>
+    <tr><td>Quadro M4000</td><td>5.2</td></tr>
+    <tr><td>Quadro K4200</td><td>3.0</td></tr>
+    <tr><td>Quadro K4000</td><td>3.0</td></tr>
+    <tr><td>Quadro M2000</td><td>5.2</td></tr>
+    <tr><td>Quadro K2200</td><td>3.0</td></tr>
+    <tr><td>Quadro K2000</td><td>3.0</td></tr>
+    <tr><td>Quadro K2000D</td><td>3.0</td></tr>
+    <tr><td>Quadro K1200</td><td>5.0</td></tr>
+    <tr><td>Quadro K620</td><td>5.0</td></tr>
+    <tr><td>Quadro K600</td><td>3.0</td></tr>
+    <tr><td>Quadro K420</td><td>3.0</td></tr>
+    <tr><td>Quadro 410</td><td>3.0</td></tr>
+    <tr><td>Quadro Plex 7000</td><td>2.0</td></tr>
+</table>
+
+<h3 id="quadro-mobile--products">Quadro Mobile  Products</h3>
+<table>
+    <tr>
+        <th>GPU</th>
+        <th>Compute Capability</th>
+    </tr>
+    <tr><td>RTX 5000</td><td>7.5</td></tr>
+    <tr><td>RTX 4000</td><td>7.5</td></tr>
+    <tr><td>RTX 3000</td><td>7.5</td></tr>
+    <tr><td>T2000</td><td>7.5</td></tr>
+    <tr><td>T1000</td><td>7.5</td></tr>
+    <tr><td>P620</td><td>6.1</td></tr>
+    <tr><td>P520</td><td>6.1</td></tr>
+    <tr><td>Quadro P5200</td><td>6.1</td></tr>
+    <tr><td>Quadro P4200</td><td>6.1</td></tr>
+    <tr><td>Quadro P3200</td><td>6.1</td></tr>
+    <tr><td>Quadro P5000</td><td>6.1</td></tr>
+    <tr><td>Quadro P4000</td><td>6.1</td></tr>
+    <tr><td>Quadro P3000</td><td>6.1</td></tr>
+    <tr><td>Quadro P2000</td><td>6.1</td></tr>
+    <tr><td>Quadro P1000</td><td>6.1</td></tr>
+    <tr><td>Quadro P600</td><td>6.1</td></tr>
+    <tr><td>Quadro P500</td><td>6.1</td></tr>
+    <tr><td>Quadro M5500M</td><td>5.2</td></tr>
+    <tr><td>Quadro M2200</td><td>5.2</td></tr>
+    <tr><td>Quadro M1200</td><td>5.0</td></tr>
+    <tr><td>Quadro M620</td><td>5.2</td></tr>
+    <tr><td>Quadro M520</td><td>5.0</td></tr>
+    <tr><td>Quadro K6000M</td><td>3.0</td></tr>
+    <tr><td>Quadro K5200M</td><td>3.0</td></tr>
+    <tr><td>Quadro K5100M</td><td>3.0</td></tr>
+    <tr><td>Quadro M5000M</td><td>5.0</td></tr>
+    <tr><td>Quadro K500M</td><td>3.0</td></tr>
+    <tr><td>Quadro K4200M</td><td>3.0</td></tr>
+    <tr><td>Quadro K4100M</td><td>3.0</td></tr>
+    <tr><td>Quadro M4000M</td><td>5.0</td></tr>
+    <tr><td>Quadro K3100M</td><td>3.0</td></tr>
+    <tr><td>Quadro M3000M</td><td>5.0</td></tr>
+    <tr><td>Quadro K2200M</td><td>3.0</td></tr>
+    <tr><td>Quadro K2100M</td><td>3.0</td></tr>
+    <tr><td>Quadro M2000M</td><td>5.0</td></tr>
+    <tr><td>Quadro K1100M</td><td>3.0</td></tr>
+    <tr><td>Quadro M1000M</td><td>5.0</td></tr>
+    <tr><td>Quadro K620M</td><td>5.0</td></tr>
+    <tr><td>Quadro K610M</td><td>3.5</td></tr>
+    <tr><td>Quadro M600M</td><td>5.0</td></tr>
+    <tr><td>Quadro K510M</td><td>3.5</td></tr>
+    <tr><td>Quadro M500M</td><td>5.0</td></tr>
+</table>
+
+
+    </div>
+  </div>
+
+  <style>
+  .post-nav {
+    overflow: hidden;
+    /* margin-top: 60px; */
+    padding: 12px;
+    white-space: nowrap;
+    /* border-top: 1px solid #eee; */
+  }
+
+  .post-nav-item {
+    display: inline-block;
+    width: 50%;
+    white-space: normal;
+  }
+
+  .post-nav-item a {
+    position: relative;
+    display: inline-block;
+    line-height: 25px;
+    font-size: 14px;
+    color: #555;
+    border-bottom: none;
+  }
+
+  .post-nav-item a:hover {
+    color: #222;
+    font-weight: bold;
+    border-bottom: none;
+  }
+
+  .post-nav-item a:active {
+    top: 2px;
+  }
+
+  .post-nav-item a:before,
+  .post-nav-item a:after {
+    display: inline-block;
+    width: 16px;
+    height: 25px;
+    vertical-align: top;
+    opacity: 0.4;
+    background-size: 16px;
+  }
+
+  .post-nav-none a:none {
+    content: ' ';
+    background-size: 8px;
+  }
+
+  .post-nav-none a:hover:none {
+    opacity: 1;
+  }
+
+  .post-nav-prev a:before {
+    content: ' ';
+    background: url("data:image/svg+xml;base64,PD94bWwgdmVyc2lvbj0iMS4wIiA/PjxzdmcgaGVpZ2h0PSIxMnB4IiB2ZXJzaW9uPSIxLjEiIHZpZXdCb3g9IjAgMCA5IDEyIiB3aWR0aD0iOXB4IiB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHhtbG5zOnNrZXRjaD0iaHR0cDovL3d3dy5ib2hlbWlhbmNvZGluZy5jb20vc2tldGNoL25zIiB4bWxuczp4bGluaz0iaHR0cDovL3d3dy53My5vcmcvMTk5OS94bGluayI+PHRpdGxlLz48ZGVzYy8+PGRlZnMvPjxnIGZpbGw9Im5vbmUiIGZpbGwtcnVsZT0iZXZlbm9kZCIgaWQ9IlBhZ2UtMSIgc3Ryb2tlPSJub25lIiBzdHJva2Utd2lkdGg9IjEiPjxnIGZpbGw9IiMwMDAwMDAiIGlkPSJDb3JlIiB0cmFuc2Zvcm09InRyYW5zbGF0ZSgtMjE4LjAwMDAwMCwgLTkwLjAwMDAwMCkiPjxnIGlkPSJjaGV2cm9uLWxlZnQiIHRyYW5zZm9ybT0idHJhbnNsYXRlKDIxOC41MDAwMDAsIDkwLjAwMDAwMCkiPjxwYXRoIGQ9Ik03LjQsMS40IEw2LDAgTC04Ljg4MTc4NDJlLTE2LDYgTDYsMTIgTDcuNCwxMC42IEwyLjgsNiBMNy40LDEuNCBaIiBpZD0iU2hhcGUiLz48L2c+PC9nPjwvZz48L3N2Zz4=") no-repeat 0 50%;
+    background-size: 8px;
+  }
+
+  .post-nav-prev a:hover:before {
+    opacity: 1;
+  }
+
+  .post-nav-next {
+    text-align: right;
+  }
+
+  .post-nav-next a:after {
+    content: ' ';
+    background: url("data:image/svg+xml;base64,PD94bWwgdmVyc2lvbj0iMS4wIiA/PjxzdmcgaGVpZ2h0PSIxMnB4IiB2ZXJzaW9uPSIxLjEiIHZpZXdCb3g9IjAgMCA5IDEyIiB3aWR0aD0iOXB4IiB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHhtbG5zOnNrZXRjaD0iaHR0cDovL3d3dy5ib2hlbWlhbmNvZGluZy5jb20vc2tldGNoL25zIiB4bWxuczp4bGluaz0iaHR0cDovL3d3dy53My5vcmcvMTk5OS94bGluayI+PHRpdGxlLz48ZGVzYy8+PGRlZnMvPjxnIGZpbGw9Im5vbmUiIGZpbGwtcnVsZT0iZXZlbm9kZCIgaWQ9IlBhZ2UtMSIgc3Ryb2tlPSJub25lIiBzdHJva2Utd2lkdGg9IjEiPjxnIGZpbGw9IiMwMDAwMDAiIGlkPSJDb3JlIiB0cmFuc2Zvcm09InRyYW5zbGF0ZSgtMjYwLjAwMDAwMCwgLTkwLjAwMDAwMCkiPjxnIGlkPSJjaGV2cm9uLXJpZ2h0IiB0cmFuc2Zvcm09InRyYW5zbGF0ZSgyNjAuNTAwMDAwLCA5MC4wMDAwMDApIj48cGF0aCBkPSJNMSwwIEwtMC40LDEuNCBMNC4yLDYgTC0wLjQsMTAuNiBMMSwxMiBMNyw2IEwxLDAgWiIgaWQ9IlNoYXBlIi8+PC9nPjwvZz48L2c+PC9zdmc+") no-repeat 100% 50%;
+    background-size: 8px;
+  }
+
+  .post-nav-next a:hover:after {
+    opacity: 1;
+  }
+</style>
+
+
+
+<div class="post-nav">
+
+  
+  <div class="post-nav-none post-nav-item">
+    <a href=""> </a>
+  </div>
+  
+
+  
+  <div class="post-nav-next post-nav-item">
+    
+    <a href="/blog/2019/tts/"> 文字转语音TTS</a>
+  </div>
+  
+
+</div>
+
+</article>
+    </div>
+
+    <footer class="site-footer">
+  <div class="container">
+    <ul class="social">
+  <li><a href="https://twitter.com/penghuailiang" target="_blank"><i class="icon icon-twitter"></i></a></li>
+  <li><a href="https://www.zhihu.com/people/huailiangpenguin" target="_blank"><i class="icon icon-zhihu"></i></a></li>
+  <li><a href="https://www.facebook.com/profile.php?id=100004290725320" target="_blank"><i class="icon icon-facebook"></i></a></li>
+  <li><a href="https://weibo.com/6212299692/profile?topnav=1&wvr=6" target="_blank"><i class="icon icon-sina"></i></a></li>
+  <li><a href="https://www.linkedin.com/in/penghuailiang/" target="_blank"><i class="icon icon-linkedin"></i></a></li>
+  <li><a href="https://github.com/huailiang" target="_blank"><i class="icon icon-github"></i></a></li>
+</ul>
+    <p class="txt-medium-gray">
+      <small>&copy;2019 All rights reserved. </small>
+    </p>
+  </div>
+</footer>
+    <a href="https://github.com/huailiang" target="_blank" class="github-corner"><svg width="80" height="80" viewBox="0 0 250 250" style="fill:#337ab7; color:#fff; position: absolute; top: 0; border: 0; right: 0;"><path d="M0,0 L115,115 L130,115 L142,142 L250,250 L250,0 Z"></path><path d="M128.3,109.0 C113.8,99.7 119.0,89.6 119.0,89.6 C122.0,82.7 120.5,78.6 120.5,78.6 C119.2,72.0 123.4,76.3 123.4,76.3 C127.3,80.9 125.5,87.3 125.5,87.3 C122.9,97.6 130.6,101.9 134.4,103.2" fill="currentColor" style="transform-origin: 130px 106px;" class="octo-arm"></path><path d="M115.0,115.0 C114.9,115.1 118.7,116.5 119.8,115.4 L133.7,101.6 C136.9,99.2 139.9,98.4 142.2,98.6 C133.8,88.0 127.5,74.4 143.8,58.0 C148.5,53.4 154.0,51.2 159.7,51.0 C160.3,49.4 163.2,43.6 171.4,40.1 C171.4,40.1 176.1,42.5 178.8,56.2 C183.1,58.6 187.2,61.8 190.9,65.4 C194.5,69.0 197.7,73.2 200.1,77.6 C213.8,80.2 216.3,84.9 216.3,84.9 C212.7,93.1 206.9,96.0 205.4,96.6 C205.1,102.4 203.0,107.8 198.3,112.5 C181.9,128.9 168.3,122.5 157.7,114.1 C157.9,116.9 156.7,120.9 152.7,124.9 L141.0,136.5 C139.8,137.7 141.6,141.9 141.8,141.8 Z" fill="currentColor" class="octo-body"></path></svg></a>
+
+
+    <script src="//code.jquery.com/jquery-1.11.3.min.js"></script>
+    <script>
+      $(document).ready(function () {
+        $('.sliding-panel-button,.sliding-panel-fade-screen,.sliding-panel-close').on('click touchstart', function (e) {
+          $('.sliding-panel-content,.sliding-panel-fade-screen').toggleClass('is-visible');
+          e.preventDefault();
+        });
+      });
+    </script>
+  </main>
+</body>
+
+</html>

@@ -92,7 +92,7 @@ MathJax.Hub.Config({
   <li>
     <p>先清除文字里陌生字符， 可以使用正则表达式匹配</p>
 
-    <div class="language-sh highlighter-rouge"><pre class="highlight"><code>_curly_re <span class="o">=</span> re.compile<span class="o">(</span>r<span class="s1">'(.*?)\{(.+?)\}(.*)'</span><span class="o">)</span>
+    <div class="language-py highlighter-rouge"><pre class="highlight"><code><span class="n">_curly_re</span> <span class="o">=</span> <span class="n">re</span><span class="o">.</span><span class="nb">compile</span><span class="p">(</span><span class="s">r'(.*?)</span><span class="err">\</span><span class="s">{(.+?)</span><span class="err">\</span><span class="s">}(.*)'</span><span class="p">)</span>
 </code></pre>
     </div>
   </li>
@@ -137,21 +137,19 @@ MathJax.Hub.Config({
 <p>进行加窗、短时傅里叶变换进入复数域</p>
 
 <div class="language-py highlighter-rouge"><pre class="highlight"><code><span class="kn">from</span> <span class="nn">scipy.signal</span> <span class="kn">import</span> <span class="n">get_window</span>
-<span class="n">fourier_basis</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">fft</span><span class="o">.</span><span class="n">fft</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">eye</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">filter_length</span><span class="p">))</span>
 
-<span class="n">cutoff</span> <span class="o">=</span> <span class="nb">int</span><span class="p">((</span><span class="bp">self</span><span class="o">.</span><span class="n">filter_length</span> <span class="o">/</span> <span class="mi">2</span> <span class="o">+</span> <span class="mi">1</span><span class="p">))</span>
-<span class="n">fourier_basis</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">vstack</span><span class="p">([</span><span class="n">np</span><span class="o">.</span><span class="n">real</span><span class="p">(</span><span class="n">fourier_basis</span><span class="p">[:</span><span class="n">cutoff</span><span class="p">,</span> <span class="p">:]),</span> 
-        <span class="n">np</span><span class="o">.</span><span class="n">imag</span><span class="p">(</span><span class="n">fourier_basis</span><span class="p">[:</span><span class="n">cutoff</span><span class="p">,</span> <span class="p">:])])</span>
-<span class="n">forward_basis</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">FloatTensor</span><span class="p">(</span><span class="n">fourier_basis</span><span class="p">[:,</span> <span class="bp">None</span><span class="p">,</span> <span class="p">:])</span>
 <span class="c"># get window and zero center pad it to filter_length</span>
 <span class="n">fft_window</span> <span class="o">=</span> <span class="n">get_window</span><span class="p">(</span><span class="n">window</span><span class="p">,</span> <span class="n">win_length</span><span class="p">,</span> <span class="n">fftbins</span><span class="o">=</span><span class="bp">True</span><span class="p">)</span>
 <span class="n">fft_window</span> <span class="o">=</span> <span class="n">pad_center</span><span class="p">(</span><span class="n">fft_window</span><span class="p">,</span> <span class="n">filter_length</span><span class="p">)</span>
 <span class="n">fft_window</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">from_numpy</span><span class="p">(</span><span class="n">fft_window</span><span class="p">)</span><span class="o">.</span><span class="nb">float</span><span class="p">()</span>
 <span class="n">forward_basis</span> <span class="o">*=</span> <span class="n">fft_window</span>
 <span class="n">inverse_basis</span> <span class="o">*=</span> <span class="n">fft_window</span>
-<span class="n">forward_transform</span> <span class="o">=</span> <span class="n">F</span><span class="o">.</span><span class="n">conv1d</span><span class="p">(</span><span class="n">input_data</span><span class="p">,</span>
+<span class="c"># 加窗</span>
+<span class="n">forward_transform</span> <span class="o">=</span> <span class="n">F</span><span class="o">.</span><span class="n">conv1d</span><span class="p">(</span>
+        <span class="n">input_data</span><span class="p">,</span>
         <span class="n">Variable</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">forward_basis</span><span class="p">,</span> <span class="n">requires_grad</span><span class="o">=</span><span class="bp">False</span><span class="p">),</span>
-        <span class="n">stride</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">hop_length</span><span class="p">,</span> <span class="n">padding</span><span class="o">=</span><span class="mi">0</span><span class="p">)</span>       
+        <span class="n">stride</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">hop_length</span><span class="p">,</span> <span class="n">padding</span><span class="o">=</span><span class="mi">0</span><span class="p">)</span>
+<span class="c"># 短时傅里叶变换       </span>
 <span class="n">cutoff</span> <span class="o">=</span> <span class="nb">int</span><span class="p">((</span><span class="bp">self</span><span class="o">.</span><span class="n">filter_length</span> <span class="o">/</span> <span class="mi">2</span><span class="p">)</span> <span class="o">+</span> <span class="mi">1</span><span class="p">)</span>
 <span class="n">real_part</span> <span class="o">=</span> <span class="n">forward_transform</span><span class="p">[:,</span> <span class="p">:</span><span class="n">cutoff</span><span class="p">,</span> <span class="p">:]</span>  <span class="c"># 实部</span>
 <span class="n">imag_part</span> <span class="o">=</span> <span class="n">forward_transform</span><span class="p">[:,</span> <span class="n">cutoff</span><span class="p">:,</span> <span class="p">:]</span>  <span class="c"># 虚部</span>
@@ -480,8 +478,9 @@ c\alpha_i=\sum_{j=1}^{i-1}\alpha_j</script>
 <div class="post-nav">
 
   
-  <div class="post-nav-none post-nav-item">
-    <a href=""> </a>
+  <div class="post-nav-prev post-nav-item">
+    
+    <a href="/blog/2019/cuda/"> cuda学习笔记</a>
   </div>
   
 
