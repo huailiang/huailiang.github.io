@@ -20,15 +20,40 @@ body {
   margin: 0;
 }
 
-/* HTML5 display definitions
-   ========================================================================== */
+.post-content blockquote{
+  padding-top: 0.5em;
+  padding-bottom: 0.1em;
+  padding-left: 1.0em;
+  border-left-style: solid;
+  border-left-width: 0.2px;
+  background: none repeat scroll 0 0 rgba(213, 213, 213, 0.2);
+  color:rgb(96, 93, 93);
+  margin-top: 1.0em;
+  margin-bottom: 1.0em;
+}
 
-/**
- * Correct `block` display not defined for any HTML5 element in IE 8/9.
- * Correct `block` display not defined for `details` or `summary` in IE 10/11
- * and Firefox.
- * Correct `block` display not defined for `main` in IE 11.
- */
+.post-content ul
+{
+    padding: 0px;
+    margin: 0px;
+}
+.post-content ul li
+{
+    background-repeat: no-repeat;
+    background-position: 0px 5px; 
+    padding-left: 14px; 
+    font-weight: 300;
+}
+
+.post-content ul li:before{
+  display: inline-block;
+  content: "●";//'\25CF'
+  padding-right: 10px;
+  color: #666;
+  font-size:6px;
+}
+
+
 
 article,
 aside,
@@ -127,15 +152,6 @@ dfn {
   font-style: italic;
 }
 
-/**
- * Address variable `h1` font-size and margin within `section` and `article`
- * contexts in Firefox 4+, Safari, and Chrome.
- */
-
-h1 {
-  font-size: 2em;
-  margin: 0.67em 0;
-}
 
 /**
  * Address styling not present in IE 8/9.
