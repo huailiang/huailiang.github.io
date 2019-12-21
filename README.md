@@ -1,6 +1,9 @@
 <p align="center">
+    <style type="text/css">
+    #img1{border-radius: 50%; }
+    </style>
     <a href="https://huailiang.github.io/">
-    	<img src="https://huailiang.github.io/img/author.jpg" width="120" height="110">
+    	<img src="https://huailiang.github.io/img/author.jpg" width="120" height="110"  id="img1">
     </a>
 </p>
 
