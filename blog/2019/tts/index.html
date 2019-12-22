@@ -92,7 +92,7 @@ MathJax.Hub.Config({
   <li>
     <p>先清除文字里陌生字符， 可以使用正则表达式匹配</p>
 
-    <div class="language-py highlighter-rouge"><pre class="highlight"><code><span class="n">_curly_re</span> <span class="o">=</span> <span class="n">re</span><span class="o">.</span><span class="nb">compile</span><span class="p">(</span><span class="s">r'(.*?)</span><span class="err">\</span><span class="s">{(.+?)</span><span class="err">\</span><span class="s">}(.*)'</span><span class="p">)</span>
+    <div class="language-sh highlighter-rouge"><pre class="highlight"><code>_curly_re <span class="o">=</span> re.compile<span class="o">(</span>r<span class="s1">'(.*?)\{(.+?)\}(.*)'</span><span class="o">)</span>
 </code></pre>
     </div>
   </li>
