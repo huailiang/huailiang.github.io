@@ -26,7 +26,7 @@ Tacotron2是由Google Brain 2017年提出来的一个语音合成框架[Tacotron
 
 1. 先清除文字里陌生字符， 可以使用正则表达式匹配
    
-   ```py
+   ```sh
    _curly_re = re.compile(r'(.*?)\{(.+?)\}(.*)')
    ```
 
