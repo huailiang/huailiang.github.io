@@ -59,6 +59,9 @@ private void Update()
     }
 }
 ```
+
+GameObject.Destroy 在下一帧（或者说在本帧的最后）释放内存， go在当前帧看到的值还不是null
+
 ![](/img/post-unity/im5.jpg)
 
 
@@ -72,6 +75,8 @@ private void Update()
     }
 }
 ```
+GameObject.DestroyImmediate会立即释放内存， 对应的GameObject会在当前帧变为null
+
 ![](/img/post-unity/im6.jpg)
 
 打开unity的Profile, 查看内存情况，
@@ -134,7 +139,7 @@ render.material.color = Color.black;
 
 当我们把材质赋值给render且修改材质的参数时，此时打开profile可以发现两个材质， 其中一个是Instance的， 而且磁盘里的材质并不会因为材质的参数发生改变。
 
-![](/img/post-unity/im8.jpg)
+![材质带instance](/img/post-unity/im8.jpg)
 
 
 而sharedMaterial就更好理解了，即修改render中的材质， 磁盘里的材质也会发生相应的变化。
@@ -147,6 +152,8 @@ render.sharedMaterial = mat;
 render.sharedMaterial.color = Color.black;
 ```
 
+![材质不带instance](/img/post-unity/im10.jpg)
+
 与此对应的是mesh, 给meshfilter赋值的时候，也区分mesh和shareMesh。例如下面例子中改变顶点色：
 
 ```cs
@@ -157,5 +164,41 @@ mesh.colors[0] = Color.black;
 ```
 
 
+## API
 
-[i2]: https://developer.nvidia.com/cuda-downloads
+#### Resources.UnloadAsset 
+
+Resources.UnloadAsset仅能释放非GameObject和Component的资源，比如Texture、Mesh等真正的资源。对于由Prefab加载出来的Object或Component，则不能通过该函数来进行释放。
+
+用Resources.UnloadAsset 释放未Instance的Object 会出现这样的错误 :Unload Assets may only be used on individual assets and can not be used on GameObject's/Components or AssetBundles.
+
+##### AssetBundle.Unload
+
+对于AssetBundle.Unload(false)只是删掉索引结构自身;
+
+AssetBundle.Unload(true)会对自身和由它创建的Asset删除（不管场景是否引用不推荐）
+
+#### Resource.UnloadUnuseAsset
+
+用于释放所有没有引用的Asset对象
+
+#### Destroy
+主要用于销毁克隆对象，也可以用于场景内的静态物体，不会自动释放该对象的所有引用。虽然也可以用于Asset,但是概念不一样要小心，如果用于销毁从文 件加载的Asset对象会销毁相应的资源文件！但是如果销毁的Asset是Copy的或者用脚本动态生成的，只会销毁内存对象。
+
+#### GC.Collect
+GC.Collect()强制垃圾收集器立即释放内存 Unity的GC功能不算好，没把握的时候就强制调用一下
+
+
+## 参考资料
+
+* [Unity加载优化][i1]
+* [unity加载模块之shader][i2]
+* [unity加载模块之网格][i4]
+* [加载模块之纹理][i3]
+* [Unity加载模块深度解析之动画][i5]
+
+[i1]: https://blog.uwa4d.com/archives/QA_Loading_1.html
+[i2]: https://blog.uwa4d.com/archives/LoadingPerformance_Shader.html
+[i3]: https://blog.uwa4d.com/archives/LoadingPerformance_Texture.html
+[i4]: https://blog.uwa4d.com/archives/LoadingPerformance_Mesh.html
+[i5]: https://blog.uwa4d.com/archives/Loading_AnimationClip.html
