@@ -1,0 +1,161 @@
+---
+layout:     post
+title:      "unity资源卸载机制"
+date:       2019-12-25 03:00:00
+author:     "Huailiang"
+tags:
+    - Unity
+---
+
+
+
+## 资源分类
+
+unity的资源类型按照加载方式分为两类：
+* GameObject、Prefab 类需要Instantiate资源
+* Texture、Mesh等 引用计数的资源
+
+
+## 加载机制
+
+#### Assets加载:
+用AssetBundle.Load(同Resources.Load) 这才会从AssetBundle的内存镜像里读取并创建一个Asset对象，创建Asset对象同时也会分配相应内存用于存放(反序列化)
+
+异步读取用AssetBundle.LoadAsync
+
+也可以一次读取多个用AssetBundle.LoadAll
+
+
+![](/img/post-unity/im7.jpg)
+
+
+Load出来的Assets其实就是个数据源，用于生成新对象或者被引用，生成的过程可能是复制（clone)也可能是引用（指针）
+
+## 卸载机制
+
+![](/img/post-unity/im4.jpg)
+
+```cs
+private GameObject go;
+private bool flag;
+
+void Start()
+{
+    go = Instantiate(Resources.Load("cube1234")) as GameObject;
+    go.name = "instate_8421";
+    flag = true;
+}
+
+private void Update()
+{
+    if (Input.GetKey(KeyCode.W))
+    {
+        GameObject.Destroy(go);
+        flag = false;
+    }
+    if (!flag)
+    {
+        Debug.Log(go == null);
+    }
+}
+```
+![](/img/post-unity/im5.jpg)
+
+
+```cs
+private void Update()
+{
+    if (Input.GetKey(KeyCode.W))
+    {
+        GameObject.DestroyImmediate(go);
+        Debug.Log(go == null);
+    }
+}
+```
+![](/img/post-unity/im6.jpg)
+
+打开unity的Profile, 查看内存情况，
+
+![](/img/post-unity/im1.jpg)
+
+![](/img/post-unity/im2.jpg)
+
+打开unity的profile， 切换到memory选项， 可以查看到Assets选项栏下的镜像， 也可以看到SceneMemory里的GameObject(Instantiate的对象)。
+
+![](/img/post-unity/im3.jpg)
+
+
+当使用Resources.UnloadUnusedAssets 卸载的时候， 可以看到cube1234不见了，tex1234的引用计数减少一， 剩余的都是Editor上的引用（手机上引用清零）。
+
+```cs
+if (Input.GetKey(KeyCode.Q))
+{
+    Resources.UnloadUnusedAssets();
+}
+```
+
+
+### 关于material和sharematerial的区别
+
+官方对materail的解释
+```
+Returns the first instantiated Material assigned
+to the renderer.
+Modifying material will change the material for this object only.
+If the material is used by any other renderers, this will clone the shared material and start using it from now on.
+```
+当使用Renderer.material的时候，每次调用都会生成一个新的material到内存中去，这在销毁物体的时候需要我们手动去销毁该material，否则会一直存在内存中。
+也可以在场景替换的时候使用Resources.UnloadUnusedAssets去统一释放内存。
+
+当使用Renderer.sharedMaterial的时候并不会生成新的material，而是直接在原material上修改，并且修改后的设置就会被保存到项目工程中。一般不推荐使用这个去修改，当某个材质球只被一个gameobject使用的时候可以使用这个去修改，并且最好在修改之前把原属性设置保存，当使用完毕后立即恢复原设置，防止下次加载后的gameobject上还会残留之前的设置信息
+
+
+
+### 实验
+
+
+```cs
+Material mat = Resources.Load<Material>("mat1234");
+mat.name = "mat_instate8421";
+mat.color = Color.black;
+go.GetComponent<Renderer>().material = mat;
+```
+
+打开profile， 只在Memoty-Assets栏存在一个material， 此时发现磁盘上的材质也变成了黑色。说明render上的材质和磁盘上的材质是共享的，尽管他们的名字不相同，这里也不会触发clone。在材质的Inspector面板选中材质，也可以看到磁盘上的材质也弹跳。
+
+
+```cs
+Material mat = Resources.Load<Material>("mat1234");
+mat.name = "mat_instate8421";
+var render = go.GetComponent<Renderer>();
+render.material = mat;
+render.material.color = Color.black;
+```
+
+当我们把材质赋值给render且修改材质的参数时，此时打开profile可以发现两个材质， 其中一个是Instance的， 而且磁盘里的材质并不会因为材质的参数发生改变。
+
+![](/img/post-unity/im8.jpg)
+
+
+而sharedMaterial就更好理解了，即修改render中的材质， 磁盘里的材质也会发生相应的变化。
+
+```cs
+Material mat = Resources.Load<Material>("mat1234");
+mat.name = "mat_instate8421";
+var render = go.GetComponent<Renderer>();
+render.sharedMaterial = mat;
+render.sharedMaterial.color = Color.black;
+```
+
+与此对应的是mesh, 给meshfilter赋值的时候，也区分mesh和shareMesh。例如下面例子中改变顶点色：
+
+```cs
+Mesh mesh = Resources.Load<Mesh>();
+var filter = go.GetComponent<MeshFilter>();
+filter.sharedMesh = mesh;
+mesh.colors[0] = Color.black;
+```
+
+
+
+[i2]: https://developer.nvidia.com/cuda-downloads
