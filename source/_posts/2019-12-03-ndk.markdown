@@ -21,9 +21,9 @@ tags:
 ![](/img/post-android/and-2.jpeg)
 
 
-快速测试Java代码：
+#### 快速测试Java代码
 
-快速测试library代码， 而不必在宿主程序里运行。在自定义的类中 添加一个静态的main方法，如下：
+快速测试library代码， 而不必在宿主程序里运行， 主要是为了节省时间。在自定义的类中 添加一个静态的main方法，如下：
 
 ```java
 public static void main(String[] args) {
