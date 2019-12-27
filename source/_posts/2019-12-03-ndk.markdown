@@ -1,6 +1,6 @@
 ---
 layout:     post
-title:      "NDK同步读取StreamingAssets资源"
+title:      "NDK同步读取资源"
 date:       2019-12-03 03:00:00
 author:     "Huailiang"
 tags:
@@ -38,7 +38,7 @@ public static void main(String[] args) {
 打开Library工程的build.gardle文件,并添加代码
 
 ``` grovy
-task makeJar(type: Copy){
+task makeJar(type: Copy) {
     delete 'build/libs/sdk.jar'
     from('build/intermediates/bundles/release/')
     into('build/libs/')

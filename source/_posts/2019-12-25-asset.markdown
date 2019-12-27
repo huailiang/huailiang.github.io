@@ -1,6 +1,6 @@
 ---
 layout:     post
-title:      "unity资源卸载机制"
+title:      "unity资源管理机制"
 date:       2019-12-25 03:00:00
 author:     "Huailiang"
 tags:
@@ -8,17 +8,18 @@ tags:
 ---
 
 
-
 ## 资源分类
 
 unity的资源类型按照加载方式分为两类：
+
 * GameObject、Prefab 类需要Instantiate资源
-* Texture、Mesh等 引用计数的资源
+* Texture、Mesh、Terrain、Texture等 引用计数的资源
 
 
 ## 加载机制
 
 #### Assets加载:
+
 用AssetBundle.Load(同Resources.Load) 这才会从AssetBundle的内存镜像里读取并创建一个Asset对象，创建Asset对象同时也会分配相应内存用于存放(反序列化)
 
 异步读取用AssetBundle.LoadAsync
@@ -32,6 +33,9 @@ unity的资源类型按照加载方式分为两类：
 Load出来的Assets其实就是个数据源，用于生成新对象或者被引用，生成的过程可能是复制（clone)也可能是引用（指针）
 
 ## 卸载机制
+
+如下图[工程][i6], 我们使用Resources Load一个镜像，然后从中Instantiate一个GameObject, 先测试下Destroy的特性。
+
 
 ![](/img/post-unity/im4.jpg)
 
@@ -64,17 +68,11 @@ GameObject.Destroy 在下一帧（或者说在本帧的最后）释放内存， 
 
 ![](/img/post-unity/im5.jpg)
 
-
 ```cs
-private void Update()
-{
-    if (Input.GetKey(KeyCode.W))
-    {
-        GameObject.DestroyImmediate(go);
-        Debug.Log(go == null);
-    }
-}
+GameObject.DestroyImmediate(go);
+Debug.Log(go == null);
 ```
+
 GameObject.DestroyImmediate会立即释放内存， 对应的GameObject会在当前帧变为null
 
 ![](/img/post-unity/im6.jpg)
@@ -93,27 +91,39 @@ GameObject.DestroyImmediate会立即释放内存， 对应的GameObject会在当
 当使用Resources.UnloadUnusedAssets 卸载的时候， 可以看到cube1234不见了，tex1234的引用计数减少一， 剩余的都是Editor上的引用（手机上引用清零）。
 
 ```cs
-if (Input.GetKey(KeyCode.Q))
+
+UnityEngine.Object _asset;
+GameObject go;
 {
+    // load 
+    _asset = Resources.Load("cube1234");
+    go = Instantiate(_asset) as GameObject;
+    go.name = "instate_8421";
+}
+{
+    // unload
+    GameObject.DestroyImmediate(go);
+    _asset = null; 
     Resources.UnloadUnusedAssets();
 }
 ```
 
+上代码中如果没有_asset置为null, 会出现类似这样的卸载不干净。
+
+![](/img/post-unity/im9.jpg)
 
 ### 关于material和sharematerial的区别
 
 官方对materail的解释
-```
-Returns the first instantiated Material assigned
-to the renderer.
-Modifying material will change the material for this object only.
-If the material is used by any other renderers, this will clone the shared material and start using it from now on.
-```
+
+* Returns the first instantiated Material assigned to the renderer.
+* Modifying material will change the material for this object only.
+* If the material is used by any other renderers, this will clone the shared material and start using it from now on.
+
 当使用Renderer.material的时候，每次调用都会生成一个新的material到内存中去，这在销毁物体的时候需要我们手动去销毁该material，否则会一直存在内存中。
 也可以在场景替换的时候使用Resources.UnloadUnusedAssets去统一释放内存。
 
 当使用Renderer.sharedMaterial的时候并不会生成新的material，而是直接在原material上修改，并且修改后的设置就会被保存到项目工程中。一般不推荐使用这个去修改，当某个材质球只被一个gameobject使用的时候可以使用这个去修改，并且最好在修改之前把原属性设置保存，当使用完毕后立即恢复原设置，防止下次加载后的gameobject上还会残留之前的设置信息
-
 
 
 ### 实验
@@ -188,6 +198,21 @@ AssetBundle.Unload(true)会对自身和由它创建的Asset删除（不管场景
 #### GC.Collect
 GC.Collect()强制垃圾收集器立即释放内存 Unity的GC功能不算好，没把握的时候就强制调用一下
 
+## UnityStudio
+
+unitystudio [源码地址][i7]
+
+* 查看AssetBundle内资源【File->LoadFile】
+* 提取AssetBundle内资源【Export】
+
+点击菜单file中的Load file，选择一个AssetBundle，在Asset List可以看到ab包内所有资源，包括纹理、shader、音频，在Scene Hierarchy中可以看到树状结构（Prefab）。
+
+![材质不带instance](/img/post-unity/im11.jpg)
+
+类似的工具还有：
+
+* disunity
+* UnityAssetsExplorer
 
 ## 参考资料
 
@@ -196,9 +221,12 @@ GC.Collect()强制垃圾收集器立即释放内存 Unity的GC功能不算好，
 * [unity加载模块之网格][i4]
 * [加载模块之纹理][i3]
 * [Unity加载模块深度解析之动画][i5]
+* [AssetStudio查看Bunlde内容][i7]
 
 [i1]: https://blog.uwa4d.com/archives/QA_Loading_1.html
 [i2]: https://blog.uwa4d.com/archives/LoadingPerformance_Shader.html
 [i3]: https://blog.uwa4d.com/archives/LoadingPerformance_Texture.html
 [i4]: https://blog.uwa4d.com/archives/LoadingPerformance_Mesh.html
 [i5]: https://blog.uwa4d.com/archives/Loading_AnimationClip.html
+[i6]: https://github.com/huailiang/profile_proj
+[i7]: https://github.com/Perfare/AssetStudio
