@@ -87,6 +87,20 @@ MathJax.Hub.Config({
 
 <p><img src="/img/post-android/and-2.jpeg" alt="" /></p>
 
+<p>快速测试Java代码：</p>
+
+<p>快速测试library代码， 而不必在宿主程序里运行。在自定义的类中 添加一个静态的main方法，如下：</p>
+
+<div class="language-java highlighter-rouge"><pre class="highlight"><code><span class="kd">public</span> <span class="kd">static</span> <span class="kt">void</span> <span class="nf">main</span><span class="o">(</span><span class="n">String</span><span class="o">[]</span> <span class="n">args</span><span class="o">)</span> <span class="o">{</span>
+    <span class="n">System</span><span class="o">.</span><span class="na">out</span><span class="o">.</span><span class="na">println</span><span class="o">(</span><span class="s">"hello world"</span><span class="o">);</span>
+<span class="o">}</span>
+</code></pre>
+</div>
+
+<p>然后在代码区鼠标右键， 就可以直接看到main函数的入口了：</p>
+
+<p><img src="/img/post-android/and-0.jpg" alt="" /></p>
+
 <p>打开Library工程的build.gardle文件,并添加代码</p>
 
 <pre><code class="language-grovy">task makeJar(type: Copy){
