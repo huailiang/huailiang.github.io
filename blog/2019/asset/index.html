@@ -5,9 +5,9 @@
   <meta http-equiv="X-UA-Compatible" content="IE=edge">
   <meta name="viewport" content="width=device-width, initial-scale=1">
 
-  <title>unity资源卸载机制</title>
+  <title>unity资源管理机制</title>
   <meta name="description"
-    content="资源分类unity的资源类型按照加载方式分为两类：  GameObject、Prefab 类需要Instantiate资源  Texture、Mesh等 引用计数的资源加载机制Assets加载:用AssetBundle.Load(同Resources.Load) 这才会从AssetBundle的内存镜像里读取并创...">
+    content="资源分类unity的资源类型按照加载方式分为两类：  GameObject、Prefab 类需要Instantiate资源  Texture、Mesh、Terrain、Texture等 引用计数的资源加载机制Assets加载:用AssetBundle.Load(同Resources.Load) 这才会从Asset...">
 
   <link rel="shortcut icon" href="/img/favicon.ico">
   <link rel="stylesheet" href="/css/main.css">
@@ -67,7 +67,7 @@ MathJax.Hub.Config({
 
   <div class="card">
     <header class="post-header">
-      <h1 class="post-title">unity资源卸载机制</h1>
+      <h1 class="post-title">unity资源管理机制</h1>
       <p class="post-meta">Dec 25, 2019 •
         Huailiang</p>
     </header>
@@ -76,14 +76,16 @@ MathJax.Hub.Config({
       <h2 id="资源分类">资源分类</h2>
 
 <p>unity的资源类型按照加载方式分为两类：</p>
+
 <ul>
   <li>GameObject、Prefab 类需要Instantiate资源</li>
-  <li>Texture、Mesh等 引用计数的资源</li>
+  <li>Texture、Mesh、Terrain、Texture等 引用计数的资源</li>
 </ul>
 
 <h2 id="加载机制">加载机制</h2>
 
 <h4 id="assets加载">Assets加载:</h4>
+
 <p>用AssetBundle.Load(同Resources.Load) 这才会从AssetBundle的内存镜像里读取并创建一个Asset对象，创建Asset对象同时也会分配相应内存用于存放(反序列化)</p>
 
 <p>异步读取用AssetBundle.LoadAsync</p>
@@ -95,6 +97,8 @@ MathJax.Hub.Config({
 <p>Load出来的Assets其实就是个数据源，用于生成新对象或者被引用，生成的过程可能是复制（clone)也可能是引用（指针）</p>
 
 <h2 id="卸载机制">卸载机制</h2>
+
+<p>如下图<a href="https://github.com/huailiang/profile_proj">工程</a>, 我们使用Resources Load一个镜像，然后从中Instantiate一个GameObject, 先测试下Destroy的特性。</p>
 
 <p><img src="/img/post-unity/im4.jpg" alt="" /></p>
 
@@ -127,16 +131,11 @@ MathJax.Hub.Config({
 
 <p><img src="/img/post-unity/im5.jpg" alt="" /></p>
 
-<div class="language-cs highlighter-rouge"><pre class="highlight"><code><span class="k">private</span> <span class="k">void</span> <span class="nf">Update</span><span class="p">()</span>
-<span class="p">{</span>
-    <span class="k">if</span> <span class="p">(</span><span class="n">Input</span><span class="p">.</span><span class="nf">GetKey</span><span class="p">(</span><span class="n">KeyCode</span><span class="p">.</span><span class="n">W</span><span class="p">))</span>
-    <span class="p">{</span>
-        <span class="n">GameObject</span><span class="p">.</span><span class="nf">DestroyImmediate</span><span class="p">(</span><span class="n">go</span><span class="p">);</span>
-        <span class="n">Debug</span><span class="p">.</span><span class="nf">Log</span><span class="p">(</span><span class="n">go</span> <span class="p">==</span> <span class="k">null</span><span class="p">);</span>
-    <span class="p">}</span>
-<span class="p">}</span>
+<div class="language-cs highlighter-rouge"><pre class="highlight"><code><span class="n">GameObject</span><span class="p">.</span><span class="nf">DestroyImmediate</span><span class="p">(</span><span class="n">go</span><span class="p">);</span>
+<span class="n">Debug</span><span class="p">.</span><span class="nf">Log</span><span class="p">(</span><span class="n">go</span> <span class="p">==</span> <span class="k">null</span><span class="p">);</span>
 </code></pre>
 </div>
+
 <p>GameObject.DestroyImmediate会立即释放内存， 对应的GameObject会在当前帧变为null</p>
 
 <p><img src="/img/post-unity/im6.jpg" alt="" /></p>
@@ -153,22 +152,38 @@ MathJax.Hub.Config({
 
 <p>当使用Resources.UnloadUnusedAssets 卸载的时候， 可以看到cube1234不见了，tex1234的引用计数减少一， 剩余的都是Editor上的引用（手机上引用清零）。</p>
 
-<div class="language-cs highlighter-rouge"><pre class="highlight"><code><span class="k">if</span> <span class="p">(</span><span class="n">Input</span><span class="p">.</span><span class="nf">GetKey</span><span class="p">(</span><span class="n">KeyCode</span><span class="p">.</span><span class="n">Q</span><span class="p">))</span>
+<div class="language-cs highlighter-rouge"><pre class="highlight"><code>
+<span class="n">UnityEngine</span><span class="p">.</span><span class="n">Object</span> <span class="n">_asset</span><span class="p">;</span>
+<span class="n">GameObject</span> <span class="n">go</span><span class="p">;</span>
 <span class="p">{</span>
+    <span class="c1">// load 
+</span>    <span class="n">_asset</span> <span class="p">=</span> <span class="n">Resources</span><span class="p">.</span><span class="nf">Load</span><span class="p">(</span><span class="s">"cube1234"</span><span class="p">);</span>
+    <span class="n">go</span> <span class="p">=</span> <span class="nf">Instantiate</span><span class="p">(</span><span class="n">_asset</span><span class="p">)</span> <span class="k">as</span> <span class="n">GameObject</span><span class="p">;</span>
+    <span class="n">go</span><span class="p">.</span><span class="n">name</span> <span class="p">=</span> <span class="s">"instate_8421"</span><span class="p">;</span>
+<span class="p">}</span>
+<span class="p">{</span>
+    <span class="c1">// unload
+</span>    <span class="n">GameObject</span><span class="p">.</span><span class="nf">DestroyImmediate</span><span class="p">(</span><span class="n">go</span><span class="p">);</span>
+    <span class="n">_asset</span> <span class="p">=</span> <span class="k">null</span><span class="p">;</span> 
     <span class="n">Resources</span><span class="p">.</span><span class="nf">UnloadUnusedAssets</span><span class="p">();</span>
 <span class="p">}</span>
 </code></pre>
 </div>
 
+<p>上代码中如果没有_asset置为null, 会出现类似这样的卸载不干净。</p>
+
+<p><img src="/img/post-unity/im9.jpg" alt="" /></p>
+
 <h3 id="关于material和sharematerial的区别">关于material和sharematerial的区别</h3>
 
 <p>官方对materail的解释</p>
-<div class="highlighter-rouge"><pre class="highlight"><code>Returns the first instantiated Material assigned
-to the renderer.
-Modifying material will change the material for this object only.
-If the material is used by any other renderers, this will clone the shared material and start using it from now on.
-</code></pre>
-</div>
+
+<ul>
+  <li>Returns the first instantiated Material assigned to the renderer.</li>
+  <li>Modifying material will change the material for this object only.</li>
+  <li>If the material is used by any other renderers, this will clone the shared material and start using it from now on.</li>
+</ul>
+
 <p>当使用Renderer.material的时候，每次调用都会生成一个新的material到内存中去，这在销毁物体的时候需要我们手动去销毁该material，否则会一直存在内存中。<br />
 也可以在场景替换的时候使用Resources.UnloadUnusedAssets去统一释放内存。</p>
 
@@ -242,6 +257,26 @@ If the material is used by any other renderers, this will clone the shared mater
 <h4 id="gccollect">GC.Collect</h4>
 <p>GC.Collect()强制垃圾收集器立即释放内存 Unity的GC功能不算好，没把握的时候就强制调用一下</p>
 
+<h2 id="unitystudio">UnityStudio</h2>
+
+<p>unitystudio <a href="https://github.com/Perfare/AssetStudio">源码地址</a></p>
+
+<ul>
+  <li>查看AssetBundle内资源【File-&gt;LoadFile】</li>
+  <li>提取AssetBundle内资源【Export】</li>
+</ul>
+
+<p>点击菜单file中的Load file，选择一个AssetBundle，在Asset List可以看到ab包内所有资源，包括纹理、shader、音频，在Scene Hierarchy中可以看到树状结构（Prefab）。</p>
+
+<p><img src="/img/post-unity/im11.jpg" alt="材质不带instance" /></p>
+
+<p>类似的工具还有：</p>
+
+<ul>
+  <li>disunity</li>
+  <li>UnityAssetsExplorer</li>
+</ul>
+
 <h2 id="参考资料">参考资料</h2>
 
 <ul>
@@ -250,6 +285,7 @@ If the material is used by any other renderers, this will clone the shared mater
   <li><a href="https://blog.uwa4d.com/archives/LoadingPerformance_Mesh.html">unity加载模块之网格</a></li>
   <li><a href="https://blog.uwa4d.com/archives/LoadingPerformance_Texture.html">加载模块之纹理</a></li>
   <li><a href="https://blog.uwa4d.com/archives/Loading_AnimationClip.html">Unity加载模块深度解析之动画</a></li>
+  <li><a href="https://github.com/Perfare/AssetStudio">AssetStudio查看Bunlde内容</a></li>
 </ul>
 
 

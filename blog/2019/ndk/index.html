@@ -5,7 +5,7 @@
   <meta http-equiv="X-UA-Compatible" content="IE=edge">
   <meta name="viewport" content="width=device-width, initial-scale=1">
 
-  <title>NDK同步读取StreamingAssets资源</title>
+  <title>NDK同步读取资源</title>
   <meta name="description"
     content="  本文主要介绍Android Studio下， Java与JNI（c/c++)与Unity(c#)之间的交互， 并利用Android原生的接口，解决StreamingAssets目录下资源IO问题。因为默认情况下，Unity StreamingAssets的资源， 在apk安装之后依旧在apk里压缩文件里，只能...">
 
@@ -67,7 +67,7 @@ MathJax.Hub.Config({
 
   <div class="card">
     <header class="post-header">
-      <h1 class="post-title">NDK同步读取StreamingAssets资源</h1>
+      <h1 class="post-title">NDK同步读取资源</h1>
       <p class="post-meta">Dec 3, 2019 •
         Huailiang</p>
     </header>
@@ -103,7 +103,7 @@ MathJax.Hub.Config({
 
 <p>打开Library工程的build.gardle文件,并添加代码</p>
 
-<pre><code class="language-grovy">task makeJar(type: Copy){
+<pre><code class="language-grovy">task makeJar(type: Copy) {
     delete 'build/libs/sdk.jar'
     from('build/intermediates/bundles/release/')
     into('build/libs/')
