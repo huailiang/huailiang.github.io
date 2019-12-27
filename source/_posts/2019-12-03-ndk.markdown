@@ -20,6 +20,21 @@ tags:
 
 ![](/img/post-android/and-2.jpeg)
 
+
+快速测试Java代码：
+
+快速测试library代码， 而不必在宿主程序里运行。在自定义的类中 添加一个静态的main方法，如下：
+
+```java
+public static void main(String[] args) {
+    System.out.println("hello world");
+}
+```
+
+然后在代码区鼠标右键， 就可以直接看到main函数的入口了：
+
+![](/img/post-android/and-0.jpg)
+
 打开Library工程的build.gardle文件,并添加代码
 
 ``` grovy
