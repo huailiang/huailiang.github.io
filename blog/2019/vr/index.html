@@ -164,9 +164,7 @@ captureOutput.alwaysDiscardsLateVideoFrames = YES;
 <center>
     <img src="/img/post-vr/vr2.png" height="240" />
 </center>
-<blockquote>
-  <p><br /><br /></p>
-</blockquote>
+<p><br /><br /></p>
 
 <p>计算摄像机的位置，首先需要对摄像机进行标定，标定是确定摄像机内参矩阵K的过程，一般用棋盘进行标定，这已经是一个很成熟的方法了，在这就不细说了。得到相机的内参矩阵K后，就可以使用solvePnP方法求取摄像机关于某个Marker的位置（这里理解成相机的位置和旋转更确切些， 以虚拟物品当做世界坐标原点，即虚拟物品的模型空间等于世界空间，通过得来的转换矩阵变换到view空间）。摄像机成像使用小孔模型，如下：</p>
 
@@ -266,9 +264,7 @@ P =
 <center>
     <img src="/img/post-vr/vr8.jpg" height="280" />
 </center>
-<blockquote>
-  <p><br /><br /></p>
-</blockquote>
+<p><br /><br /></p>
 
 <script type="math/tex; mode=display">% <![CDATA[
 P =
