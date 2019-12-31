@@ -35,7 +35,7 @@ Policy gradient 是 RL 中另外一个大家族, 他不像 Value-based 方法 (Q
 损失函数即：<b>loss= -log(prob)*vt</b>
 今天我们的目的不是推导此公式是怎么得来的，而是利用此公式，来实现机器学习的目的。若你想详细了解算法详细的推导过程，可以参考[这篇文章][i1]。
 
-通过我们公式可以看到，当奖励（vt）越大的时候，在loss不断减少的情况下，prob发生的几率会越大。反之，奖励（vt)越小的情况，随着梯度�，prob发生的机会也越小。
+通过我们公式可以看到，当奖励（vt）越大的时候，在loss不断减少的情况下，prob发生的几率会越大。反之，奖励（vt)越小的情况，随着梯度，prob发生的机会也越小。
 
 - <b>PPO</b>
 
@@ -49,7 +49,7 @@ PPO 是 OpenAI 发表的 Trust Region Policy Optimization,基于 Actor-Critic �
       <p>Your user agent does not support the HTML5 Video element.</p>
 </video>
 
-官方的paper对ppo�有两种实现方式。分别是 KL penalty和Clip�的方式。
+官方的paper对ppo有两种实现方式。分别是 KL penalty和Clip的方式。
 
 ![](/img/post-reinforcement/re22.jpg)
 

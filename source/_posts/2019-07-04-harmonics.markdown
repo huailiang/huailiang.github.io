@@ -192,7 +192,7 @@ $$
 
 ![](/img/post-engine/tex29.jpeg)
 
- 在引擎中， 我们使用了tools/sample.sh 生成SAMPLE_NUM=1000000个采样点，采样点使用正太分布的随机数，DEGREE=3 四阶(m = DEGREE+1)的球谐面来生成对应球谐基的因子。
+ 在引擎中， 我们使用了tools/sample.sh 生成SAMPLE_NUM=1000000个采样点，采样点使用正太分布的随机数，DEGREE=3 四阶(m = DEGREE+1)的球谐面来生成对应球谐基的因子。我们分别使用[c++][i15]和python两种语言来实现生成球谐因子的[工具][i14]。
 
 使用球谐函数还原的间接光照效果如下图所示:
 
@@ -416,3 +416,5 @@ half3 ShadeSH9 (half4 normal) {
 [i11]: https://blog.csdn.net/NotMz/article/details/78339913
 [i12]: https://docs.unity3d.com/ScriptReference/Rendering.SphericalHarmonicsL2.html
 [i13]: http://smellysheep.com/2018/03/%E7%90%83%E8%B0%90%E5%87%BD%E6%95%B0%E5%8F%8A%E5%85%B6%E4%BD%9C%E5%9B%BE/
+[i14]: https://github.com/huailiang/OpenGLEngine/tree/master/tools/harmonics
+[i15]: https://github.com/huailiang/OpenGLEngine/tree/master/engine/cv
