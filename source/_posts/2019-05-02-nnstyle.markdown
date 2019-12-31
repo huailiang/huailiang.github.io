@@ -15,7 +15,7 @@ tags:
 
 <center>
     <img src="/img/post-tf/show.gif" height="480"/>
-</center>><br><br>
+</center><br><br>
 
 ## 训练集
 
@@ -104,7 +104,7 @@ tensorflow 训练数据集有自己的序列化方式，大概是protobuf,  goog
 
 <center>
     <img src="/img/post-tf/style2.jpg" height="480"/>
-</center>><br>
+</center><br>
 
 我们通过一张图片看到， ganerator前期encoder前期更多的学到的是形状信息， 后期decoder学到的更多的是风格相关的信息。
 

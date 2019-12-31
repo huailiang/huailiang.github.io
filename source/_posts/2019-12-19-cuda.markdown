@@ -1,6 +1,6 @@
 ---
 layout:     post
-title:      "cuda学习笔记"
+title:      "CUDA学习笔记"
 date:       2019-12-19 03:00:00
 author:     "Huailiang"
 tags:

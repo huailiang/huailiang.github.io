@@ -1,6 +1,6 @@
 ---
 layout:     post
-title:      "unity资源管理机制"
+title:      "Unity资源管理机制"
 date:       2019-12-25 03:00:00
 author:     "Huailiang"
 tags:
@@ -13,7 +13,7 @@ tags:
 unity的资源类型按照加载方式分为两类：
 
 * GameObject、Prefab 类需要Instantiate资源
-* Texture、Mesh、Terrain、Texture等 引用计数的资源
+* Texture、Mesh、Terrain、ShareMaterial等 引用计数的资源
 
 
 ## 加载机制
