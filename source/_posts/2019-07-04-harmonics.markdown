@@ -41,15 +41,15 @@ $$
 $$
 Y_l^m=
 \begin{cases}
-{\sqrt{2}}  K_l^mcos(m\phi)P_l^m(cos\theta)& \text{(m>0)}\\
+{\sqrt{2}}  K_l^mcos(m\varphi)P_l^m(cos\theta)& \text{(m>0)}\\
 
-{\sqrt{2}}  K_l^{m}sin(-m\phi)P_l^{-m}(cos\theta)& \text{(m<0)}\\
+{\sqrt{2}}  K_l^{m}sin(-m\varphi)P_l^{-m}(cos\theta)& \text{(m<0)}\\
 
 K_l^0P_l^0(cos\theta)& \text{(m=0)}
 \end{cases}
 $$
 
-上述式子中$\theta,\phi$是球面坐标系的表示，可以转换成笛卡尔坐标系使用x-y-z，后面球面均匀采样还会详细提到。$K_l^m$为SH球谐函数的缩放因子，其公式表述如下：
+上述式子中$\theta,\varphi$是球面坐标系的表示，可以转换成笛卡尔坐标系使用x-y-z，后面球面均匀采样还会详细提到。$K_l^m$为SH球谐函数的缩放因子，其公式表述如下：
 
 $$
 K_l^m = \sqrt{ \frac{2l+1}{4\pi} \frac{ (l-|m|)! }{ (l+|m|)! } }
@@ -87,45 +87,45 @@ $$
 #### l=0:
 
 $$  
-Y_0^0 = \frac{1}{2}\sqrt{\frac{1}{\pi}}  \tag{m = 0}
+Y_0^0 = s = \frac{1}{2} \sqrt{\frac{1}{\pi}}  \tag{m = 0}
 $$
 
 
 #### l=1:
 
 $$  
-Y_1^{-1} = \sqrt{\frac{3}{4\pi}}\frac{y}{r}\ \tag{m =-1}
+Y_1^{-1} = p_y =  i \sqrt{\frac{1}{2}} \left( Y_1^{- 1} + Y_1^1 \right) = \sqrt{\frac{3}{4 \pi}} \cdot \frac{y}{r}\ \tag{m =-1}
 $$
 
 $$  
-Y_1^0 = \sqrt{\frac{3}{4\pi}}\frac{z}{r}\ \tag{m = 0}
+Y_1^0 = p_z = \sqrt{\frac{3}{4 \pi}} \cdot \frac{z}{r}\ \tag{m = 0}
 $$
 
 $$  
-Y_1^1 = \sqrt{\frac{3}{4\pi}}\frac{x}{r}\ \tag{m = 1}
+Y_1^1 = p_x = \sqrt{\frac{1}{2}} \left( Y_1^{- 1} - Y_1^1 \right) = \sqrt{\frac{3}{4 \pi}} \cdot \frac{x}{r}\ \tag{m = 1}
 $$
 
 
 #### l=2:
 
 $$  
-Y_2^{-2} = \frac{1}{2}\sqrt{\frac{15}{\pi}}\frac{xz}{r^2}\ \tag{m =-2}
+Y_2^{-2} =d_{xy} = i \sqrt{\frac{1}{2}} \left( Y_2^{- 2} - Y_2^2\right)= \frac{1}{2} \sqrt{\frac{15}{\pi}} \cdot \frac{x y}{r^2}\ \tag{m =-2}
 $$
 
 $$  
-Y_2^{-1} = \frac{1}{2}\sqrt{\frac{15}{\pi}}\frac{yz}{r^2}\ \tag{m =-1}
+Y_2^{-1} = d_{yz} = i \sqrt{\frac{1}{2}} \left( Y_2^{- 1} + Y_2^1 \right)  = \frac{1}{2} \sqrt{\frac{15}{\pi}} \cdot \frac{y z}{r^2}\ \tag{m =-1}
 $$
 
 $$  
-Y_2^{-1} = \frac{1}{4}\sqrt{\frac{5}{\pi}}\frac{-x^2-z^2+2y^2}{r^2}\ \tag{m = 0}
+Y_2^0 = d_{z^2}  = \frac{1}{4} \sqrt{\frac{5}{\pi}} \cdot \frac{- x^2 - y^2 + 2 z^2}{r^2}\ \tag{m = 0}
 $$
 
 $$  
-Y_2^1 = \frac{1}{2}\sqrt{\frac{15}{\pi}}\frac{xy}{r^2}\ \tag{m = 1}
+Y_2^1 = d_{xz} = \sqrt{\frac{1}{2}} \left( Y_2^{- 1} - Y_2^1 \right) = \frac{1}{2} \sqrt{\frac{15}{\pi}} \cdot \frac{z x}{r^2}\ \tag{m = 1}
 $$
 
 $$  
-Y_2^2 = \frac{1}{4}\sqrt{\frac{15}{\pi}}\frac{x^2-z^2}{r^2}\ \tag{m = 2}
+Y_2^2 = d_{x^2-y^2} = \sqrt{\frac{1}{2}} \left( Y_2^{- 2} + Y_2^2 \right) = \frac{1}{4} \sqrt{\frac{15}{\pi}} \cdot \frac{x^2 - y^2 }{r^2}\ \tag{m = 2}
 $$
 
 *代入m和l推导更多的简化公式[参考wiki][i16]*
@@ -141,7 +141,7 @@ $$
 
 ## 球面均匀采样
 
-球面坐标系使用$r-\theta-\phi$表达的球表面：
+球面坐标系使用$r-\theta-\varphi$表达的球表面：
 
 ![](/img/post-engine/tex28.jpg)
 
@@ -150,22 +150,22 @@ $$
 $$ 
 \left\{
 \begin{aligned}
-x & = r\cos\phi\sin\theta \\
-y & = r\sin\phi\sin\theta \\
+x & = r\cos\varphi\sin\theta \\
+y & = r\sin\varphi\sin\theta \\
 z & = r\cos\theta
 \end{aligned}
 \right.
 $$
 
 
-在球面上均匀采样的映射的表达式, 并不是均匀的变化球面参数$$\theta$$ 和 $$\phi$$， 或者说如果我们直接给 [公式] 赋两个标准随机变量的话：
+在球面上均匀采样的映射的表达式, 并不是均匀的变化球面参数$\theta$ 和 $\varphi$， 或者说如果我们直接给 [公式] 赋两个标准随机变量的话：
 
 
 $$ 
 \left\{
 \begin{aligned}
 \theta & = \xi_x \\
-\phi & = \xi_y
+\varphi & = \xi_y
 \end{aligned}
 \right.
 $$
@@ -175,7 +175,7 @@ $$
 
 ![](/img/post-engine/tex22.jpg)
 
-但是如果在$$\theta-\phi$$坐标系是均匀分布的：
+但是如果在$$\theta-\varphi$$坐标系是均匀分布的：
 
 ![](/img/post-engine/tex23.png)
 
@@ -188,7 +188,7 @@ $$
 \left\{
 \begin{aligned}
 \theta & = 2arccos(\sqrt{1-\xi_x}) \\
-\phi & = 2\pi\xi_y
+\varphi & = 2\pi\xi_y
 \end{aligned}
 \right.
 $$
