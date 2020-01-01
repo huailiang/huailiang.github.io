@@ -42,12 +42,14 @@ $$
 Y_l^m=
 \begin{cases}
 {\sqrt{2}}  K_l^mcos(m\phi)P_l^m(cos\theta)& \text{(m>0)}\\
+
 {\sqrt{2}}  K_l^{m}sin(-m\phi)P_l^{-m}(cos\theta)& \text{(m<0)}\\
+
 K_l^0P_l^0(cos\theta)& \text{(m=0)}
 \end{cases}
 $$
 
-K为SH球谐函数的缩放因子，其公式表述如下：
+上述式子中$\theta,\phi$是球面坐标系的表示，可以转换成笛卡尔坐标系使用x-y-z，后面球面均匀采样还会详细提到。$K_l^m$为SH球谐函数的缩放因子，其公式表述如下：
 
 $$
 K_l^m = \sqrt{ \frac{2l+1}{4\pi} \frac{ (l-|m|)! }{ (l+|m|)! } }
@@ -115,7 +117,7 @@ Y_2^{-1} = \frac{1}{2}\sqrt{\frac{15}{\pi}}\frac{yz}{r^2}\ \tag{m =-1}
 $$
 
 $$  
-Y_2^{-1} = \frac{1}{4}\sqrt{\frac{15}{\pi}}\frac{-x^2-z^2+2y^2}{r^2}\ \tag{m = 0}
+Y_2^{-1} = \frac{1}{4}\sqrt{\frac{5}{\pi}}\frac{-x^2-z^2+2y^2}{r^2}\ \tag{m = 0}
 $$
 
 $$  
@@ -126,7 +128,7 @@ $$
 Y_2^2 = \frac{1}{4}\sqrt{\frac{15}{\pi}}\frac{x^2-z^2}{r^2}\ \tag{m = 2}
 $$
 
-
+*代入m和l推导更多的简化公式[参考wiki][i16]*
 
 由于球谐基函数阶数是无限的，所以只能取前面几组基来近似，一般在光照中大都取3阶，也即9个球谐系数。对于每个球谐波，我们将其值绘制在球体表面上，然后绘制在极性中。通过改变前一个球体的半径简单地获得极坐标图。
 
@@ -134,25 +136,26 @@ $$
     <img src="/img/post-engine/tex20.jpg" />
 </center><br><br>
 
+
 这里面每个曲面都是用球坐标系表示的，球谐基都是定义在球坐标系上的函数，r（也就是离中心的距离）表示的就是这个球谐基在这个方向分量的重要程度。我是用类比傅里叶变换的方法来理解的，其实球谐函数本身就是拉普拉斯变换在球坐标系下的表示，这里的每个球谐基可以类比成傅里叶变换中频域的各个离散的频率，各个球谐基乘以对应的系数就可以还原出原来的球面函数。一个复杂的波形可以用简单的谐波和相应系数表示，同样的，一个复杂的球面上的函数也可以用简单的球谐基和相应的系数表示。
 
 ## 球面均匀采样
 
-先给一下球面坐标的弧度表达式(r表示球的半径):
+球面坐标系使用$r-\theta-\phi$表达的球表面：
+
+![](/img/post-engine/tex28.jpg)
+
+对应的球面坐标的弧度表达式(r表示球的半径):
 
 $$ 
 \left\{
 \begin{aligned}
-x & = r\cos\theta\cos\phi \\
-y & = r\sin\theta\cos\phi \\
-z & = r\cos\phi
+x & = r\cos\phi\sin\theta \\
+y & = r\sin\phi\sin\theta \\
+z & = r\cos\theta
 \end{aligned}
 \right.
 $$
-
-<center>
-    <img src="/img/post-engine/tex28.jpg"/>
-</center><br><br>
 
 
 在球面上均匀采样的映射的表达式, 并不是均匀的变化球面参数$$\theta$$ 和 $$\phi$$， 或者说如果我们直接给 [公式] 赋两个标准随机变量的话：
@@ -239,7 +242,9 @@ $$
 
 $$
 
-我们在glsl中重建球谐函数如下：
+一般我们可以用SH coefficients来编码低频的环境光（因为边缘是亮度变化剧烈的高频信息，所以用SH来编码看起来糊糊的indirect lighting其实是比较合适的，例如拿来编码天光skylight）。阶数越高，一般重建的质量越高。但是很难重构得像原图那么精致了，毕竟只有少量的系数，只能重构出大概的信息
+
+我们在glsl中重建4阶球谐函数如下：
 
 ``` glsl
 void main(void)
@@ -284,6 +289,8 @@ void main(void)
 
 ![](/img/post-engine/tex24.jpg)
 
+![](/img/post-engine/tex30.jpg)
+
 ## Unity中的球谐光照应用
 
 unity中至少在光照探头和前向渲染的大量顶点光照这两个地方上使用了球谐光照的技术。
@@ -292,6 +299,7 @@ unity中至少在光照探头和前向渲染的大量顶点光照这两个地方
 unity的光照探头在烘焙的时候为每个探头点附近采样光照值，然后计算每个点的球谐函数基底系数，用于运行时对于动态物体计算当前点的烘焙时的全局光照。
 
 ![](/img/post-engine/tex.jpg)
+
 
 #### 前向渲染中的实时的顶点光照：
 前向渲染中光源数量太多，会降低运行效率。unity的正向渲染严格控制了光照的运算数量，具体的规则是，最亮的那盏直线光一定是像素光，其他标记了important的光源在数量不超过settimng里面pixel count的情况下是像素光，否则是顶点光，unity对于第一盏最亮的直线光在第一个bass pass 计算，并计算阴影，然后选择4盏顶点光在也在第一个pass同时计算，对于其他的像素光每个多加一个额外的add pass，对于再剩下的那些顶点光则按照球谐光照的方式在一个bass pass计算。这里面可以认为超过了一定限制的光最后都变成了球谐光照 。可以认为只要你设置了pixel count的限制，你打再多的光也不会把性能拖垮，因为最终他们会转变为球谐光照来伪实现实时光照。这里面的球谐光照的做法可以认为是当场景光源每次变化时将重新在场景上采样一个大的球面，然后计算球谐基底系数，因为这时候采样已经完全忽略了光源的位置，所以在unity中过多的实时的位置光将失去位置信息。
@@ -372,7 +380,7 @@ half3 ShadeSH9 (half4 normal) {
 
 ![](/img/post-engine/tex27.jpg)
 
-分享提到游戏中间接光用cubemamp做GI Specular，用SH probe做GI diffuse。 不过让我产生疑问的是， 既然使用了SH 球谐面了， 就没必要在去生成cubemap了。 因为使用SH函数，完全就可以还原物体周围的环境辐射图了。 而且他这个cubemap肯定不包含近景的间接光信息， 否则的话实时生成间接光就太耗了， 可能是是只有远景的间接光信息， 在一个场景里只会对应这样一个cubemap。 这完全就我自己猜测的，具体的原因只有他本人知道了。
+分享提到游戏中间接光用cubemamp做GI Specular，用SH probe做GI diffuse。因为球谐预计算的本质是内积操作，类似对环境cubemap模糊的算法，而且球谐的阶数不能设太高，太高运算会成指数成长，性能就不太划算了，所以比较适合diffuse, 而对于高光的计算，为了还原更高的细节，比如镜面反射周边的环境，这时候使用IBL更合适些。
 
 ![](/img/post-engine/tex26.jpg)
 
@@ -415,6 +423,7 @@ half3 ShadeSH9 (half4 normal) {
 [i10]: http://cseweb.ucsd.edu/~viscomp/projects/ash/
 [i11]: https://blog.csdn.net/NotMz/article/details/78339913
 [i12]: https://docs.unity3d.com/ScriptReference/Rendering.SphericalHarmonicsL2.html
-[i13]: http://smellysheep.com/2018/03/%E7%90%83%E8%B0%90%E5%87%BD%E6%95%B0%E5%8F%8A%E5%85%B6%E4%BD%9C%E5%9B%BE/
+[i13]: http://smellysheep.com/2018/03/球谐函数及其作图/
 [i14]: https://github.com/huailiang/OpenGLEngine/tree/master/tools/harmonics
 [i15]: https://github.com/huailiang/OpenGLEngine/tree/master/engine/cv
+[i16]: https://en.wikipedia.org/wiki/Table_of_spherical_harmonics
