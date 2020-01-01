@@ -98,12 +98,14 @@ MathJax.Hub.Config({
 <script type="math/tex; mode=display">% <![CDATA[
 Y_l^m=
 \begin{cases}
-{\sqrt{2}}  K_l^mcos(m\phi)P_l^m(cos\theta)& \text{(m>0)}\\
-{\sqrt{2}}  K_l^{m}sin(-m\phi)P_l^{-m}(cos\theta)& \text{(m<0)}\\
+{\sqrt{2}}  K_l^mcos(m\varphi)P_l^m(cos\theta)& \text{(m>0)}\\
+
+{\sqrt{2}}  K_l^{m}sin(-m\varphi)P_l^{-m}(cos\theta)& \text{(m<0)}\\
+
 K_l^0P_l^0(cos\theta)& \text{(m=0)}
 \end{cases} %]]></script>
 
-<p>K为SH球谐函数的缩放因子，其公式表述如下：</p>
+<p>上述式子中$\theta,\varphi$是球面坐标系的表示，可以转换成笛卡尔坐标系使用x-y-z，后面球面均匀采样还会详细提到。$K_l^m$为SH球谐函数的缩放因子，其公式表述如下：</p>
 
 <script type="math/tex; mode=display">K_l^m = \sqrt{ \frac{2l+1}{4\pi} \frac{ (l-|m|)! }{ (l+|m|)! } }</script>
 
@@ -129,27 +131,29 @@ K_l^0P_l^0(cos\theta)& \text{(m=0)}
 
 <h4 id="l0">l=0:</h4>
 
-<script type="math/tex; mode=display">Y_0^0 = \frac{1}{2}\sqrt{\frac{1}{\pi}}  \tag{m = 0}</script>
+<script type="math/tex; mode=display">Y_0^0 = s = \frac{1}{2} \sqrt{\frac{1}{\pi}}  \tag{m = 0}</script>
 
 <h4 id="l1">l=1:</h4>
 
-<script type="math/tex; mode=display">Y_1^{-1} = \sqrt{\frac{3}{4\pi}}\frac{y}{r}\ \tag{m =-1}</script>
+<script type="math/tex; mode=display">Y_1^{-1} = p_y =  i \sqrt{\frac{1}{2}} \left( Y_1^{- 1} + Y_1^1 \right) = \sqrt{\frac{3}{4 \pi}} \cdot \frac{y}{r}\ \tag{m =-1}</script>
 
-<script type="math/tex; mode=display">Y_1^0 = \sqrt{\frac{3}{4\pi}}\frac{z}{r}\ \tag{m = 0}</script>
+<script type="math/tex; mode=display">Y_1^0 = p_z = \sqrt{\frac{3}{4 \pi}} \cdot \frac{z}{r}\ \tag{m = 0}</script>
 
-<script type="math/tex; mode=display">Y_1^1 = \sqrt{\frac{3}{4\pi}}\frac{x}{r}\ \tag{m = 1}</script>
+<script type="math/tex; mode=display">Y_1^1 = p_x = \sqrt{\frac{1}{2}} \left( Y_1^{- 1} - Y_1^1 \right) = \sqrt{\frac{3}{4 \pi}} \cdot \frac{x}{r}\ \tag{m = 1}</script>
 
 <h4 id="l2">l=2:</h4>
 
-<script type="math/tex; mode=display">Y_2^{-2} = \frac{1}{2}\sqrt{\frac{15}{\pi}}\frac{xz}{r^2}\ \tag{m =-2}</script>
+<script type="math/tex; mode=display">Y_2^{-2} =d_{xy} = i \sqrt{\frac{1}{2}} \left( Y_2^{- 2} - Y_2^2\right)= \frac{1}{2} \sqrt{\frac{15}{\pi}} \cdot \frac{x y}{r^2}\ \tag{m =-2}</script>
 
-<script type="math/tex; mode=display">Y_2^{-1} = \frac{1}{2}\sqrt{\frac{15}{\pi}}\frac{yz}{r^2}\ \tag{m =-1}</script>
+<script type="math/tex; mode=display">Y_2^{-1} = d_{yz} = i \sqrt{\frac{1}{2}} \left( Y_2^{- 1} + Y_2^1 \right)  = \frac{1}{2} \sqrt{\frac{15}{\pi}} \cdot \frac{y z}{r^2}\ \tag{m =-1}</script>
 
-<script type="math/tex; mode=display">Y_2^{-1} = \frac{1}{4}\sqrt{\frac{15}{\pi}}\frac{-x^2-z^2+2y^2}{r^2}\ \tag{m = 0}</script>
+<script type="math/tex; mode=display">Y_2^0 = d_{z^2}  = \frac{1}{4} \sqrt{\frac{5}{\pi}} \cdot \frac{- x^2 - y^2 + 2 z^2}{r^2}\ \tag{m = 0}</script>
 
-<script type="math/tex; mode=display">Y_2^1 = \frac{1}{2}\sqrt{\frac{15}{\pi}}\frac{xy}{r^2}\ \tag{m = 1}</script>
+<script type="math/tex; mode=display">Y_2^1 = d_{xz} = \sqrt{\frac{1}{2}} \left( Y_2^{- 1} - Y_2^1 \right) = \frac{1}{2} \sqrt{\frac{15}{\pi}} \cdot \frac{z x}{r^2}\ \tag{m = 1}</script>
 
-<script type="math/tex; mode=display">Y_2^2 = \frac{1}{4}\sqrt{\frac{15}{\pi}}\frac{x^2-z^2}{r^2}\ \tag{m = 2}</script>
+<script type="math/tex; mode=display">Y_2^2 = d_{x^2-y^2} = \sqrt{\frac{1}{2}} \left( Y_2^{- 2} + Y_2^2 \right) = \frac{1}{4} \sqrt{\frac{15}{\pi}} \cdot \frac{x^2 - y^2 }{r^2}\ \tag{m = 2}</script>
+
+<p><em>代入m和l推导更多的简化公式<a href="https://en.wikipedia.org/wiki/Table_of_spherical_harmonics">参考wiki</a></em></p>
 
 <p>由于球谐基函数阶数是无限的，所以只能取前面几组基来近似，一般在光照中大都取3阶，也即9个球谐系数。对于每个球谐波，我们将其值绘制在球体表面上，然后绘制在极性中。通过改变前一个球体的半径简单地获得极坐标图。</p>
 
@@ -162,29 +166,28 @@ K_l^0P_l^0(cos\theta)& \text{(m=0)}
 
 <h2 id="球面均匀采样">球面均匀采样</h2>
 
-<p>先给一下球面坐标的弧度表达式(r表示球的半径):</p>
+<p>球面坐标系使用$r-\theta-\varphi$表达的球表面：</p>
+
+<p><img src="/img/post-engine/tex28.jpg" alt="" /></p>
+
+<p>对应的球面坐标的弧度表达式(r表示球的半径):</p>
 
 <script type="math/tex; mode=display">% <![CDATA[
 \left\{
 \begin{aligned}
-x & = r\cos\theta\cos\phi \\
-y & = r\sin\theta\cos\phi \\
-z & = r\cos\phi
+x & = r\cos\varphi\sin\theta \\
+y & = r\sin\varphi\sin\theta \\
+z & = r\cos\theta
 \end{aligned}
 \right. %]]></script>
 
-<center>
-    <img src="/img/post-engine/tex28.jpg" />
-</center>
-<p><br /><br /></p>
-
-<p>在球面上均匀采样的映射的表达式, 并不是均匀的变化球面参数<script type="math/tex">\theta</script> 和 <script type="math/tex">\phi</script>， 或者说如果我们直接给 [公式] 赋两个标准随机变量的话：</p>
+<p>在球面上均匀采样的映射的表达式, 并不是均匀的变化球面参数$\theta$ 和 $\varphi$， 或者说如果我们直接给 [公式] 赋两个标准随机变量的话：</p>
 
 <script type="math/tex; mode=display">% <![CDATA[
 \left\{
 \begin{aligned}
 \theta & = \xi_x \\
-\phi & = \xi_y
+\varphi & = \xi_y
 \end{aligned}
 \right. %]]></script>
 
@@ -192,7 +195,7 @@ z & = r\cos\phi
 
 <p><img src="/img/post-engine/tex22.jpg" alt="" /></p>
 
-<p>但是如果在<script type="math/tex">\theta-\phi</script>坐标系是均匀分布的：</p>
+<p>但是如果在<script type="math/tex">\theta-\varphi</script>坐标系是均匀分布的：</p>
 
 <p><img src="/img/post-engine/tex23.png" alt="" /></p>
 
@@ -204,7 +207,7 @@ z & = r\cos\phi
 \left\{
 \begin{aligned}
 \theta & = 2arccos(\sqrt{1-\xi_x}) \\
-\phi & = 2\pi\xi_y
+\varphi & = 2\pi\xi_y
 \end{aligned}
 \right. %]]></script>
 
@@ -246,7 +249,9 @@ z & = r\cos\phi
 
 <script type="math/tex; mode=display">\int_S f1(s)f2(s)ds = \vec{c1}  \cdot \vec{c2} = \sum_{i=0}^{N}\vec{c1_i} \cdot \vec{c2_i}</script>
 
-<p>我们在glsl中重建球谐函数如下：</p>
+<p>一般我们可以用SH coefficients来编码低频的环境光（因为边缘是亮度变化剧烈的高频信息，所以用SH来编码看起来糊糊的indirect lighting其实是比较合适的，例如拿来编码天光skylight）。阶数越高，一般重建的质量越高。但是很难重构得像原图那么精致了，毕竟只有少量的系数，只能重构出大概的信息</p>
+
+<p>我们在glsl中重建4阶球谐函数如下：</p>
 
 <div class="language-glsl highlighter-rouge"><pre class="highlight"><code><span class="kt">void</span> <span class="nf">main</span><span class="p">(</span><span class="kt">void</span><span class="p">)</span>
 <span class="p">{</span>
@@ -290,6 +295,8 @@ z & = r\cos\phi
 <p>在<a href="https://github.com/huailiang/OpenGLEngine">引擎</a>里运行的效果如下图:</p>
 
 <p><img src="/img/post-engine/tex24.jpg" alt="" /></p>
+
+<p><img src="/img/post-engine/tex30.jpg" alt="" /></p>
 
 <h2 id="unity中的球谐光照应用">Unity中的球谐光照应用</h2>
 
@@ -377,7 +384,7 @@ z & = r\cos\phi
 
 <p><img src="/img/post-engine/tex27.jpg" alt="" /></p>
 
-<p>分享提到游戏中间接光用cubemamp做GI Specular，用SH probe做GI diffuse。 不过让我产生疑问的是， 既然使用了SH 球谐面了， 就没必要在去生成cubemap了。 因为使用SH函数，完全就可以还原物体周围的环境辐射图了。 而且他这个cubemap肯定不包含近景的间接光信息， 否则的话实时生成间接光就太耗了， 可能是是只有远景的间接光信息， 在一个场景里只会对应这样一个cubemap。 这完全就我自己猜测的，具体的原因只有他本人知道了。</p>
+<p>分享提到游戏中间接光用cubemamp做GI Specular，用SH probe做GI diffuse。因为球谐预计算的本质是内积操作，类似对环境cubemap模糊的算法，而且球谐的阶数不能设太高，太高运算会成指数成长，性能就不太划算了，所以比较适合diffuse, 而对于高光的计算，为了还原更高的细节，比如镜面反射周边的环境，这时候使用IBL更合适些。</p>
 
 <p><img src="/img/post-engine/tex26.jpg" alt="" /></p>
 
@@ -395,7 +402,7 @@ z & = r\cos\phi
 
 <h2 id="学习资料">学习资料</h2>
 <ul>
-  <li><a href="http://smellysheep.com/2018/03/%E7%90%83%E8%B0%90%E5%87%BD%E6%95%B0%E5%8F%8A%E5%85%B6%E4%BD%9C%E5%9B%BE/">球谐函数及其作图 - python </a></li>
+  <li><a href="http://smellysheep.com/2018/03/球谐函数及其作图/">球谐函数及其作图 - python </a></li>
   <li><a href="http://www.yasrt.org/shlighting/">Spherical Harmonic Lighting Program</a></li>
   <li><a href="http://www.paulsprojects.net/opengl/sh/sh.html">Spherical Harmonics</a></li>
   <li><a href="https://www.researchgate.net/publication/234765403_Precomputed_radiance_transfer">Precomputed Radiance Transfer:Theory and Practice</a></li>
@@ -522,7 +529,7 @@ z & = r\cos\phi
   <li><a href="https://github.com/huailiang" target="_blank"><i class="icon icon-github"></i></a></li>
 </ul>
     <p class="txt-medium-gray">
-      <small>&copy;2019 All rights reserved. </small>
+      <small>&copy;2020 All rights reserved. </small>
     </p>
   </div>
 </footer>
