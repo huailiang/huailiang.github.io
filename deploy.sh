@@ -12,6 +12,7 @@
 
 path=$(cd `dirname $0`; pwd)
 name="${path##*/}"
+gitee=~/Documents/projects/penghuailiang
 echo $path
 echo $name
 
@@ -28,6 +29,21 @@ if [ $? -ne 0 ]; then
     exit 1
 fi
 fi
+
+function exec_git_pull(){
+	git clean -df
+	git checkout .
+	git checkout master
+	git pull -q
+	git status -s
+}
+
+function exec_git_push(){
+	git branch
+	git add .
+	git commit -m "deploy "`date +"%Y-%m-%d"`
+	git push
+}
 
 
 cd /tmp/
@@ -49,17 +65,9 @@ mv LICENSE ../
 
 echo "开始切换分支到master"
 
-git clean -df
-
-git checkout .
-
-git checkout master
-
-git pull -q
-
-git status -s
-
 pwd
+
+exec_git_pull
  
 for file in $(ls .)
 do
@@ -82,14 +90,33 @@ mv README.md ${name}
 
 cd $name
 
-git branch
-
 echo "开始上传到github"
 
-git add .
-
-git commit -m "deploy "`date +"%Y-%m-%d"`
-
-git push
+exec_git_push
 
 echo "job done, bye"
+
+echo "start sync Gitee"
+
+workdir=`pwd`
+
+function sync_tree_dir(){
+	rm -rf ${gitee}/${1}
+	cp -rf ${workdir}/${1} ${gitee}/${1}
+}
+
+cd ${gitee}
+
+exec_git_pull
+
+# apply modify
+sync_tree_dir blog/
+sync_tree_dir img/
+sync_tree_dir js/
+sync_tree_dir category/
+
+exec_git_push
+
+
+
+
