@@ -1,0 +1,822 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <meta http-equiv="X-UA-Compatible" content="IE=edge">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+
+  <title>光线追踪</title>
+  <meta name="description"
+    content="  对于光线追踪来说，这真是令人兴奋的时刻。最新的进展，如人工智能加速去噪，微软宣布在DirectX 12的原生支持光线追踪。在本文中，我们将使用Unity中的计算着色器从头开始编写一个非常简单的光线跟踪器。我们将使用的语言是C#结合compute shader实现如下图效果。本文中所有代码都上传到github上。">
+
+  <link rel="shortcut icon" href="/img/favicon.ico">
+  <link rel="stylesheet" href="/css/main.css">
+  <link rel="canonical" href="https://huailiang.github.io/blog/2020/ray/">
+
+</head>
+
+<body>
+  <main>
+    <header class="site-header">
+  <div class="container">
+    <h1><a href="/">Hom<span>e</span></a></h1>
+
+    <button type="button" class="sliding-panel-button">
+      <span></span>
+      <span></span>
+      <span></span>
+    </button>
+
+    <nav class="navbar sliding-panel-content">
+      <ul>
+        
+        <li><a href="/about" title="About">About</a>
+        </li>
+        
+        <li><a href="/blog" title="Blog">Blog</a>
+        </li>
+        
+       <li><a href="/category/" target="_blank"><i class="icon icon-feed"></i></a></li>
+      </ul>
+    </nav>
+  </div>
+</header>
+
+<div class="sliding-panel-fade-screen"></div>
+    <script type="text/javascript" src="/js/MathJax.js?config=TeX-AMS-MML_HTMLorMML"></script>
+
+<script type="text/x-mathjax-config">
+MathJax.Hub.Config({
+  tex2jax: {
+    inlineMath: [['$','$'], ['\\(','\\)']],
+    processEscapes: true
+  }
+});
+</script>
+
+<script type="text/x-mathjax-config">
+  MathJax.Hub.Config({
+    tex2jax: {
+      skipTags: ['script', 'noscript', 'style', 'textarea', 'pre', 'code']
+    }
+  });
+
+</script>
+    <div class="container">
+      <article role="article" class="post">
+
+  <div class="card">
+    <header class="post-header">
+      <h1 class="post-title">光线追踪</h1>
+      <p class="post-meta">Jan 3, 2020 •
+        Huailiang</p>
+    </header>
+
+    <div class="post-content">
+      <blockquote>
+  <p>对于光线追踪来说，这真是令人兴奋的时刻。最新的进展，如人工智能加速去噪，微软宣布在DirectX 12的原生支持光线追踪。在本文中，我们将使用Unity中的计算着色器从头开始编写一个非常简单的光线跟踪器。我们将使用的语言是C#结合compute shader实现如下图效果。本文中所有代码都上传到<a href="https://github.com/huailiang/ray_tracing">github</a>上。</p>
+</blockquote>
+
+<p><img src="/img/post-engine/ray5.jpg" alt="" /></p>
+
+<h2 id="光线追踪-whitted-style-ray-tracing">光线追踪 Whitted-style Ray Tracing</h2>
+
+<p>这里使用的光线追踪方法基于<em>Turner Whitted</em> 在19080年发表的一篇<a href="https://dl.acm.org/citation.cfm?id=358882">论文:</a>, 能够模拟硬阴影和完美的反射, 而且还是实现了更高级效果（如折射refraction、全局照明GI、光泽反射glossy reflection和软阴影softshadow）。</p>
+
+<p>利用Compute Shader，屏幕的每个像素点向外释放一条射线来采样颜色，利用光线可逆的原则，每条光线根据碰撞到的物体进行反射，如此反复直到采样到天空盒（无限远）或者达到最大的反射次数。</p>
+
+<h4 id="基本步骤">基本步骤</h4>
+
+<p>当渲染完成后，OnRenderImage方法会自动被Unity调用。代码里创建一张跟屏幕大小的RT 作为compute shader算法返回的结果。omputeShader中设置每个线程组为8x8，也就是每一组能处理8x8个像素， 线程组个数(高/8)*(宽/8)，第三维度设置为1。添加RayTracingMaster组件到场景camera下， 这样OnRenderImage 才会被调到。</p>
+
+<div class="language-c# highlighter-rouge"><pre class="highlight"><code><span class="k">using</span> <span class="nn">UnityEngine</span><span class="p">;</span>
+
+<span class="k">public</span> <span class="k">class</span> <span class="nc">RayTracingMaster</span> <span class="p">:</span> <span class="n">MonoBehaviour</span>
+<span class="p">{</span>
+    <span class="k">public</span> <span class="n">ComputeShader</span> <span class="n">RayTracingShader</span><span class="p">;</span>
+
+    <span class="k">private</span> <span class="n">RenderTexture</span> <span class="n">_target</span><span class="p">;</span>
+
+    <span class="k">private</span> <span class="k">void</span> <span class="nf">OnRenderImage</span><span class="p">(</span><span class="n">RenderTexture</span> <span class="n">source</span><span class="p">,</span> <span class="n">RenderTexture</span> <span class="n">destination</span><span class="p">)</span>
+    <span class="p">{</span>
+        <span class="nf">Render</span><span class="p">(</span><span class="n">destination</span><span class="p">);</span>
+    <span class="p">}</span>
+
+    <span class="k">private</span> <span class="k">void</span> <span class="nf">Render</span><span class="p">(</span><span class="n">RenderTexture</span> <span class="n">destination</span><span class="p">)</span>
+    <span class="p">{</span>
+        <span class="nf">InitRenderTexture</span><span class="p">();</span>
+
+        <span class="n">RayTracingShader</span><span class="p">.</span><span class="nf">SetTexture</span><span class="p">(</span><span class="m">0</span><span class="p">,</span> <span class="s">"Result"</span><span class="p">,</span> <span class="n">_target</span><span class="p">);</span>
+        <span class="kt">int</span> <span class="n">threadGroupsX</span> <span class="p">=</span> <span class="n">Mathf</span><span class="p">.</span><span class="nf">CeilToInt</span><span class="p">(</span><span class="n">Screen</span><span class="p">.</span><span class="n">width</span> <span class="p">/</span> <span class="m">8.0f</span><span class="p">);</span>
+        <span class="kt">int</span> <span class="n">threadGroupsY</span> <span class="p">=</span> <span class="n">Mathf</span><span class="p">.</span><span class="nf">CeilToInt</span><span class="p">(</span><span class="n">Screen</span><span class="p">.</span><span class="n">height</span> <span class="p">/</span> <span class="m">8.0f</span><span class="p">);</span>
+        <span class="n">RayTracingShader</span><span class="p">.</span><span class="nf">Dispatch</span><span class="p">(</span><span class="m">0</span><span class="p">,</span> <span class="n">threadGroupsX</span><span class="p">,</span> <span class="n">threadGroupsY</span><span class="p">,</span> <span class="m">1</span><span class="p">);</span>
+
+        <span class="n">Graphics</span><span class="p">.</span><span class="nf">Blit</span><span class="p">(</span><span class="n">_target</span><span class="p">,</span> <span class="n">destination</span><span class="p">);</span>
+    <span class="p">}</span>
+
+    <span class="k">private</span> <span class="k">void</span> <span class="nf">InitRenderTexture</span><span class="p">()</span>
+    <span class="p">{</span>
+        <span class="k">if</span> <span class="p">(</span><span class="n">_target</span> <span class="p">==</span> <span class="k">null</span> <span class="p">||</span> <span class="n">_target</span><span class="p">.</span><span class="n">width</span> <span class="p">!=</span> <span class="n">Screen</span><span class="p">.</span><span class="n">width</span> 
+            <span class="p">||</span> <span class="n">_target</span><span class="p">.</span><span class="n">height</span> <span class="p">!=</span> <span class="n">Screen</span><span class="p">.</span><span class="n">height</span><span class="p">)</span>
+        <span class="p">{</span>
+            <span class="k">if</span> <span class="p">(</span><span class="n">_target</span> <span class="p">!=</span> <span class="k">null</span><span class="p">)</span>
+                <span class="n">_target</span><span class="p">.</span><span class="nf">Release</span><span class="p">();</span>
+
+            <span class="n">_target</span> <span class="p">=</span> <span class="k">new</span> <span class="nf">RenderTexture</span><span class="p">(</span><span class="n">Screen</span><span class="p">.</span><span class="n">width</span><span class="p">,</span> <span class="n">Screen</span><span class="p">.</span><span class="n">height</span><span class="p">,</span> <span class="m">0</span><span class="p">,</span>
+                <span class="n">RenderTextureFormat</span><span class="p">.</span><span class="n">ARGBFloat</span><span class="p">,</span> <span class="n">RenderTextureReadWrite</span><span class="p">.</span><span class="n">Linear</span><span class="p">);</span>
+            <span class="n">_target</span><span class="p">.</span><span class="n">enableRandomWrite</span> <span class="p">=</span> <span class="k">true</span><span class="p">;</span>
+            <span class="n">_target</span><span class="p">.</span><span class="nf">Create</span><span class="p">();</span>
+        <span class="p">}</span>
+    <span class="p">}</span>
+<span class="p">}</span>
+</code></pre>
+</div>
+
+<p>compute shader 需要传递一些camera的参数给compute shader, 主要是用来空间变换</p>
+
+<ul>
+  <li>cameraToWorldMatrix 观察坐标系切换到世界坐标系</li>
+  <li>projectionMatrix 观察坐标系转到投影坐标系 inverse是反过来，即投影坐标系变换到观察坐标系</li>
+</ul>
+
+<div class="language-cs highlighter-rouge"><pre class="highlight"><code><span class="n">traceShader</span><span class="p">.</span><span class="nf">SetMatrix</span><span class="p">(</span><span class="s">"_CameraToWorld"</span><span class="p">,</span> <span class="n">_camera</span><span class="p">.</span><span class="n">cameraToWorldMatrix</span><span class="p">);</span>
+<span class="n">traceShader</span><span class="p">.</span><span class="nf">SetMatrix</span><span class="p">(</span><span class="s">"_CameraInverseProjection"</span><span class="p">,</span> <span class="n">_camera</span><span class="p">.</span><span class="n">projectionMatrix</span><span class="p">.</span><span class="n">inverse</span><span class="p">);</span>
+</code></pre>
+</div>
+
+<p>在compute shader 部分， 定义个Ray的结构体来描述射线。 需要注意hlsl语法不像c#， 一个方法或者变量一定要先声明， 然后再去使用。 我们计算每条射线的起点和放线，然后输出对应的颜色， 对应的代码如下：</p>
+
+<div class="language-c++ highlighter-rouge"><pre class="highlight"><code><span class="cp">#pragma kernel CSMain
+</span>
+<span class="n">RWTexture2D</span><span class="o">&lt;</span><span class="n">float4</span><span class="o">&gt;</span> <span class="n">Result</span><span class="p">;</span>
+<span class="n">float4x4</span> <span class="n">_CameraToWorld</span><span class="p">;</span>
+<span class="n">float4x4</span> <span class="n">_CameraInverseProjection</span><span class="p">;</span>
+
+<span class="k">struct</span> <span class="n">Ray</span>
+<span class="p">{</span>
+    <span class="n">float3</span> <span class="n">origin</span><span class="p">;</span>
+    <span class="n">float3</span> <span class="n">direction</span><span class="p">;</span>
+<span class="p">};</span>
+
+<span class="n">Ray</span> <span class="nf">CreateRay</span><span class="p">(</span><span class="n">float3</span> <span class="n">origin</span><span class="p">,</span> <span class="n">float3</span> <span class="n">direction</span><span class="p">)</span>
+<span class="p">{</span>
+    <span class="n">Ray</span> <span class="n">ray</span><span class="p">;</span>
+    <span class="n">ray</span><span class="p">.</span><span class="n">origin</span> <span class="o">=</span> <span class="n">origin</span><span class="p">;</span>
+    <span class="n">ray</span><span class="p">.</span><span class="n">direction</span> <span class="o">=</span> <span class="n">direction</span><span class="p">;</span>
+    <span class="k">return</span> <span class="n">ray</span><span class="p">;</span>
+<span class="p">}</span>
+
+<span class="n">Ray</span> <span class="nf">CreateCameraRay</span><span class="p">(</span><span class="n">float2</span> <span class="n">uv</span><span class="p">)</span>
+<span class="p">{</span>
+    <span class="c1">// 观察空间到世界空间变换
+</span>    <span class="n">float3</span> <span class="n">origin</span> <span class="o">=</span> <span class="n">mul</span><span class="p">(</span><span class="n">_CameraToWorld</span><span class="p">,</span> <span class="n">float4</span><span class="p">(</span><span class="mf">0.0</span><span class="n">f</span><span class="p">,</span> <span class="mf">0.0</span><span class="n">f</span><span class="p">,</span> <span class="mf">0.0</span><span class="n">f</span><span class="p">,</span> <span class="mf">1.0</span><span class="n">f</span><span class="p">)).</span><span class="n">xyz</span><span class="p">;</span>
+    <span class="c1">// 投影空间变换到观察空间
+</span>    <span class="n">float3</span> <span class="n">direction</span> <span class="o">=</span> <span class="n">mul</span><span class="p">(</span><span class="n">_CameraInverseProjection</span><span class="p">,</span> <span class="n">float4</span><span class="p">(</span><span class="n">uv</span><span class="p">,</span> <span class="mf">0.0</span><span class="n">f</span><span class="p">,</span> <span class="mf">1.0</span><span class="n">f</span><span class="p">)).</span><span class="n">xyz</span><span class="p">;</span>
+    <span class="c1">// 变换到时间空间 w=0只变换方向
+</span>    <span class="n">direction</span> <span class="o">=</span> <span class="n">mul</span><span class="p">(</span><span class="n">_CameraToWorld</span><span class="p">,</span> <span class="n">float4</span><span class="p">(</span><span class="n">direction</span><span class="p">,</span> <span class="mf">0.0</span><span class="n">f</span><span class="p">)).</span><span class="n">xyz</span><span class="p">;</span>
+    <span class="n">direction</span> <span class="o">=</span> <span class="n">normalize</span><span class="p">(</span><span class="n">direction</span><span class="p">);</span>
+    <span class="k">return</span> <span class="n">CreateRay</span><span class="p">(</span><span class="n">origin</span><span class="p">,</span> <span class="n">direction</span><span class="p">);</span>
+<span class="p">}</span>
+
+<span class="p">[</span><span class="n">numthreads</span><span class="p">(</span><span class="mi">8</span><span class="p">,</span><span class="mi">8</span><span class="p">,</span><span class="mi">1</span><span class="p">)]</span>
+<span class="kt">void</span> <span class="n">CSMain</span> <span class="p">(</span><span class="n">uint3</span> <span class="n">id</span> <span class="o">:</span> <span class="n">SV_DispatchThreadID</span><span class="p">)</span>
+<span class="p">{</span>
+    <span class="c1">// 获取RT分辨率
+</span>    <span class="n">uint</span> <span class="n">width</span><span class="p">,</span> <span class="n">height</span><span class="p">;</span>
+    <span class="n">Result</span><span class="p">.</span><span class="n">GetDimensions</span><span class="p">(</span><span class="n">width</span><span class="p">,</span> <span class="n">height</span><span class="p">);</span>
+
+    <span class="c1">// [0,1] 变换到 [-1,1] 
+</span>    <span class="n">float2</span> <span class="n">uv</span> <span class="o">=</span> <span class="n">float2</span><span class="p">((</span><span class="n">id</span><span class="p">.</span><span class="n">xy</span> <span class="o">+</span> <span class="n">float2</span><span class="p">(</span><span class="mf">0.5</span><span class="n">f</span><span class="p">,</span> <span class="mf">0.5</span><span class="n">f</span><span class="p">))</span><span class="o">/</span><span class="n">float2</span><span class="p">(</span><span class="n">width</span><span class="p">,</span> <span class="n">height</span><span class="p">)</span><span class="o">*</span><span class="mf">2.0</span><span class="n">f</span><span class="o">-</span><span class="mf">1.0</span><span class="n">f</span><span class="p">);</span>
+
+    <span class="n">Ray</span> <span class="n">ray</span> <span class="o">=</span> <span class="n">CreateCameraRay</span><span class="p">(</span><span class="n">uv</span><span class="p">);</span>
+    <span class="n">Result</span><span class="p">[</span><span class="n">id</span><span class="p">.</span><span class="n">xy</span><span class="p">]</span> <span class="o">=</span> <span class="n">float4</span><span class="p">(</span><span class="n">ray</span><span class="p">.</span><span class="n">direction</span> <span class="o">*</span> <span class="mf">0.5</span><span class="n">f</span> <span class="o">+</span> <span class="mf">0.5</span><span class="n">f</span><span class="p">,</span> <span class="mf">1.0</span><span class="n">f</span><span class="p">);</span>
+<span class="p">}</span>
+</code></pre>
+</div>
+<p>这里我们导入天空盒是以texture2D而非texture3D的格式传入，所以我们需要把方向从笛卡尔坐标系转换为球坐标系，接着再除以π和π/2 把值映射至uv坐标的[0,1]范围内。直角坐标系(x,y,z)与球坐标系(r,θ,φ)的转换关系为:</p>
+
+<p><script type="math/tex">r = \sqrt{x^2+y^2+z^2}</script><br />
+<script type="math/tex">\theta = \arccos{\frac{z}{r}}</script><br />
+<script type="math/tex">\varphi =  \arctan{\frac{y}{x}}</script></p>
+
+<p>想了解更多球面坐标系, 参考之前<a href="https://huailiang.github.io/blog/2019/harmonics/">球谐光照的部分</a>。</p>
+
+<div class="language-c++ highlighter-rouge"><pre class="highlight"><code><span class="c1">//因为我们天空盒导入的是2D的，所以要把方向转为球坐标系来采样 
+</span><span class="kt">float</span> <span class="n">theta</span> <span class="o">=</span> <span class="n">acos</span><span class="p">(</span><span class="n">ray</span><span class="p">.</span><span class="n">direction</span><span class="p">.</span><span class="n">y</span><span class="p">)</span> <span class="o">/</span> <span class="o">-</span><span class="n">PI</span><span class="p">;</span>
+<span class="kt">float</span> <span class="n">phi</span> <span class="o">=</span> <span class="n">atan2</span><span class="p">(</span><span class="n">ray</span><span class="p">.</span><span class="n">direction</span><span class="p">.</span><span class="n">x</span><span class="p">,</span> <span class="o">-</span><span class="n">ray</span><span class="p">.</span><span class="n">direction</span><span class="p">.</span><span class="n">z</span><span class="p">)</span> <span class="o">/</span> <span class="o">-</span><span class="n">PI</span> <span class="o">*</span> <span class="mf">0.5</span><span class="n">f</span><span class="p">;</span>
+<span class="k">return</span> <span class="n">_SkyboxTexture</span><span class="p">.</span><span class="n">SampleLevel</span><span class="p">(</span><span class="n">sampler_SkyboxTexture</span><span class="p">,</span> <span class="n">float2</span><span class="p">(</span><span class="n">phi</span><span class="p">,</span> <span class="n">theta</span><span class="p">),</span> <span class="mi">0</span><span class="p">).</span><span class="n">rgb</span><span class="p">;</span>
+</code></pre>
+</div>
+
+<h4 id="光线追踪流程">光线追踪流程</h4>
+
+<div class="language-c++ highlighter-rouge"><pre class="highlight"><code><span class="c1">//光线进行7次反弹
+</span><span class="n">float3</span> <span class="n">result</span><span class="o">=</span><span class="n">float3</span><span class="p">(</span><span class="mf">0.0</span><span class="n">f</span><span class="p">,</span><span class="mf">0.0</span><span class="n">f</span><span class="p">,</span><span class="mf">0.0</span><span class="n">f</span><span class="p">);</span>
+    <span class="k">for</span><span class="p">(</span><span class="kt">int</span> <span class="n">i</span><span class="o">=</span><span class="mi">0</span><span class="p">;</span><span class="n">i</span><span class="o">&lt;</span><span class="mi">8</span><span class="p">;</span><span class="n">i</span><span class="o">++</span><span class="p">){</span>
+    <span class="n">RayHit</span> <span class="n">hit</span><span class="o">=</span><span class="n">Trace</span><span class="p">(</span><span class="n">ray</span><span class="p">);</span>
+    <span class="n">result</span><span class="o">+=</span><span class="n">ray</span><span class="p">.</span><span class="n">energy</span><span class="o">*</span><span class="n">Shade</span><span class="p">(</span><span class="n">ray</span><span class="p">,</span><span class="n">hit</span><span class="p">);</span>
+    <span class="c1">//光线能量耗尽直接退出循环
+</span>    <span class="k">if</span><span class="p">(</span><span class="o">!</span><span class="n">any</span><span class="p">(</span><span class="n">ray</span><span class="p">.</span><span class="n">energy</span><span class="p">))</span> <span class="k">break</span><span class="p">;</span>
+<span class="p">}</span>
+</code></pre>
+</div>
+
+<p>首先是射线检测来寻找和场景中物体的碰撞情况，并将碰撞信息写入rayhit，接着在Shade方法内根据rayhit信息采样颜色，并且更新ray为碰撞点的入射光（原本是相对于碰撞点的出射光，我们的射线和光线是相反的）用于下一次的追踪。</p>
+
+<p>按这个步骤循环进行多次从而形成完整的光线路径，当然不可能模拟无限反弹，我们这里限制最多7次</p>
+
+<p><strong>碰撞物:</strong><br />
+也就是场景中的物体，我们先跳过网格，用相交性检测的方式来模拟圆和平面，如果射线和指定物体碰撞且距离最近，就将结果存入rayhit，共着色函数（Shade）使用。 这里使用的算法在文章的最后还有详细的推导。</p>
+
+<div class="language-c++ highlighter-rouge"><pre class="highlight"><code><span class="c1">//y=0的平面的射线相交检测
+</span><span class="kt">void</span> <span class="n">IntersectGroundPlane</span><span class="p">(</span><span class="n">Ray</span> <span class="n">ray</span><span class="p">,</span><span class="n">inout</span> <span class="n">RayHit</span> <span class="n">bestHit</span><span class="p">){</span>
+    <span class="kt">float</span> <span class="n">t</span><span class="o">=-</span><span class="n">ray</span><span class="p">.</span><span class="n">origin</span><span class="p">.</span><span class="n">y</span><span class="o">/</span><span class="n">ray</span><span class="p">.</span><span class="n">direction</span><span class="p">.</span><span class="n">y</span><span class="p">;</span>
+    <span class="k">if</span><span class="p">(</span><span class="n">t</span><span class="o">&gt;</span><span class="mi">0</span><span class="o">&amp;&amp;</span><span class="n">t</span><span class="o">&lt;</span><span class="n">bestHit</span><span class="p">.</span><span class="n">distance</span><span class="p">){</span>
+        <span class="n">bestHit</span><span class="p">.</span><span class="n">distance</span><span class="o">=</span><span class="n">t</span><span class="p">;</span>
+        <span class="n">bestHit</span><span class="p">.</span><span class="n">position</span><span class="o">=</span><span class="n">ray</span><span class="p">.</span><span class="n">origin</span><span class="o">+</span><span class="n">t</span><span class="o">*</span><span class="n">ray</span><span class="p">.</span><span class="n">direction</span><span class="p">;</span>
+        <span class="n">bestHit</span><span class="p">.</span><span class="n">normal</span><span class="o">=</span><span class="n">float3</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span><span class="mi">1</span><span class="p">,</span><span class="mi">0</span><span class="p">);</span>
+        <span class="n">bestHit</span><span class="p">.</span><span class="n">albedo</span><span class="o">=</span><span class="n">float3</span><span class="p">(</span><span class="mf">1.0</span><span class="n">f</span><span class="p">,</span><span class="mf">1.0</span><span class="n">f</span><span class="p">,</span><span class="mf">1.0</span><span class="n">f</span><span class="p">);</span>
+        <span class="n">bestHit</span><span class="p">.</span><span class="n">specular</span><span class="o">=</span><span class="n">float3</span><span class="p">(</span><span class="mf">0.2</span><span class="n">f</span><span class="p">,</span><span class="mf">0.2</span><span class="n">f</span><span class="p">,</span><span class="mf">0.2</span><span class="n">f</span><span class="p">);</span>
+    <span class="p">}</span>
+<span class="p">}</span>
+ 
+<span class="c1">//球的相交检测
+</span><span class="kt">void</span> <span class="n">IntersectSphere</span><span class="p">(</span><span class="n">Ray</span> <span class="n">ray</span><span class="p">,</span> <span class="n">inout</span> <span class="n">RayHit</span> <span class="n">bestHit</span><span class="p">,</span> <span class="n">Sphere</span> <span class="n">sphere</span><span class="p">)</span>
+<span class="p">{</span>
+    <span class="n">float3</span> <span class="n">d</span> <span class="o">=</span> <span class="n">ray</span><span class="p">.</span><span class="n">origin</span> <span class="o">-</span> <span class="n">sphere</span><span class="p">.</span><span class="n">position</span><span class="p">;</span>
+    <span class="kt">float</span> <span class="n">p1</span> <span class="o">=</span> <span class="o">-</span><span class="n">dot</span><span class="p">(</span><span class="n">ray</span><span class="p">.</span><span class="n">direction</span><span class="p">,</span> <span class="n">d</span><span class="p">);</span>
+    <span class="kt">float</span> <span class="n">p2sqr</span> <span class="o">=</span> <span class="n">p1</span> <span class="o">*</span> <span class="n">p1</span> <span class="o">-</span> <span class="n">dot</span><span class="p">(</span><span class="n">d</span><span class="p">,</span> <span class="n">d</span><span class="p">)</span> <span class="o">+</span> <span class="n">sphere</span><span class="p">.</span><span class="n">radius</span> <span class="o">*</span> <span class="n">sphere</span><span class="p">.</span><span class="n">radius</span><span class="p">;</span>
+    <span class="k">if</span> <span class="p">(</span><span class="n">p2sqr</span> <span class="o">&lt;</span> <span class="mi">0</span><span class="p">)</span> <span class="c1">//不想交的情况
+</span>        <span class="k">return</span><span class="p">;</span>
+    <span class="kt">float</span> <span class="n">p2</span> <span class="o">=</span> <span class="n">sqrt</span><span class="p">(</span><span class="n">p2sqr</span><span class="p">);</span>
+    <span class="kt">float</span> <span class="n">t</span> <span class="o">=</span> <span class="n">p1</span> <span class="o">-</span> <span class="n">p2</span> <span class="o">&gt;</span> <span class="mi">0</span> <span class="o">?</span> <span class="n">p1</span> <span class="o">-</span> <span class="n">p2</span> <span class="o">:</span> <span class="n">p1</span> <span class="o">+</span> <span class="n">p2</span><span class="p">;</span>
+    <span class="k">if</span> <span class="p">(</span><span class="n">t</span> <span class="o">&gt;</span> <span class="mi">0</span> <span class="o">&amp;&amp;</span> <span class="n">t</span> <span class="o">&lt;</span> <span class="n">bestHit</span><span class="p">.</span><span class="n">distance</span><span class="p">)</span>
+    <span class="p">{</span>
+        <span class="n">bestHit</span><span class="p">.</span><span class="n">distance</span> <span class="o">=</span> <span class="n">t</span><span class="p">;</span>
+        <span class="n">bestHit</span><span class="p">.</span><span class="n">position</span> <span class="o">=</span> <span class="n">ray</span><span class="p">.</span><span class="n">origin</span> <span class="o">+</span> <span class="n">t</span> <span class="o">*</span> <span class="n">ray</span><span class="p">.</span><span class="n">direction</span><span class="p">;</span>
+        <span class="n">bestHit</span><span class="p">.</span><span class="n">normal</span> <span class="o">=</span> <span class="n">normalize</span><span class="p">(</span><span class="n">bestHit</span><span class="p">.</span><span class="n">position</span> <span class="o">-</span> <span class="n">sphere</span><span class="p">.</span><span class="n">position</span><span class="p">);</span>
+        <span class="n">bestHit</span><span class="p">.</span><span class="n">albedo</span><span class="o">=</span><span class="n">sphere</span><span class="p">.</span><span class="n">albedo</span><span class="p">;</span>
+        <span class="n">bestHit</span><span class="p">.</span><span class="n">specular</span><span class="o">=</span><span class="n">sphere</span><span class="p">.</span><span class="n">specular</span><span class="p">;</span>
+    <span class="p">}</span>
+<span class="p">}</span>
+</code></pre>
+</div>
+
+<p><strong>着色：</strong><br />
+采样颜色并且更新ray信息  这里有一个energy的概念，你可以把它想成光线的损耗度，因为物体是会吸收部分光线的，假设原本的光线强度为1，他碰撞到的第一个物体的specular0.6，物体吸收了0.4后反射的光线强度就变为0.6了（表现出来的就是物体的颜色）,第二个Specular为0.8，那么就只剩下0.48，以此类推直到进入我们的眼睛。乘法顺序改变不会有影响，所以我们反着来的射线追踪也直接乘就好。</p>
+
+<div class="language-c++ highlighter-rouge"><pre class="highlight"><code><span class="n">float3</span> <span class="nf">Shade</span><span class="p">(</span><span class="n">inout</span> <span class="n">Ray</span> <span class="n">ray</span><span class="p">,</span><span class="n">RayHit</span> <span class="n">hit</span><span class="p">){</span>
+    <span class="k">if</span><span class="p">(</span><span class="n">hit</span><span class="p">.</span><span class="n">distance</span><span class="o">&lt;</span><span class="mf">1.</span><span class="err">#</span><span class="n">INF</span><span class="p">)</span>
+    <span class="p">{</span>
+        <span class="n">ray</span><span class="p">.</span><span class="n">origin</span><span class="o">=</span><span class="n">hit</span><span class="p">.</span><span class="n">position</span><span class="o">+</span><span class="n">hit</span><span class="p">.</span><span class="n">normal</span><span class="o">*</span><span class="mf">0.001</span><span class="n">f</span><span class="p">;</span>
+        <span class="n">ray</span><span class="p">.</span><span class="n">direction</span><span class="o">=</span><span class="n">reflect</span><span class="p">(</span><span class="n">ray</span><span class="p">.</span><span class="n">direction</span><span class="p">,</span><span class="n">hit</span><span class="p">.</span><span class="n">normal</span><span class="p">);</span>
+        <span class="n">ray</span><span class="p">.</span><span class="n">energy</span><span class="o">*=</span><span class="n">hit</span><span class="p">.</span><span class="n">specular</span><span class="p">;</span>
+        <span class="k">return</span> <span class="n">float3</span><span class="p">(</span><span class="mf">0.0</span><span class="n">f</span><span class="p">,</span><span class="mf">0.0</span><span class="n">f</span><span class="p">,</span><span class="mf">0.0</span><span class="n">f</span><span class="p">)</span>
+    <span class="p">}</span><span class="k">else</span><span class="p">{</span>
+        <span class="n">ray</span><span class="p">.</span><span class="n">energy</span><span class="o">=</span><span class="mi">0</span><span class="p">;</span>
+        <span class="c1">//没有碰撞的物体就采样天空盒
+</span>        <span class="c1">//因为我们天空盒导入的是2D的，所以要把方向转为极坐标来采样
+</span>        <span class="kt">float</span> <span class="n">theta</span> <span class="o">=</span> <span class="n">acos</span><span class="p">(</span><span class="n">ray</span><span class="p">.</span><span class="n">direction</span><span class="p">.</span><span class="n">y</span><span class="p">)</span> <span class="o">/</span> <span class="o">-</span><span class="n">PI</span><span class="p">;</span>
+        <span class="kt">float</span> <span class="n">phi</span> <span class="o">=</span> <span class="n">atan2</span><span class="p">(</span><span class="n">ray</span><span class="p">.</span><span class="n">direction</span><span class="p">.</span><span class="n">x</span><span class="p">,</span> <span class="o">-</span><span class="n">ray</span><span class="p">.</span><span class="n">direction</span><span class="p">.</span><span class="n">z</span><span class="p">)</span> <span class="o">/</span> <span class="o">-</span><span class="n">PI</span> <span class="o">*</span> <span class="mf">0.5</span><span class="n">f</span><span class="p">;</span>
+        <span class="k">return</span> <span class="n">_SkyboxTexture</span><span class="p">.</span><span class="n">SampleLevel</span><span class="p">(</span><span class="n">sampler_SkyboxTexture</span><span class="p">,</span> <span class="n">float2</span><span class="p">(</span><span class="n">phi</span><span class="p">,</span> <span class="n">theta</span><span class="p">),</span> <span class="mi">0</span><span class="p">).</span><span class="n">rgb</span><span class="p">;</span>
+    <span class="p">}</span>
+<span class="p">}</span>
+</code></pre>
+</div>
+
+<p><strong>主光源:</strong><br />
+前面我们采样的光源颜色全部来自天空盒，也就是环境光，现在我们加入主光源的影响, 这里我们添加albedo值，实现方法就是简单的兰伯特光照模型 直接返回。</p>
+
+<div class="language-c++ highlighter-rouge"><pre class="highlight"><code><span class="k">return</span> <span class="n">saturate</span><span class="p">(</span><span class="n">dot</span><span class="p">(</span><span class="n">hit</span><span class="p">.</span><span class="n">normal</span><span class="p">,</span><span class="n">_DirectionLight</span><span class="p">.</span><span class="n">xyz</span><span class="p">)</span><span class="o">*-</span><span class="mi">1</span><span class="p">)</span><span class="o">*</span><span class="n">_DirectionLight</span><span class="p">.</span><span class="n">w</span><span class="o">*</span><span class="n">hit</span><span class="p">.</span><span class="n">albedo</span><span class="p">;</span>
+</code></pre>
+</div>
+
+<p>要注意的是现在我们有了两个获得光源的地方，所以得到的颜色综合了两者。</p>
+
+<p>如图，黄色为直接光，蓝色为我们的追踪光线，所以我们可以理解为，光线追踪追踪的实际是物体的间接光，而每个物体还会有它的直接光，这解释了之前除了采样到天空盒，shade函数返回值都为0，而现在我们返回了直接光的光照值。</p>
+
+<p><img src="/img/post-engine/ray7.jpg" alt="" /></p>
+
+<p>我们可以发现第二个碰撞点实际是在阴影下的，所以我们还需要检测阴影。要注意的是这里我们需要的是直射光反向的反射方向，不是我们的射线方向。</p>
+
+<div class="highlighter-rouge"><pre class="highlight"><code>//阴影检测，向直射光的反方向进行射线检测，如果撞到了物体，就说明他在直射光的阴影之下，返回0
+Ray shadowRay = CreateRay(hit.position + hit.normal * 0.001f, -1 * _DirectionLight.xyz);
+RayHit shadowHit = Trace(shadowRay);
+if (shadowHit.distance != 1.#INF)
+</code></pre>
+</div>
+
+<p><strong>抗锯齿:</strong><br />
+因为我们是每个像素进行采样的，也就是说内容其实是不连续的，所以结果是会有很难看的锯齿, 解决办法就是每次采样，都对射线发射坐标进行轻微的偏移，然后获取采样的平均值。</p>
+
+<div class="language-c# highlighter-rouge"><pre class="highlight"><code><span class="c1">//映射至uv的01范围内
+</span><span class="n">float2</span> <span class="n">uv</span><span class="p">=</span><span class="nf">float2</span><span class="p">((</span><span class="n">id</span><span class="p">.</span><span class="n">xy</span><span class="p">+</span><span class="n">_PixelOffset</span><span class="p">.</span><span class="n">xy</span><span class="p">)/</span><span class="nf">float2</span><span class="p">(</span><span class="n">width</span><span class="p">,</span><span class="n">height</span><span class="p">)*</span><span class="m">2.0f</span><span class="p">-</span><span class="m">1.0f</span><span class="p">);</span>
+</code></pre>
+</div>
+
+<p>然后我们在新增一个pass，对每次采样进行平均。</p>
+<div class="language-c++ highlighter-rouge"><pre class="highlight"><code><span class="n">Pass</span>
+<span class="p">{</span>
+    <span class="n">CGPROGRAM</span>
+    <span class="cp">#pragma vertex vert
+</span>    <span class="cp">#pragma fragment frag
+</span>    <span class="cp">#pragma multi_compile_fog
+</span>
+    <span class="cp">#include "UnityCG.cginc"
+</span>
+    <span class="k">struct</span> <span class="n">appdata</span>
+    <span class="p">{</span>
+        <span class="n">float4</span> <span class="n">vertex</span> <span class="o">:</span> <span class="n">POSITION</span><span class="p">;</span>
+        <span class="n">float2</span> <span class="n">uv</span> <span class="o">:</span> <span class="n">TEXCOORD0</span><span class="p">;</span>
+    <span class="p">};</span>
+
+    <span class="k">struct</span> <span class="n">v2f</span>
+    <span class="p">{</span>
+        <span class="n">float2</span> <span class="n">uv</span> <span class="o">:</span> <span class="n">TEXCOORD0</span><span class="p">;</span>
+        <span class="n">UNITY_FOG_COORDS</span><span class="p">(</span><span class="mi">1</span><span class="p">)</span>
+        <span class="n">float4</span> <span class="n">vertex</span> <span class="o">:</span> <span class="n">SV_POSITION</span><span class="p">;</span>
+    <span class="p">};</span>
+
+    <span class="n">sampler2D</span> <span class="n">_MainTex</span><span class="p">;</span>
+    <span class="n">float4</span> <span class="n">_MainTex_ST</span><span class="p">;</span>
+    
+    <span class="kt">float</span> <span class="n">_Sample</span><span class="p">;</span>
+
+    <span class="n">v2f</span> <span class="nf">vert</span> <span class="p">(</span><span class="n">appdata</span> <span class="n">v</span><span class="p">)</span>
+    <span class="p">{</span>
+        <span class="n">v2f</span> <span class="n">o</span><span class="p">;</span>
+        <span class="n">o</span><span class="p">.</span><span class="n">vertex</span> <span class="o">=</span> <span class="n">UnityObjectToClipPos</span><span class="p">(</span><span class="n">v</span><span class="p">.</span><span class="n">vertex</span><span class="p">);</span>
+        <span class="n">o</span><span class="p">.</span><span class="n">uv</span> <span class="o">=</span> <span class="n">TRANSFORM_TEX</span><span class="p">(</span><span class="n">v</span><span class="p">.</span><span class="n">uv</span><span class="p">,</span> <span class="n">_MainTex</span><span class="p">);</span>
+        <span class="n">UNITY_TRANSFER_FOG</span><span class="p">(</span><span class="n">o</span><span class="p">,</span><span class="n">o</span><span class="p">.</span><span class="n">vertex</span><span class="p">);</span>
+        <span class="k">return</span> <span class="n">o</span><span class="p">;</span>
+    <span class="p">}</span>
+    
+    <span class="n">float4</span> <span class="n">frag</span> <span class="p">(</span><span class="n">v2f</span> <span class="n">i</span><span class="p">)</span> <span class="o">:</span> <span class="n">SV_Target</span>
+    <span class="p">{</span>
+        <span class="k">return</span> <span class="n">float4</span><span class="p">(</span><span class="n">tex2D</span><span class="p">(</span><span class="n">_MainTex</span><span class="p">,</span> <span class="n">i</span><span class="p">.</span><span class="n">uv</span><span class="p">).</span><span class="n">rgb</span><span class="p">,</span> <span class="mf">1.0</span><span class="n">f</span> <span class="o">/</span> <span class="p">(</span><span class="n">_Sample</span> <span class="o">+</span> <span class="mf">1.0</span><span class="n">f</span><span class="p">));</span>
+    <span class="p">}</span>
+    <span class="n">ENDCG</span>
+<span class="p">}</span>
+</code></pre>
+</div>
+
+<h2 id="路径追踪-monte-carlo-path-tracing">路径追踪 Monte Carlo Path Tracing</h2>
+
+<p>我们假设每次光线都是表面法线进行的完美反射，所以他可以很好的展现光滑物体表面的反射效果。但是现实生活着并不是所有物体都是非常光滑的，这种方法无法展现物体之间相互作用的漫反射，还有物体的光泽。所以这一章我们把它改成蒙特卡洛路径追踪（Monte Carlo Path Tracing）</p>
+
+<h4 id="渲染方程">渲染方程</h4>
+
+<script type="math/tex; mode=display">L(x, \, \vec \omega_{o}) = L_e(x, \, \vec \omega_{o}) + \int_{\Omega}{f_r(x, \, \vec \omega_{i}, \, \vec \omega_{o}) \, (\vec \omega_{i} \cdot \vec n) \, L(x, \, \vec \omega_{i}) \, d\vec \omega_{i}}</script>
+
+<p>$L_o(x,\vec{w_o})$：碰撞点X在w方向的出射光</p>
+
+<p>$L_e(x,\vec{w_o} )$:出射光的自发光贡献</p>
+
+<p>$\int _\Omega …$:Ω=法线方向的半球面，这个积分的意思就是综合这个半球面所有可能方向的入射光对这个指定的出射光线的贡献。</p>
+
+<p><img src="/img/post-engine/ray6.jpg" alt="" /></p>
+
+<p>$f_r(x,\vec{w_i},\vec{w_o})$：双向反射分布函数BRDF</p>
+
+<p>$\vec{w_i }\cdot \vec{n}$:入射光和表面法线的夹角cos值，夹角越大，值越低，出射光强度越弱，因为夹角越大大，一束光线越容易分散</p>
+
+<p>$L(x,\vec{w_i})$:入射光，这个值就是前一个碰撞点用渲染方程得到的出射光，如此递归直到结束。</p>
+
+<h4 id="蒙特卡洛积分">蒙特卡洛积分</h4>
+
+<p>我们无法明确的知道入射光来自哪些方向，所以我们使用蒙特卡洛方法在所有可能的方向中随机采样，我们采样的越多，越接近正确的结果。</p>
+
+<script type="math/tex; mode=display">F_N \approx \frac{1}{N} \sum_{n=0}^{N}{\frac{f(x_n)}{p(x_n)}}</script>
+
+<p>这里我们先假设光线在半球面的各个方向的入射几率都是相同的，也就是说p(x_n)=\frac{1}{2\pi }。（单位半球的表面积为2π）。</p>
+
+<p>先前的渲染公式就可以修改成如下：</p>
+
+<script type="math/tex; mode=display">L(x, \, \vec \omega_{o}) \approx L_e(x, \, \vec \omega_{o}) + \frac{1}{N} \sum_{n=0}^{N}{\color{Green}{2 \pi \, f_r(x, \, \vec \omega_{i}, \, \vec \omega_{o}) \, (\vec \omega_{i} \cdot \vec n)} \, L(x, \, \vec \omega_{i})}</script>
+
+<p>前一章为了抗锯齿，我们使用addshader对多次采样进行平均取值，正好完成了公式中的这部分，但是因为OnRenderImage中的destination纹理精度为R8G8B8A8的类型，而我们希望的是RGBAfloat的精度，所以我们要再创建一个贴图用于来回倒，至于为什么要这样一个精度后面有提到。</p>
+
+<p>又是上一条光线的递归结果（也就是代码中的energy），所以我们修改的就是绿色的这个部分。</p>
+
+<p>关于如何优雅计算BRDF, 采样方式 处理流程就是类似PBR对间接光的处理， 参照我之前的<a href="https://huailiang.github.io/blog/2019/ibl/">文章:基于图像的光照IBL</a>。</p>
+
+<p><img src="/img/post-engine/ray8.jpg" alt="" /></p>
+
+<h2 id="mesh-碰撞检测">Mesh 碰撞检测</h2>
+
+<p>在计算机图形学中，网格由许多缓冲区定义，其中最重要的缓冲区是顶点缓冲区和索引缓冲区。顶点缓冲区是一个三维向量列表，描述每个顶点在对象空间中的位置（这意味着当您平移、旋转或缩放对象时，这些值不需要更改，而是使用矩阵乘法从对象空间动态地转换到世界空间）。索引缓冲区是指向顶点缓冲区的索引整数列表。每三个指数构成一个三角形。例如，如果索引缓冲区为[0，1，2，0，2，3]，则有两个三角形：第一个三角形由顶点缓冲区中的第一、第二和第三个顶点组成，而第二个三角形由第一、第三和第四个顶点组成。因此，索引缓冲器还定义了上述的缠绕顺序。除了顶点和索引缓冲区之外，其他缓冲区还可以向每个顶点添加信息。最常见的附加缓冲区存储法线、纹理坐标（称为texcoords或简单的uv）和顶点颜色。</p>
+
+<p>因此， 我们需要把游戏中需要渲染的mesh的顶点和索引告诉compute shader, 方式如下：</p>
+
+<div class="language-cs highlighter-rouge"><pre class="highlight"><code><span class="k">private</span> <span class="k">void</span> <span class="nf">RebuildMeshObjectBuffers</span><span class="p">()</span>
+<span class="p">{</span>
+    <span class="k">if</span> <span class="p">(!</span><span class="n">_meshObjectsNeedRebuilding</span><span class="p">)</span>
+    <span class="p">{</span>
+        <span class="k">return</span><span class="p">;</span>
+    <span class="p">}</span>
+
+    <span class="n">_meshObjectsNeedRebuilding</span> <span class="p">=</span> <span class="k">false</span><span class="p">;</span>
+    <span class="n">_currentSample</span> <span class="p">=</span> <span class="m">0</span><span class="p">;</span>
+
+    <span class="c1">// Clear all lists
+</span>    <span class="n">_meshObjects</span><span class="p">.</span><span class="nf">Clear</span><span class="p">();</span>
+    <span class="n">_vertices</span><span class="p">.</span><span class="nf">Clear</span><span class="p">();</span>
+    <span class="n">_indices</span><span class="p">.</span><span class="nf">Clear</span><span class="p">();</span>
+
+    <span class="c1">// Loop over all objects and gather their data
+</span>    <span class="k">foreach</span> <span class="p">(</span><span class="n">RayTracingObject</span> <span class="n">obj</span> <span class="k">in</span> <span class="n">_rayTracingObjects</span><span class="p">)</span>
+    <span class="p">{</span>
+        <span class="n">Mesh</span> <span class="n">mesh</span> <span class="p">=</span> <span class="n">obj</span><span class="p">.</span><span class="n">GetComponent</span><span class="p">&lt;</span><span class="n">MeshFilter</span><span class="p">&gt;().</span><span class="n">sharedMesh</span><span class="p">;</span>
+
+        <span class="c1">// Add vertex data
+</span>        <span class="kt">int</span> <span class="n">firstVertex</span> <span class="p">=</span> <span class="n">_vertices</span><span class="p">.</span><span class="n">Count</span><span class="p">;</span>
+        <span class="n">_vertices</span><span class="p">.</span><span class="nf">AddRange</span><span class="p">(</span><span class="n">mesh</span><span class="p">.</span><span class="n">vertices</span><span class="p">);</span>
+
+        <span class="c1">// Add index data - if the vertex buffer wasn't empty before, the
+</span>        <span class="c1">// indices need to be offset
+</span>        <span class="kt">int</span> <span class="n">firstIndex</span> <span class="p">=</span> <span class="n">_indices</span><span class="p">.</span><span class="n">Count</span><span class="p">;</span>
+        <span class="kt">var</span> <span class="n">indices</span> <span class="p">=</span> <span class="n">mesh</span><span class="p">.</span><span class="nf">GetIndices</span><span class="p">(</span><span class="m">0</span><span class="p">);</span>
+        <span class="n">_indices</span><span class="p">.</span><span class="nf">AddRange</span><span class="p">(</span><span class="n">indices</span><span class="p">.</span><span class="nf">Select</span><span class="p">(</span><span class="n">index</span> <span class="p">=&gt;</span> <span class="n">index</span> <span class="p">+</span> <span class="n">firstVertex</span><span class="p">));</span>
+
+        <span class="c1">// Add the object itself
+</span>        <span class="n">_meshObjects</span><span class="p">.</span><span class="nf">Add</span><span class="p">(</span><span class="k">new</span> <span class="nf">MeshObject</span><span class="p">()</span>
+        <span class="p">{</span>
+            <span class="n">localToWorldMatrix</span> <span class="p">=</span> <span class="n">obj</span><span class="p">.</span><span class="n">transform</span><span class="p">.</span><span class="n">localToWorldMatrix</span><span class="p">,</span>
+            <span class="n">indices_offset</span> <span class="p">=</span> <span class="n">firstIndex</span><span class="p">,</span>
+            <span class="n">indices_count</span> <span class="p">=</span> <span class="n">indices</span><span class="p">.</span><span class="n">Length</span>
+        <span class="p">});</span>
+    <span class="p">}</span>
+
+    <span class="nf">CreateComputeBuffer</span><span class="p">(</span><span class="k">ref</span> <span class="n">_meshObjectBuffer</span><span class="p">,</span> <span class="n">_meshObjects</span><span class="p">,</span> <span class="m">72</span><span class="p">);</span>
+    <span class="nf">CreateComputeBuffer</span><span class="p">(</span><span class="k">ref</span> <span class="n">_vertexBuffer</span><span class="p">,</span> <span class="n">_vertices</span><span class="p">,</span> <span class="m">12</span><span class="p">);</span>
+    <span class="nf">CreateComputeBuffer</span><span class="p">(</span><span class="k">ref</span> <span class="n">_indexBuffer</span><span class="p">,</span> <span class="n">_indices</span><span class="p">,</span> <span class="m">4</span><span class="p">);</span>
+<span class="p">}</span>
+</code></pre>
+</div>
+
+<p>shader 中判断三角形是否与射线相交的算法， 在文章后面的部分会介绍推导，  Mesh是由大量的三角形构成，我们遍历mesh里的每个三角形， 这里用来判断射线和Mesh相交。</p>
+
+<div class="language-c++ highlighter-rouge"><pre class="highlight"><code><span class="kt">void</span> <span class="nf">IntersectMeshObject</span><span class="p">(</span><span class="n">Ray</span> <span class="n">ray</span><span class="p">,</span> <span class="n">inout</span> <span class="n">RayHit</span> <span class="n">bestHit</span><span class="p">,</span> <span class="n">MeshObject</span> <span class="n">meshObject</span><span class="p">)</span>
+<span class="p">{</span>
+    <span class="n">uint</span> <span class="n">offset</span> <span class="o">=</span> <span class="n">meshObject</span><span class="p">.</span><span class="n">indices_offset</span><span class="p">;</span>
+    <span class="n">uint</span> <span class="n">count</span> <span class="o">=</span> <span class="n">offset</span> <span class="o">+</span> <span class="n">meshObject</span><span class="p">.</span><span class="n">indices_count</span><span class="p">;</span>
+    <span class="k">for</span> <span class="p">(</span><span class="n">uint</span> <span class="n">i</span> <span class="o">=</span> <span class="n">offset</span><span class="p">;</span> <span class="n">i</span> <span class="o">&lt;</span> <span class="n">count</span><span class="p">;</span> <span class="n">i</span> <span class="o">+=</span> <span class="mi">3</span><span class="p">)</span>
+    <span class="p">{</span>
+        <span class="n">float3</span> <span class="n">v0</span> <span class="o">=</span> <span class="p">(</span><span class="n">mul</span><span class="p">(</span><span class="n">meshObject</span><span class="p">.</span><span class="n">localToWorldMatrix</span><span class="p">,</span> <span class="n">float4</span><span class="p">(</span><span class="n">_Vertices</span><span class="p">[</span><span class="n">_Indices</span><span class="p">[</span><span class="n">i</span><span class="p">]],</span> <span class="mi">1</span><span class="p">))).</span><span class="n">xyz</span><span class="p">;</span>
+        <span class="n">float3</span> <span class="n">v1</span> <span class="o">=</span> <span class="p">(</span><span class="n">mul</span><span class="p">(</span><span class="n">meshObject</span><span class="p">.</span><span class="n">localToWorldMatrix</span><span class="p">,</span> <span class="n">float4</span><span class="p">(</span><span class="n">_Vertices</span><span class="p">[</span><span class="n">_Indices</span><span class="p">[</span><span class="n">i</span> <span class="o">+</span> <span class="mi">1</span><span class="p">]],</span> <span class="mi">1</span><span class="p">))).</span><span class="n">xyz</span><span class="p">;</span>
+        <span class="n">float3</span> <span class="n">v2</span> <span class="o">=</span> <span class="p">(</span><span class="n">mul</span><span class="p">(</span><span class="n">meshObject</span><span class="p">.</span><span class="n">localToWorldMatrix</span><span class="p">,</span> <span class="n">float4</span><span class="p">(</span><span class="n">_Vertices</span><span class="p">[</span><span class="n">_Indices</span><span class="p">[</span><span class="n">i</span> <span class="o">+</span> <span class="mi">2</span><span class="p">]],</span> <span class="mi">1</span><span class="p">))).</span><span class="n">xyz</span><span class="p">;</span>
+
+        <span class="kt">float</span> <span class="n">t</span><span class="p">,</span> <span class="n">u</span><span class="p">,</span> <span class="n">v</span><span class="p">;</span>
+        <span class="k">if</span> <span class="p">(</span><span class="n">IntersectTriangle_MT97</span><span class="p">(</span><span class="n">ray</span><span class="p">,</span> <span class="n">v0</span><span class="p">,</span> <span class="n">v1</span><span class="p">,</span> <span class="n">v2</span><span class="p">,</span> <span class="n">t</span><span class="p">,</span> <span class="n">u</span><span class="p">,</span> <span class="n">v</span><span class="p">))</span>
+        <span class="p">{</span>
+            <span class="k">if</span> <span class="p">(</span><span class="n">t</span> <span class="o">&gt;</span> <span class="mi">0</span> <span class="o">&amp;&amp;</span> <span class="n">t</span> <span class="o">&lt;</span> <span class="n">bestHit</span><span class="p">.</span><span class="n">distance</span><span class="p">)</span>
+            <span class="p">{</span>
+                <span class="n">bestHit</span><span class="p">.</span><span class="n">distance</span> <span class="o">=</span> <span class="n">t</span><span class="p">;</span>
+                <span class="n">bestHit</span><span class="p">.</span><span class="n">position</span> <span class="o">=</span> <span class="n">ray</span><span class="p">.</span><span class="n">origin</span> <span class="o">+</span> <span class="n">t</span> <span class="o">*</span> <span class="n">ray</span><span class="p">.</span><span class="n">direction</span><span class="p">;</span>
+                <span class="n">bestHit</span><span class="p">.</span><span class="n">normal</span> <span class="o">=</span> <span class="n">normalize</span><span class="p">(</span><span class="n">cross</span><span class="p">(</span><span class="n">v1</span> <span class="o">-</span> <span class="n">v0</span><span class="p">,</span> <span class="n">v2</span> <span class="o">-</span> <span class="n">v0</span><span class="p">));</span>
+                <span class="n">bestHit</span><span class="p">.</span><span class="n">albedo</span> <span class="o">=</span> <span class="mf">0.0</span><span class="n">f</span><span class="p">;</span>
+                <span class="n">bestHit</span><span class="p">.</span><span class="n">specular</span> <span class="o">=</span> <span class="mf">0.65</span><span class="n">f</span><span class="p">;</span>
+                <span class="n">bestHit</span><span class="p">.</span><span class="n">smoothness</span> <span class="o">=</span> <span class="mf">0.99</span><span class="n">f</span><span class="p">;</span>
+                <span class="n">bestHit</span><span class="p">.</span><span class="n">emission</span> <span class="o">=</span> <span class="mf">0.0</span><span class="n">f</span><span class="p">;</span>
+            <span class="p">}</span>
+        <span class="p">}</span>
+    <span class="p">}</span>
+<span class="p">}</span>
+</code></pre>
+</div>
+<p>不要使用任何过多的网格（超过几百个三角形）！我们的着色器缺少正确的优化，如果超出范围，每像素跟踪一个样本可能需要几秒钟甚至几分钟的时间。结果是你的GPU驱动程序将被系统杀死，Unity可能会崩溃，你的机器需要重新启动。最终运行的效果如下图：</p>
+
+<p><img src="/img/post-engine/ray9.jpg" alt="" /></p>
+
+<h2 id="射线相交检测算法">射线相交检测算法</h2>
+
+<h4 id="1-射线与平面相交">1. 射线与平面相交</h4>
+
+<p>射线: $R(t) = O + tD$（O原点, D方向, t距离）</p>
+
+<p>设O的坐标(x, y, z) 方向使用向量D=(x’, y’, z’)</p>
+
+<p><img src="/img/post-engine/ray1.jpg" alt="" /></p>
+
+<p>图中可以看到射线起点到地平面（y=0, x-z 平面)， 即射线起点纵坐标y除上余弦值。</p>
+
+<script type="math/tex; mode=display">\cos\theta= (0,-1,0) * (x', y', z') = -y'</script>
+
+<script type="math/tex; mode=display">t = \frac{y}{\cos\theta} = -\frac{y}{y'}</script>
+
+<p>所以代码里实现如下：</p>
+
+<div class="language-c++ highlighter-rouge"><pre class="highlight"><code><span class="kt">bool</span> <span class="nf">IntersectPlane</span><span class="p">(</span><span class="n">Ray</span> <span class="n">ray</span><span class="p">)</span>
+<span class="p">{</span>
+    <span class="n">t</span> <span class="o">=</span> <span class="o">-</span><span class="n">ray</span><span class="p">.</span><span class="n">origin</span><span class="p">.</span><span class="n">y</span> <span class="o">/</span> <span class="n">ray</span><span class="p">.</span><span class="n">direction</span><span class="p">.</span><span class="n">y</span><span class="p">;</span>
+    <span class="k">return</span> <span class="nb">true</span><span class="p">;</span>
+<span class="p">}</span>
+</code></pre>
+</div>
+
+<h4 id="2-射线与球相交">2. 射线与球相交</h4>
+
+<p>射线：$R(t)=O+tD$</p>
+
+<p>圆：pos+radius</p>
+
+<p>得到向量d d= pos-O</p>
+
+<p>点乘单位向量得到投影P1 P_1=d\cdot D</p>
+
+<p>两次勾股定律得到p2平方 (P_2)^2=r^2-(d^2-p_1^2)</p>
+
+<p>&lt;0无解 =0 一解 &gt;0 两解</p>
+
+<p>t=P_1\pm P_2</p>
+
+<p>如果有两个解，就选距离最短的那个解,看图可以知道最短的就是进入圆的点，圆的是退出圆。</p>
+
+<p><img src="/img/post-engine/ray2.jpg" alt="" /></p>
+
+<div class="language-c++ highlighter-rouge"><pre class="highlight"><code><span class="kt">bool</span> <span class="nf">IntersectSphere</span><span class="p">(</span><span class="n">Ray</span> <span class="n">ray</span><span class="p">,</span> <span class="n">float3</span> <span class="n">position</span><span class="p">,</span><span class="kt">float</span> <span class="n">radius</span><span class="p">,</span><span class="n">inout</span> <span class="kt">float</span> <span class="n">t</span><span class="p">)</span>
+<span class="p">{</span>
+    <span class="n">float3</span> <span class="n">d</span> <span class="o">=</span> <span class="n">ray</span><span class="p">.</span><span class="n">origin</span> <span class="o">-</span> <span class="n">position</span><span class="p">;</span>
+    <span class="kt">float</span> <span class="n">p1</span> <span class="o">=</span> <span class="o">-</span><span class="n">dot</span><span class="p">(</span><span class="n">ray</span><span class="p">.</span><span class="n">direction</span><span class="p">,</span> <span class="n">d</span><span class="p">);</span>
+    <span class="kt">float</span> <span class="n">p2sqr</span> <span class="o">=</span> <span class="n">p1</span> <span class="o">*</span> <span class="n">p1</span> <span class="o">-</span> <span class="n">dot</span><span class="p">(</span><span class="n">d</span><span class="p">,</span> <span class="n">d</span><span class="p">)</span> <span class="o">+</span><span class="n">radius</span><span class="o">*</span><span class="n">radius</span><span class="p">;</span>
+    <span class="k">if</span> <span class="p">(</span><span class="n">p2sqr</span> <span class="o">&lt;</span> <span class="mi">0</span><span class="p">)</span><span class="c1">//不存在解也就是不相交
+</span>        <span class="k">return</span> <span class="nb">false</span><span class="p">;</span>
+    <span class="kt">float</span> <span class="n">p2</span> <span class="o">=</span> <span class="n">sqrt</span><span class="p">(</span><span class="n">p2sqr</span><span class="p">);</span>
+    <span class="n">t</span> <span class="o">=</span> <span class="n">p1</span> <span class="o">-</span> <span class="n">p2</span> <span class="o">&gt;</span> <span class="mi">0</span> <span class="o">?</span> <span class="n">p1</span> <span class="o">-</span> <span class="n">p2</span> <span class="o">:</span> <span class="n">p1</span> <span class="o">+</span> <span class="n">p2</span><span class="p">;</span><span class="c1">//优先选近的那个点，除非近的点在后头
+</span>    <span class="k">return</span> <span class="nb">true</span><span class="p">;</span>
+<span class="p">}</span>
+</code></pre>
+</div>
+
+<h4 id="3-射线与三角形相交">3. 射线与三角形相交</h4>
+
+<p>射线：$R(t)=O+tD$</p>
+
+<p>射线，一个点从起点o开始，沿着方向D移动任意长度，得到终点R，根据t值的不同，得到的R值也不同，所有这些不同的R值便构成了整条射线，比如下面的射线，起点是P0，方向是u，p0 + tu也就构成了整条射线。</p>
+
+<p><img src="/img/post-engine/ray3.jpg" alt="" /></p>
+
+<p>三角形的参数方程如下，其中V0，V1和V2是三角形的三个点，u, v是V1和V2的权重，1-u-v是V0的权重，并且满足u&gt;=0, v &gt;= 0,u+v&lt;=1。</p>
+
+<script type="math/tex; mode=display">(1-u-v)V_0 + uV_1 + vV_2</script>
+
+<p>确切的说，上面的方程是三角形及其内部所有点的方程，因为三角形内任意一点都可以理解为从顶点V0开始，沿着边V0V1移动一段距离，然后再沿着边V0V2移动一段距离，然后求他们的和向量。至于移动多大距离，就是由参数u和v控制的。</p>
+
+<p><img src="/img/post-engine/ray4.png" alt="" /></p>
+
+<p>于是，求射线与三角形的交点也就变成了解下面这个方程-其中t,u,v是未知数，其他都是已知的</p>
+
+<script type="math/tex; mode=display">O+tD = (1-u-v)V_0+uV_1+vV_2</script>
+
+<p>移项并整理，将t,u,v提取出来作为未知数，得到下面的线性方程组</p>
+
+<script type="math/tex; mode=display">% <![CDATA[
+\begin{bmatrix}
+    -D& V_1-V_0 &V_2-V_0
+\end{bmatrix}\begin{bmatrix}
+    t\\u\\v
+\end{bmatrix}=O-V_0 %]]></script>
+
+<p>现在开始解这个方程组，这里要用到两个知识点，一是克莱姆法则，二是向量的混合积。</p>
+
+<p>令E1=V1−V0，E2=V2−V0，T=O−V0上式可以改写成:</p>
+
+<script type="math/tex; mode=display">% <![CDATA[
+\begin{bmatrix}
+    -D& E_1 & E_2
+\end{bmatrix}\begin{bmatrix}
+    t\\u\\v
+\end{bmatrix}=T %]]></script>
+
+<p>根据克莱姆法则，可得到t,u,v的解为：</p>
+
+<script type="math/tex; mode=display">% <![CDATA[
+\begin{bmatrix}
+    t\\u\\v
+\end{bmatrix}
+=\frac{1}{\begin{vmatrix}
+    -D & E_1 & E_2
+\end{vmatrix} }
+\begin{vmatrix}
+    T&E_1&E_2\\
+    -D& T& E_2\\
+    -D & E_1& T
+\end{vmatrix} %]]></script>
+
+<p>根据混合积公式:</p>
+
+<script type="math/tex; mode=display">% <![CDATA[
+\begin{vmatrix}
+    a&b&c
+\end{vmatrix}
+=a\times{b}\cdot{c} %]]></script>
+
+<p>上式改写为：</p>
+
+<script type="math/tex; mode=display">\begin{bmatrix}
+    t\\u\\v
+\end{bmatrix}
+=\frac{1}{\begin{bmatrix}
+    -D \times E_2 \cdot E_1
+\end{bmatrix} }
+\begin{vmatrix}
+    T \times E_1 \cdot E_2\\
+    D \times E_2 \cdot T\\
+    T \times E_1 \cdot D
+\end{vmatrix}</script>
+
+<p>令$P=D×E_2，Q=T×E_1$，得到最终的公式:</p>
+
+<script type="math/tex; mode=display">\begin{bmatrix}
+    t\\u\\v
+\end{bmatrix}
+=\frac{1}{\begin{bmatrix}
+    P \cdot E_1
+\end{bmatrix} }
+\begin{vmatrix}
+    Q \cdot E_2\\
+    P \cdot T\\
+    Q \cdot D
+\end{vmatrix}</script>
+
+<p>之所以提炼出P和Q是为了避免重复计算。</p>
+
+<div class="language-c++ highlighter-rouge"><pre class="highlight"><code><span class="c1">//三角形的相交性检测 双面 uvw 重心坐标 w=1-u-v  t=距离
+</span><span class="k">static</span> <span class="k">const</span> <span class="kt">float</span> <span class="n">EPSILON</span> <span class="o">=</span> <span class="mf">1e-8</span><span class="p">;</span>
+<span class="kt">bool</span> <span class="nf">IntersectTriangle_01</span><span class="p">(</span><span class="n">Ray</span> <span class="n">ray</span><span class="p">,</span> <span class="n">float3</span> <span class="n">vert0</span><span class="p">,</span> <span class="n">float3</span> <span class="n">vert1</span><span class="p">,</span> <span class="n">float3</span> <span class="n">vert2</span><span class="p">,</span>
+    <span class="n">inout</span> <span class="kt">float</span> <span class="n">t</span><span class="p">,</span> <span class="n">inout</span> <span class="kt">float</span> <span class="n">u</span><span class="p">,</span> <span class="n">inout</span> <span class="kt">float</span> <span class="n">v</span><span class="p">,</span><span class="n">inout</span> <span class="kt">float</span> <span class="n">toward</span><span class="p">)</span>
+<span class="p">{</span>
+    <span class="c1">//E1 E2
+</span>    <span class="n">float3</span> <span class="n">edge1</span> <span class="o">=</span> <span class="n">vert1</span> <span class="o">-</span> <span class="n">vert0</span><span class="p">;</span>
+    <span class="n">float3</span> <span class="n">edge2</span> <span class="o">=</span> <span class="n">vert2</span> <span class="o">-</span> <span class="n">vert0</span><span class="p">;</span>
+    <span class="c1">//P=DxE2
+</span>    <span class="n">float3</span> <span class="n">pvec</span> <span class="o">=</span> <span class="n">cross</span><span class="p">(</span><span class="n">ray</span><span class="p">.</span><span class="n">direction</span><span class="p">,</span> <span class="n">edge2</span><span class="p">);</span>
+    <span class="kt">float</span> <span class="n">det</span> <span class="o">=</span> <span class="n">dot</span><span class="p">(</span><span class="n">edge1</span><span class="p">,</span> <span class="n">pvec</span><span class="p">);</span>
+    <span class="c1">//背面det&lt;0 正面&gt;0 在三角形内=0
+</span>    <span class="k">if</span> <span class="p">(</span><span class="n">det</span> <span class="o">&lt;</span> <span class="n">EPSILON</span><span class="o">&amp;&amp;</span><span class="n">det</span> <span class="o">&gt;-</span><span class="n">EPSILON</span><span class="p">)</span> <span class="k">return</span> <span class="nb">false</span><span class="p">;</span>
+    <span class="n">toward</span><span class="o">=</span><span class="n">sign</span><span class="p">(</span><span class="n">det</span><span class="p">);</span>
+    <span class="c1">// 1/(DxE2)·E1    
+</span>    <span class="kt">float</span> <span class="n">inv_det</span> <span class="o">=</span> <span class="mf">1.0</span><span class="n">f</span> <span class="o">/</span> <span class="n">det</span><span class="p">;</span>
+    <span class="c1">//T
+</span>    <span class="n">float3</span> <span class="n">tvec</span> <span class="o">=</span> <span class="n">ray</span><span class="p">.</span><span class="n">origin</span> <span class="o">-</span> <span class="n">vert0</span><span class="p">;</span>
+    <span class="c1">//u=invdet *(P·T)
+</span>    <span class="n">u</span> <span class="o">=</span> <span class="n">dot</span><span class="p">(</span><span class="n">tvec</span><span class="p">,</span> <span class="n">pvec</span><span class="p">)</span> <span class="o">*</span> <span class="n">inv_det</span><span class="p">;</span>
+    <span class="c1">//如果三角形内的点，重心坐标一定在[0,1]
+</span>    <span class="k">if</span> <span class="p">(</span><span class="n">u</span> <span class="o">&lt;</span> <span class="mf">0.0</span> <span class="o">||</span> <span class="n">u</span> <span class="o">&gt;</span> <span class="mf">1.0</span><span class="n">f</span><span class="p">)</span> <span class="k">return</span> <span class="nb">false</span><span class="p">;</span>
+    <span class="c1">//Q=TxE1
+</span>    <span class="n">float3</span> <span class="n">qvec</span> <span class="o">=</span> <span class="n">cross</span><span class="p">(</span><span class="n">tvec</span><span class="p">,</span> <span class="n">edge1</span><span class="p">);</span>
+    <span class="c1">//v=invdet*(Q·D)
+</span>    <span class="n">v</span> <span class="o">=</span> <span class="n">dot</span><span class="p">(</span><span class="n">ray</span><span class="p">.</span><span class="n">direction</span><span class="p">,</span> <span class="n">qvec</span><span class="p">)</span> <span class="o">*</span> <span class="n">inv_det</span><span class="p">;</span>
+    <span class="k">if</span> <span class="p">(</span><span class="n">v</span> <span class="o">&lt;</span> <span class="mf">0.0</span> <span class="o">||</span> <span class="n">u</span> <span class="o">+</span> <span class="n">v</span> <span class="o">&gt;</span> <span class="mf">1.0</span><span class="n">f</span><span class="p">)</span> <span class="k">return</span> <span class="nb">false</span><span class="p">;</span>
+    <span class="c1">//t=Q·E2  
+</span>    <span class="n">t</span> <span class="o">=</span> <span class="n">dot</span><span class="p">(</span><span class="n">edge2</span><span class="p">,</span> <span class="n">qvec</span><span class="p">)</span> <span class="o">*</span> <span class="n">inv_det</span><span class="p">;</span>
+    <span class="k">return</span> <span class="nb">true</span><span class="p">;</span>
+<span class="p">}</span>
+</code></pre>
+</div>
+
+<h2 id="参考资料">参考资料</h2>
+
+<ul>
+  <li><a href="http://blog.three-eyed-games.com/2018/05/03/gpu-ray-tracing-in-unity-part-1/">GPU Ray Tracing in Unity</a></li>
+  <li><a href="https://blog.csdn.net/qq_38275140/article/details/90345582">路径追踪 相交性检测 算法</a></li>
+  <li><a href="https://zh.wikipedia.org/wiki/克萊姆法則">克莱姆法则,by wikipedia</a></li>
+  <li><a href="https://zh.wikipedia.org/wiki/重心坐标">重心坐标,by wikipedia</a></li>
+  <li><a href="http://pkuwwt.github.io/scholarship/2014-04-03-ray-triangle-intersection-tests-for-dummies/">光线-三角形求交测试算法</a></li>
+</ul>
+
+
+    </div>
+  </div>
+
+  <style>
+  .post-nav {
+    overflow: hidden;
+    /* margin-top: 60px; */
+    padding: 12px;
+    white-space: nowrap;
+    /* border-top: 1px solid #eee; */
+  }
+
+  .post-nav-item {
+    display: inline-block;
+    width: 50%;
+    white-space: normal;
+  }
+
+  .post-nav-item a {
+    position: relative;
+    display: inline-block;
+    line-height: 25px;
+    font-size: 14px;
+    color: #555;
+    border-bottom: none;
+  }
+
+  .post-nav-item a:hover {
+    color: #222;
+    font-weight: bold;
+    border-bottom: none;
+  }
+
+  .post-nav-item a:active {
+    top: 2px;
+  }
+
+  .post-nav-item a:before,
+  .post-nav-item a:after {
+    display: inline-block;
+    width: 16px;
+    height: 25px;
+    vertical-align: top;
+    opacity: 0.4;
+    background-size: 16px;
+  }
+
+  .post-nav-none a:none {
+    content: ' ';
+    background-size: 8px;
+  }
+
+  .post-nav-none a:hover:none {
+    opacity: 1;
+  }
+
+  .post-nav-prev a:before {
+    content: ' ';
+    background: url("data:image/svg+xml;base64,PD94bWwgdmVyc2lvbj0iMS4wIiA/PjxzdmcgaGVpZ2h0PSIxMnB4IiB2ZXJzaW9uPSIxLjEiIHZpZXdCb3g9IjAgMCA5IDEyIiB3aWR0aD0iOXB4IiB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHhtbG5zOnNrZXRjaD0iaHR0cDovL3d3dy5ib2hlbWlhbmNvZGluZy5jb20vc2tldGNoL25zIiB4bWxuczp4bGluaz0iaHR0cDovL3d3dy53My5vcmcvMTk5OS94bGluayI+PHRpdGxlLz48ZGVzYy8+PGRlZnMvPjxnIGZpbGw9Im5vbmUiIGZpbGwtcnVsZT0iZXZlbm9kZCIgaWQ9IlBhZ2UtMSIgc3Ryb2tlPSJub25lIiBzdHJva2Utd2lkdGg9IjEiPjxnIGZpbGw9IiMwMDAwMDAiIGlkPSJDb3JlIiB0cmFuc2Zvcm09InRyYW5zbGF0ZSgtMjE4LjAwMDAwMCwgLTkwLjAwMDAwMCkiPjxnIGlkPSJjaGV2cm9uLWxlZnQiIHRyYW5zZm9ybT0idHJhbnNsYXRlKDIxOC41MDAwMDAsIDkwLjAwMDAwMCkiPjxwYXRoIGQ9Ik03LjQsMS40IEw2LDAgTC04Ljg4MTc4NDJlLTE2LDYgTDYsMTIgTDcuNCwxMC42IEwyLjgsNiBMNy40LDEuNCBaIiBpZD0iU2hhcGUiLz48L2c+PC9nPjwvZz48L3N2Zz4=") no-repeat 0 50%;
+    background-size: 8px;
+  }
+
+  .post-nav-prev a:hover:before {
+    opacity: 1;
+  }
+
+  .post-nav-next {
+    text-align: right;
+  }
+
+  .post-nav-next a:after {
+    content: ' ';
+    background: url("data:image/svg+xml;base64,PD94bWwgdmVyc2lvbj0iMS4wIiA/PjxzdmcgaGVpZ2h0PSIxMnB4IiB2ZXJzaW9uPSIxLjEiIHZpZXdCb3g9IjAgMCA5IDEyIiB3aWR0aD0iOXB4IiB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHhtbG5zOnNrZXRjaD0iaHR0cDovL3d3dy5ib2hlbWlhbmNvZGluZy5jb20vc2tldGNoL25zIiB4bWxuczp4bGluaz0iaHR0cDovL3d3dy53My5vcmcvMTk5OS94bGluayI+PHRpdGxlLz48ZGVzYy8+PGRlZnMvPjxnIGZpbGw9Im5vbmUiIGZpbGwtcnVsZT0iZXZlbm9kZCIgaWQ9IlBhZ2UtMSIgc3Ryb2tlPSJub25lIiBzdHJva2Utd2lkdGg9IjEiPjxnIGZpbGw9IiMwMDAwMDAiIGlkPSJDb3JlIiB0cmFuc2Zvcm09InRyYW5zbGF0ZSgtMjYwLjAwMDAwMCwgLTkwLjAwMDAwMCkiPjxnIGlkPSJjaGV2cm9uLXJpZ2h0IiB0cmFuc2Zvcm09InRyYW5zbGF0ZSgyNjAuNTAwMDAwLCA5MC4wMDAwMDApIj48cGF0aCBkPSJNMSwwIEwtMC40LDEuNCBMNC4yLDYgTC0wLjQsMTAuNiBMMSwxMiBMNyw2IEwxLDAgWiIgaWQ9IlNoYXBlIi8+PC9nPjwvZz48L2c+PC9zdmc+") no-repeat 100% 50%;
+    background-size: 8px;
+  }
+
+  .post-nav-next a:hover:after {
+    opacity: 1;
+  }
+</style>
+
+
+
+<div class="post-nav">
+
+  
+  <div class="post-nav-none post-nav-item">
+    <a href=""> </a>
+  </div>
+  
+
+  
+  <div class="post-nav-next post-nav-item">
+    
+    <a href="/blog/2019/asset/"> Unity资源管理机制</a>
+  </div>
+  
+
+</div>
+
+</article>
+    </div>
+
+    <footer class="site-footer">
+  <div class="container">
+    <ul class="social">
+  <li><a href="https://twitter.com/penghuailiang" target="_blank"><i class="icon icon-twitter"></i></a></li>
+  <li><a href="https://www.zhihu.com/people/huailiangpenguin" target="_blank"><i class="icon icon-zhihu"></i></a></li>
+  <li><a href="https://www.facebook.com/profile.php?id=100004290725320" target="_blank"><i class="icon icon-facebook"></i></a></li>
+  <li><a href="https://weibo.com/6212299692/profile?topnav=1&wvr=6" target="_blank"><i class="icon icon-sina"></i></a></li>
+  <li><a href="https://www.linkedin.com/in/penghuailiang/" target="_blank"><i class="icon icon-linkedin"></i></a></li>
+  <li><a href="https://github.com/huailiang" target="_blank"><i class="icon icon-github"></i></a></li>
+</ul>
+    <p class="txt-medium-gray">
+      <small>&copy;2020 All rights reserved. </small>
+    </p>
+  </div>
+</footer>
+    <a href="https://github.com/huailiang" target="_blank" class="github-corner"><svg width="80" height="80" viewBox="0 0 250 250" style="fill:#337ab7; color:#fff; position: absolute; top: 0; border: 0; right: 0;"><path d="M0,0 L115,115 L130,115 L142,142 L250,250 L250,0 Z"></path><path d="M128.3,109.0 C113.8,99.7 119.0,89.6 119.0,89.6 C122.0,82.7 120.5,78.6 120.5,78.6 C119.2,72.0 123.4,76.3 123.4,76.3 C127.3,80.9 125.5,87.3 125.5,87.3 C122.9,97.6 130.6,101.9 134.4,103.2" fill="currentColor" style="transform-origin: 130px 106px;" class="octo-arm"></path><path d="M115.0,115.0 C114.9,115.1 118.7,116.5 119.8,115.4 L133.7,101.6 C136.9,99.2 139.9,98.4 142.2,98.6 C133.8,88.0 127.5,74.4 143.8,58.0 C148.5,53.4 154.0,51.2 159.7,51.0 C160.3,49.4 163.2,43.6 171.4,40.1 C171.4,40.1 176.1,42.5 178.8,56.2 C183.1,58.6 187.2,61.8 190.9,65.4 C194.5,69.0 197.7,73.2 200.1,77.6 C213.8,80.2 216.3,84.9 216.3,84.9 C212.7,93.1 206.9,96.0 205.4,96.6 C205.1,102.4 203.0,107.8 198.3,112.5 C181.9,128.9 168.3,122.5 157.7,114.1 C157.9,116.9 156.7,120.9 152.7,124.9 L141.0,136.5 C139.8,137.7 141.6,141.9 141.8,141.8 Z" fill="currentColor" class="octo-body"></path></svg></a>
+
+
+    <script src="//code.jquery.com/jquery-1.11.3.min.js"></script>
+    <script>
+      $(document).ready(function () {
+        $('.sliding-panel-button,.sliding-panel-fade-screen,.sliding-panel-close').on('click touchstart', function (e) {
+          $('.sliding-panel-content,.sliding-panel-fade-screen').toggleClass('is-visible');
+          e.preventDefault();
+        });
+      });
+    </script>
+  </main>
+</body>
+
+</html>
