@@ -1,6 +1,6 @@
 ---
 layout:     post
-title:      "NDK同步读取资源"
+title:      "NDK同步读取Unity资源"
 date:       2019-12-03 03:00:00
 author:     "Huailiang"
 tags:
@@ -34,6 +34,67 @@ public static void main(String[] args) {
 然后在代码区鼠标右键， 就可以直接看到main函数的入口了：
 
 ![](/img/post-android/and-0.jpg)
+
+Android 工程目录中，用于存放资源文件的文件夹有两个，分别为 res 和 assets。其中assets文件夹对应unity中streamingasset文件夹下资源， 下面列表列出二者的区别：
+
+<table border="1">
+ <tr>
+    <th>res</th>
+    <th>asset</th>
+</tr>
+<tr>
+    <td>不支持深度子目录 </td>
+    <td>可以使用任意深度的子目录进行存储</td>
+</tr>            
+<tr>
+    <td>资源最终将被打包到编译后的 Java 文件中，可以直接通过 R 资源类访问</td>
+    <td>资源打包到应用程序中的静态文件，这些文件不会被编译，最终会直接部署到目标设备中；另外，不能直接通过 R 资源类读取，只能使用流的形式读取。</td>
+</tr>            
+<tr>
+    <td>利用率较高</td>
+    <td>利用率相对较低</td>
+</tr>                
+</table>
+
+Android 的资源编译器 AAPT（Android Asset Packaging Tool）会依照资源所在的子目录及其格式对其进行编译。
+
+java读取streamingasset文件夹下的资源, 即assets资源的代码:
+
+``` java
+InputStream ins = null;
+try {
+    // path是相对于streamingasset的相对路径
+    ins = gameContext.getAssets().open(path);
+    ByteArrayOutputStream os = new ByteArrayOutputStream();
+    int idx = -1;
+    while ((idx = ins.read()) != -1) {
+        os.write(idx);
+    }
+    return os.toString();
+}
+catch (Exception e) {
+    Log.e(TAG, e.getMessage());
+}
+finally {
+    try {
+        if (ins != null) ins.close();
+    }
+    catch (Exception e) {
+        Log.e(TAG, e.getMessage());
+    }
+}
+```
+
+java读取Res资源， 即aapt编译资源代码：
+
+```java
+// 文字
+txtName.setText(getResources().getText(R.string.name));
+// 图片
+imgIcon.setBackgroundDrawableResource(R.drawable.icon);
+// 颜色
+txtName.setTextColor(getResouces().getColor(R.color.red));
+```
 
 打开Library工程的build.gardle文件,并添加代码
 
