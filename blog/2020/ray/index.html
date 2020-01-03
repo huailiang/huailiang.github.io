@@ -500,9 +500,9 @@ if (shadowHit.distance != 1.#INF)
 
 <p>图中可以看到射线起点到地平面（y=0, x-z 平面)， 即射线起点纵坐标y除上余弦值。</p>
 
-<script type="math/tex; mode=display">\cos\theta= (0,-1,0) * (x', y', z') = -y'</script>
-
-<script type="math/tex; mode=display">t = \frac{y}{\cos\theta} = -\frac{y}{y'}</script>
+<p><script type="math/tex">\cos\theta= (0,-1,0) \cdot (x', y', z') = -y'</script><br />
+把上式$\cos\theta$代入分母：<br />
+<script type="math/tex">t = \frac{y}{\cos\theta} = -\frac{y}{y'}</script></p>
 
 <p>所以代码里实现如下：</p>
 
@@ -520,15 +520,13 @@ if (shadowHit.distance != 1.#INF)
 
 <p>圆：pos+radius</p>
 
-<p>得到向量d d= pos-O</p>
+<p>得到向量 $d= pos-O$</p>
 
-<p>点乘单位向量得到投影P1 P_1=d\cdot D</p>
+<p>点乘单位向量得到投影 $P_1=d\cdot D$</p>
 
-<p>两次勾股定律得到p2平方 (P_2)^2=r^2-(d^2-p_1^2)</p>
+<p>两次勾股定律得到p2平方 $(P_2)^2=r^2-(d^2-p_1^2)$</p>
 
-<p>&lt;0无解 =0 一解 &gt;0 两解</p>
-
-<p>t=P_1\pm P_2</p>
+<p>&lt;0无解 =0 一解 &gt;0 两解 $t=P_1\pm P_2$</p>
 
 <p>如果有两个解，就选距离最短的那个解,看图可以知道最短的就是进入圆的点，圆的是退出圆。</p>
 
