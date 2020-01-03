@@ -443,9 +443,9 @@ void IntersectMeshObject(Ray ray, inout RayHit bestHit, MeshObject meshObject)
 图中可以看到射线起点到地平面（y=0, x-z 平面)， 即射线起点纵坐标y除上余弦值。
 
 $$
-\cos\theta= (0,-1,0) * (x', y', z') = -y'
+\cos\theta= (0,-1,0) \cdot (x', y', z') = -y'
 $$
-
+把上式$\cos\theta$代入分母：
 $$
 t = \frac{y}{\cos\theta} = -\frac{y}{y'}
 $$
