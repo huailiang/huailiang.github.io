@@ -7,17 +7,43 @@ tags:
     - 引擎
 ---
 
->对于光线追踪来说，这真是令人兴奋的时刻。最新的进展，如人工智能加速去噪，微软宣布在DirectX 12的原生支持光线追踪。在本文中，我们将使用Unity中的计算着色器从头开始编写一个非常简单的光线跟踪器。我们将使用的语言是C#结合compute shader实现如下图效果。本文中所有代码都上传到[github][i7]上。
+>要说目前最热门的图形学话题，自然非实时光线追踪了莫属了。在GDC 2018上，微软率先为DX 12 API增加了光线追踪模块，并且将其命名为DirectX Raytracing (DXR)；而NV则紧随其后发布了基于实时光线追踪的RTX技术；并且直接将显卡型号都从GTX改成了RTX系列。此后，AMD也正式宣布了自家的ProRender渲染引擎将支持实时光线追踪。 当然，硬件厂商都这样了，游戏引擎也不能掉链子，诸如EA 寒霜引擎、EA Seed、Unreal 引擎、3DMark、Unity 引擎已经宣布将会引入光线追踪。不过，乍一听看起来这些似乎距离我们还有些遥远，直到前两天NVIDIA发布了RTX 2080 Ti、RTX 2080、RTX 2070游戏显卡，明确表示从硬件级别支持光线追踪。
+
+### 光线追踪的历史
+
+其实光线追踪并不是近几年才有的概念，它的历史甚至可以追溯到上世纪70年代。Arthur Appel 于 1968 年提出将光线追踪算法应用于图片渲染的概念，那时还叫 ray casting，这也是后来光线追踪的基石。但一直等到 10 年后的 1979 年，*Turner Whitted*才继续在论文《*[An Improved Illumination Model for Shaded Display][i8]*》中，具体解析如何捕捉反射、阴影和反射。在光线投射的基础上，加入光与物体表面的交互。
+
+
+而在电影行业中，早就用上了我们提及的光线追踪，他们已经有相当成熟的解决方案，完全可以达到以假乱真的效果，你看看漫威的科幻大片，是不是给你一种异常真实的错觉？没错，这就是光线追踪的魅力。至于为什么电影行业能这样做，原因不外乎有两个：一是有时间，他们采用的离线光线追踪，是要慢慢一帧帧渲染出来；二是有钱，通常特效工作室会使用到NVIDIA所说的渲染农场，不是一台电脑在算，而是一个个渲染集群服务器在工作，算力是你机箱里的GTX 1080 Ti成千上万倍，因此它们可以这样玩。
+
+
+早在上世纪60年代，美国科学家已经尝试将光线投射应用于军事领域的计算机图形生成。随着技术的成熟，很快应用于好莱坞电影及动漫制作。目前，绝大多数需要后期特效的好莱坞电影，除了风格化的类型之外，基本都使用了光线追踪技术。如下图《狮子王》利用光线追踪技术渲染的画面
+
+ ![](/img/post-engine/ray10.jpg)
+
+
+### 光线特性
+
+运用光线追踪技术，有以下渲染特性：
+
+* 更精确的反射、折射和透射。
+* 更准确的阴影。包括自阴影、软阴影、区域阴影、多光源阴影等。
+* 更精准的全局光照。
+* 更真实的环境光遮蔽（AO）
+
+光线追踪技术可以精确地反映复杂的反射、折射、透射、阴影、全局光等物理特性。当然，光线追踪也不是万全的渲染技术，它有苛刻的硬件要求、有限度的渲染特性支持以及噪点干扰等负面特点。
+
+
+## 光线追踪 
+
+ 光线追踪主要思想是从视点向成像平面上的像素发射光线，找到阻挡光线传播的最近物体，如果交点表面为散射面，则计算光源直接照射该点产生的颜色；如果该交点表面为镜面或折射面，则继续向反射或折射方向跟踪另一条光线，如此往复循环，直到光线射出场景或者达到规定计算次数（还是为了节省资源）。这个方法被称之为经典光线跟踪方法或者递归式光线追踪方法。利用Compute Shader，屏幕的每个像素点向外释放一条射线来采样颜色，利用光线可逆的原则，每条光线根据碰撞到的物体进行反射，如此反复直到采样到天空盒（无限远）或者达到最大的反射次数。
+
+ ![](/img/post-engine/ray0.jpg)
+
+ 我们将使用Unity引擎，C#结合compute shader实现如下图效果。本文中所有代码都上传到[github][i7]上。
 
 ![](/img/post-engine/ray5.jpg)
 
-
-
-## 光线追踪 Whitted-style Ray Tracing
-
-这里使用的光线追踪方法基于*Turner Whitted* 在19080年发表的一篇[论文:][i8], 能够模拟硬阴影和完美的反射, 而且还是实现了更高级效果（如折射refraction、全局照明GI、光泽反射glossy reflection和软阴影softshadow）。
-
-利用Compute Shader，屏幕的每个像素点向外释放一条射线来采样颜色，利用光线可逆的原则，每条光线根据碰撞到的物体进行反射，如此反复直到采样到天空盒（无限远）或者达到最大的反射次数。
 
 #### 基本步骤
 
@@ -29,16 +55,13 @@ using UnityEngine;
 public class RayTracingMaster : MonoBehaviour
 {
     public ComputeShader RayTracingShader;
-
     private RenderTexture _target;
 
-    private void OnRenderImage(RenderTexture source, RenderTexture destination)
-    {
+    private void OnRenderImage(RenderTexture source, RenderTexture destination) {
         Render(destination);
     }
 
-    private void Render(RenderTexture destination)
-    {
+    private void Render(RenderTexture destination) {
         InitRenderTexture();
 
         RayTracingShader.SetTexture(0, "Result", _target);
@@ -49,11 +72,9 @@ public class RayTracingMaster : MonoBehaviour
         Graphics.Blit(_target, destination);
     }
 
-    private void InitRenderTexture()
-    {
+    private void InitRenderTexture() {
         if (_target == null || _target.width != Screen.width 
-            || _target.height != Screen.height)
-        {
+            || _target.height != Screen.height) {
             if (_target != null)
                 _target.Release();
 
@@ -85,22 +106,19 @@ RWTexture2D<float4> Result;
 float4x4 _CameraToWorld;
 float4x4 _CameraInverseProjection;
 
-struct Ray
-{
+struct Ray {
     float3 origin;
     float3 direction;
 };
 
-Ray CreateRay(float3 origin, float3 direction)
-{
+Ray CreateRay(float3 origin, float3 direction) {
     Ray ray;
     ray.origin = origin;
     ray.direction = direction;
     return ray;
 }
 
-Ray CreateCameraRay(float2 uv)
-{
+Ray CreateCameraRay(float2 uv) {
     // 观察空间到世界空间变换
     float3 origin = mul(_CameraToWorld, float4(0.0f, 0.0f, 0.0f, 1.0f)).xyz;
     // 投影空间变换到观察空间
@@ -112,8 +130,7 @@ Ray CreateCameraRay(float2 uv)
 }
 
 [numthreads(8,8,1)]
-void CSMain (uint3 id : SV_DispatchThreadID)
-{
+void CSMain (uint3 id : SV_DispatchThreadID) {
     // 获取RT分辨率
     uint width, height;
     Result.GetDimensions(width, height);
@@ -151,7 +168,7 @@ return _SkyboxTexture.SampleLevel(sampler_SkyboxTexture, float2(phi, theta), 0).
 ```c++
 //光线进行7次反弹
 float3 result=float3(0.0f,0.0f,0.0f);
-    for(int i=0;i<8;i++){
+    for(int i=0;i<8;i++) {
     RayHit hit=Trace(ray);
     result+=ray.energy*Shade(ray,hit);
     //光线能量耗尽直接退出循环
@@ -169,9 +186,9 @@ __碰撞物:__
 
 ```c++
 //y=0的平面的射线相交检测
-void IntersectGroundPlane(Ray ray,inout RayHit bestHit){
+void IntersectGroundPlane(Ray ray,inout RayHit bestHit) {
     float t=-ray.origin.y/ray.direction.y;
-    if(t>0&&t<bestHit.distance){
+    if(t>0&&t<bestHit.distance) {
         bestHit.distance=t;
         bestHit.position=ray.origin+t*ray.direction;
         bestHit.normal=float3(0,1,0);
@@ -181,8 +198,7 @@ void IntersectGroundPlane(Ray ray,inout RayHit bestHit){
 }
  
 //球的相交检测
-void IntersectSphere(Ray ray, inout RayHit bestHit, Sphere sphere)
-{
+void IntersectSphere(Ray ray, inout RayHit bestHit, Sphere sphere) {
     float3 d = ray.origin - sphere.position;
     float p1 = -dot(ray.direction, d);
     float p2sqr = p1 * p1 - dot(d, d) + sphere.radius * sphere.radius;
@@ -190,8 +206,7 @@ void IntersectSphere(Ray ray, inout RayHit bestHit, Sphere sphere)
         return;
     float p2 = sqrt(p2sqr);
     float t = p1 - p2 > 0 ? p1 - p2 : p1 + p2;
-    if (t > 0 && t < bestHit.distance)
-    {
+    if (t > 0 && t < bestHit.distance) {
         bestHit.distance = t;
         bestHit.position = ray.origin + t * ray.direction;
         bestHit.normal = normalize(bestHit.position - sphere.position);
@@ -205,9 +220,8 @@ __着色：__
 采样颜色并且更新ray信息  这里有一个energy的概念，你可以把它想成光线的损耗度，因为物体是会吸收部分光线的，假设原本的光线强度为1，他碰撞到的第一个物体的specular0.6，物体吸收了0.4后反射的光线强度就变为0.6了（表现出来的就是物体的颜色）,第二个Specular为0.8，那么就只剩下0.48，以此类推直到进入我们的眼睛。乘法顺序改变不会有影响，所以我们反着来的射线追踪也直接乘就好。
 
 ```c++
-float3 Shade(inout Ray ray,RayHit hit){
-    if(hit.distance<1.#INF)
-    {
+float3 Shade(inout Ray ray,RayHit hit) {
+    if(hit.distance<1.#INF) {
         ray.origin=hit.position+hit.normal*0.001f;
         ray.direction=reflect(ray.direction,hit.normal);
         ray.energy*=hit.specular;
@@ -264,14 +278,12 @@ Pass
 
     #include "UnityCG.cginc"
 
-    struct appdata
-    {
+    struct appdata {
         float4 vertex : POSITION;
         float2 uv : TEXCOORD0;
     };
 
-    struct v2f
-    {
+    struct v2f {
         float2 uv : TEXCOORD0;
         UNITY_FOG_COORDS(1)
         float4 vertex : SV_POSITION;
@@ -279,11 +291,9 @@ Pass
 
     sampler2D _MainTex;
     float4 _MainTex_ST;
-    
     float _Sample;
 
-    v2f vert (appdata v)
-    {
+    v2f vert (appdata v) {
         v2f o;
         o.vertex = UnityObjectToClipPos(v.vertex);
         o.uv = TRANSFORM_TEX(v.uv, _MainTex);
@@ -291,8 +301,7 @@ Pass
         return o;
     }
     
-    float4 frag (v2f i) : SV_Target
-    {
+    float4 frag (v2f i) : SV_Target {
         return float4(tex2D(_MainTex, i.uv).rgb, 1.0f / (_Sample + 1.0f));
     }
     ENDCG
@@ -351,12 +360,8 @@ $$ L(x, \, \vec \omega_{o}) \approx L_e(x, \, \vec \omega_{o}) + \frac{1}{N} \su
 因此， 我们需要把游戏中需要渲染的mesh的顶点和索引告诉compute shader, 方式如下：
 
 ```cs
-private void RebuildMeshObjectBuffers()
-{
-    if (!_meshObjectsNeedRebuilding)
-    {
-        return;
-    }
+private void RebuildMeshObjectBuffers() {
+    if (!_meshObjectsNeedRebuilding) return;
 
     _meshObjectsNeedRebuilding = false;
     _currentSample = 0;
@@ -367,23 +372,17 @@ private void RebuildMeshObjectBuffers()
     _indices.Clear();
 
     // Loop over all objects and gather their data
-    foreach (RayTracingObject obj in _rayTracingObjects)
-    {
+    foreach (RayTracingObject obj in _rayTracingObjects) {
         Mesh mesh = obj.GetComponent<MeshFilter>().sharedMesh;
 
-        // Add vertex data
         int firstVertex = _vertices.Count;
         _vertices.AddRange(mesh.vertices);
 
-        // Add index data - if the vertex buffer wasn't empty before, the
-        // indices need to be offset
         int firstIndex = _indices.Count;
         var indices = mesh.GetIndices(0);
         _indices.AddRange(indices.Select(index => index + firstVertex));
 
-        // Add the object itself
-        _meshObjects.Add(new MeshObject()
-        {
+        _meshObjects.Add(new MeshObject() {
             localToWorldMatrix = obj.transform.localToWorldMatrix,
             indices_offset = firstIndex,
             indices_count = indices.Length
@@ -403,17 +402,14 @@ void IntersectMeshObject(Ray ray, inout RayHit bestHit, MeshObject meshObject)
 {
     uint offset = meshObject.indices_offset;
     uint count = offset + meshObject.indices_count;
-    for (uint i = offset; i < count; i += 3)
-    {
+    for (uint i = offset; i < count; i += 3) {
         float3 v0 = (mul(meshObject.localToWorldMatrix, float4(_Vertices[_Indices[i]], 1))).xyz;
         float3 v1 = (mul(meshObject.localToWorldMatrix, float4(_Vertices[_Indices[i + 1]], 1))).xyz;
         float3 v2 = (mul(meshObject.localToWorldMatrix, float4(_Vertices[_Indices[i + 2]], 1))).xyz;
 
         float t, u, v;
-        if (IntersectTriangle_MT97(ray, v0, v1, v2, t, u, v))
-        {
-            if (t > 0 && t < bestHit.distance)
-            {
+        if (IntersectTriangle_MT97(ray, v0, v1, v2, t, u, v)) {
+            if (t > 0 && t < bestHit.distance) {
                 bestHit.distance = t;
                 bestHit.position = ray.origin + t * ray.direction;
                 bestHit.normal = normalize(cross(v1 - v0, v2 - v0));
@@ -445,7 +441,9 @@ void IntersectMeshObject(Ray ray, inout RayHit bestHit, MeshObject meshObject)
 $$
 \cos\theta= (0,-1,0) \cdot (x', y', z') = -y'
 $$
+
 把上式$\cos\theta$代入分母：
+
 $$
 t = \frac{y}{\cos\theta} = -\frac{y}{y'}
 $$
@@ -638,6 +636,7 @@ bool IntersectTriangle_01(Ray ray, float3 vert0, float3 vert1, float3 vert2,
 * [克莱姆法则,by wikipedia][i4]
 * [重心坐标,by wikipedia][i5]
 * [光线-三角形求交测试算法][i6]
+* [UE里的光线追踪实现][i11]
 
 [i1]: http://blog.three-eyed-games.com/2018/05/03/gpu-ray-tracing-in-unity-part-1/
 [i2]: https://blog.csdn.net/qq_38275140/article/details/90345582
@@ -649,3 +648,4 @@ bool IntersectTriangle_01(Ray ray, float3 vert0, float3 vert1, float3 vert2,
 [i8]: https://dl.acm.org/citation.cfm?id=358882
 [i9]: https://huailiang.github.io/blog/2019/harmonics/
 [i10]: https://huailiang.github.io/blog/2019/ibl/
+[i11]: https://www.cnblogs.com/timlly/p/11366199.html
