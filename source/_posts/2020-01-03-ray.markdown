@@ -1,6 +1,6 @@
 ---
 layout:     post
-title:      "光线追踪"
+title:      "光线追踪-引擎"
 date:       2020-01-03 03:00:00
 author:     "Huailiang"
 tags:
@@ -40,9 +40,7 @@ tags:
 
  ![](/img/post-engine/ray0.jpg)
 
- 我们将使用Unity引擎，C#结合compute shader实现如下图效果。本文中所有代码都上传到[github][i7]上。
-
-![](/img/post-engine/ray5.jpg)
+ 我们将使用Unity引擎，C#结合compute shader实现光线追踪效果。本文中所有代码都上传到[github][i7]上。
 
 
 #### 基本步骤
@@ -266,6 +264,8 @@ float2 uv=float2((id.xy+_PixelOffset.xy)/float2(width,height)*2.0f-1.0f);
 
 然后我们在新增一个pass，对每次采样进行平均。
 ```c++ 
+Cull Off ZWrite Off ZTest Always
+Blend SrcAlpha OneMinusSrcAlpha
 Pass
 {
     CGPROGRAM
@@ -305,9 +305,11 @@ Pass
 }
 ```
 
-## 路径追踪 Monte Carlo Path Tracing
+这里之所以能够均值采样， 是因为shader设置了ZWrite Off ZTest Always， 每次深度测试都通过， 即每次都往颜色缓冲里写值，在写值的时候和颜色缓冲里的值进行Blend， 由于Blend方式是Blend SrcAlpha OneMinusSrcAlpha， 所以在_Sample递增的时候， 相当于与历史的值进行求平均。这样的求均值方式在后面的路径追踪算法里还会有别的用处。
 
-我们假设每次光线都是表面法线进行的完美反射，所以他可以很好的展现光滑物体表面的反射效果。但是现实生活着并不是所有物体都是非常光滑的，这种方法无法展现物体之间相互作用的漫反射，还有物体的光泽。所以这一章我们把它改成蒙特卡洛路径追踪（Monte Carlo Path Tracing）
+## 路径追踪 
+
+我们假设每次光线都是表面法线进行的完美反射，所以他可以很好的展现光滑物体表面的反射效果。但是现实生活着并不是所有物体都是非常光滑的，这种方法无法展现物体之间相互作用的漫反射，还有物体的光泽。
 
 #### 渲染方程
 
@@ -317,17 +319,17 @@ $$
 
 $L_o(x,\vec{w_o})$：碰撞点X在w方向的出射光
 
-$L_e(x,\vec{w_o} )$:出射光的自发光贡献
+$L_e(x,\vec{w_o} )$: 出射光的自发光贡献
 
-$\int _\Omega ...$:Ω=法线方向的半球面，这个积分的意思就是综合这个半球面所有可能方向的入射光对这个指定的出射光线的贡献。
+$\int _\Omega ...$: Ω=法线方向的半球面，这个积分的意思就是综合这个半球面所有可能方向的入射光对这个指定的出射光线的贡献。
 
 ![](/img/post-engine/ray6.jpg)
 
 $f_r(x,\vec{w_i},\vec{w_o})$：双向反射分布函数BRDF
 
-$\vec{w_i }\cdot \vec{n}$:入射光和表面法线的夹角cos值，夹角越大，值越低，出射光强度越弱，因为夹角越大大，一束光线越容易分散
+$\vec{w_i }\cdot \vec{n}$: 入射光和表面法线的夹角cos值，夹角越大，值越低，出射光强度越弱，因为夹角越大大，一束光线越容易分散
 
-$L(x,\vec{w_i})$:入射光，这个值就是前一个碰撞点用渲染方程得到的出射光，如此递归直到结束。
+$L(x,\vec{w_i})$: 入射光，这个值就是前一个碰撞点用渲染方程得到的出射光，如此递归直到结束。
 
 #### 蒙特卡洛积分
 
@@ -341,16 +343,55 @@ $$ F_N \approx \frac{1}{N} \sum_{n=0}^{N}{\frac{f(x_n)}{p(x_n)}} $$
 
 $$ L(x, \, \vec \omega_{o}) \approx L_e(x, \, \vec \omega_{o}) + \frac{1}{N} \sum_{n=0}^{N}{\color{Green}{2 \pi \, f_r(x, \, \vec \omega_{i}, \, \vec \omega_{o}) \, (\vec \omega_{i} \cdot \vec n)} \, L(x, \, \vec \omega_{i})} $$
 
+上式$2\pi$是半球表面积，  式子左侧是漫反射Diffuse计算， 右侧是高光Specular求解。
+
 前一章为了抗锯齿，我们使用addshader对多次采样进行平均取值，正好完成了公式中的这部分，但是因为OnRenderImage中的destination纹理精度为R8G8B8A8的类型，而我们希望的是RGBAfloat的精度，所以我们要再创建一个贴图用于来回倒，至于为什么要这样一个精度后面有提到。
 
-又是上一条光线的递归结果（也就是代码中的energy），所以我们修改的就是绿色的这个部分。
+又是上一条光线的递归结果（也就是代码中的energy)，所以我们修改的就是绿色的这个部分。关于如何优雅计算BRDF, 采样方式 处理流程就是类似PBR对间接光的处理， 参照我之前的[文章:基于图像的光照IBL][i10]。下面是一些实现的细节：
+
+__随机值__
+GPU里没有类似random()函数之类的算法， 需要自己去实现， 下面是网上的产生随机值算法。
+
+```c++
+float2 _Pixel;
+float _Seed;
+float rand()
+{
+    float result = frac(sin(_Seed / 100.0f * dot(_Pixel, float2(12.9898f, 78.233f))) * 43758.5453f);
+    _Seed += 1.0f;
+    return result;
+}
+```
+_Pixel直接在CSMain里初始化： _Pixel=id.xy, 所以每个像素都使用不同的随机值。 _Seed是c#侧传过来的初始值，这里当做随机种子使用。
+
+__漫反射__
+
+Lambert BRDF: $f_r(x, \, \vec \omega_{i}, \, \vec \omega_{o}) = \frac{k_d}{\pi}$, 其中$k_d$代表着材质的albeo
+
+$$
+L(x, \, \vec \omega_{o}) \approx \frac{1}{N} \sum_{n=0}^{N}{\color{BlueViolet}{2 k_d} \, (\vec \omega_{i} \cdot \vec n) \, L(x, \, \vec \omega_{i})}
+$$
 
 
-关于如何优雅计算BRDF, 采样方式 处理流程就是类似PBR对间接光的处理， 参照我之前的[文章:基于图像的光照IBL][i10]。
+__高光__
+
+这里使用的是brdf简化公式， $\alpha$代表着粗糙度：
+
+$$
+f_r(x, \, \vec \omega_{i}, \, \vec \omega_{o}) = k_s \, \frac{\alpha + 2}{2 \pi} \, (\vec \omega_{r} \cdot \vec \omega_{o})^\alpha
+$$
+
+![](/img/post-engine/ray5.jpg)
+
+图为α=15，入射光为45度（左侧斜线）时的图像，红色是各个方向的出射光最终得到的值，可以看到出射光方向等于反射方向（右侧斜线）时值最大，约为$2\sqrt{2}$，一旦偏离这个方向，值就会迅速降低。
 
 ![](/img/post-engine/ray8.jpg)
 
-## Mesh 碰撞检测
+__自发光__
+
+相当于新的光线并入这条光路，所以直接return自发光颜色
+
+### Mesh 碰撞检测
 
 在计算机图形学中，网格由许多缓冲区定义，其中最重要的缓冲区是顶点缓冲区和索引缓冲区。顶点缓冲区是一个三维向量列表，描述每个顶点在对象空间中的位置（这意味着当您平移、旋转或缩放对象时，这些值不需要更改，而是使用矩阵乘法从对象空间动态地转换到世界空间）。索引缓冲区是指向顶点缓冲区的索引整数列表。每三个指数构成一个三角形。例如，如果索引缓冲区为[0，1，2，0，2，3]，则有两个三角形：第一个三角形由顶点缓冲区中的第一、第二和第三个顶点组成，而第二个三角形由第一、第三和第四个顶点组成。因此，索引缓冲器还定义了上述的缠绕顺序。除了顶点和索引缓冲区之外，其他缓冲区还可以向每个顶点添加信息。最常见的附加缓冲区存储法线、纹理坐标（称为texcoords或简单的uv）和顶点颜色。
 
@@ -362,8 +403,6 @@ private void RebuildMeshObjectBuffers() {
 
     _meshObjectsNeedRebuilding = false;
     _currentSample = 0;
-
-    // Clear all lists
     _meshObjects.Clear();
     _vertices.Clear();
     _indices.Clear();
@@ -400,9 +439,10 @@ void IntersectMeshObject(Ray ray, inout RayHit bestHit, MeshObject meshObject)
     uint offset = meshObject.indices_offset;
     uint count = offset + meshObject.indices_count;
     for (uint i = offset; i < count; i += 3) {
-        float3 v0 = (mul(meshObject.localToWorldMatrix, float4(_Vertices[_Indices[i]], 1))).xyz;
-        float3 v1 = (mul(meshObject.localToWorldMatrix, float4(_Vertices[_Indices[i + 1]], 1))).xyz;
-        float3 v2 = (mul(meshObject.localToWorldMatrix, float4(_Vertices[_Indices[i + 2]], 1))).xyz;
+        float4x4 local2world = meshObject.localToWorldMatrix;
+        float3 v0 = (mul(local2world, float4(_Vertices[_Indices[i]], 1))).xyz;
+        float3 v1 = (mul(local2world, float4(_Vertices[_Indices[i + 1]], 1))).xyz;
+        float3 v2 = (mul(local2world, float4(_Vertices[_Indices[i + 2]], 1))).xyz;
 
         float t, u, v;
         if (IntersectTriangle_MT97(ray, v0, v1, v2, t, u, v)) {
@@ -627,10 +667,11 @@ bool IntersectTriangle_01(Ray ray, float3 vert0, float3 vert1, float3 vert2,
 
 * [GPU Ray Tracing in Unity][i1]
 * [路径追踪 相交性检测 算法][i2]
-* [克莱姆法则,by wikipedia][i4]
-* [重心坐标,by wikipedia][i5]
+* [克莱姆法则, wikipedia][i4]
+* [重心坐标, wikipedia][i5]
 * [光线-三角形求交测试算法][i6]
-* [UE里的光线追踪实现][i11]
+* [UE里的光线追踪实现][i12]
+* [蒙特卡洛 渲染方程论文][i13]
 
 [i1]: http://blog.three-eyed-games.com/2018/05/03/gpu-ray-tracing-in-unity-part-1/
 [i2]: https://blog.csdn.net/qq_38275140/article/details/90345582
@@ -643,3 +684,5 @@ bool IntersectTriangle_01(Ray ray, float3 vert0, float3 vert1, float3 vert2,
 [i9]: https://huailiang.github.io/blog/2019/harmonics/
 [i10]: https://huailiang.github.io/blog/2019/ibl/
 [i11]: https://www.cnblogs.com/timlly/p/11366199.html
+[i12]: https://devblogs.nvidia.com/introduction-ray-tracing-unreal-engine-422/
+[i13]: http://www.cse.chalmers.se/edu/year/2011/course/TDA361/2007/rend_eq.pdf

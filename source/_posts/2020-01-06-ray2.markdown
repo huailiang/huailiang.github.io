@@ -1,0 +1,205 @@
+---
+layout:     post
+title:      "光线追踪-AI降噪"
+date:       2020-01-06 03:00:00
+author:     "Huailiang"
+tags:
+    - 引擎
+---
+
+>要说目前最热门的图形学话题，自然非实时光线追踪了莫属了。在GDC 2018上，微软率先为DX 12 API增加了光线追踪模块，并且将其命名为DirectX Raytracing (DXR)
+
+### 为什么光线追踪会出现噪点
+
+因为光线追踪，确切地说是路径追踪(Path Tracing)本质上是在解渲染方程，一个积分方程。
+
+$$ L(x, \, \vec \omega_{o}) = L_e(x, \, \vec \omega_{o}) + \int_{\Omega}{f_r(x, \, \vec \omega_{i}, \, \vec \omega_{o}) \, (\vec \omega_{i} \cdot \vec n) \, L(x, \, \vec \omega_{i}) \, d\vec \omega_{i}} 
+$$
+
+使用蒙特卡洛采样， 将上面积分式转换为离散的表达式:
+
+$$
+L(x, \, \vec \omega_{o}) \approx L_e(x, \, \vec \omega_{o}) + \frac{1}{N} \sum_{n=0}^{N}{2 \pi \, f_r(x, \, \vec \omega_{i}, \, \vec \omega_{o}) \, (\vec \omega_{i} \cdot \vec n) \, L(x, \, \vec \omega_{i})}
+$$
+
+当然，引入这个方法，如果采样数量不够多，会造成光照贡献量与实际值偏差依然会很大，形成噪点（即上式中N比较小）。随着采样数量的增加，局部估算越来越接近实际光照积分，噪点逐渐消失（下图）。
+
+![](/img/post-ml/ray1.jpg)
+
+从左到右分别对应的每个象素采样为1、16、256、4096、65536
+
+
+## 峰值信噪比
+
+PSNR是*Peak Signal to Noise Ratio*的缩写，即峰值信噪比，是一种评价图像的客观标准，它具有局限性，一般是用于最大值信号和背景噪音之间的一个工程项目。
+
+psnr一般是用于最大值信号和背景噪音之间的一个工程项目。通常在经过影像压缩之后，输出的影像都会在某种程度与原始影像不同。为了衡量经过处理后的影像品质，我们通常会参考PSNR值来衡量某个处理程序能否令人满意。它是原图像与被处理图像之间的均方误差相对于$(2^n-1)^2$的对数值(信号最大值的平方，n是每个采样值的比特数)，它的单位是dB。 
+
+给定一个大小为 m×n 的干净图像 I 和噪声图像 K，均方误差 (MSE) 定义为：
+
+$$
+MSE = \frac{1}{mn}\sum_{i=0}^{m-1}\sum_{j=0}^{n-1}[I(i, j)-K(i,j)]^2
+$$
+
+数学公式如下：
+
+$$
+PSNR = 10 \cdot log_{10}(\frac{(2^n-1)^2}{MSE})
+$$
+
+一般地，针对 uint8 数据，最大像素值为 255,；针对浮点型数据，最大像素值为 1。n为每像素的比特数，一般取8，即像素灰阶数为256. PSNR的单位是dB，数值越大表示失真越小。
+
+上面是针对灰度图像的计算方法，如果是彩色图像，通常有三种方法来计算。
+* 分别计算 RGB 三个通道的 PSNR，然后取平均值。
+* 计算 RGB 三通道的 MSE ，然后再除以 3 。
+* 将图片转化为 YCbCr 格式，然后只计算 Y 分量也就是亮度分量的 PSNR。
+
+```py
+# im1 和 im2 都为灰度图像，uint8 类型
+
+# method 1
+diff = im1 - im2
+mse = np.mean(np.square(diff))
+psnr = 10 * np.log10(255 * 255 / mse)
+
+# method 2
+psnr = skimage.measure.compare_psnr(im1, im2, 255)
+```
+
+### 数据集
+
+可以使用[Tungsten][i7]引擎来生成， 也可以去开源的站点去[下载][i8]。 下面主要介绍使用引擎生成数据集的方式。
+
+Tungsten是一个基于物理的渲染器，最初为ETH年的年度渲染竞赛编写。 它通过对渲染方程的无偏积分来模拟通过任意几何的全光传输。 Tungsten支持各种光传输算法，如双向路径跟踪BRDF、渐进光子映射、空间城市光传输等。Tungsten是用C++11编写的，利用了几何交叉库embree的高性能。 Tungsten充分利用多核系统，并通过频繁的基准和优化来提供良好的性能。 运行渲染器至少需要SSE3支持。
+
+![](/img/post-ml/ray3.jpg)
+
+编译生成引擎， 需要你本地已经安装了GCC， 下载然后make:
+
+```sh
+git clone https://github.com/tunabrain/tungsten.git
+./setup_builds.sh
+cd build/release
+make
+```
+
+然后添加Tungsten 到环境变量PATH里去，（Mac系统保存环境变量在.profle文件)
+
+```sh
+echo 'export PATH="<tungsten-release-dir>":$PATH' >> ~/.bashrc
+source ~/.bashrc
+```
+
+在终端里敲命令，看是否配置成功：
+
+```sh
+tungsten -v
+```
+
+下载场景贴图(大概860张建筑贴图)：
+
+```sh
+cd data && mkdir scenes
+wget https://benedikt-bitterli.me/resources/tungsten/bathroom.zip
+unzip bathroom.zip -d scenes
+rm *.zip
+```
+
+生成训练集：
+```py
+python3 render.py \
+  --scene-path ../data/scenes/bathroom/scene.json \
+  --spp 8 \
+  --nb-renders 48 \
+  --output-dir ../data/mc/train \
+  --hdr-targets
+```
+
+## Noise2Noise
+
+[Noise2Noise-Learning Image Restoration without Clean Data][i6]在ICML2018上，是图像领域的重要的论文。训练图像去噪不需要无噪的原图像。Noise2Noise的AI系统是基于深度学习算法创建的，并且已利用ImageNet数据集提供的50000张图片进行了强化锻炼。每一张训练图片都是由清晰的高质量原图上随机地加上噪点而创建的。计算机生成的图像和核磁共振（MRI）扫描成像也被用于训练Noise2Noise的AI系统。
+
+![](/img/post-ml/ray2.jpg)
+
+如果我们接触过图像（信号）恢复中基于模型（重建）的算法，我们就知道：其难点和麻烦的地方，在于对似然函数（降质模型）和图像先验（稀疏、平滑等）的建模。
+
+而CNN很好地解决了这一问题，但需要大量的训练数据，通常是受损输入$x^i$和干净目标$y_i$，并且训练目标是最小化经验损失：
+
+$$
+\arg\min_{\theta} \sum_i L(f_{\theta}(\hat{x}_i), y_i) \tag{1}
+$$
+
+其中，$f_θ$是参数化的映射（a parametric family of mappings），例如CNN。
+
+获取大量干净数据是很困难的。例如，为了获得无噪图像，我们需要长曝光；为了获得MRI图像的完整采样，图像中不能有动态目标等。
+
+点估计
+假设我们有一组温度采样数据(y1,y2,…)。我们希望在某种损失度量L下，得到温度估计值z（希望该损失最小）：
+
+$$ \arg\min_z \mathbb{E}_y \{L(z,y)\} \tag{2} $$
+
+如果采用L2损失，那么估计值就是观测值的算术平均（批注：假设样本分布i.i.d.）：
+
+$$
+z = \mathbb{E}_y \{ y \} \tag{3}
+$$
+
+总结一下，点估计带有一些统计平均的性质。比如，我们可以简单地对多点采样的温度取平均，得到最终的估计温度。
+
+### 神经网络算法与点估计的关系
+
+乍一眼看，式1表达的是参数预测问题（不是简单地估计值，而是学习一个预测模型，服务千千万万的输入），式2是点估计问题，二者不是一个东西。理想状况下，网络的优化方式如下（提供准确的先验和似然）
+
+$$
+\arg\min_{\theta} \mathbb{E}_{(x,y)} \{ L(f_{\theta}(x), y) \} = \arg\min_{\theta} \mathbb{E}_x \{ \mathbb{E}_{(y | x)} \{ L(f_{\theta}(x), y) \} \} \tag{4}
+$$
+
+上式可以理解为：对于每一个样本$x_i$，都在执行一次点估计。可以理解为：根据观测点y，估计点$z=f_θ(x)$，而估计完成时，参数θ就可以根据z推出（或者说二者本质是一样的）。
+
+当然，这种论证是很粗糙的，但提供给我们一个非常有用的见解。我们考虑超分辨问题：这是一个典型的病态问题，因为高频信息在采样过程中丢掉了，而同一张LR图像可以对应大量的HR图像。
+借助上述点估计思想，我们不难理解：神经网络实际上是将这些大量的、可能的HR图像做了一个统计平均（点估计的特性），因此L2范数下超分辨图像常常被过度平滑。
+这也能解释BM3D的成功本质！
+
+
+基于上述思考，我们可以很自然地思考：既然是统计平均，那么我们可以将干净图像y随意换成其他图像（信号），只要保证期望不变，那么也能得到我们想要的估计值z=fθ(x)（式3），进而得到不变的参数θ（式4）！
+
+换句话说，如果假设噪声零均值（或保证期望仍然是无噪图像的期望），那么我们就可以让神经网络的输入和监督都是有噪图像，学习的参数是一样的！
+
+$$
+\mathbb{E} \{ \hat{y}_i | \hat{x}_i \} = y = \mathbb{E} \{ y_i | \hat{x}_i \} \tag{5}
+$$
+
+其中，$x^i$是有噪图像，$y^i$也是有噪图像（$y_i$不一定要和$x_i$相同），y就是目标干净图像。
+
+附录A.3.给出了一个证明，证明$y_i$和$y^i$均值之间的误差与样本数量N有关；当N足够大时，该误差趋于0。
+
+在一篇引用该文的论文中，$x^i$和$y^i$用的是同一幅干净图像、在同一噪声分布下分别独立产生的两幅图像。
+
+实际上，BM3D算法属于基于模型（重建）的算法，英文叫a model-based or reconstruction-based approach。BM3D通过块匹配和协同滤波的方式去噪，可以简单理解为统计平均取均值，从而消除噪声。但是，这篇文章提出，神经网络算法也可以理解为统计平均。这种思想很前卫，也很不好理解，论证也很模糊。
+
+我们原来对神经网络工作模式的理解大致如下：
+
+大量有噪图像 -> 表征图像本质的高维特征 -> 重建图像 <- 对应干净图像监督。
+
+现在我们换个角度理解：
+
+大量有噪图像 -> 表征图像本质的高维特征 -> 大量重建图像 <- 另一组有噪图像监督（要求或假设总期望相同）
+
+## 参考资料
+
+* [Tungsten 基于物理的渲染器][i7] 
+* [几何交叉库 embree][i1]
+* [峰值信噪比, PSNR, 百科][i4]
+* [Learning Image Restoration without Clean Data, arxiv][i6]
+* [Learning Image Restoration without Clean Data, pytorch, github][i2]
+* [Learning Image Restoration without Clean Data, tensorflow, github][i5]
+
+
+[i1]: https://www.embree.org/
+[i2]: https://github.com/joeylitalien/noise2noise-pytorch
+[i3]: https://www.cnblogs.com/graphics/archive/2010/08/09/1795348.html
+[i4]: https://baike.baidu.com/item/psnr/2925132?fr=aladdin
+[i5]: https://github.com/NVlabs/noise2noise
+[i6]: https://arxiv.org/abs/1803.04189
+[i7]: https://github.com/tunabrain/tungsten
+[i8]: https://benedikt-bitterli.me/nfor/denoising-data.zip
