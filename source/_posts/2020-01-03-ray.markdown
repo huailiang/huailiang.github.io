@@ -50,7 +50,6 @@ tags:
  当渲染完成后，OnRenderImage方法会自动被Unity调用。代码里创建一张跟屏幕大小的RT 作为compute shader算法返回的结果。omputeShader中设置每个线程组为8x8，也就是每一组能处理8x8个像素， 线程组个数(高/8)*(宽/8)，第三维度设置为1。添加RayTracingMaster组件到场景camera下， 这样OnRenderImage 才会被调到。
 
 ```c#
-using UnityEngine;
 
 public class RayTracingMaster : MonoBehaviour
 {
@@ -63,12 +62,10 @@ public class RayTracingMaster : MonoBehaviour
 
     private void Render(RenderTexture destination) {
         InitRenderTexture();
-
         RayTracingShader.SetTexture(0, "Result", _target);
         int threadGroupsX = Mathf.CeilToInt(Screen.width / 8.0f);
         int threadGroupsY = Mathf.CeilToInt(Screen.height / 8.0f);
         RayTracingShader.Dispatch(0, threadGroupsX, threadGroupsY, 1);
-
         Graphics.Blit(_target, destination);
     }
 
@@ -134,10 +131,8 @@ void CSMain (uint3 id : SV_DispatchThreadID) {
     // 获取RT分辨率
     uint width, height;
     Result.GetDimensions(width, height);
-
     // [0,1] 变换到 [-1,1] 
     float2 uv = float2((id.xy + float2(0.5f, 0.5f))/float2(width, height)*2.0f-1.0f);
-
     Ray ray = CreateCameraRay(uv);
     Result[id.xy] = float4(ray.direction * 0.5f + 0.5f, 1.0f);
 }
@@ -147,9 +142,11 @@ void CSMain (uint3 id : SV_DispatchThreadID) {
 $$
 r = \sqrt{x^2+y^2+z^2} 
 $$
+
 $$
 \theta = \arccos{\frac{z}{r}} 
 $$
+
 $$
 \varphi =  \arctan{\frac{y}{x}}
 $$
@@ -168,7 +165,7 @@ return _SkyboxTexture.SampleLevel(sampler_SkyboxTexture, float2(phi, theta), 0).
 ```c++
 //光线进行7次反弹
 float3 result=float3(0.0f,0.0f,0.0f);
-    for(int i=0;i<8;i++) {
+for(int i=0;i<8;i++) {
     RayHit hit=Trace(ray);
     result+=ray.energy*Shade(ray,hit);
     //光线能量耗尽直接退出循环
@@ -451,8 +448,7 @@ $$
 所以代码里实现如下：
 
 ``` c++
-bool IntersectPlane(Ray ray)
-{
+bool IntersectPlane(Ray ray) {
     t = -ray.origin.y / ray.direction.y;
     return true;
 }
@@ -477,8 +473,7 @@ bool IntersectPlane(Ray ray)
 ![](/img/post-engine/ray2.jpg)
 
 ```c++
-bool IntersectSphere(Ray ray, float3 position,float radius,inout float t)
-{
+bool IntersectSphere(Ray ray, float3 position,float radius,inout float t) {
     float3 d = ray.origin - position;
     float p1 = -dot(ray.direction, d);
     float p2sqr = p1 * p1 - dot(d, d) +radius*radius;
@@ -599,8 +594,7 @@ $$
 //三角形的相交性检测 双面 uvw 重心坐标 w=1-u-v  t=距离
 static const float EPSILON = 1e-8;
 bool IntersectTriangle_01(Ray ray, float3 vert0, float3 vert1, float3 vert2,
-    inout float t, inout float u, inout float v,inout float toward)
-{
+    inout float t, inout float u, inout float v,inout float toward) {
     //E1 E2
     float3 edge1 = vert1 - vert0;
     float3 edge2 = vert2 - vert0;
