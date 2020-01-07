@@ -5,7 +5,7 @@
   <meta http-equiv="X-UA-Compatible" content="IE=edge">
   <meta name="viewport" content="width=device-width, initial-scale=1">
 
-  <title>光线追踪</title>
+  <title>光线追踪-引擎</title>
   <meta name="description"
     content="  要说目前最热门的图形学话题，自然非实时光线追踪了莫属了。在GDC 2018上，微软率先为DX 12 API增加了光线追踪模块，并且将其命名为DirectX Raytracing (DXR)；而NV则紧随其后发布了基于实时光线追踪的RTX技术；并且直接将显卡型号都从GTX改成了RTX系列。此后，AMD也正式宣布...">
 
@@ -67,7 +67,7 @@ MathJax.Hub.Config({
 
   <div class="card">
     <header class="post-header">
-      <h1 class="post-title">光线追踪</h1>
+      <h1 class="post-title">光线追踪-引擎</h1>
       <p class="post-meta">Jan 3, 2020 •
         Huailiang</p>
     </header>
@@ -77,7 +77,9 @@ MathJax.Hub.Config({
   <p>要说目前最热门的图形学话题，自然非实时光线追踪了莫属了。在GDC 2018上，微软率先为DX 12 API增加了光线追踪模块，并且将其命名为DirectX Raytracing (DXR)；而NV则紧随其后发布了基于实时光线追踪的RTX技术；并且直接将显卡型号都从GTX改成了RTX系列。此后，AMD也正式宣布了自家的ProRender渲染引擎将支持实时光线追踪。 当然，硬件厂商都这样了，游戏引擎也不能掉链子，诸如EA 寒霜引擎、EA Seed、Unreal 引擎、3DMark、Unity 引擎已经宣布将会引入光线追踪。不过，乍一听看起来这些似乎距离我们还有些遥远，直到前两天NVIDIA发布了RTX 2080 Ti、RTX 2080、RTX 2070游戏显卡，明确表示从硬件级别支持光线追踪。</p>
 </blockquote>
 
-<h3 id="光线追踪的历史">光线追踪的历史</h3>
+<p>[TOC]</p>
+
+<h3 id="光线追踪的历史2">光线追踪的历史2</h3>
 
 <p>其实光线追踪并不是近几年才有的概念，它的历史甚至可以追溯到上世纪70年代。Arthur Appel 于 1968 年提出将光线追踪算法应用于图片渲染的概念，那时还叫 ray casting，这也是后来光线追踪的基石。但一直等到 10 年后的 1979 年，<em>Turner Whitted</em>才继续在论文《<em><a href="https://dl.acm.org/citation.cfm?id=358882">An Improved Illumination Model for Shaded Display</a></em>》中，具体解析如何捕捉反射、阴影和反射。在光线投射的基础上，加入光与物体表面的交互。</p>
 
@@ -106,16 +108,13 @@ MathJax.Hub.Config({
 
 <p><img src="/img/post-engine/ray0.jpg" alt="" /></p>
 
-<p>我们将使用Unity引擎，C#结合compute shader实现如下图效果。本文中所有代码都上传到<a href="https://github.com/huailiang/ray_tracing">github</a>上。</p>
-
-<p><img src="/img/post-engine/ray5.jpg" alt="" /></p>
+<p>我们将使用Unity引擎，C#结合compute shader实现光线追踪效果。本文中所有代码都上传到<a href="https://github.com/huailiang/ray_tracing">github</a>上。</p>
 
 <h4 id="基本步骤">基本步骤</h4>
 
 <p>当渲染完成后，OnRenderImage方法会自动被Unity调用。代码里创建一张跟屏幕大小的RT 作为compute shader算法返回的结果。omputeShader中设置每个线程组为8x8，也就是每一组能处理8x8个像素， 线程组个数(高/8)*(宽/8)，第三维度设置为1。添加RayTracingMaster组件到场景camera下， 这样OnRenderImage 才会被调到。</p>
 
-<div class="language-c# highlighter-rouge"><pre class="highlight"><code><span class="k">using</span> <span class="nn">UnityEngine</span><span class="p">;</span>
-
+<div class="language-c# highlighter-rouge"><pre class="highlight"><code>
 <span class="k">public</span> <span class="k">class</span> <span class="nc">RayTracingMaster</span> <span class="p">:</span> <span class="n">MonoBehaviour</span>
 <span class="p">{</span>
     <span class="k">public</span> <span class="n">ComputeShader</span> <span class="n">RayTracingShader</span><span class="p">;</span>
@@ -127,12 +126,10 @@ MathJax.Hub.Config({
 
     <span class="k">private</span> <span class="k">void</span> <span class="nf">Render</span><span class="p">(</span><span class="n">RenderTexture</span> <span class="n">destination</span><span class="p">)</span> <span class="p">{</span>
         <span class="nf">InitRenderTexture</span><span class="p">();</span>
-
         <span class="n">RayTracingShader</span><span class="p">.</span><span class="nf">SetTexture</span><span class="p">(</span><span class="m">0</span><span class="p">,</span> <span class="s">"Result"</span><span class="p">,</span> <span class="n">_target</span><span class="p">);</span>
         <span class="kt">int</span> <span class="n">threadGroupsX</span> <span class="p">=</span> <span class="n">Mathf</span><span class="p">.</span><span class="nf">CeilToInt</span><span class="p">(</span><span class="n">Screen</span><span class="p">.</span><span class="n">width</span> <span class="p">/</span> <span class="m">8.0f</span><span class="p">);</span>
         <span class="kt">int</span> <span class="n">threadGroupsY</span> <span class="p">=</span> <span class="n">Mathf</span><span class="p">.</span><span class="nf">CeilToInt</span><span class="p">(</span><span class="n">Screen</span><span class="p">.</span><span class="n">height</span> <span class="p">/</span> <span class="m">8.0f</span><span class="p">);</span>
         <span class="n">RayTracingShader</span><span class="p">.</span><span class="nf">Dispatch</span><span class="p">(</span><span class="m">0</span><span class="p">,</span> <span class="n">threadGroupsX</span><span class="p">,</span> <span class="n">threadGroupsY</span><span class="p">,</span> <span class="m">1</span><span class="p">);</span>
-
         <span class="n">Graphics</span><span class="p">.</span><span class="nf">Blit</span><span class="p">(</span><span class="n">_target</span><span class="p">,</span> <span class="n">destination</span><span class="p">);</span>
     <span class="p">}</span>
 
@@ -200,10 +197,8 @@ MathJax.Hub.Config({
     <span class="c1">// 获取RT分辨率
 </span>    <span class="n">uint</span> <span class="n">width</span><span class="p">,</span> <span class="n">height</span><span class="p">;</span>
     <span class="n">Result</span><span class="p">.</span><span class="n">GetDimensions</span><span class="p">(</span><span class="n">width</span><span class="p">,</span> <span class="n">height</span><span class="p">);</span>
-
     <span class="c1">// [0,1] 变换到 [-1,1] 
 </span>    <span class="n">float2</span> <span class="n">uv</span> <span class="o">=</span> <span class="n">float2</span><span class="p">((</span><span class="n">id</span><span class="p">.</span><span class="n">xy</span> <span class="o">+</span> <span class="n">float2</span><span class="p">(</span><span class="mf">0.5</span><span class="n">f</span><span class="p">,</span> <span class="mf">0.5</span><span class="n">f</span><span class="p">))</span><span class="o">/</span><span class="n">float2</span><span class="p">(</span><span class="n">width</span><span class="p">,</span> <span class="n">height</span><span class="p">)</span><span class="o">*</span><span class="mf">2.0</span><span class="n">f</span><span class="o">-</span><span class="mf">1.0</span><span class="n">f</span><span class="p">);</span>
-
     <span class="n">Ray</span> <span class="n">ray</span> <span class="o">=</span> <span class="n">CreateCameraRay</span><span class="p">(</span><span class="n">uv</span><span class="p">);</span>
     <span class="n">Result</span><span class="p">[</span><span class="n">id</span><span class="p">.</span><span class="n">xy</span><span class="p">]</span> <span class="o">=</span> <span class="n">float4</span><span class="p">(</span><span class="n">ray</span><span class="p">.</span><span class="n">direction</span> <span class="o">*</span> <span class="mf">0.5</span><span class="n">f</span> <span class="o">+</span> <span class="mf">0.5</span><span class="n">f</span><span class="p">,</span> <span class="mf">1.0</span><span class="n">f</span><span class="p">);</span>
 <span class="p">}</span>
@@ -211,9 +206,11 @@ MathJax.Hub.Config({
 </div>
 <p>这里我们导入天空盒是以texture2D而非texture3D的格式传入，所以我们需要把方向从笛卡尔坐标系转换为球坐标系，接着再除以π和π/2 把值映射至uv坐标的[0,1]范围内。直角坐标系(x,y,z)与球坐标系(r,θ,φ)的转换关系为:</p>
 
-<p><script type="math/tex">r = \sqrt{x^2+y^2+z^2}</script><br />
-<script type="math/tex">\theta = \arccos{\frac{z}{r}}</script><br />
-<script type="math/tex">\varphi =  \arctan{\frac{y}{x}}</script></p>
+<script type="math/tex; mode=display">r = \sqrt{x^2+y^2+z^2}</script>
+
+<script type="math/tex; mode=display">\theta = \arccos{\frac{z}{r}}</script>
+
+<script type="math/tex; mode=display">\varphi =  \arctan{\frac{y}{x}}</script>
 
 <p>想了解更多球面坐标系, 参考之前<a href="https://huailiang.github.io/blog/2019/harmonics/">球谐光照的部分</a>。</p>
 
@@ -228,7 +225,7 @@ MathJax.Hub.Config({
 
 <div class="language-c++ highlighter-rouge"><pre class="highlight"><code><span class="c1">//光线进行7次反弹
 </span><span class="n">float3</span> <span class="n">result</span><span class="o">=</span><span class="n">float3</span><span class="p">(</span><span class="mf">0.0</span><span class="n">f</span><span class="p">,</span><span class="mf">0.0</span><span class="n">f</span><span class="p">,</span><span class="mf">0.0</span><span class="n">f</span><span class="p">);</span>
-    <span class="k">for</span><span class="p">(</span><span class="kt">int</span> <span class="n">i</span><span class="o">=</span><span class="mi">0</span><span class="p">;</span><span class="n">i</span><span class="o">&lt;</span><span class="mi">8</span><span class="p">;</span><span class="n">i</span><span class="o">++</span><span class="p">)</span> <span class="p">{</span>
+<span class="k">for</span><span class="p">(</span><span class="kt">int</span> <span class="n">i</span><span class="o">=</span><span class="mi">0</span><span class="p">;</span><span class="n">i</span><span class="o">&lt;</span><span class="mi">8</span><span class="p">;</span><span class="n">i</span><span class="o">++</span><span class="p">)</span> <span class="p">{</span>
     <span class="n">RayHit</span> <span class="n">hit</span><span class="o">=</span><span class="n">Trace</span><span class="p">(</span><span class="n">ray</span><span class="p">);</span>
     <span class="n">result</span><span class="o">+=</span><span class="n">ray</span><span class="p">.</span><span class="n">energy</span><span class="o">*</span><span class="n">Shade</span><span class="p">(</span><span class="n">ray</span><span class="p">,</span><span class="n">hit</span><span class="p">);</span>
     <span class="c1">//光线能量耗尽直接退出循环
@@ -328,7 +325,9 @@ if (shadowHit.distance != 1.#INF)
 </div>
 
 <p>然后我们在新增一个pass，对每次采样进行平均。</p>
-<div class="language-c++ highlighter-rouge"><pre class="highlight"><code><span class="n">Pass</span>
+<div class="language-c++ highlighter-rouge"><pre class="highlight"><code><span class="n">Cull</span> <span class="n">Off</span> <span class="n">ZWrite</span> <span class="n">Off</span> <span class="n">ZTest</span> <span class="n">Always</span>
+<span class="n">Blend</span> <span class="n">SrcAlpha</span> <span class="n">OneMinusSrcAlpha</span>
+<span class="n">Pass</span>
 <span class="p">{</span>
     <span class="n">CGPROGRAM</span>
     <span class="cp">#pragma vertex vert
@@ -368,9 +367,11 @@ if (shadowHit.distance != 1.#INF)
 </code></pre>
 </div>
 
-<h2 id="路径追踪-monte-carlo-path-tracing">路径追踪 Monte Carlo Path Tracing</h2>
+<p>这里之所以能够均值采样， 是因为shader设置了ZWrite Off ZTest Always， 每次深度测试都通过， 即每次都往颜色缓冲里写值，在写值的时候和颜色缓冲里的值进行Blend， 由于Blend方式是Blend SrcAlpha OneMinusSrcAlpha， 所以在_Sample递增的时候， 相当于与历史的值进行求平均。这样的求均值方式在后面的路径追踪算法里还会有别的用处。</p>
 
-<p>我们假设每次光线都是表面法线进行的完美反射，所以他可以很好的展现光滑物体表面的反射效果。但是现实生活着并不是所有物体都是非常光滑的，这种方法无法展现物体之间相互作用的漫反射，还有物体的光泽。所以这一章我们把它改成蒙特卡洛路径追踪（Monte Carlo Path Tracing）</p>
+<h2 id="路径追踪">路径追踪</h2>
+
+<p>我们假设每次光线都是表面法线进行的完美反射，所以他可以很好的展现光滑物体表面的反射效果。但是现实生活着并不是所有物体都是非常光滑的，这种方法无法展现物体之间相互作用的漫反射，还有物体的光泽。</p>
 
 <h4 id="渲染方程">渲染方程</h4>
 
@@ -378,17 +379,17 @@ if (shadowHit.distance != 1.#INF)
 
 <p>$L_o(x,\vec{w_o})$：碰撞点X在w方向的出射光</p>
 
-<p>$L_e(x,\vec{w_o} )$:出射光的自发光贡献</p>
+<p>$L_e(x,\vec{w_o} )$: 出射光的自发光贡献</p>
 
-<p>$\int _\Omega …$:Ω=法线方向的半球面，这个积分的意思就是综合这个半球面所有可能方向的入射光对这个指定的出射光线的贡献。</p>
+<p>$\int _\Omega …$: Ω=法线方向的半球面，这个积分的意思就是综合这个半球面所有可能方向的入射光对这个指定的出射光线的贡献。</p>
 
 <p><img src="/img/post-engine/ray6.jpg" alt="" /></p>
 
 <p>$f_r(x,\vec{w_i},\vec{w_o})$：双向反射分布函数BRDF</p>
 
-<p>$\vec{w_i }\cdot \vec{n}$:入射光和表面法线的夹角cos值，夹角越大，值越低，出射光强度越弱，因为夹角越大大，一束光线越容易分散</p>
+<p>$\vec{w_i }\cdot \vec{n}$: 入射光和表面法线的夹角cos值，夹角越大，值越低，出射光强度越弱，因为夹角越大大，一束光线越容易分散</p>
 
-<p>$L(x,\vec{w_i})$:入射光，这个值就是前一个碰撞点用渲染方程得到的出射光，如此递归直到结束。</p>
+<p>$L(x,\vec{w_i})$: 入射光，这个值就是前一个碰撞点用渲染方程得到的出射光，如此递归直到结束。</p>
 
 <h4 id="蒙特卡洛积分">蒙特卡洛积分</h4>
 
@@ -402,15 +403,50 @@ if (shadowHit.distance != 1.#INF)
 
 <script type="math/tex; mode=display">L(x, \, \vec \omega_{o}) \approx L_e(x, \, \vec \omega_{o}) + \frac{1}{N} \sum_{n=0}^{N}{\color{Green}{2 \pi \, f_r(x, \, \vec \omega_{i}, \, \vec \omega_{o}) \, (\vec \omega_{i} \cdot \vec n)} \, L(x, \, \vec \omega_{i})}</script>
 
+<p>上式$2\pi$是半球表面积，  式子左侧是漫反射Diffuse计算， 右侧是高光Specular求解。</p>
+
 <p>前一章为了抗锯齿，我们使用addshader对多次采样进行平均取值，正好完成了公式中的这部分，但是因为OnRenderImage中的destination纹理精度为R8G8B8A8的类型，而我们希望的是RGBAfloat的精度，所以我们要再创建一个贴图用于来回倒，至于为什么要这样一个精度后面有提到。</p>
 
-<p>又是上一条光线的递归结果（也就是代码中的energy），所以我们修改的就是绿色的这个部分。</p>
+<p>又是上一条光线的递归结果（也就是代码中的energy)，所以我们修改的就是绿色的这个部分。关于如何优雅计算BRDF, 采样方式 处理流程就是类似PBR对间接光的处理， 参照我之前的<a href="https://huailiang.github.io/blog/2019/ibl/">文章:基于图像的光照IBL</a>。下面是一些实现的细节：</p>
 
-<p>关于如何优雅计算BRDF, 采样方式 处理流程就是类似PBR对间接光的处理， 参照我之前的<a href="https://huailiang.github.io/blog/2019/ibl/">文章:基于图像的光照IBL</a>。</p>
+<p><strong>随机值</strong><br />
+GPU里没有类似random()函数之类的算法， 需要自己去实现， 下面是网上的产生随机值算法。</p>
+
+<div class="language-c++ highlighter-rouge"><pre class="highlight"><code><span class="n">float2</span> <span class="n">_Pixel</span><span class="p">;</span>
+<span class="kt">float</span> <span class="n">_Seed</span><span class="p">;</span>
+<span class="kt">float</span> <span class="nf">rand</span><span class="p">()</span>
+<span class="p">{</span>
+    <span class="kt">float</span> <span class="n">result</span> <span class="o">=</span> <span class="n">frac</span><span class="p">(</span><span class="n">sin</span><span class="p">(</span><span class="n">_Seed</span> <span class="o">/</span> <span class="mf">100.0</span><span class="n">f</span> <span class="o">*</span> <span class="n">dot</span><span class="p">(</span><span class="n">_Pixel</span><span class="p">,</span> <span class="n">float2</span><span class="p">(</span><span class="mf">12.9898</span><span class="n">f</span><span class="p">,</span> <span class="mf">78.233</span><span class="n">f</span><span class="p">)))</span> <span class="o">*</span> <span class="mf">43758.5453</span><span class="n">f</span><span class="p">);</span>
+    <span class="n">_Seed</span> <span class="o">+=</span> <span class="mf">1.0</span><span class="n">f</span><span class="p">;</span>
+    <span class="k">return</span> <span class="n">result</span><span class="p">;</span>
+<span class="p">}</span>
+</code></pre>
+</div>
+<p>_Pixel直接在CSMain里初始化： _Pixel=id.xy, 所以每个像素都使用不同的随机值。 _Seed是c#侧传过来的初始值，这里当做随机种子使用。</p>
+
+<p><strong>漫反射</strong></p>
+
+<p>Lambert BRDF: $f_r(x, \, \vec \omega_{i}, \, \vec \omega_{o}) = \frac{k_d}{\pi}$, 其中$k_d$代表着材质的albeo</p>
+
+<script type="math/tex; mode=display">L(x, \, \vec \omega_{o}) \approx \frac{1}{N} \sum_{n=0}^{N}{\color{BlueViolet}{2 k_d} \, (\vec \omega_{i} \cdot \vec n) \, L(x, \, \vec \omega_{i})}</script>
+
+<p><strong>高光</strong></p>
+
+<p>这里使用的是brdf简化公式， $\alpha$代表着粗糙度：</p>
+
+<script type="math/tex; mode=display">f_r(x, \, \vec \omega_{i}, \, \vec \omega_{o}) = k_s \, \frac{\alpha + 2}{2 \pi} \, (\vec \omega_{r} \cdot \vec \omega_{o})^\alpha</script>
+
+<p><img src="/img/post-engine/ray5.jpg" alt="" /></p>
+
+<p>图为α=15，入射光为45度（左侧斜线）时的图像，红色是各个方向的出射光最终得到的值，可以看到出射光方向等于反射方向（右侧斜线）时值最大，约为$2\sqrt{2}$，一旦偏离这个方向，值就会迅速降低。</p>
 
 <p><img src="/img/post-engine/ray8.jpg" alt="" /></p>
 
-<h2 id="mesh-碰撞检测">Mesh 碰撞检测</h2>
+<p><strong>自发光</strong></p>
+
+<p>相当于新的光线并入这条光路，所以直接return自发光颜色</p>
+
+<h3 id="mesh-碰撞检测">Mesh 碰撞检测</h3>
 
 <p>在计算机图形学中，网格由许多缓冲区定义，其中最重要的缓冲区是顶点缓冲区和索引缓冲区。顶点缓冲区是一个三维向量列表，描述每个顶点在对象空间中的位置（这意味着当您平移、旋转或缩放对象时，这些值不需要更改，而是使用矩阵乘法从对象空间动态地转换到世界空间）。索引缓冲区是指向顶点缓冲区的索引整数列表。每三个指数构成一个三角形。例如，如果索引缓冲区为[0，1，2，0，2，3]，则有两个三角形：第一个三角形由顶点缓冲区中的第一、第二和第三个顶点组成，而第二个三角形由第一、第三和第四个顶点组成。因此，索引缓冲器还定义了上述的缠绕顺序。除了顶点和索引缓冲区之外，其他缓冲区还可以向每个顶点添加信息。最常见的附加缓冲区存储法线、纹理坐标（称为texcoords或简单的uv）和顶点颜色。</p>
 
@@ -421,9 +457,7 @@ if (shadowHit.distance != 1.#INF)
 
     <span class="n">_meshObjectsNeedRebuilding</span> <span class="p">=</span> <span class="k">false</span><span class="p">;</span>
     <span class="n">_currentSample</span> <span class="p">=</span> <span class="m">0</span><span class="p">;</span>
-
-    <span class="c1">// Clear all lists
-</span>    <span class="n">_meshObjects</span><span class="p">.</span><span class="nf">Clear</span><span class="p">();</span>
+    <span class="n">_meshObjects</span><span class="p">.</span><span class="nf">Clear</span><span class="p">();</span>
     <span class="n">_vertices</span><span class="p">.</span><span class="nf">Clear</span><span class="p">();</span>
     <span class="n">_indices</span><span class="p">.</span><span class="nf">Clear</span><span class="p">();</span>
 
@@ -459,9 +493,10 @@ if (shadowHit.distance != 1.#INF)
     <span class="n">uint</span> <span class="n">offset</span> <span class="o">=</span> <span class="n">meshObject</span><span class="p">.</span><span class="n">indices_offset</span><span class="p">;</span>
     <span class="n">uint</span> <span class="n">count</span> <span class="o">=</span> <span class="n">offset</span> <span class="o">+</span> <span class="n">meshObject</span><span class="p">.</span><span class="n">indices_count</span><span class="p">;</span>
     <span class="k">for</span> <span class="p">(</span><span class="n">uint</span> <span class="n">i</span> <span class="o">=</span> <span class="n">offset</span><span class="p">;</span> <span class="n">i</span> <span class="o">&lt;</span> <span class="n">count</span><span class="p">;</span> <span class="n">i</span> <span class="o">+=</span> <span class="mi">3</span><span class="p">)</span> <span class="p">{</span>
-        <span class="n">float3</span> <span class="n">v0</span> <span class="o">=</span> <span class="p">(</span><span class="n">mul</span><span class="p">(</span><span class="n">meshObject</span><span class="p">.</span><span class="n">localToWorldMatrix</span><span class="p">,</span> <span class="n">float4</span><span class="p">(</span><span class="n">_Vertices</span><span class="p">[</span><span class="n">_Indices</span><span class="p">[</span><span class="n">i</span><span class="p">]],</span> <span class="mi">1</span><span class="p">))).</span><span class="n">xyz</span><span class="p">;</span>
-        <span class="n">float3</span> <span class="n">v1</span> <span class="o">=</span> <span class="p">(</span><span class="n">mul</span><span class="p">(</span><span class="n">meshObject</span><span class="p">.</span><span class="n">localToWorldMatrix</span><span class="p">,</span> <span class="n">float4</span><span class="p">(</span><span class="n">_Vertices</span><span class="p">[</span><span class="n">_Indices</span><span class="p">[</span><span class="n">i</span> <span class="o">+</span> <span class="mi">1</span><span class="p">]],</span> <span class="mi">1</span><span class="p">))).</span><span class="n">xyz</span><span class="p">;</span>
-        <span class="n">float3</span> <span class="n">v2</span> <span class="o">=</span> <span class="p">(</span><span class="n">mul</span><span class="p">(</span><span class="n">meshObject</span><span class="p">.</span><span class="n">localToWorldMatrix</span><span class="p">,</span> <span class="n">float4</span><span class="p">(</span><span class="n">_Vertices</span><span class="p">[</span><span class="n">_Indices</span><span class="p">[</span><span class="n">i</span> <span class="o">+</span> <span class="mi">2</span><span class="p">]],</span> <span class="mi">1</span><span class="p">))).</span><span class="n">xyz</span><span class="p">;</span>
+        <span class="n">float4x4</span> <span class="n">local2world</span> <span class="o">=</span> <span class="n">meshObject</span><span class="p">.</span><span class="n">localToWorldMatrix</span><span class="p">;</span>
+        <span class="n">float3</span> <span class="n">v0</span> <span class="o">=</span> <span class="p">(</span><span class="n">mul</span><span class="p">(</span><span class="n">local2world</span><span class="p">,</span> <span class="n">float4</span><span class="p">(</span><span class="n">_Vertices</span><span class="p">[</span><span class="n">_Indices</span><span class="p">[</span><span class="n">i</span><span class="p">]],</span> <span class="mi">1</span><span class="p">))).</span><span class="n">xyz</span><span class="p">;</span>
+        <span class="n">float3</span> <span class="n">v1</span> <span class="o">=</span> <span class="p">(</span><span class="n">mul</span><span class="p">(</span><span class="n">local2world</span><span class="p">,</span> <span class="n">float4</span><span class="p">(</span><span class="n">_Vertices</span><span class="p">[</span><span class="n">_Indices</span><span class="p">[</span><span class="n">i</span> <span class="o">+</span> <span class="mi">1</span><span class="p">]],</span> <span class="mi">1</span><span class="p">))).</span><span class="n">xyz</span><span class="p">;</span>
+        <span class="n">float3</span> <span class="n">v2</span> <span class="o">=</span> <span class="p">(</span><span class="n">mul</span><span class="p">(</span><span class="n">local2world</span><span class="p">,</span> <span class="n">float4</span><span class="p">(</span><span class="n">_Vertices</span><span class="p">[</span><span class="n">_Indices</span><span class="p">[</span><span class="n">i</span> <span class="o">+</span> <span class="mi">2</span><span class="p">]],</span> <span class="mi">1</span><span class="p">))).</span><span class="n">xyz</span><span class="p">;</span>
 
         <span class="kt">float</span> <span class="n">t</span><span class="p">,</span> <span class="n">u</span><span class="p">,</span> <span class="n">v</span><span class="p">;</span>
         <span class="k">if</span> <span class="p">(</span><span class="n">IntersectTriangle_MT97</span><span class="p">(</span><span class="n">ray</span><span class="p">,</span> <span class="n">v0</span><span class="p">,</span> <span class="n">v1</span><span class="p">,</span> <span class="n">v2</span><span class="p">,</span> <span class="n">t</span><span class="p">,</span> <span class="n">u</span><span class="p">,</span> <span class="n">v</span><span class="p">))</span> <span class="p">{</span>
@@ -503,8 +538,7 @@ if (shadowHit.distance != 1.#INF)
 
 <p>所以代码里实现如下：</p>
 
-<div class="language-c++ highlighter-rouge"><pre class="highlight"><code><span class="kt">bool</span> <span class="nf">IntersectPlane</span><span class="p">(</span><span class="n">Ray</span> <span class="n">ray</span><span class="p">)</span>
-<span class="p">{</span>
+<div class="language-c++ highlighter-rouge"><pre class="highlight"><code><span class="kt">bool</span> <span class="nf">IntersectPlane</span><span class="p">(</span><span class="n">Ray</span> <span class="n">ray</span><span class="p">)</span> <span class="p">{</span>
     <span class="n">t</span> <span class="o">=</span> <span class="o">-</span><span class="n">ray</span><span class="p">.</span><span class="n">origin</span><span class="p">.</span><span class="n">y</span> <span class="o">/</span> <span class="n">ray</span><span class="p">.</span><span class="n">direction</span><span class="p">.</span><span class="n">y</span><span class="p">;</span>
     <span class="k">return</span> <span class="nb">true</span><span class="p">;</span>
 <span class="p">}</span>
@@ -529,8 +563,7 @@ if (shadowHit.distance != 1.#INF)
 
 <p><img src="/img/post-engine/ray2.jpg" alt="" /></p>
 
-<div class="language-c++ highlighter-rouge"><pre class="highlight"><code><span class="kt">bool</span> <span class="nf">IntersectSphere</span><span class="p">(</span><span class="n">Ray</span> <span class="n">ray</span><span class="p">,</span> <span class="n">float3</span> <span class="n">position</span><span class="p">,</span><span class="kt">float</span> <span class="n">radius</span><span class="p">,</span><span class="n">inout</span> <span class="kt">float</span> <span class="n">t</span><span class="p">)</span>
-<span class="p">{</span>
+<div class="language-c++ highlighter-rouge"><pre class="highlight"><code><span class="kt">bool</span> <span class="nf">IntersectSphere</span><span class="p">(</span><span class="n">Ray</span> <span class="n">ray</span><span class="p">,</span> <span class="n">float3</span> <span class="n">position</span><span class="p">,</span><span class="kt">float</span> <span class="n">radius</span><span class="p">,</span><span class="n">inout</span> <span class="kt">float</span> <span class="n">t</span><span class="p">)</span> <span class="p">{</span>
     <span class="n">float3</span> <span class="n">d</span> <span class="o">=</span> <span class="n">ray</span><span class="p">.</span><span class="n">origin</span> <span class="o">-</span> <span class="n">position</span><span class="p">;</span>
     <span class="kt">float</span> <span class="n">p1</span> <span class="o">=</span> <span class="o">-</span><span class="n">dot</span><span class="p">(</span><span class="n">ray</span><span class="p">.</span><span class="n">direction</span><span class="p">,</span> <span class="n">d</span><span class="p">);</span>
     <span class="kt">float</span> <span class="n">p2sqr</span> <span class="o">=</span> <span class="n">p1</span> <span class="o">*</span> <span class="n">p1</span> <span class="o">-</span> <span class="n">dot</span><span class="p">(</span><span class="n">d</span><span class="p">,</span> <span class="n">d</span><span class="p">)</span> <span class="o">+</span><span class="n">radius</span><span class="o">*</span><span class="n">radius</span><span class="p">;</span>
@@ -639,8 +672,7 @@ if (shadowHit.distance != 1.#INF)
 <div class="language-c++ highlighter-rouge"><pre class="highlight"><code><span class="c1">//三角形的相交性检测 双面 uvw 重心坐标 w=1-u-v  t=距离
 </span><span class="k">static</span> <span class="k">const</span> <span class="kt">float</span> <span class="n">EPSILON</span> <span class="o">=</span> <span class="mf">1e-8</span><span class="p">;</span>
 <span class="kt">bool</span> <span class="nf">IntersectTriangle_01</span><span class="p">(</span><span class="n">Ray</span> <span class="n">ray</span><span class="p">,</span> <span class="n">float3</span> <span class="n">vert0</span><span class="p">,</span> <span class="n">float3</span> <span class="n">vert1</span><span class="p">,</span> <span class="n">float3</span> <span class="n">vert2</span><span class="p">,</span>
-    <span class="n">inout</span> <span class="kt">float</span> <span class="n">t</span><span class="p">,</span> <span class="n">inout</span> <span class="kt">float</span> <span class="n">u</span><span class="p">,</span> <span class="n">inout</span> <span class="kt">float</span> <span class="n">v</span><span class="p">,</span><span class="n">inout</span> <span class="kt">float</span> <span class="n">toward</span><span class="p">)</span>
-<span class="p">{</span>
+    <span class="n">inout</span> <span class="kt">float</span> <span class="n">t</span><span class="p">,</span> <span class="n">inout</span> <span class="kt">float</span> <span class="n">u</span><span class="p">,</span> <span class="n">inout</span> <span class="kt">float</span> <span class="n">v</span><span class="p">,</span><span class="n">inout</span> <span class="kt">float</span> <span class="n">toward</span><span class="p">)</span> <span class="p">{</span>
     <span class="c1">//E1 E2
 </span>    <span class="n">float3</span> <span class="n">edge1</span> <span class="o">=</span> <span class="n">vert1</span> <span class="o">-</span> <span class="n">vert0</span><span class="p">;</span>
     <span class="n">float3</span> <span class="n">edge2</span> <span class="o">=</span> <span class="n">vert2</span> <span class="o">-</span> <span class="n">vert0</span><span class="p">;</span>
@@ -675,10 +707,11 @@ if (shadowHit.distance != 1.#INF)
 <ul>
   <li><a href="http://blog.three-eyed-games.com/2018/05/03/gpu-ray-tracing-in-unity-part-1/">GPU Ray Tracing in Unity</a></li>
   <li><a href="https://blog.csdn.net/qq_38275140/article/details/90345582">路径追踪 相交性检测 算法</a></li>
-  <li><a href="https://zh.wikipedia.org/wiki/克萊姆法則">克莱姆法则,by wikipedia</a></li>
-  <li><a href="https://zh.wikipedia.org/wiki/重心坐标">重心坐标,by wikipedia</a></li>
+  <li><a href="https://zh.wikipedia.org/wiki/克萊姆法則">克莱姆法则, wikipedia</a></li>
+  <li><a href="https://zh.wikipedia.org/wiki/重心坐标">重心坐标, wikipedia</a></li>
   <li><a href="http://pkuwwt.github.io/scholarship/2014-04-03-ray-triangle-intersection-tests-for-dummies/">光线-三角形求交测试算法</a></li>
-  <li><a href="https://www.cnblogs.com/timlly/p/11366199.html">UE里的光线追踪实现</a></li>
+  <li><a href="https://devblogs.nvidia.com/introduction-ray-tracing-unreal-engine-422/">UE里的光线追踪实现</a></li>
+  <li><a href="http://www.cse.chalmers.se/edu/year/2011/course/TDA361/2007/rend_eq.pdf">蒙特卡洛 渲染方程论文</a></li>
 </ul>
 
 
@@ -768,8 +801,9 @@ if (shadowHit.distance != 1.#INF)
 <div class="post-nav">
 
   
-  <div class="post-nav-none post-nav-item">
-    <a href=""> </a>
+  <div class="post-nav-prev post-nav-item">
+    
+    <a href="/blog/2020/ray2/"> 光线追踪-降噪</a>
   </div>
   
 
