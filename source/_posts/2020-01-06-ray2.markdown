@@ -144,13 +144,13 @@ Unity 生成的mc-noised 和 cleaned的图像对比：
 NL-Means的全称是：Non-Local Means，直译过来是非局部平均，在2005年由Baudes提出，该算法使用自然图像中普遍存在的冗余信息来去噪声。与常用的双线性滤波、中值滤波等利用图像局部信息来滤波不同的是，它利用了整幅图像来进行去噪，以图像块为单位在图像中寻找相似区域，再对这些区域求平均，能够比较好地去掉图像中存在的高斯噪声。NL-Means的滤波过程可以用下面公式来表示：
 
 $$
-\tilde u(x) = \sum\limits_{y \in {\Omega _x}} {w(x,y)v(y)}.
+\tilde u(x) = \sum\limits_{y \in {\Omega _x}} {w(x,y)v(y)}
 $$
 
 在这个公式中，w(x,y)是一个权重，表示在原始图像v中，像素 x 和像素 y 的相似度。这个权重要大于0，同时，权重的和为1，用公式表示是这样：
 
 $$
-w(x,y) > 0\quad and\quad \sum\limits_{y \in {\Omega _x}} {w(x,y) = 1}, \quad \forall x \in \Omega ,y \in {\Omega _x} .
+w(x,y) > 0\quad and\quad \sum\limits_{y \in {\Omega _x}} {w(x,y) = 1}, \quad \forall x \in \Omega ,y \in {\Omega _x} 
 $$
 
 Ωx是像素 x 的邻域。这个公式可以这样理解：对于图像中的每一个像素 x ，去噪之后的结果等于它邻域中像素 y 的加权和，加权的权重等于 x 和 y 的相似度。这个邻域也称为搜索区域，搜索区域越大，找到相似像素的机会也越大，但同时计算量也是成指数上升。在提出这个算法的文献中，这个区域是整幅图像！导致的结果是处理一幅512x512大小的图像，最少也得几分钟。
@@ -158,10 +158,10 @@ $$
 衡量像素相似度的方法有很多，最常用的是根据两个像素的亮度值的差的平方来估计。但因为有噪声的存在，单独的一个像素并不可靠。对此解决方法是，考虑它们的邻域，只有邻域相似度高才能说这两个像素的相似度高。衡量两个图像块的相似度最常用的方法是计算他们之间的欧氏距离：
 
 $$
-w(x,y) = {1 \over {n(x)}}\exp ({{\left\| {{\bf{V}}(x) - {\bf{V}}(y)} \right\|_{2,a}^2} \over {{h^2}}}).
+w(x,y) = \frac{1} {n(x)} \exp ({\frac{\| {V(x) - V(y)}\|_{2,a}^2}  {h^2}})
 $$
 
-其中： n(x) 是一个归一化的因子，是所有权重的和，对每个权重除以该因子后，使得权重满足和为1的条件。 h>0 是滤波系数，控制指数函数的衰减从而改变欧氏距离的权重。 V(x) 和 V(y) 代表了像素 x 和像素 y 的邻域，这个邻域常称为块(Patch)邻域。块邻域一般要小于搜索区域。${\left\| {{\bf{V}}(x) - {\bf{V}}(y)} \right\|_{2,a}^2}$ 是两个邻域的高斯加权欧式距离。其中 a>0 是高斯核的标准差。在求欧式距离的时候，不同位置的像素的权重是不一样的，距离块的中心越近，权重越大，距离中心越远，权重越小，权重服从高斯分布。实际计算中考虑到计算量的问题，常常采用均匀分布的权重。
+其中： n(x) 是一个归一化的因子，是所有权重的和，对每个权重除以该因子后，使得权重满足和为1的条件。 h>0 是滤波系数，控制指数函数的衰减从而改变欧氏距离的权重。 V(x) 和 V(y) 代表了像素 x 和像素 y 的邻域，这个邻域常称为块(Patch)邻域。块邻域一般要小于搜索区域。${\|{V(x) - V(y)}\|_{2,a}^2}$ 是两个邻域的高斯加权欧式距离。其中 a>0 是高斯核的标准差。在求欧式距离的时候，不同位置的像素的权重是不一样的，距离块的中心越近，权重越大，距离中心越远，权重越小，权重服从高斯分布。实际计算中考虑到计算量的问题，常常采用均匀分布的权重。
 
 <center><img src="/img/post-ml/ray6.jpg" /></center>
 
@@ -207,6 +207,16 @@ $$
 
 在这个公式中，二维变换和一维变换用一个T3Dhard 来表示。γ是一个阈值操作：
 
+$$ 
+\gamma (x) =
+\left\{
+\begin{aligned}
+0 \quad if |x| \le {\lambda _{3D}\sigma }  \\
+x \quad \quad otherwise
+\end{aligned}
+\right.
+$$
+
 σ是噪声的标准差，代表噪声的强度。
 
 (3) Aggregation：此时，每个二维块都是对去噪图像的估计。这一步分别将这些块融合到原来的位置，每个像素的灰度值通过每个对应位置的块的值加权平均，权重取决于置0的个数和噪声强度。
@@ -224,6 +234,9 @@ $$
 
 在这个公式中，二维变换和一维变换用一个T3Dwein 来表示。wp是一个维纳滤波的系数：
 
+$$
+{w_p}(\xi ) = \frac{|\tau_{3D}^{wien}(Q^{basic}(P))(\xi)|^2}{|\tau_{3D}^{wien}(Q^{basic}(P))|^2+{\sigma ^2}}
+$$
 
 σ是噪声的标准差，代表噪声的强度。
 
@@ -285,7 +298,7 @@ $$
 
 点估计带有一些统计平均的性质。比如，我们可以简单地对多点采样的温度取平均，得到最终的估计温度。
 
-### 神经网络算法与点估计的关系
+__神经网络算法与点估计的关系__
 
 式1表达的是参数预测问题（不是简单地估计值，而是学习一个预测模型，服务千千万万的输入），式2是点估计问题，二者不是一个东西。理想状况下，网络的优化方式如下（提供准确的先验和似然）
 
@@ -306,7 +319,15 @@ $$
 
 其中，$x^i$是有噪图像，$y^i$也是有噪图像（$y_i$不一定要和$x_i$相同），y就是目标干净图像。
 
+### NVIDIA OptiX 
 
+[NVIDIA OptiX][i11] API是基于GPU实现高性能光线追踪的应用程序框架。它为加速光线追踪算法提供了一个简单、递归且灵活的管线。OptiX SDK包含两个可相互独立使用的主要组件：用于渲染器开发的光线追踪引擎和post process管线来处理最终显示的像素。
+
+OptiX使用Iray渲染的成千上万的图像构建了一个神经网络，现在这个学习的数据可以应用到其他光线跟踪图像。 凭借OptiX引擎，从前需要耗费数分钟的软件操作现在只需几毫秒即可完成，从而让设计师能够在行业标准硬件上交互地检查真实场景中的光照、反射、折射以及阴影的播放效果。 NVIDIA®（英伟达™）Quadro和Tesla产品拥有业内最大容量的显存，能够处理最大的数据集，可打造出高可靠性的解决方案，非常适合用于GPU光线追踪。 Quadro还能够提供顶级图形性能，是专业人士在处理图形与光线追踪时的首选产品。
+
+![](/img/post-ml/ray12.jpg)
+
+OptiX AI降噪技术与Quadro GV100和Titan V中的全新NVIDIA Tensor Cores相结合，可提供相当于前代GPU 3倍的性能，并首次实现了无噪声流体交互。
 
 ## 参考资料
 
@@ -316,6 +337,9 @@ $$
 * [Learning Image Restoration without Clean Data, arxiv][i6]
 * [Learning Image Restoration without Clean Data, pytorch, github][i2]
 * [Learning Image Restoration without Clean Data, tensorflow, github][i5]
+* [NVIDIA Optix Instro][i9]
+* [v-ray instro, 百科][i10]
+* [基于RTX的NVIDIA OptiX光线追踪][i11]
 
 
 [i1]: https://www.embree.org/
@@ -326,3 +350,6 @@ $$
 [i6]: https://arxiv.org/abs/1803.04189
 [i7]: https://github.com/tunabrain/tungsten
 [i8]: https://benedikt-bitterli.me/nfor/denoising-data.zip
+[i9]: https://developer.nvidia.com/optix
+[i10]: https://baike.baidu.com/item/v-ray/3745231?fr=aladdin
+[i11]: https://zhuanlan.zhihu.com/p/36429298
