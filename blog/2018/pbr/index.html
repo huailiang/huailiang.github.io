@@ -7,7 +7,7 @@
 
   <title>PBR基于物理的着色</title>
   <meta name="description"
-    content="  Unity5之后加入新的渲染方式 PBR。PBR是一种着色和渲染技术，用于更精确的描述光如何与物体表面互动。PBS（Physically Based Shading）在有一些地方也叫PBR（Physically Based Rendering），是一个基于物体表面材质属性的着色方法。与之前的Blinn-Pho...">
+    content="一. PBR基本认知和应用">
 
   <link rel="shortcut icon" href="/img/favicon.ico">
   <link rel="stylesheet" href="/css/main.css">
@@ -73,59 +73,1134 @@ MathJax.Hub.Config({
     </header>
 
     <div class="post-content">
-      <blockquote>
-  <p>Unity5之后加入新的渲染方式 PBR。PBR是一种着色和渲染技术，用于更精确的描述光如何与物体表面互动。PBS（Physically Based Shading）在有一些地方也叫PBR（Physically Based Rendering），是一个基于物体表面材质属性的着色方法。与之前的Blinn-Phong等算法不同。PBS通过对物体表面的材质属性与周围光照信息来进行着色计算。PBS着色系统中，一个物体不仅受到光源的影响，还会受到周围环境的影响。 这会使得整个场景更加真实。</p>
+      <h2 id="一-pbr基本认知和应用">一. PBR基本认知和应用</h2>
+
+<p>本章内容主要介绍PBR的基本概念和衍变历史，以及其在主流商业引擎的应用。</p>
+
+<h3 id="11-pbr的基本介绍">1.1 PBR的基本介绍</h3>
+
+<h4 id="111-pbr概念">1.1.1 PBR概念</h4>
+<p>PBR（Physically Based Rendering）译成中文是基于物理的渲染。它是利用真实世界的原理和理论，通过各种数学方法推导或简化或模拟出一系列渲染方程，并依赖计算机硬件和图形API渲染出拟真画面的技术。</p>
+
+<h4 id="112-与物理渲染的差别">1.1.2 与物理渲染的差别</h4>
+<p>那它为什么不叫物理渲染（Physical Rendering）呢？物理渲染（Physical Rendering）是指跟真实世界完全一致的计算机渲染效果。为了回答这个问题，先了解一下真实世界的成相原理。</p>
+
+<p>真实世界的物体有着各自的材质属性和表面特征，它们受到各种局部灯光和全局环境光的影响，而且它们之间又相互影响，最终这些信息通过光波的形式进入复杂的人眼构造，刺激视神经形成生物信号进入大脑感光皮层，最终让人产生视觉认知。（下图）</p>
+
+<p><img src="/img/post-pbr/10.jpg" alt="" /></p>
+
+<p>有论文指出，绝大多数人的眼睛可以接收相当于5亿~10亿个像素的信息量。目前主流的分辨率才百万~千万级别，加上显示器亮度范围和屏幕像素间距的限制，远远达不到亿级像素的渲染和亮度表示范围。</p>
+
+<p>基于现阶段的知识水平和硬件水平，还不能渲染跟真实世界完全一致的效果，只能一定程序上模拟接近真实世界的渲染画面，故而叫基于物理的渲染（Physically Based Rendering），而非物理渲染（Physical Rendering）。</p>
+
+<h4 id="113-pbr的特征">1.1.3 PBR的特征</h4>
+
+<p>这节阐述的是PBR呈现的效果特征，而非底层物理原理的特征。 相比传统的Lambert着色和Phong着色，PBR着色在效果上有着质的提升，可以表示更多更复杂的材质特征：</p>
+
+<ul>
+  <li>表面细节</li>
+  <li>物体粗糙度</li>
+  <li>区别明显的金属和绝缘体</li>
+  <li>物体的浑浊程度</li>
+  <li>菲涅尔现象：不同角度有不同强度的反射光</li>
+  <li>半透明物体</li>
+  <li>多层混合材质</li>
+  <li>清漆效果</li>
+  <li>其它更复杂的表面特征</li>
+</ul>
+
+<p><img src="/img/post-pbr/pbr11.png" alt="" /></p>
+
+<p>Phong模型着色效果，只能简单地表现理想模型的漫反射和高光，渲染出的效果跟真实世界相差甚远。</p>
+
+<p><img src="/img/post-pbr/pbr12.jpg" alt="" /></p>
+
+<p>质效果球，它们真实地渲染出各类材质的粗糙、纹理、高光、清漆、边缘光等等表面细节特征。PBR对渲染效果真实感的提升可见一斑。</p>
+
+<h3 id="12-pbr的衍变历史">1.2 PBR的衍变历史</h3>
+<p>PBR从最初传统型的Lambert光照发展至今，已经历经200多年，期间发生多次迭代衍变和改进，主流光照模型和分支光照模型也遍地开花。下面按照时间顺序着重对PBR衍变的关键技术节点做阐述。</p>
+
+<h4 id="121-lambert1760年">1.2.1 Lambert（1760年）</h4>
+<p>Lambert模型是Johann Heinrich Lambert在1760年提出的光照模型。是传统的光照模型。</p>
+
+<p>它计算的是漫反射。漫反射是光源照射到物体表面后，向四面八方反射，产生的反射效果。这是一种理想的漫反射光照模型。漫反射光的强度近似地服从于Lambert定律，即漫反射光的光强仅与入射光的方向和反射点处表面法向夹角的余弦成正比。</p>
+
+<p><img src="/img/post-pbr/pbr13.png" alt="" /></p>
+
+<p>Lambert模型着色效果，模拟了理想环境下的漫反射效果。</p>
+
+<h4 id="122-smith1967年">1.2.2 Smith（1967年）</h4>
+<p>Smith将Cook-Torrance的DFG部分的G几何项有效地结合起来，使得几何函数的近似法得到了有效地提升，后面章节将会阐述更多细节。</p>
+
+<h4 id="123-phong1973年">1.2.3 Phong（1973年）</h4>
+<p>Phong模型由美国越南裔学者裴祥风（Bùi Tường Phong）发明，于1973年的博士论文首度发表。它也是一种传统的理想的光照模型。相较Lambert，Phong增加了镜面反射部分，使得物体渲染效果更接近真实世界（下图）。</p>
+
+<p><img src="/img/post-pbr/pbr14.png" alt="" /></p>
+
+<h4 id="124-cook-torrance1982年">1.2.4 Cook-Torrance（1982年）</h4>
+<p>Cook-Torrance是Cook和Torrance于1982年联合提出的光反射模型。该模型考虑在同一景物中不同材料和不同光源的相对亮度。它描述反射光线在方向上的分布和当反射随入射角而改变时颜色的变化，并能求得从具体的实际材料制成的物体反射出来的光线的光谱能量分布，并根据这种光谱能量分布精确地再现颜色。简而言之，Cook-Torrance增加了几何项G、Fresnel项、粗糙度项D等信息。利用该模型渲染出的图像真实感有了较大跨度的提升。</p>
+
+<p><img src="/img/post-pbr/pbr15.png" alt="" /></p>
+
+<p>Cook-Torrance光照模型渲染效果。它较好地渲染出模型的表面特征和光照效果。</p>
+
+<h4 id="125-oren-nayarh1994年">1.2.5 Oren Nayarh（1994年）</h4>
+
+<p>Lambert模型由于是理想环境下的光照模拟，不能正确体现物体（特别是粗糙物体）表面的光照效果。Oren Nayarh模型对此做出了改进，主要对粗糙表面的物体建模，比如石膏、沙石、陶瓷等。用了一系列的Lambert微平面，考虑了微小平面之间的相互遮挡（shadowing and masking）和互相反射照明。它能一定程度上模拟真实物体的表面粗糙度，使物体更有质感</p>
+
+<p><img src="/img/post-pbr/pbr16.jpg" alt="" /></p>
+
+<p><em>左：真实照片，中：Lambert模型效果，右：Oren Nayarh模型效果</em></p>
+
+<h4 id="126-schlick1994年">1.2.6 Schlick（1994年）</h4>
+
+<p>Schlick模型简化了Phong模型的镜面反射中的指数运算。采用以下公式替代：</p>
+
+<script type="math/tex; mode=display">F = F_0+(1-F_o)(1-cos(\theta))^5</script>
+
+<script type="math/tex; mode=display">F_0 = (\frac{n_1-n_2}{n_1+n_2})^2</script>
+
+<p>它模拟的高光反射效果跟Pow运算基本一致，且效率比Pow运算高。</p>
+
+<h4 id="127-ggx2007年">1.2.7 GGX（2007年）</h4>
+
+<p>GGX模型所解决的问题是，如何将微平面反射模型推广到表面粗糙的半透明材质，从而能够模拟类似于毛玻璃的粗糙表面的透射效果。同时，它也提出了一种新的微平面分布函数 。</p>
+
+<p><img src="/img/post-pbr/pbr17.png" alt="" /></p>
+
+<p><em>上图：GGX非常逼真地模拟半透明物体的效果</em></p>
+
+<p>虽然它提出时被用于半透明物体的模拟，但它作为一种描述微平面法线方向分布的函数，同样适用于渲染表面粗糙的不透明物体。</p>
+
+<p><img src="/img/post-pbr/pbr18.png" alt="" /></p>
+
+<p>同样可以非常逼真地模拟不透明物体的效果, GGX已经广泛应用于各种主流游戏引擎中，同时也是效果最好的。</p>
+
+<h4 id="128-迪斯尼原则的brdfdisney-principled-brdf-2012年">1.2.8 迪斯尼原则的BRDF（Disney principled BRDF, 2012年)</h4>
+
+<p>在SIGGRAPH 2012会议上，工作于迪斯尼动画工作室的Brent Burly演讲了著名的主题：《Physically Based Shading at Disney》。 迪斯尼的BRDF（Disney Principled BRDF），奠定了后续游戏行业和电影行业PBR的方向和标准。后续的主流游戏引擎，3D渲染器及动画制作软件大多基于此方案或变种实现的。</p>
+
+<p><img src="/img/post-pbr/pbr19.png" alt="" /></p>
+
+<p><em>PBR渲染出的《无敌破坏王》画面</em></p>
+
+<p>迪斯尼原则的BRDF用少量简单易懂的参数和高度完善的美术工作流程，大大简化了此前复杂的PBR的参数和制作流程。它是艺术导向（Art Directable）的着色模型，而不完全是物理正确（Physically Correct）。</p>
+
+<p><img src="/img/post-pbr/pbr20.png" alt="" /></p>
+
+<p><em>BRDF抽象出的参数</em></p>
+
+<h4 id="129-现阶段的bxdf2019年">1.2.9 现阶段的BxDF（2019年）</h4>
+
+<p>基于物理的光照模型已经发展了数十年，期间衍生的关键技术和变种技术非常多，它们各有适用场景或解决的各个具体应用场景的问题。近今年，PBR的技术主要朝着更逼真、更复杂、效能更好的方向，或是结合若干种模型的综合性技术迈进。代表性技术有：</p>
+
+<ul>
+  <li>PBR Diffuse for GGX + Smith (2017)</li>
+  <li>MultiScattering Diffuse (2018)</li>
+  <li>Layers Material（分层材质）</li>
+  <li>Mixed Material（混合材质）</li>
+  <li>Mixed BxDF（混合BxDF）</li>
+  <li>Advanced Rendering（进阶渲染）</li>
+</ul>
+
+<p><img src="/img/post-pbr/pbr21.jpg" alt="" /></p>
+
+<p>UE4渲染出的虚拟人Siren。综合了分层材质、混合材质、混合BxDF、眼球毛发和皮肤渲染等新兴技术。</p>
+
+<p><img src="/img/post-pbr/pbr22.jpg" alt="" /></p>
+
+<p>虚拟人Siren的皮肤细节。与数码相机摄制的相片如出一辙，逼真程度令人咂舌。如果不特意提醒，很难相信这是游戏引擎实时渲染出来的画面。</p>
+
+<h3 id="13-pbr的应用领域">1.3 PBR的应用领域</h3>
+
+<p>PBR经过长时间的发展，技术上和渲染的效果突飞猛进，是计算机图形学的下一代渲染技术。它在实时渲染和离线渲染领域都有着非常广泛且深入的应用，主要有：电影和动漫。使用PBR技术渲染的真人电影，拟真电影，以及各类动漫电影数量非常多，比如早些年的《阿凡达》《飞屋环游记》，近期的《战斗天使》《流浪地球》《驯龙高手3》等。</p>
+
+<p><img src="/img/post-pbr/pbr23.jpg" alt="" /></p>
+
+<p><em>电影《阿凡达》的人物画面</em></p>
+
+<p><img src="/img/post-pbr/pbr24.jpg" alt="" /></p>
+
+<p><em>电影《战斗天使》的画面。主角阿丽塔是计算机通过PBR技术渲染出来的虚拟角色，她与真人演员和真实环境无缝地融合在了一起</em></p>
+
+<p><img src="/img/post-pbr/pbr25.jpg" alt="" /></p>
+
+<p><em>单机游戏《极品飞车20》的动感瞬间</em></p>
+
+<p>虚拟技术通常需要佩戴眼镜或头盔等显示设备，较多地用于军事，教学，模拟训练，医学等领域。而VR引入PBR技术，能更逼真地模拟现实世界，让参与者身临其境。</p>
+
+<p><img src="/img/post-pbr/pbr26.jpg" alt="" /></p>
+
+<p><em>Magic Leap制作的VR概念图</em></p>
+
+<p>科学计算可视化。气象、地震、天体物理、分子生物学、医学等科学领域采用PBR技术将更真实地模拟自然规律，有助于科学家新发现，有助于高校师生教学。</p>
+
+<p><img src="/img/post-pbr/pbr27.jpg" alt="" /></p>
+
+<p><em>计算机模拟出的DNA双螺旋结构图</em></p>
+
+<h3 id="14-pbr在游戏引擎的应用">1.4 PBR在游戏引擎的应用</h3>
+
+<p>迪斯尼自2012年提出迪斯尼原则的PBR理论后，在游戏和电影界引起轰动，随后各大主流游戏引擎和渲染器及建模软件纷纷实现基于斯尼原则的PBR技术。下面是主流游戏引擎支持迪斯尼原则的PBR时间表：</p>
+
+<ul>
+  <li>Unreal Engine 4：《Real Shading in Unreal Engine 4》，SIGGRAPH 2013</li>
+  <li>Unity 5：《Physically Based Shading in Unity》，GDC 2014</li>
+  <li>Frostbite（寒霜）： 《Moving Frostbite to PBR》，SIGGRAPH 2014</li>
+  <li>Cry Engine 3.6：《Physically Based Shading in Cry Engine》，2015</li>
+</ul>
+
+<p>UE4和Unity在算法上的实现略有差别，但本章先不讨论算法的实现问题，主要阐述材质上的参数。</p>
+
+<h4 id="141-unreal-engine-4的pbr">1.4.1 Unreal Engine 4的PBR</h4>
+
+<p>UE4的PBR相对其它迪斯尼原则的PBR实现，在参数方面做了精简，涉及的参数主要有：</p>
+
+<p><strong>基础色（Base Color）：</strong></p>
+
+<p>为材质提供基础纹理色，是Vector3（RGB），它们的值都限定在0~1之间。</p>
+
+<p><img src="/img/post-pbr/pbr28.jpg" alt="" /></p>
+
+<p>下表是经过测量后得出的非金属材质的基础色强度（非金属材质只有单色，即强度）：</p>
+
+<table>
+  <thead>
+    <tr>
+      <th>材质(Material)</th>
+      <th style="text-align: center">基础色强度(BaseColor Intensity)</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td>木炭(Charcoal)</td>
+      <td style="text-align: center">0.02</td>
+    </tr>
+    <tr>
+      <td>新沥青(Fresh asphalt)</td>
+      <td style="text-align: center">0.02</td>
+    </tr>
+    <tr>
+      <td>旧沥青(Worn asphalt)</td>
+      <td style="text-align: center">0.08</td>
+    </tr>
+    <tr>
+      <td>土壤(Bare soil)</td>
+      <td style="text-align: center">0.13</td>
+    </tr>
+    <tr>
+      <td>绿草(Green Grass)</td>
+      <td style="text-align: center">0.21</td>
+    </tr>
+    <tr>
+      <td>沙漠沙(desert sand)</td>
+      <td style="text-align: center">0.36</td>
+    </tr>
+    <tr>
+      <td>新混泥土(Fresh concrete)</td>
+      <td style="text-align: center">0.51</td>
+    </tr>
+    <tr>
+      <td>海洋冰(Ocean Ice)</td>
+      <td style="text-align: center">0.56</td>
+    </tr>
+    <tr>
+      <td>鲜雪(Fresh snow)</td>
+      <td style="text-align: center">0.81</td>
+    </tr>
+  </tbody>
+</table>
+
+<p>下表是经过测量后得出的金属材质的基础色（R, G, B），是在Linear色域空间的值：</p>
+
+<table>
+<thead>
+<tr>
+<th>材质(Material)</th>
+<th style="text-align: center;">基础色(BaseColor)</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>铁(Iron)</td>
+<td style="text-align: center;">(0.560, 0.570, 0.580)</td>
+</tr>
+<tr>
+<td>银(Silver)</td>
+<td style="text-align: center;">(0.972, 0.960, 0.915)</td>
+</tr>
+<tr>
+<td>铝(Aluminum)</td>
+<td style="text-align: center;">(0.913, 0.921, 0.925)</td>
+</tr>
+<tr>
+<td>金(Gold)</td>
+<td style="text-align: center;">(1.000, 0.766, 0.336)</td>
+</tr>
+<tr>
+<td>铜(Copper)</td>
+<td style="text-align: center;">(0.955, 0.637, 0.538)</td>
+</tr>
+<tr>
+<td>铬(Chromium)</td>
+<td style="text-align: center;">(0.550, 0.556, 0.554)</td>
+</tr>
+<tr>
+<td>镍(Nickel)</td>
+<td style="text-align: center;">(0.660, 0.609, 0.526)</td>
+</tr>
+<tr>
+<td>钛(Titanium)</td>
+<td style="text-align: center;">(0.542, 0.497, 0.449)</td>
+</tr>
+<tr>
+<td>钴(Cobalt)</td>
+<td style="text-align: center;">(0.662, 0.655, 0.634)</td>
+</tr>
+<tr>
+<td>铂(Platinum)</td>
+<td style="text-align: center;">(0.672, 0.637, 0.585)</td>
+</tr>
+</tbody>
+</table>
+
+<p><strong>粗糙度（Roughness）</strong></p>
+
+<p>表示材质表面的粗糙程度，值限定在0~1之间。越粗糙材质高光反射越不明显，金属和非金属的粗糙度有所区别</p>
+
+<p><img src="/img/post-pbr/pbr29.png" alt="" /><br />
+<img src="/img/post-pbr/pbr30.png" alt="" /></p>
+
+<p><em>上：非金属材质随粗造度从0-1变化而渐变的图，下：金属材质随粗造度从0-1变化而渐变的图</em></p>
+
+<p><strong>金属度（Metallic）</strong></p>
+
+<p>表示材质像金属的程度，0是电介质（绝缘体），1是金属。金属没有漫反射，只有镜面反射。</p>
+
+<p><img src="/img/post-pbr/pbr31.png" alt="" /></p>
+
+<p><em>金属度从0~1的变化图</em></p>
+
+<p><strong>镜面度（Specular）</strong></p>
+
+<p>表示材质的镜面反射强度，从0（完全无镜面反射）1（完全镜面反射。UE4的默认值是0.5。万物皆有光泽（镜面反射），对于强漫反射的材质，可通过调节粗糙度，而不应该将镜面度调成0。</p>
+
+<p><img src="/img/post-pbr/pbr32.png" alt="" /></p>
+
+<p><em>镜面度从0~1的变化图</em></p>
+
+<p>下表是UE4给出的部分材质镜面度参考值：</p>
+
+<table>
+<thead>
+<tr>
+<th>材质(Material)</th>
+<th style="text-align: center;">镜面度(Specular)</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>草(Glass)</td>
+<td style="text-align: center;">0.500</td>
+</tr>
+<tr>
+<td>塑料(Plastic)</td>
+<td style="text-align: center;">0.500</td>
+</tr>
+<tr>
+<td>石英(Quartz)</td>
+<td style="text-align: center;">0.570</td>
+</tr>
+<tr>
+<td>冰(Ice)</td>
+<td style="text-align: center;">0.224</td>
+</tr>
+<tr>
+<td>水(Water)</td>
+<td style="text-align: center;">0.255</td>
+</tr>
+<tr>
+<td>牛奶(Milk)</td>
+<td style="text-align: center;">0.277</td>
+</tr>
+<tr>
+<td>皮肤(Skin)</td>
+<td style="text-align: center;">0.350</td>
+</tr>
+</tbody>
+</table>
+
+<p>UE4模拟的部分材质效果见下图。</p>
+
+<p><img src="/img/post-pbr/pbr33.png" alt="" /></p>
+
+<h4 id="142-unity的pbr">1.4.2 Unity的PBR</h4>
+
+<p>Unity的PBR已经纳入内建的标准着色器（Standard Shader），它的实现准则是用户友好的（user-friendly），故而在材质编辑器里呈现给用户是有限的参数，而且跟传统的各类贴图信息统一在了一起。Unity内部实现机制遵循了PBR的基本准则，支持金属度，表面粗糙度，能量守恒，菲涅尔反射，表面阴影遮蔽等特性。</p>
+
+<p><img src="/img/post-pbr/pbr34.png" alt="" /></p>
+
+<p><em>Unity的Standard Shader编辑界面</em></p>
+
+<p>其中跟PBR相关的参数：</p>
+
+<ul>
+  <li>Albedo：基础色，相当于UE4的Base Color。可用纹理贴图指定，也可用一个颜色值代替。</li>
+  <li>Metallic：金属度，意义跟UE4的一致。但它可以用金属贴图代替，此时Smoothness参数会消失。</li>
+</ul>
+
+<p><img src="/img/post-pbr/pbr35.jpg" alt="" /><br />
+<em>Unity指定了Metallic贴图后的效果，Smoothness参数消失</em></p>
+
+<ul>
+  <li>Smoothness：光滑度，跟UE的粗糙度取值刚好相反，但都是表示材质表面的粗糙程度
+    <ul>
+      <li>Smoothness Source：指定存储光滑度数据的纹理通道，可选择金属度、镜面贴图的Alpha通道或基础色贴图的Alpha通道。</li>
+    </ul>
+  </li>
+</ul>
+
+<p><img src="/img/post-pbr/pbr36.png" alt="" /><br />
+<em>Unity的Smoothness参数从0~1的变化</em></p>
+
+<ul>
+  <li>Occlusion：遮蔽图。用于指定材质接受间接光（如环境光）的光照强度和反射强度。</li>
+</ul>
+
+<p><img src="/img/post-pbr/pbr37.jpg" alt="" /><br />
+<em>Unity中使用遮蔽图为人物阴暗面（脸部，脖子）屏蔽环境光的影响</em></p>
+
+<ul>
+  <li>Fresnel：随着物体表面法线与视线的角度增大，物体的反射能力增大，这种现象称之为菲涅尔效应。在Unity中，无法直接调节菲涅尔效应的参数，但内部实现机制会自动处理。越光滑的表面具有越强的菲涅尔效应，相反，越粗糙的表面具有越弱的菲涅尔效应。</li>
+</ul>
+
+<p><img src="/img/post-pbr/pbr38.jpg" alt="" /><br />
+<em>上图展示了菲涅尔效应从弱到强的渐变</em></p>
+
+<h2 id="二-pbr基本原理和实现">二. PBR基本原理和实现</h2>
+
+<h3 id="21-pbr基础理论和推导">2.1 PBR基础理论和推导</h3>
+
+<p>本节的理论和推导尽量简化和精简，更深入的原理和理论将在下一章阐述。 满足以下条件的光照模型才能称之为PBR光照模型：</p>
+
+<ul>
+  <li>基于微平面模型（Be based on the microfacet surface model）。</li>
+  <li>能量守恒（Be energy conserving）。</li>
+  <li>使用基于物理的BRDF（Use a physically based BRDF）</li>
+</ul>
+
+<h4 id="211-微平面microfacet">2.1.1 微平面（Microfacet）</h4>
+<p>大多数PBR技术都是基于微平面理论。在此理论下，认为在微观上所有材质表面都是由很多朝向不一的微小平面组成，有的材质表面光滑一些，有的粗糙一些。真实世界的物体表面不一定是很多微小平面组成，也可能是带有弧度或者坑坑洼洼。但对于我们肉眼能观察到的维度，PBR的微观近似模拟方法产生的结果跟实际差别甚微。</p>
+
+<p><img src="/img/post-pbr/pbr39.png" alt="" /></p>
+
+<p>所有材质表面由粗糙度不同的微小平面组成。左边材质更粗糙，右边的平滑一些。</p>
+
+<p>当光线射入这些微平面后，通常会产生镜面反射。对于越粗糙的表面，由于其朝向更无序，反射的光线更杂乱，反之，平滑的微平面，反射的光线更平齐。</p>
+
+<p><img src="/img/post-pbr/pbr40.png" alt="" /></p>
+
+<p><em>图左边材质表面更粗糙，反射的光线更杂乱；图右的平滑许多，反射的光线更有规律</em></p>
+
+<p>从微观角度来说，没有任何表面是完全光滑的。由于这些微平面已经微小到无法逐像素地继续对其进行细分，因此我们只有假设一个粗糙度(Roughness，即2.4.1中提到的粗糙度)参数，然后用统计学的方法来概略的估算微平面的粗糙程度。</p>
+
+<p>我们可以基于一个平面的粗糙度来计算出某个向量的方向与微平面平均取向方向一致的概率。这个向量便是位于光线向量l和视线向量v之间的中间向量，被称为半角向量(Halfway Vector)。</p>
+
+<p><img src="/img/post-pbr/pbr41.png" alt="" /></p>
+
+<p>半角向量h是视线v和入射光l的中间单位向量。</p>
+
+<p>半角向量计算公式如下：</p>
+
+<script type="math/tex; mode=display">h = \frac{l + v}{\|l + v\|}</script>
+
+<p>半角向量计算GLSL实现:</p>
+
+<div class="language-c++ highlighter-rouge"><pre class="highlight"><code><span class="c1">// lightPos是光源位置，viewPos是摄像机位置，FragPos是像素位置
+</span><span class="n">vec3</span> <span class="n">lightDir</span>   <span class="o">=</span> <span class="n">normalize</span><span class="p">(</span><span class="n">lightPos</span> <span class="o">-</span> <span class="n">FragPos</span><span class="p">);</span>
+<span class="n">vec3</span> <span class="n">viewDir</span>    <span class="o">=</span> <span class="n">normalize</span><span class="p">(</span><span class="n">viewPos</span> <span class="o">-</span> <span class="n">FragPos</span><span class="p">);</span>
+<span class="n">vec3</span> <span class="n">halfwayDir</span> <span class="o">=</span> <span class="n">normalize</span><span class="p">(</span><span class="n">lightDir</span> <span class="o">+</span> <span class="n">viewDir</span><span class="p">);</span>
+</code></pre>
+</div>
+
+<p>越多的微平面取向与其半角向量一致，材质镜面反射越强越锐利。加上引入取值01的粗糙度，可以大致模拟微平面的整体取向。</p>
+
+<p><img src="/img/post-pbr/pbr42.png" alt="" /></p>
+
+<p><em>粗糙度从0.11.0的变化图。粗糙度越小，镜面反射越亮范围越小；粗糙度越大，镜面反射越弱。</em></p>
+
+<h4 id="212-能量守恒energy-conservation">2.1.2 能量守恒（Energy Conservation）</h4>
+<p>在微平面理论中，采用近似的能量守恒：出射光的总能量不超过入射光的总能量（自发光材质除外）。3.1.1的粗糙度变化图可以看出，材质粗糙度越大，反射的范围越大，但整体亮度变暗。那么PBR是如何实现近似的能量守恒呢？为了回答这个问题，先弄清楚镜面反射（specular）和漫反射（diffuse）的区别。</p>
+
+<p>一束光照到材质表面上，通常会分成反射（reflection）部分和折射（refraction）部分。反射部分直接从表面反射出去，而不进入物体内部，由此产生了镜面反射光。折射部分会进入物体内部，被吸收或者散射产生漫反射。折射进物体内部的光如果没有被立即吸收，将会持续前进，与物体内部的微粒产生碰撞，每次碰撞有一部分能量损耗转化成热能，直至光线能量全部消耗。有些折射光线在跟微粒发生若干次碰撞之后，从物体表面射出，便会形成漫反射光。</p>
+
+<p><img src="/img/post-pbr/pbr43.png" alt="" /></p>
+
+<p><em>照射在平面的光被分成镜面反射和折射光，折射光在跟物体微粒发生若干次碰撞之后，有可能发射出表面，成为漫反射</em></p>
+
+<p>通常情况下，PBR会简化折射光，将平面上所有折射光都视为被完全吸收而不会散开。而有一些被称为次表面散射(Subsurface Scattering)技术的着色器技术会计算折射光散开后的模拟，它们可以显著提升一些材质（如皮肤、大理石或蜡质）的视觉效果，不过性能也会随着下降。金属(Metallic)材质会立即吸收所有折射光，故而金属只有镜面反射，而没有折射光引起的漫反射。回到能量守恒话题。反射光与折射光它们二者之间是互斥的，被表面反射出去的光无法再被材质吸收。故而，进入材质内部的折射光就是入射光减去反射光后余下的能量。根据上面的能量守恒关系，可以先计算镜面反射部分，此部分等于入射光线被反射的能量所占的百分比。而折射部分可以由镜面反射部分计算得出。</p>
+
+<div class="language-c++ highlighter-rouge"><pre class="highlight"><code><span class="kt">float</span> <span class="n">kS</span> <span class="o">=</span> <span class="n">calculateSpecularComponent</span><span class="p">(...);</span> <span class="c1">// 反射/镜面部分
+</span><span class="kt">float</span> <span class="n">kD</span> <span class="o">=</span> <span class="mf">1.0</span> <span class="o">-</span> <span class="n">kS</span><span class="p">;</span>                        <span class="c1">// 折射/漫反射部分
+</span></code></pre>
+</div>
+
+<h4 id="213-反射方程reflectance-equation">2.1.3 反射方程（Reflectance Equation）</h4>
+
+<p>渲染方程(Render Equation)是用来模拟光的视觉效果最好的模型。而PBR的渲染方程是用以抽象地描述PBR光照计算过程的特化版本的渲染方程，被称为反射方程。PBR的反射方程可抽象成下面的形式：</p>
+
+<script type="math/tex; mode=display">L_o(p,\omega_o) = \int\limits_{\Omega} f_r(p,\omega_i,\omega_o) L_i(p,\omega_i) n \cdot \omega_i  d\omega_i</script>
+
+<p>反射方程看似很复杂，但如果拆分各个部分加以解析，就可以揭开其神秘的面纱。为了更好地理解反射方程，先了解辐射度量学(Radiometry)。辐射度量学是一种用来度量电磁场辐射（包括可见光）的手段。有很多种辐射度量(radiometric quantities)可以用来测量曲面或者某个方向上的光，此处只讨论和反射方程有关的一种量，它就是辐射率(Radiance)，用L来表示。</p>
+
+<table>
+  <thead>
+    <tr>
+      <th style="text-align: center">名称</th>
+      <th style="text-align: center">符号&amp;单位</th>
+      <th style="text-align: center">公式</th>
+      <th style="text-align: center">解析</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td style="text-align: center">辐射能量(Radiant energy)</td>
+      <td style="text-align: center">Q 焦耳(J)</td>
+      <td style="text-align: center">-</td>
+      <td style="text-align: center">电磁辐射能量</td>
+    </tr>
+    <tr>
+      <td style="text-align: center">辐射通量(Radiant Flux)</td>
+      <td style="text-align: center">Φ 瓦(W)</td>
+      <td style="text-align: center">$Φ=\frac{dQ}{dt}$</td>
+      <td style="text-align: center">单位时间辐射的能量，也叫辐射功率(Radiant Power)或通量(Flux)</td>
+    </tr>
+    <tr>
+      <td style="text-align: center">辐照度(Irradiance)</td>
+      <td style="text-align: center">E 瓦/平方米($W/m^2$)</td>
+      <td style="text-align: center">$Φ=\frac{dΦ}{dA^⊥}$</td>
+      <td style="text-align: center">到达单位面积的辐射通量</td>
+    </tr>
+    <tr>
+      <td style="text-align: center">辐射度(Radiosity)</td>
+      <td style="text-align: center">M 瓦/平方米($W/m^2$)</td>
+      <td style="text-align: center">$M=\frac{dΦ}{dA^⊥}$</td>
+      <td style="text-align: center">离开单位面积的辐射通量，也叫辐出度、辐射出射度（Radiant Existance）</td>
+    </tr>
+    <tr>
+      <td style="text-align: center">辐射强度(Radiant Intensity)</td>
+      <td style="text-align: center">I 瓦/立体弧度(W/sr)</td>
+      <td style="text-align: center">$I=\frac{dΦ}{dω}$</td>
+      <td style="text-align: center">通过单位立体角的辐射通量</td>
+    </tr>
+    <tr>
+      <td style="text-align: center">辐射率(Radiance)</td>
+      <td style="text-align: center">L 瓦/平方米立体弧度($W/m^2sr$)</td>
+      <td style="text-align: center">$L=\frac{dΦ}{dωdA^⊥}$</td>
+      <td style="text-align: center">通过单位面积单位立体角的辐射通量</td>
+    </tr>
+    <tr>
+      <td style="text-align: center">立体角(Solid Angle)</td>
+      <td style="text-align: center">ω 立体弧度，球面度(sr)</td>
+      <td style="text-align: center">$ω=\frac{S}{r^2}$</td>
+      <td style="text-align: center">是二维弧度在三维的扩展，1球面度等于单位球体的表面面积</td>
+    </tr>
+  </tbody>
+</table>
+
+<p>辐射率被用来量化单一方向上发射来的光线的大小或者强度。辐射率是由多个物理变量集合而成的，它涉及的物理变量有以下几种：</p>
+
+<ul>
+  <li>辐射通量(Radiant Flux)：辐射通量用符号Φ表示，表示一个光源输出的能量，以瓦特为单位。光是由多种不同波长的能量集合而成，每种波长与一种特定的（可见的）颜色相关。因此一个光源所放射出来的能量可以被视作这个光源包含的所有各种波长的一个函数。波长介于390nm（纳米）到700nm的光被认为是处于可见光光谱中，也就是说它们是人眼可见的波长。</li>
+</ul>
+
+<p><img src="/img/post-pbr/44.png" alt="" /></p>
+
+<p><em>上图展示了太阳光中不同波长的光所具有的能量。 传统物理学上的辐射通量将会计算这个由不同波长构成的函数的总面积，这种计算很复杂，耗费大量性能。在PBR技术中，不直接使用波长的强度，而是使用三原色编码（RGB）来简化辐射通量的计算。虽然这种简化会带来一些信息上的损失，但是这对于视觉效果上的影响基本可以忽略</em></p>
+
+<ul>
+  <li>立体角(Solid Angle)：用符号ω表示，它描述投射到单位球体上的一个截面的大小或者面积。</li>
+</ul>
+
+<p><img src="/img/post-pbr/45.png" alt="" /></p>
+
+<ul>
+  <li>辐射强度(Radiant Intensity)：用符号I表示，它描述的是在单位球面上，一个光源向每单位立体角所投送的辐射通量。举个例子，假设一个点光源向所有方向均匀地辐射能量，辐射强度就能计算出它在一个单位面积（立体角）内的能量大小：</li>
+</ul>
+
+<p><img src="/img/post-pbr/46.png" alt="" /></p>
+
+<p>计算辐射强度的公式：</p>
+
+<script type="math/tex; mode=display">I = \frac{d\Phi}{d\omega}</script>
+
+<p>其中I表示辐射通量Φ除以立体角ω的辐射强度。理解以上物理变量后，可以继续讨论辐射率方程了。下面方程代表的意义是：一个辐射强度为Φ的光通过立体角ω辐射在区域A的可被观察到的总能量。</p>
+
+<script type="math/tex; mode=display">L=\frac{I}{dA^\perp}=\frac{\frac{d\Phi}{d\omega}}{dA\cos\theta}=\frac{d\Phi}{ dA d\omega \cos\theta}</script>
+
+<p><img src="/img/post-pbr/47.png" alt="" /></p>
+
+<p>辐射率是一个区域内光照量的辐射学度量，按照光的入射（或者来源）角与平面法线的夹角θ计算cosθ。越是斜着照射在平面上光越弱，反之越是垂直照射在表面上的光越强，类似基础光照中的漫反射颜色计算，cosθ直接等于光的方向和表面法线的点积。</p>
+
+<div class="language-c++ highlighter-rouge"><pre class="highlight"><code><span class="kt">float</span> <span class="n">cosTheta</span> <span class="o">=</span> <span class="n">dot</span><span class="p">(</span><span class="n">lightDir</span><span class="p">,</span> <span class="n">N</span><span class="p">);</span> 
+</code></pre>
+</div>
+
+<p>上面的物理符号似乎和PBR的反射方程没有直接的关系。但是，如果将立体角ω跟区域A都看作无限小，就可以使用辐射率来分析一束光线打在空间上一个点的通量，也就是说能够计算单束光线对单个（片元）点的辐射率影响。进一步地，将立体角ω转化为方向向量ω，将区域A转化成点p，因此在shader中直接使用辐射率来计算单束光线对每个片元的贡献。实际上，当谈及光的辐射率时，通常只关注的是所有射入点p的光线，这些光的辐射度总和称为辐照度(Irradiance)。理解了辐射率和辐照度，回到反射方程：</p>
+
+<script type="math/tex; mode=display">L_o(p,\omega_o) = \int\limits_{\Omega} f_r(p,\omega_i,\omega_o) L_i(p,\omega_i) n \cdot \omega_i  d\omega_i</script>
+
+<p>渲染方程式中L代表某个点p的辐射率，而无限小的入射光的立体角$ω_i$可以看作入射光方向向量$ω_i$，将用来衡量入射光与平面法线夹角对能量的影响的cosθ分量移出辐射率方程，作为反射方程的单独项$n⋅ω_i$</p>
+
+<p>反射方程计算了点p在所有视线方向$ω_0$上被反射出来的辐射率$L_o(p,ω_o)$的总和。换言之：$L_0$计算的是在$ω_o$方向的眼睛观察到的p点的总辐照度</p>
+
+<p>反射方程里面使用的辐照度，必须要包含所有以p点为中心的半球Ω内的入射光，而不单单只是某一个方向的入射光。这个半球指的是围绕面法线n的那一个半球</p>
+
+<p><img src="/img/post-pbr/48.png" alt="" /></p>
+
+<p>为了计算这个区域（半球）内的所有值，在反射方程中使用了一个称作为积分的数学符号 ∫，来计算半球Ω内所有的入射向量$dω_i$</p>
+
+<p>积分计算面积的方法，有<strong>解析(analytically)和渐近(numerically)</strong>两种方法。目前尚没有可以满足渲染计算的解析法，所以只能选择离散渐近法来解决这个积分问题。具体做法是在半球Ω按一定的步长将反射方程离散地求解，然后再按照步长大小将所得到的结果平均化，这种方法被称为黎曼和(Riemann sum)。下面是实现的伪代码：</p>
+
+<div class="language-c++ highlighter-rouge"><pre class="highlight"><code><span class="kt">int</span> <span class="n">steps</span> <span class="o">=</span> <span class="mi">100</span><span class="p">;</span> <span class="c1">// 分段计算的数量，数量越多，计算结果越准确。
+</span><span class="kt">float</span> <span class="n">dW</span>  <span class="o">=</span> <span class="mf">1.0</span><span class="n">f</span> <span class="o">/</span> <span class="n">steps</span><span class="p">;</span>
+<span class="n">vec3</span> <span class="n">P</span>    <span class="o">=</span> <span class="p">...;</span>
+<span class="n">vec3</span> <span class="n">Wo</span>   <span class="o">=</span> <span class="p">...;</span>
+<span class="n">vec3</span> <span class="n">N</span>    <span class="o">=</span> <span class="p">...;</span>
+<span class="kt">float</span> <span class="n">sum</span> <span class="o">=</span> <span class="mf">0.0</span><span class="n">f</span><span class="p">;</span>
+<span class="k">for</span><span class="p">(</span><span class="kt">int</span> <span class="n">i</span> <span class="o">=</span> <span class="mi">0</span><span class="p">;</span> <span class="n">i</span> <span class="o">&lt;</span> <span class="n">steps</span><span class="p">;</span> <span class="o">++</span><span class="n">i</span><span class="p">)</span> 
+<span class="p">{</span>
+    <span class="n">vec3</span> <span class="n">Wi</span> <span class="o">=</span> <span class="n">getNextIncomingLightDir</span><span class="p">(</span><span class="n">i</span><span class="p">);</span>
+    <span class="n">sum</span> <span class="o">+=</span> <span class="n">Fr</span><span class="p">(</span><span class="n">P</span><span class="p">,</span> <span class="n">Wi</span><span class="p">,</span> <span class="n">Wo</span><span class="p">)</span> <span class="o">*</span> <span class="n">L</span><span class="p">(</span><span class="n">P</span><span class="p">,</span> <span class="n">Wi</span><span class="p">)</span> <span class="o">*</span> <span class="n">dot</span><span class="p">(</span><span class="n">N</span><span class="p">,</span> <span class="n">Wi</span><span class="p">)</span> <span class="o">*</span> <span class="n">dW</span><span class="p">;</span>
+<span class="p">}</span>
+</code></pre>
+</div>
+
+<p>dW的值越小结果越接近正确的积分函数的面积或者说体积，衡量离散步长的dW可以看作反射方程中的$dω_i$。积分计算中我们用到的dωi是线性连续的符号，跟代码中的dW并没有直接关系，但是这种方式有助于我们理解，而且这种离散渐近的计算方法总是可以得到一个很接近正确结果的值。值得一提的是，通过增加步骤数steps可以提高黎曼和的准确性，但计算量也会增大。</p>
+
+<p>反射方程加了所有的，以各个方向ωi射入半球Ω并打中点p的入射光，经过反射函数fr进入观察者眼睛的所有反射光Lo的辐射率之和。入射光辐射度可以由光源处获得，此外还可以利用一个环境贴图来测算所有入射方向上的辐射度。</p>
+
+<p>至此，反射方程中，只剩下$f_r$项未描述。$f_r$就是双向反射分布函数(Bidirectional Reflectance Distribution Function, BRDF)，它的作用是基于表面材质属性来对入射辐射度进行缩放或者加权。</p>
+
+<h4 id="214-双向反射分布函数brdf">2.1.4 双向反射分布函数（BRDF）</h4>
+
+<p>双向反射分布函数（Bidirectional Reflectance Distribution Function，BRDF）是一个使用入射光方向ωi作为输入参数的函数，输出参数为出射光ωo，表面法线为n，参数a表示的是微平面的粗糙度。</p>
+
+<p>BRDF函数是近似的计算在一个给定了属性的不透明表面上每个单独的光线对最终的反射光的贡献量。假如表面是绝对光滑的（比如镜子），对于所有入射光$ω_i$的BRDF函数都将会返回0.0，除非出射光线ωo方向的角度跟入射光线ωi方向的角度以面法线为中轴线完全对称，则返回1.0。</p>
+
+<p>BRDF对于材质的反射和折射属性的模拟基于之前讨论过的微平面理论，想要BRDF在物理上是合理的，就必须遵守能量守恒定律。比如反射光能量总和永远不应该超过入射光。技术上来说，Blinn-Phong光照模型跟BRDF一样使用了ωi跟$ω_o$作为输入参数，但是没有像基于物理的渲染这样严格地遵守能量守恒定律。</p>
+
+<p>BRDF有好几种模拟表面光照的算法，然而，基本上所有的实时渲染管线使用的都是Cook-Torrance BRDF。<br />
+Cook-Torrance BRDF分为漫反射和镜面反射两个部分：</p>
+
+<script type="math/tex; mode=display">f_r = k_d f_{lambert} +  k_s f_{cook-torrance}</script>
+
+<p>其中$k_d$是入射光中被折射的比例，$k_s$是另外一部分被镜面反射的入射光。BRDF等式左边的f_表示的是漫反射部分，这部分叫做伦勃朗漫反射（Lambertian Diffuse）。它类似于我们之前的漫反射着色，是一个恒定的算式：</p>
+
+<script type="math/tex; mode=display">f_{lambert} = \frac{c}{\pi}</script>
+
+<p>其中c代表的是Albedo或表面颜色，类似漫反射表面纹理。除以π是为了规格化漫反射光，为后期的BRDF积分做准备。</p>
+
+<blockquote>
+  <p>此处的伦勃朗漫反射跟以前用的漫反射之间的关系：以前的漫反射是用表面的漫反射颜色乘以法线与面法线的点积，这个点积依然存在，只不过是被移到了BRDF外面，写作n⋅ωi，放在反射方程Lo靠后的位置。</p>
 </blockquote>
 
-<p>PBS有一个大前提，就是它能够满足光能传播过程中的能量守衡。能量守衡体现在三个方面。</p>
+<p>BRDF的高光（镜面反射）部分更复杂：</p>
 
-<p>1、一个对象反射出来的光照信息，不可能超过它接受到的信息。也就是说，全反射是一个物体的极限。</p>
+<script type="math/tex; mode=display">f_{cook-torrance} = \frac{DFG}{4(\omega_o \cdot n)(\omega_i \cdot n)}</script>
 
-<p>2、一个物体越光亮，那么它的颜色信息应该越少。（可以看出，refection 和 diffuse 应该是一个插值关系）</p>
+<p>Cook-Torrance镜面反射BRDF由3个函数（D，F，G）和一个标准化因子构成。D，F，G符号各自近似模拟了特定部分的表面反射属性：</p>
 
-<p>3、一个物体越平滑，那么它的高亮点会越小，越亮。</p>
+<ul>
+  <li>D(Normal Distribution Function，NDF)：法线分布函数，估算在受到表面粗糙度的影响下，取向方向与中间向量一致的微平面的数量。这是用来估算微平面的主要函数。</li>
+  <li>F(Fresnel equation)：菲涅尔方程，描述的是在不同的表面角下表面反射的光线所占的比率。</li>
+  <li>G(Geometry function)：几何函数，描述了微平面自成阴影的属性。当一个平面相对比较粗糙的时候，平面表面上的微平面有可能挡住其他的微平面从而减少表面所反射的光线。</li>
+</ul>
 
-<p>下面以一个自己实现的 pbr 例子，例子下载地址，<a href="https://github.com/huailiang/pbr_proj">点击这里</a>。</p>
+<p>以上的每一种函数都是用来估算相应的物理参数的，而且你会发现用来实现相应物理机制的每种函数都有不止一种形式。它们有的非常真实，有的则性能高效。你可以按照自己的需求任意选择自己想要的函数的实现方法。</p>
 
-<p>关于 pbr shader的实现这里就不再赘述了，工程附带的 readme 推导公式、源码都给的很详细。本文主要是通过此例子来验证 pbr 的一些特性。</p>
+<p>Epic Games公司的Brian Karis对于这些函数的多种近似实现方式进行了大量的研究。这里将采用Epic Games在Unreal Engine 4中所使用的函数，其中D使用Trowbridge-Reitz GGX，F使用Fresnel-Schlick近似法(Approximation)，而G使用Smith’s Schlick-GGX。</p>
 
-<p>选中材质，开启 OpenDebug 选项。通过输出参数控制来调试 pbr 的各种效果。当然这些只是在编辑器里预览，游戏运行时，可以通过 material.DisableKeyword()来关闭此选项，来避免不必要的计算。</p>
+<h5 id="2141-dnormal-distribution-functionndf">2.1.4.1 D(Normal Distribution Function，NDF)</h5>
+<p>法线分布函数，从统计学上近似的表示了与某些（如中间）向量h取向一致的微平面的比率。</p>
 
-<p>我们都知道PBR 材质金属性越强，反射的光越少，因为大部分光都被金属吸收了，转化为热能或者说电能。<br />
-为了验证 pbr 这一特性，我们 debugmode 选中 Diffuse，如下图所示，拖拽 Matillic 属性来改变材质的金属性发现：matallic 值越大，材质的颜色越暗；反之，材质的颜色越亮。</p>
+<p>目前有很多种NDF都可以从统计学上来估算微平面的总体取向度，只要给定一些粗糙度的参数以及一个我们马上将会要用到的参数Trowbridge-Reitz GGX（GGXTR）：</p>
 
-<p><img src="/img/post-pbr/pbr1.jpg" alt="" /></p>
+<script type="math/tex; mode=display">NDF_{GGX TR}(n, h, \alpha) = \frac{\alpha^2}{\pi((n \cdot h)^2 (\alpha^2 - 1) + 1)^2}</script>
 
-<p>下面我们再验证 PBR 材质的能量守恒性质：</p>
+<p>这里的h是用来测量微平面的半角向量，α是表面的粗糙度，n是表面法线。 如果将h放到表面法线和光线方向之间，并使用不同的粗糙度作为参数，可以得到下面的效果</p>
 
-<p>我们把 Debug Mode 选中 None, 不要开启边缘发光效果，我们拖拽 Gloss 选项来改变材质的光滑度。通过滑动，我们可以发现，Gloss 越小，漫反射（高光部分）区域越大，但光线锐度越小；Gloss 越大，虽然高光区域越小，但光线的亮度越高，锐度越犀利。</p>
+<p><img src="/img/post-pbr/49.png" alt="" /></p>
 
-<p><img src="/img/post-pbr/pbr4.jpg" alt="" /></p>
+<p>当粗糙度很低（表面很光滑）时，与中间向量h取向一致的微平面会高度集中在一个很小的半径范围内。由于这种集中性，NDF最终会生成一个非常明亮的斑点。但是当表面比较粗糙的时候，微平面的取向方向会更加的随机，与向量h取向一致的微平面分布在一个大得多的半径范围内，但是较低的集中性也会让最终效果显得更加灰暗。</p>
 
-<p>更多的调试选项这里就不一一列举了，比如查看材质发现的方向，PBR 公式计算的过程中 法线分布函数、微平面遮挡系数、Fresnel 现象等等，等等都可以通过 DebugMode 来调试。</p>
+<p>Trowbridge-Reitz GGX的NDF实现代码：</p>
 
-<p><img src="/img/post-pbr/pbr6.jpg" alt="" /></p>
+<div class="language-c++ highlighter-rouge"><pre class="highlight"><code><span class="kt">float</span> <span class="nf">DistributionGGX</span><span class="p">(</span><span class="n">vec3</span> <span class="n">N</span><span class="p">,</span> <span class="n">vec3</span> <span class="n">H</span><span class="p">,</span> <span class="kt">float</span> <span class="n">a</span><span class="p">)</span>
+<span class="p">{</span>
+    <span class="kt">float</span> <span class="n">a2</span>     <span class="o">=</span> <span class="n">a</span><span class="o">*</span><span class="n">a</span><span class="p">;</span>
+    <span class="kt">float</span> <span class="n">NdotH</span>  <span class="o">=</span> <span class="n">max</span><span class="p">(</span><span class="n">dot</span><span class="p">(</span><span class="n">N</span><span class="p">,</span> <span class="n">H</span><span class="p">),</span> <span class="mf">0.0</span><span class="p">);</span>
+    <span class="kt">float</span> <span class="n">NdotH2</span> <span class="o">=</span> <span class="n">NdotH</span><span class="o">*</span><span class="n">NdotH</span><span class="p">;</span>
+	
+    <span class="kt">float</span> <span class="n">nom</span>    <span class="o">=</span> <span class="n">a2</span><span class="p">;</span>
+    <span class="kt">float</span> <span class="n">denom</span>  <span class="o">=</span> <span class="p">(</span><span class="n">NdotH2</span> <span class="o">*</span> <span class="p">(</span><span class="n">a2</span> <span class="o">-</span> <span class="mf">1.0</span><span class="p">)</span> <span class="o">+</span> <span class="mf">1.0</span><span class="p">);</span>
+    <span class="n">denom</span>        <span class="o">=</span> <span class="n">PI</span> <span class="o">*</span> <span class="n">denom</span> <span class="o">*</span> <span class="n">denom</span><span class="p">;</span>
+	
+    <span class="k">return</span> <span class="n">nom</span> <span class="o">/</span> <span class="n">denom</span><span class="p">;</span>
+<span class="p">}</span>
+</code></pre>
+</div>
 
-<p>然而，尽管实现了 pbr 的特性，往往却不能满足美术或者说策划大大们的需求，这些需求往往并不是更真实的着色，比如说我们在展示 avatar 的时候，需要一圈外发光效果。有时候外发光的颜色使我们场景里主光的颜色，有时外发光的颜色是某一个指定的颜色。</p>
+<h5 id="2142-ffresnel-equation">2.1.4.2 F(Fresnel equation)</h5>
 
-<p>在材质的选项中，我们没有勾选 SpecialRimColor,外发光的颜色为主光的颜色，当我们勾选之后，可以指定一个特定的外发光颜色。效果如下图所示：</p>
+<p>菲涅尔方程定义的是在不同观察方向上，表面上被反射的光除以被折射的光的比例。在一束光击中了表面的一瞬间，菲涅尔根据表面与观察方向之间的夹角，计算得到光被反射的百分比。根据这个比例和能量守恒定律我们可以直接知道剩余的能量就是会被折射的能量。</p>
 
-<p><img src="/img/post-pbr/pbr5.jpg" alt="" /></p>
+<p>当我们垂直观察每个表面或者材质时都有一个基础反射率，当我们以任意一个角度观察表面时所有的反射现象都会变得更明显（反射率高于基础反射率）。你可以从你身边的任意一件物体上观察到这个现象，当你以90度角观察你的桌子你会法线反射现象将会变得更加的明显，理论上以完美的90度观察任意材质的表面都应该会出现全反射现象（所有物体、材质都有菲涅尔现象）。菲涅尔方程同样是个复杂的方程，但是幸运的是菲涅尔方程可以使用Fresnel-Schlick来近似：</p>
 
-<p>处理半透明有多重方式，主要是 AlphaTest 和 AlphaBlend 两种。在例子的Example_ALPHA的 scene 中，我们给了四种 alpha 混合方式：Opaque、 Cutout、 CutoutTansparent、 Transparent四种裁剪方式。</p>
+<script type="math/tex; mode=display">F_{Schlick}(h, v, F_0) = 
+    F_0 + (1 - F_0) ( 1 - (h \cdot v))^5</script>
 
-<p><img src="/img/post-pbr/pbr2.jpg" alt="" /></p>
+<p>F0表示的是表面基础反射率，这个我们可以使用一种叫做Indices of refraction(IOR)的方法计算得到。运用在球面上的效果就是你看到的那样，观察方向越是接近掠射角（grazing angle，又叫切线角，与正视角相差90度），菲涅尔现象导致的反射就越强：</p>
 
-<p>Opaque 的渲染队列是Geometry， RenderType 是Opaque 效果是右下角，没有透明度也没有Alpha裁剪</p>
+<p><img src="/img/post-pbr/50.png" alt="" /></p>
 
-<p>Cutout 的渲染队列是AlphaTest，RenderType 是Opaque 效果如左下角，没有透明度但有 Alpha 裁剪</p>
+<p>菲涅尔方程中有几个微妙的地方，一个是Fresnel-Schlick算法仅仅是为电介质（绝缘体）表面定义的算法。对于金属表面，使用电介质的折射率来计算基础反射率是不合适的，我们需要用别的菲涅尔方程来计算。对于这个问题，我们需要预先计算表面在正视角(即以0度角正视表面)下的反应（F0），然后就可以跟之前的Fresnel-Schlick算法一样，根据观察角度来进行插值。这样我们就可以用一个方程同时计算金属和电介质了。</p>
 
-<p>CutoutTransparent 渲染队列是Transparent， RenderType 是TransparentCutout， 有透明度也有 Alha 裁剪</p>
+<p>表面在正视角下的反映或者说基础反射率可以在这个数据库中找到，下面是Naty Hoffman的在SIGGRAPH公开课中列举的一些常见材质</p>
 
-<p>Transparent 的渲染队列是Transparent， RenderType 是Transparent， 有透明度 Alpha混合处理</p>
+<p><img src="/img/post-pbr/51.png" alt="" /></p>
 
-<p>结语：我们可以使用 PBR，当然也可以再之基础上添加更多的效果，艺术的大脑是无限的。</p>
+<p>这里可以观察到的一个有趣的现象，所有电介质材质表面的基础反射率都不会高于0.17，这其实是例外而非普遍情况。导体材质表面的基础反射率起点更高一些并且（大多）在0.5和1.0之间变化。此外，对于导体或者金属表面而言基础反射率一般是带有色彩的，这也是为什么要用RGB三原色来表示的原因（法向入射的反射率可随波长不同而不同）。这种现象我们只能在金属表面观察的到。</p>
 
+<blockquote>
+  <p>金属表面这些和电介质表面相比所独有的特性引出了所谓的金属工作流的概念。也就是我们需要额外使用一个被称为金属度(Metalness)的参数来参与编写表面材质。金属度用来描述一个材质表面是金属还是非金属的。</p>
+</blockquote>
+
+<p>通过预先计算电介质与导体的值，我们可以对两种类型的表面使用相同的Fresnel-Schlick近似，但是如果是金属表面的话就需要对基础反射率添加色彩。我们一般是按下面这个样子来实现的：</p>
+
+<div class="language-c++ highlighter-rouge"><pre class="highlight"><code><span class="n">vec3</span> <span class="n">F0</span> <span class="o">=</span> <span class="n">vec3</span><span class="p">(</span><span class="mf">0.04</span><span class="p">);</span>
+<span class="n">F0</span>      <span class="o">=</span> <span class="n">mix</span><span class="p">(</span><span class="n">F0</span><span class="p">,</span> <span class="n">surfaceColor</span><span class="p">.</span><span class="n">rgb</span><span class="p">,</span> <span class="n">metalness</span><span class="p">);</span>
+</code></pre>
+</div>
+
+<p>我们为大多数电介质表面定义了一个近似的基础反射率。F0取最常见的电解质表面的平均值，这又是一个近似值。不过对于大多数电介质表面而言使用0.04作为基础反射率已经足够好了，而且可以在不需要输入额外表面参数的情况下得到物理可信的结果。然后，基于金属表面特性，我们要么使用电介质的基础反射率要么就使用F0作来为表面颜色。因为金属表面会吸收所有折射光线而没有漫反射，所以我们可以直接使用表面颜色纹理来作为它们的基础反射率。</p>
+
+<p>Fresnel Schlick近似可以用GLSL代码实现：</p>
+
+<div class="language-c++ highlighter-rouge"><pre class="highlight"><code><span class="n">vec3</span> <span class="nf">fresnelSchlick</span><span class="p">(</span><span class="kt">float</span> <span class="n">cosTheta</span><span class="p">,</span> <span class="n">vec3</span> <span class="n">F0</span><span class="p">)</span>
+<span class="p">{</span>
+    <span class="k">return</span> <span class="n">F0</span> <span class="o">+</span> <span class="p">(</span><span class="mf">1.0</span> <span class="o">-</span> <span class="n">F0</span><span class="p">)</span> <span class="o">*</span> <span class="n">pow</span><span class="p">(</span><span class="mf">1.0</span> <span class="o">-</span> <span class="n">cosTheta</span><span class="p">,</span> <span class="mf">5.0</span><span class="p">);</span>
+<span class="p">}</span>
+</code></pre>
+</div>
+
+<p>其中cosTheta是表面法向量n与观察方向v的点乘的结果。</p>
+
+<h5 id="2143-ggeometry-function">2.1.4.3 G(Geometry function)</h5>
+
+<p>几何函数模拟微平面相互遮挡导致光线的能量减少或丢失的现象。</p>
+
+<p><img src="/img/post-pbr/52.png" alt="" /></p>
+
+<p>类似NDF，几何函数也使用粗糙度作为输入参数，更粗糙意味着微平面产生自阴影的概率更高。几何函数使用由GGX和Schlick-Beckmann组合而成的模拟函数Schlick-GGX：</p>
+
+<script type="math/tex; mode=display">G_{SchlickGGX}(n, v, k)  = \frac{n \cdot v}{(n \cdot v)(1 - k) + k }</script>
+
+<p>这里的k是使用粗糙度α计算而来的，用于直接光照和IBL光照的几何函数的参数：</p>
+
+<script type="math/tex; mode=display">k_{direct} = \frac{(\alpha + 1)^2}{8}</script>
+
+<script type="math/tex; mode=display">k_{IBL} = \frac{\alpha^2}{2}</script>
+
+<p>需要注意的是这里α的值取决于你的引擎怎么将粗糙度转化成α，在接下来的教程中我们将会进一步讨论如何和在什么地方进行这个转换。为了有效地模拟几何体，我们需要同时考虑两个视角，视线方向（几何遮挡）跟光线方向（几何阴影），我们可以用Smith函数将两部分放到一起：</p>
+
+<script type="math/tex; mode=display">G(n, v, l, k) = G_{sub}(n, v, k) G_{sub}(n, l, k)</script>
+
+<p>其中v表示视线向量，G(n,v,k)表示视线方向的几何遮挡；l表示光线向量，G(n,l,k)表示光线方向的几何阴影。使用Smith函数与Schlick-GGX作为G_可以得到如下所示不同粗糙度R的视觉效果：</p>
+
+<p><img src="/img/post-pbr/53.png" alt="" /></p>
+
+<p>几何函数是一个值域为[0.0, 1.0]的乘数，其中白色(1.0)表示没有微平面阴影，而黑色(0.0)则表示微平面彻底被遮蔽。使用GLSL编写的几何函数代码如下：</p>
+
+<div class="language-c++ highlighter-rouge"><pre class="highlight"><code><span class="kt">float</span> <span class="nf">GeometrySchlickGGX</span><span class="p">(</span><span class="kt">float</span> <span class="n">NdotV</span><span class="p">,</span> <span class="kt">float</span> <span class="n">k</span><span class="p">)</span>
+<span class="p">{</span>
+    <span class="kt">float</span> <span class="n">nom</span>   <span class="o">=</span> <span class="n">NdotV</span><span class="p">;</span>
+    <span class="kt">float</span> <span class="n">denom</span> <span class="o">=</span> <span class="n">NdotV</span> <span class="o">*</span> <span class="p">(</span><span class="mf">1.0</span> <span class="o">-</span> <span class="n">k</span><span class="p">)</span> <span class="o">+</span> <span class="n">k</span><span class="p">;</span>
+    <span class="k">return</span> <span class="n">nom</span> <span class="o">/</span> <span class="n">denom</span><span class="p">;</span>
+<span class="p">}</span>
+  
+<span class="kt">float</span> <span class="nf">GeometrySmith</span><span class="p">(</span><span class="n">vec3</span> <span class="n">N</span><span class="p">,</span> <span class="n">vec3</span> <span class="n">V</span><span class="p">,</span> <span class="n">vec3</span> <span class="n">L</span><span class="p">,</span> <span class="kt">float</span> <span class="n">k</span><span class="p">)</span>
+<span class="p">{</span>
+    <span class="kt">float</span> <span class="n">NdotV</span> <span class="o">=</span> <span class="n">max</span><span class="p">(</span><span class="n">dot</span><span class="p">(</span><span class="n">N</span><span class="p">,</span> <span class="n">V</span><span class="p">),</span> <span class="mf">0.0</span><span class="p">);</span>
+    <span class="kt">float</span> <span class="n">NdotL</span> <span class="o">=</span> <span class="n">max</span><span class="p">(</span><span class="n">dot</span><span class="p">(</span><span class="n">N</span><span class="p">,</span> <span class="n">L</span><span class="p">),</span> <span class="mf">0.0</span><span class="p">);</span>
+    <span class="kt">float</span> <span class="n">ggx1</span> <span class="o">=</span> <span class="n">GeometrySchlickGGX</span><span class="p">(</span><span class="n">NdotV</span><span class="p">,</span> <span class="n">k</span><span class="p">);</span> <span class="c1">// 视线方向的几何遮挡
+</span>    <span class="kt">float</span> <span class="n">ggx2</span> <span class="o">=</span> <span class="n">GeometrySchlickGGX</span><span class="p">(</span><span class="n">NdotL</span><span class="p">,</span> <span class="n">k</span><span class="p">);</span> <span class="c1">// 光线方向的几何阴影
+</span>    <span class="k">return</span> <span class="n">ggx1</span> <span class="o">*</span> <span class="n">ggx2</span><span class="p">;</span>
+<span class="p">}</span>
+</code></pre>
+</div>
+
+<h5 id="2144-cook-torrance反射方程cook-torrance-reflectance-equation">2.1.4.4 Cook-Torrance反射方程(Cook-Torrance reflectance equation)</h5>
+
+<p>Cook-Torrance反射方程中的每一个部分我们我们都用基于物理的BRDF替换，可以得到最终的反射方程：</p>
+
+<script type="math/tex; mode=display">L_o(p,\omega_o) = \int\limits_{\Omega} 
+    	(k_d\frac{c}{\pi} + \frac{DFG}{4(\omega_o \cdot n)(\omega_i \cdot n)})
+    	L_i(p,\omega_i) n \cdot \omega_i  d\omega_i</script>
+
+<h4 id="215-制作pbr材质">2.1.5 制作PBR材质</h4>
+
+<p>对PBR数学模型有了基本了解之后，我们最后要讨论的是美工应该生成怎样的材质属性，让我们可以直接用在PBR渲染管线里。PBR管线中需要的所有材质参数都可以使用纹理来定义或者模拟，使用纹理我们可以逐像素控制制定的面如何跟光线交互：这个点是否是金属，粗糙度如何又或者表面对不同波长的光有什么反映。</p>
+
+<p>下面是在PBR渲染管线中经常用到的纹理：</p>
+
+<p><img src="/img/post-pbr/54.png" alt="" /></p>
+
+<p>下面的参数跟2.4 PBR在游戏引擎的应用描述的很多参数基本一致。</p>
+
+<ul>
+  <li>
+    <p><strong>反射率（Albedo）</strong> 反射率纹理指定了材质表面每个像素的颜色，如果材质是金属那纹理包含的就是基础反射率。这个跟我们之前用过的漫反射纹理非常的类似，但是不包含任何光照信息。漫反射纹理通常会有轻微的阴影和较暗的裂缝，这些在Albedo贴图里面都不应该出现，仅仅只包含材质的颜色（金属材质是基础反射率）。</p>
+  </li>
+  <li>
+    <p><strong>法线（Normal）</strong> 法线纹理跟我们之前使用的是完全一样的。法线贴图可以逐像素指定表面法线，让平坦的表面也能渲染出凹凸不平的视觉效果。</p>
+  </li>
+  <li>
+    <p><strong>金属度（Metallic）</strong> 金属度贴图逐像素的指定表面是金属还是电介质。根据PBR引擎各自的设定，金属程度即可以是[0.0，1.0]区间的浮点值也可以是非0即1的布尔值。</p>
+  </li>
+  <li>
+    <p><strong>粗糙度（Roughness）</strong> 粗糙度贴图逐像素的指定了表面有多粗糙，粗糙度的值影响了材质表面的微平面的平均朝向，粗糙的表面上反射效果更大更模糊，光滑的表面更亮更清晰。有些PBR引擎用光滑度贴图替代粗糙度贴图，因为他们觉得光滑度贴图更直观，将采样出来的光滑度使用（1-光滑度）= 粗糙度 就能转换成粗糙度了。</p>
+  </li>
+  <li>
+    <p><strong>环境光遮挡（Ambient Occlusion，AO）</strong> AO贴图为材质表面和几何体周边可能的位置，提供了额外的阴影效果。比如有一面砖墙，在两块砖之间的缝隙里Albedo贴图包含的应该是没有阴影的颜色信息，而让AO贴图来指定这一块需要更暗一些，这个地方光线更难照射到。AO贴图在光照计算的最后一步使用可以显著的提高渲染效果，模型或者材质的AO贴图一般是在建模阶段手动生成的。</p>
+  </li>
+</ul>
+
+<p>美术可以直接根据物体在真实世界里的物理属性，来设置和调整用于渲染的基于物理的材质。基于物理的渲染管线最大的优势在于，材质的物理属性是不变的，无论环境光怎么样设置都能得到一个接近真实的渲染结果，这让美术的人生都变得美好了。基于物理管线的材质可以很简单的移植到不同的渲染引擎，不管光照环境如何都能正确的渲染出一个自然的结果。</p>
+
+<h3 id="22-pbr的光照实现">2.2 PBR的光照实现</h3>
+
+<p>2.1章节阐述了Cook-Torrance反射方程的理论和公式意义。这节将探讨如何将前面讲到的理论转化成一个基于直接光照的渲染器：比如点光源，方向光和聚光灯。</p>
+
+<h4 id="221-辐照度计算">2.2.1 辐照度计算</h4>
+<p>2.1章节解释了Cook-Torrance反射方程的大部分含义，但有一点未提及：具体要怎么处理场景中的辐照度（Irradiance，也就是辐射的总能量L）？在计算机领域，场景的辐射率L度量的是来自光源光线的辐射通量ϕ穿过指定的立体角ω，在这里我们假设立体角ω无限小，小到辐射度衡量的是光源射出的一束经过指定方向向量的光线的通量。</p>
+
+<p>有了这个假设，我们又要怎么将之融合到之前教程讲的光照计算里去呢？想象我们有一个辐射通量以RGB表示为（23.47, 21.31, 20.79）的点光源，这个光源的辐射强度等于辐射通量除以所有出射方向。当为平面上某个特定的点p着色的时候，所有可能的入射光方向都会经过半球Ω，但只有一个入射方向ωi是直接来自点光源的，又因为我们的场景中只包含有一个光源，且这个光源只是一个点，所以p点所有其它的入射光方向的辐射率都应该是0.</p>
+
+<p>如果我们暂时不考虑点光源的距离衰减问题，且无论光源放在什么地方入射光线的辐射率都一样大（忽略入射光角度cosθ对辐射度的影响），又因为点光源朝各个方向的辐射强度都是一样的，那么有效的辐射强度就跟辐射通量完全一样：恒定值（23.47, 21.31, 20.79）。</p>
+
+<p>然而，辐射率需要使用位置p作为输入参数，因为现实中的灯光根据点p和光源之间距离的不同，辐射强度多少都会有一定的衰减。另外，从原始的辐射方程中我们可以发现，面法线n于入射光方向向量ωi的点积也会影响结果。</p>
+
+<p>用更精炼的话来描述：在点光源直接光照的情况里，辐射率函数L计算的是灯光颜色，经过到p点距离的衰减之后，再经过n⋅ωi缩放。能击中点p的光线方向ωi就是从p点看向光源的方向。把这些写成代码：</p>
+
+<div class="language-c++ highlighter-rouge"><pre class="highlight"><code><span class="n">ec3</span>  <span class="n">lightColor</span>  <span class="o">=</span> <span class="n">vec3</span><span class="p">(</span><span class="mf">23.47</span><span class="p">,</span> <span class="mf">21.31</span><span class="p">,</span> <span class="mf">20.79</span><span class="p">);</span>
+<span class="n">vec3</span>  <span class="n">wi</span>          <span class="o">=</span> <span class="n">normalize</span><span class="p">(</span><span class="n">lightPos</span> <span class="o">-</span> <span class="n">fragPos</span><span class="p">);</span>
+<span class="kt">float</span> <span class="n">cosTheta</span>    <span class="o">=</span> <span class="n">max</span><span class="p">(</span><span class="n">dot</span><span class="p">(</span><span class="n">N</span><span class="p">,</span> <span class="n">Wi</span><span class="p">),</span> <span class="mf">0.0</span><span class="p">);</span>
+<span class="c1">// 计算光源在点fragPos的衰减系数
+</span><span class="kt">float</span> <span class="n">attenuation</span> <span class="o">=</span> <span class="n">calculateAttenuation</span><span class="p">(</span><span class="n">fragPos</span><span class="p">,</span> <span class="n">lightPos</span><span class="p">);</span> 
+<span class="c1">// 英文原版的radiance类型有误，将它改成了vec3
+</span><span class="n">vec3</span> <span class="n">radiance</span>  <span class="o">=</span> <span class="n">lightColor</span> <span class="o">*</span> <span class="p">(</span><span class="n">attenuation</span> <span class="o">*</span> <span class="n">cosTheta</span><span class="p">);</span>
+</code></pre>
+</div>
+
+<p>你应该非常非常熟悉这段代码：这就是以前我们计算漫反射光的算法！在只有单光源直接光照的情况下，辐射率的计算方法跟我们以前的光照算法是类似的。</p>
+
+<blockquote>
+  <p>要注意我们这里假设点光源无限小，只是空间中的一个点。如果我们使用有体积的光源模型，那么就有很多的入射光方向的辐射率是非0的。</p>
+</blockquote>
+
+<p>对那些基于点的其他类型光源我们可以用类似的方法计算辐射率，比如平行光源的入射角的恒定的且没有衰减因子，聚光灯没有一个固定的辐射强度，而是围绕一个正前方向量来进行缩放的。</p>
+
+<p>这也将我们带回了在表面半球Ω的积分∫。我们知道，多个单一位置的光源对同一个表面的同一个点进行光照着色并不需要用到积分，我们可以直接拿出这些数目已知的光源来，分别计算这些光源的辐照度后再加到一起，毕竟每个光源只有一束方向光能影响物体表面的辐射率。这样只需要通过相对简单的循环计算每个光源的贡献就能完成整个PBR光照计算。当我们需要使用IBL将环境光加入计算的时候我们才会需要用到积分，因为环境光可能来自任何方向。</p>
+
+<h4 id="222-线性和hdr渲染">2.2.2 线性和HDR渲染</h4>
+
+<p>假设所有计算都在线性空间，为了使用这个结果我们还需要在着色器的最后进行伽马校正（Gamma Correct），在线性空间计算光照对于PBR是非常非常重要的，所有输入参数同样要求是线性的，不考虑这一点将会得到错误的光照结果。</p>
+
+<p>另外，我们希望输入的灯光参数更贴近实际的物理参数，比如他们的辐射度或者颜色值可以是一个非常宽广的值域。这样作为结果输出的Lo也将变得很大，如果我们不做处理默认会直接Clamp到0.0至1.0之间以适配低动态范围（LDR）输出方式。</p>
+
+<p>为了有效解决Lo的值域问题，我们可以使用色调映射（Tone Map）和曝光控制（Exposure Map），用它们将Lo的高动态范围（HDR）映射到LDR之后再做伽马校正：</p>
+
+<div class="language-c++ highlighter-rouge"><pre class="highlight"><code><span class="n">color</span> <span class="o">=</span> <span class="n">color</span> <span class="o">/</span> <span class="p">(</span><span class="n">color</span> <span class="o">+</span> <span class="n">vec3</span><span class="p">(</span><span class="mf">1.0</span><span class="p">));</span> <span class="c1">// 色调映射
+</span><span class="n">color</span> <span class="o">=</span> <span class="n">pow</span><span class="p">(</span><span class="n">color</span><span class="p">,</span> <span class="n">vec3</span><span class="p">(</span><span class="mf">1.0</span><span class="o">/</span><span class="mf">2.2</span><span class="p">));</span> 	 <span class="c1">// 伽马校正
+</span></code></pre>
+</div>
+
+<p>这里我们使用的是莱因哈特算法（Reinhard operator）对HDR进行Tone Map操作，尽量在伽马矫正之后还保持高动态范围。我们并没有分开帧缓冲或者使用后处理，所以我们可以直接将Tone Mapping和伽马矫正放在前向片元着色器（forward fragment shader）</p>
+
+<h3 id="23-基于图像的光照image-based-lightingibl">2.3 基于图像的光照（Image Based Lighting，IBL）</h3>
+
+<p>基于图像的光照（IBL）是对光源物体的技巧集合，与直接光照不同，它将周围环境当成一个大光源。IBL通常结合cubemap环境贴图，cubemap通常采集自真实的照片或从3D场景生成，这样可以将其用于光照方程：将cubemap的每个像素当成一个光源。这样可以更有效地捕获全局光照和常规感观，使得被渲染的物体更好地融入所处的环境中。</p>
+
+<p>当基于图像的光照算法获得一些（全局的）环境光照时，它的输入被当成更加精密形式的环境光照，甚至是一种粗糙的全局光照的模拟。这使得IBL有助于PBR的渲染，使得物体渲染效果更真实。</p>
+
+<p>在介绍IBL结合PBR之前，先回顾一下反射方程：</p>
+
+<script type="math/tex; mode=display">L_o(p,\omega_o) = \int\limits_{\Omega} 
+    	(k_d\frac{c}{\pi} + k_s\frac{DFG}{4(\omega_o \cdot n)(\omega_i \cdot n)})
+    	L_i(p,\omega_i) n \cdot \omega_i  d\omega_i</script>
+
+<p>如之前所述，我们的主目标是解决所有入射光wi通过半球Ω的积分∫。与直接光照不同的是，在IBL中，每一个来自周围环境的入射光ωi都可能存在辐射，这些辐射对解决积分有着重要的作用。为解决积分有两个要求：</p>
+
+<ul>
+  <li>需要用某种方法获得给定任意方向向量ωi的场景辐射。</li>
+  <li>解决积分需尽可能快并实时。</li>
+</ul>
+
+<h2 id="三-进阶pbr核心理论和原理">三. 进阶：PBR核心理论和原理</h2>
+
+<h3 id="31-再论pbr核心理论">3.1 再论PBR核心理论</h3>
+<p>上章讲述了符合PBR必须满足以下3个条件：</p>
+
+<ul>
+  <li>基于微平面模型（Be based on the microfacet surface model）。该模型将物体表面建模成无数微观尺度上有随机朝向的理想镜面反射的小平面（microfacet）。微观几何（microgeometry）是在不同微表面改变其法线，从而改变反射和折射光的方向。常用统计方法处理微观几何现象，将表面视为具有微观结构法线的随机分布，在宏观表面视为在每个点处多个方向上反射（和折射）光的总和。</li>
+  <li>能量守恒 （Energy Conservation）。出射光线的能量永远不能大于入射光线的能量。随着表面粗糙度的增加，镜面反射区域的面积会增加，但平均亮度则会下降。</li>
+  <li>使用基于物理的BRDF（Use a physically based BRDF）。Cook-Torance的BRDF是实时渲染领域最普遍的PBR光照模型，上章详述了其原理和实现。它是数学和物理领域里诸多知识的综合体。</li>
+</ul>
+
+<h3 id="32-光的性质">3.2 光的性质</h3>
+
+<h4 id="321-光是什么">3.2.1 光是什么？</h4>
+<p>有人说光是粒子，有人说光是电磁，有人说光是一种波，有人说光是一种能量，还有人说光是量子，那么光到底是什么？</p>
+
+<p>狭义上说，光是电磁辐射的某一部分内人眼可见的电磁频谱，即可见光，它是人眼可感知的可见光谱，是造成视觉的原因。</p>
+
+<p>可见光通常被定义为具有波长在400-700纳米（nm）的范围内，不可见的有红外线（具有更长的波长）和紫外线（具有更短的波长）。</p>
+
+<p>广义上说，光指的是任何波长的电磁辐射，无论是否可见。包括伽马射线、X射线、微波和无线电波。而可见光（400-700纳米）只是所有波长区域的一小部分：</p>
+
+<p><img src="/img/post-pbr/60.png" alt="" /></p>
+
+<h4 id="322-电磁频谱和可见光electromagnetic-spectrum-and-visible-light">3.2.2 电磁频谱和可见光（Electromagnetic spectrum and visible light）</h4>
+<p>电磁辐射（Electromagnetic Radiation，EMR）按波长从长到短分为：无线电波、微波、红外线、可见光、紫外线、X射线和伽玛射线。</p>
+
+<p>EMR的行为取决于其波长。较高频率具有较短波长，较低频率具有较长波长。不同波长的电磁辐射携带着不同的能量。当EMR与单个原子和分子相互作用时，其行为取决于它携带的每个量子的能量。</p>
+
+<p>不同波长的可见光代表着不同的颜色。太阳光、日光灯等可见光是一组不同波长的电磁辐射的集合，在三棱镜下可以被分离出不同的颜色</p>
+
+<p><img src="/img/post-pbr/61.gif" alt="" /></p>
+
+<p>不同来源对可见光的定义略有不同，有的将可见光定义为狭窄的420-680nm，有的宽达380-800nm。在理想的实验室条件下，人们可以看到至少1050纳米的红外线; 儿童和年轻人可能会感知波长低至约310-313纳米的紫外线。</p>
+
+<p><img src="/img/post-pbr/62.png" alt="" /></p>
+
+<h3 id="323-人眼感知可见光原理">3.2.3 人眼感知可见光原理</h3>
+<p>上节阐述了可见光的范围和简单的感知理论，本小节将深入阐述人类为什么会感知并且只感知波长为380-800纳米的可见光。</p>
+
+<p>首先要了解人眼的结构和视觉的分子机制。</p>
+
+<p>人眼的结构类似于一架高精度的照相机，光线穿过透明的角膜（cornea）和虹膜（iris）包围的瞳孔（pupil），经过晶状体（lens）的折射在视网膜（retina）上形成空间分布的像。而视网膜上则分布着主要检测光强度的视杆细胞（rod cell）和主要检测颜色的视锥细胞,它们是视觉形成的细胞基础。</p>
+
+<p>视杆细胞与视锥细胞对光的响应程度虽然略有差异，但它们发生光响应的机制都是类似的。以视杆细胞上的视紫红质（rhodopsin）为例，它由一个细胞膜上的七次跨膜蛋白（视蛋白，opsin）和视黄醛（retinal）辅基组成。视蛋白是G蛋白偶联受体（GPCR）的一种，视黄醛辅基以共价键结合在其第七个跨膜α螺旋片段的赖氨酸残基上。</p>
+
+<p>视黄醛分子是由维生素 A 氧化而来的，一个维生素 A 分子氧化得到一个视黄醛。视黄醛具有两种构型：11 位顺式（11-cis）和 全反式（All-trans），正常与视蛋白结合的是 11 位顺式构型。恰巧在可见光（对视紫红质而言是波长 500 nm 左右的电磁波）照射下，11 位顺式构型可以转变为全反式构型，从而导致视黄醛辅基从视蛋白上脱离。辅基的脱离造成视紫红质构象变化，经过信号转导导致细胞膜内外离子电位发生变化，产生神经电信号。这一信号经过视神经传入大脑，就使得我们产生了视觉。</p>
+
+<h4 id="324-光的来源">3.2.4 光的来源</h4>
+<p>众所皆知，光是电磁波，而物质是由原子组成，原子是由原子核与核外运转着的电子组成。那么，物质原子中的电磁波是哪里来的？电磁波难道会无中生有？</p>
+
+<p>奥斯特实验发现了直流导线的周围产生磁场，因为电子的运动伴生着磁场。电子的运动分为线性运动和振动：</p>
+
+<ul>
+  <li>线性运动：电子的线性运动是核外电子的绕核运动及在导电时电子的流动，它所伴生电磁波的宏观表现是磁场。电子的线性运动不是产生光的原因。</li>
+  <li>振动：电子的振动与发光息息相关，它会使电磁脱离场源形成电磁波，也就是产生了光，而不是所谓的光子。引起电子振动有两种原因：
+    <ul>
+      <li>一是高温物质核外电子的跃迁引发的振动，这种振动需要物质的温度大大高于环境温度，运转速率很高的核外电子跃迁辐射才能达到可见光的频率。这种高温物质核外电子的跃迁辐射所形成发光的光源叫热光源。岩浆、铁水、火焰、灯丝等高温物质的发光属于热光源。</li>
+      <li>二是电子在磁场或电场的作用下引发的受激振动，这样的电子振动与温度无关、与核外电子运转速率无关。这种不需要高温而使电子振动所形成辐射的光源叫冷光源。日光灯、节能灯、极光、萤火虫的发光、半导体发光（LED）等属于冷光源。</li>
+    </ul>
+  </li>
+</ul>
+
+<h3 id="33-光学原理optics-theory">3.3 光学原理（Optics theory）</h3>
+<p>光学（Optics）是物理学的一个分支，研究光的行为和性质，包括它与物质的相互作用以及使用或检测它的仪器的结构。</p>
+
+<p>光学通常描述可见光、紫外光和红外光的行为。由于光是电磁波，其它波段的电磁辐射（如X射线、微波和无线电波）表现出类似的特性。</p>
+
+<p>光学按照不同角度、不同粒度和不同侧重点大致可以分为以下几类：</p>
+
+<ul>
+  <li>电磁光学。将光分为大多数光学现象可以使用光的经典电磁描述来解释。然而，光的完整电磁描述通常难以应用于实践中，需要借助其它光学类型。</li>
+  <li>几何光学。几何光学系统将光线视为一组光线，它们以直线传播，并在通过或从表面反射时弯曲。是物理应用中简化的一种模型。由于PBR的BRDF几乎都是基于几何光学，后面章节会侧重地介绍几何光学。</li>
+  <li>物理光学。物理光学是一种更全面的光模型，包括衍射和干涉等波效应几何光学中无法解释的。历史上，首先开发基于射线的光模型，然后是波的光模型。19世纪电磁理论的进步才发现光波实际上是电磁辐射。<br />
+运动物理光学。主要研究天体运动的光速差、光漂移、多普勒效应等。当前已经发展成一支庞大的独立的物理分支。</li>
+  <li>量子光学。一些现象取决于光具有波状和粒子状特性的事实。这些效应的解释需要量子力学。当考虑光的粒子特性时，光被建模为称为“光子” 的粒子集合。量子光学涉及量子力学在光学系统中的应用。</li>
+</ul>
+
+<p>光学与许多相关学科联合进行研究，包括天文学、工程领域、摄影、计算机和医学等等。光学的应用存在于各种日常物品中，包括镜子、透镜、望远镜、显微镜、激光器和光纤等等。</p>
+
+<h1 id="参考文献"><strong>参考文献</strong></h1>
+
+<ul>
+  <li><strong>书籍</strong>
+    <ul>
+      <li><a href="http://www.pbr-book.org/3ed-2018/contents.html">《Physically Based Rendering（ Third Edition）》</a></li>
+      <li>《Real-Time Rendering（4th Edition）》</li>
+      <li>《Physically Based Shader Development for Unity》</li>
+      <li>《Principles of Optics, 6th Edition》 (by MAX BORN and EMIL WOLF)</li>
+      <li>《数学物理学百科全书(卷04)：规范场论》</li>
+      <li>《数学物理学百科全书(卷05)：广义相对论》</li>
+      <li>《Ray Tracing Gems》</li>
+      <li><a href="https://developer.nvidia.com/gpugems/GPUGems/gpugems_pref01.html">《GPU Gems》</a></li>
+      <li><a href="https://developer.nvidia.com/gpugems/GPUGems2/gpugems2_inside_front_cover.html">《GPU Gems 2》</a></li>
+      <li><a href="https://developer.nvidia.com/gpugems/GPUGems3/gpugems3_pref01.html">《GPU Gems 3》</a></li>
+      <li>《高等数学微积分(北大版)》</li>
+    </ul>
+  </li>
+  <li><strong>专题、论文</strong>
+    <ul>
+      <li><a href="https://disney-animation.s3.amazonaws.com/library/s2012_pbs_disney_brdf_notes_v2.pdf">Physically Based Shading at Disney</a></li>
+      <li><a href="https://blog.selfshadow.com/publications/s2013-shading-course/karis/s2013_pbs_epic_notes_v2.pdf">Real Shading in Unreal Engine 4</a></li>
+      <li><a href="https://seblagarde.files.wordpress.com/2015/07/course_notes_moving_frostbite_to_pbr_v32.pdf">Moving Frostbite to PBR</a></li>
+      <li><a href="http://www.gdcvault.com/play/1022235/Rendering-the-World-of-Far">Rendering the world of Far Cry 4</a></li>
+      <li><a href="http://renderwonk.com/publications/s2010-shading-course/">【SIGGRAPH 2010 Course】Physically-Based Shading Models in Film and Game Production</a></li>
+      <li><a href="http://renderwonk.com/publications/s2011-shading-course/">【SIGGRAPH 2011 Course】Physically-Based Shading Models in Film and Game Production</a></li>
+      <li><a href="http://renderwonk.com/publications/s2012-shading-course/">【SIGGRAPH 2012 Course】Physically-Based Shading Models in Film and Game Production</a></li>
+      <li><a href="http://renderwonk.com/publications/s2013-shading-course/">【SIGGRAPH 2013 Course】Physically-Based Shading Models in Film and Game Production</a></li>
+      <li><a href="http://renderwonk.com/publications/s2014-shading-course/">【SIGGRAPH 2014 Course】Physically-Based Shading Models in Film and Game Production</a></li>
+      <li><a href="http://renderwonk.com/publications/s2015-shading-course/">【SIGGRAPH 2015 Course】Physically-Based Shading Models in Film and Game Production</a></li>
+      <li><a href="http://renderwonk.com/publications/s2016-shading-course/">【SIGGRAPH 2016 Course】Physically-Based Shading Models in Film and Game Production</a></li>
+      <li><a href="http://renderwonk.com/publications/s2017-shading-course/">【SIGGRAPH 2017 Course】Physically-Based Shading Models in Film and Game Production</a></li>
+      <li><a href="https://www.trentreed.net/blog/physically-based-shading-and-image-based-lighting/">Physically Based Shading and Image Based Lighting</a></li>
+      <li><a href="https://www.disneyanimation.com/technology/publications/#papers">disney animation papers</a></li>
+      <li><a href="https://docs.cryengine.com/display/SDKDOC2/Physically+Based+Shading">Physically Based Shading in Cry Engine</a></li>
+      <li>Reflection Model Design for WALL-E and Up</li>
+      <li>Background-Physics and Math of Shading (2013~2015)</li>
+      <li>PBS Approx Models</li>
+      <li>A Microfacet Based Coupled Specular-Matte BRDF Model</li>
+      <li>A Multi-Ink Color-Separation Algorithm</li>
+      <li>Arbitrarily Layered Micro-Facet Surfaces</li>
+      <li>Microfacet Models for Refraction through Rough Surface</li>
+      <li>Pre-Filter Antialiasing</li>
+      <li>Printing Spatially-Varying Reflectance</li>
+      <li>Volumetric Skin and Fabric Shading at Framestore</li>
+      <li><a href="http://www.scratchapixel.com/lessons/mathematics-physics-for-computer-graphics/mathematics-of-shading">The Mathematics of Shading</a></li>
+      <li><a href="https://pny.com/File%20Library/Unassigned/Moor-Whitepaper-Download.pdf">PHYSICALLY-BASED RENDERING REVOLUTIONIZES PRODUCT DEVELOPMENT</a></li>
+      <li><a href="http://www.weiss-gerhard.info/publications/D02.pdf">A MultiAgent System for Physically based Rendering Optimization</a></li>
+      <li><a href="https://medium.com/spaceapetech/physically-based-shading-on-mobile-d7d4e90bb4bd">Physically Based Shading on Mobile</a></li>
+      <li><a href="http://cg.ivd.kit.edu/publications/2018/visual_analytics_pbr/preprint.pdf">Applying Visual Analytics to Physically-Based Rendering</a></li>
+      <li><a href="http://mathinfo.univ-reims.fr/IMG/pdf/An_inexpensive_BRDF_model_for_Physically-based_rendering_-_Schlick.pdf">An Inexpensive BRDF Model for Physically based Rendering</a></li>
+      <li><a href="https://community.arm.com/cfs-file/__key/communityserver-blogs-components-weblogfiles/00-00-00-20-66/siggraph2015_2D00_mmg_2D00_renaldas_2D00_slides.pdf">Optimizing PBR</a></li>
+      <li><a href="https://www.cnblogs.com/timlly/p/10463467.html">移动游戏性能优化通用技法</a></li>
+    </ul>
+  </li>
+  <li><strong>Wikipedia</strong>
+    <ul>
+      <li><a href="https://en.wikipedia.org/wiki/Optics">Optics</a></li>
+      <li><a href="https://en.wikipedia.org/wiki/Light">Light</a></li>
+      <li><a href="https://en.wikipedia.org/wiki/Polarization_(waves)">Polarization (waves)</a></li>
+      <li><a href="https://en.wikipedia.org/wiki/Spectroscopy">Spectroscopy</a></li>
+      <li><a href="https://en.wikipedia.org/wiki/Visible_spectrum">Visible spectrum</a></li>
+      <li><a href="https://en.wikipedia.org/wiki/Wave%E2%80%93particle_duality#">Wave–particle duality</a></li>
+      <li><a href="https://en.wikipedia.org/wiki/Radiant_energy">Radiant energy</a></li>
+      <li><a href="https://en.wikipedia.org/wiki/Radiometry">Radiometry</a></li>
+      <li><a href="https://en.wikipedia.org/wiki/Bidirectional_reflectance_distribution_function">BRDF</a></li>
+      <li><a href="https://en.wikipedia.org/wiki/Surface_roughness">Surface roughness</a></li>
+      <li><a href="https://en.wikipedia.org/wiki/Maxwell%27s_equations">Maxwell’s equations</a></li>
+      <li><a href="https://en.wikipedia.org/wiki/Solid_angle">Solid angle</a></li>
+      <li><a href="https://en.wikipedia.org/wiki/Normal_distribution">Normal distribution</a></li>
+      <li><a href="https://en.wikipedia.org/wiki/Low-discrepancy_sequence">Low-discrepancy sequence</a></li>
+      <li><a href="https://en.wikipedia.org/wiki/Rendering_equation">Rendering equation</a></li>
+      <li><a href="https://en.wikipedia.org/wiki/Mathematical_physics">Mathematical physics</a></li>
+      <li><a href="https://en.wikipedia.org/wiki/Oren%E2%80%93Nayar_reflectance_model">Oren–Nayar reflectance model</a></li>
+      <li><a href="https://en.wikipedia.org/wiki/Schlick%27s_approximation">Schlick’s approximation</a></li>
+    </ul>
+  </li>
+  <li><strong>百度百科</strong>
+    <ul>
+      <li><a href="https://baike.baidu.com/item/%E5%87%A0%E4%BD%95%E5%85%89%E5%AD%A6/869075">几何光学</a></li>
+      <li><a href="https://baike.baidu.com/item/%E6%B3%A2%E7%B2%92%E4%BA%8C%E8%B1%A1%E6%80%A7">波粒二象性</a></li>
+      <li><a href="https://baike.baidu.com/item/%E5%85%89%E8%83%BD%E9%87%8F">光能量</a></li>
+      <li><a href="https://baike.baidu.com/item/BRDF/2843176">BRDF</a></li>
+      <li><a href="https://wenku.baidu.com/view/bfa2b645be1e650e52ea99a3.html">微积分公式大全</a></li>
+      <li><a href="https://wenku.baidu.com/view/5a9412ca87c24028905fc307.html">大学积分入门</a></li>
+      <li><a href="https://baike.baidu.com/item/麦克斯韦方程组/2717563">麦克斯韦方程组</a></li>
+      <li><a href="https://baike.baidu.com/item/%E6%95%B0%E5%AD%A6%E7%89%A9%E7%90%86/5363054">数学物理</a></li>
+    </ul>
+  </li>
+  <li><strong>知乎、简书</strong>
+    <ul>
+      <li><a href="https://www.zhihu.com/question/20286038/answer/64282761">辐射度学基本量</a></li>
+      <li><a href="https://zhuanlan.zhihu.com/p/21376124">光的度量</a></li>
+      <li><a href="https://zhuanlan.zhihu.com/p/21376124">基于物理着色：BRDF</a></li>
+      <li><a href="https://www.zhihu.com/question/36766702/answer/70426471">如何深入浅出地讲解麦克斯韦方程组？</a></li>
+      <li><a href="https://zhuanlan.zhihu.com/p/32951655">PBR（物理渲染技术）在实时渲染中的概念与限制</a></li>
+      <li><a href="https://zhuanlan.zhihu.com/p/53086060">【基于物理的渲染（PBR）白皮书】系列</a></li>
+      <li><a href="https://zhuanlan.zhihu.com/p/20091064">基于物理着色系列</a></li>
+      <li><a href="https://www.jianshu.com/p/d2c97d0646d5">PBR渲染介绍</a></li>
+      <li><a href="https://www.jianshu.com/p/7c9b666c3fe1">基于物理的渲染学习心得——面向使用的PBR理论</a></li>
+      <li><a href="https://www.jianshu.com/p/d2c97d0646d5?open_source=weibo_search">PBR渲染介绍</a></li>
+    </ul>
+  </li>
+  <li><strong>博客园、CSDN</strong>
+    <ul>
+      <li><a href="基于物理的渲染技术（PBR）系列">基于物理的渲染技术（PBR）系列</a></li>
+      <li><a href="https://www.cnblogs.com/TracePlus/p/4056893.html">基于物理渲染的基础理论</a></li>
+      <li><a href="https://blog.csdn.net/coldkaweh/article/details/70187399">基于物理的渲染</a></li>
+      <li><a href="https://blog.csdn.net/pizi0475/article/details/48393933">Physically Based Rendering,PBRT笔记</a></li>
+      <li><a href="https://blog.csdn.net/bill2ccssddnn/article/details/53423410">伽马空间与线性空间</a></li>
+      <li><a href="https://blog.csdn.net/k46023/article/details/52489363/">线性渲染（Linear Rendering）和Gamma Correction</a></li>
+      <li><a href="https://blog.csdn.net/github_38885296/article/details/77914436">人眼到底等于多少像素</a></li>
+      <li><a href="https://www.cnblogs.com/jerrycg/p/4924761.html">PBR Step by Step（一）立体角</a></li>
+      <li><a href="https://www.cnblogs.com/jim-game-dev/p/5425731.html">基于物理渲染的基础理论（译）</a></li>
+      <li><a href="https://blog.csdn.net/coldkaweh/article/details/70187399">基于物理的渲染 – 理论篇</a></li>
+      <li><a href="https://www.cnblogs.com/jqm304775992/p/4887779.html">Lambert （兰伯特）光照模型</a></li>
+      <li><a href="https://blog.csdn.net/wolf96/article/details/44172243">Unity3d 基于物理渲染Physically-Based Rendering之specular BRDF</a></li>
+      <li><a href="https://www.cnblogs.com/jqm304775992/p/5202973.html">Cook-Torrance lighting model</a></li>
+      <li><a href="https://www.cnblogs.com/mengdd/archive/2013/08/05/3238123.html">光照模型</a></li>
+      <li><a href="https://blog.csdn.net/aidlife/article/details/48972661">Specular BRDF Reference</a></li>
+      <li><a href="https://blog.csdn.net/xingzhe2001/article/details/83897914">Physically Based Rendering—BRDF中D函数NDF的中文资料</a></li>
+      <li><a href="https://blog.csdn.net/xingzhe2001/article/details/83829705">手推系列——直观理解推导Physically Based Rendering 的BRDF公式之微表面法线分布函数NDF</a></li>
+      <li><a href="https://blog.csdn.net/lin453701006/article/details/71173090">Equirectangular Projection(ERP)</a></li>
+    </ul>
+  </li>
+  <li><strong>Unreal、Unity</strong>
+    <ul>
+      <li><a href="https://docs.unrealengine.com/en-us/Engine/Rendering/Materials/LightingModels/SubSurfaceProfile">SubSurface Profile Shading Model</a></li>
+      <li><a href="https://docs.unrealengine.com/en-us/Engine/Rendering/Materials/PhysicallyBased">Physically Based Materials in Unreal Engine 4</a></li>
+      <li><a href="https://www.unrealengine.com/zh-CN/blog/gdcc2015-pbr">PBR:应用于虚幻引擎4贴图和材质创建的启示</a></li>
+      <li><a href="https://docs.unity3d.com/Manual/shader-StandardShader.html">Unity Standard Shader</a></li>
+      <li><a href="https://docs.unrealengine.com/en-us/Engine/Rendering/Materials/HowTo/Masking">Using Texture Masks</a></li>
+    </ul>
+  </li>
+  <li><strong>LearnOpenGL</strong>
+    <ul>
+      <li><a href="https://learnopengl.com/PBR/Theory">PBR Tutorial - Theory</a></li>
+      <li><a href="https://learnopengl.com/PBR/Lighting">PBR Tutorial - Lighting</a></li>
+      <li><a href="https://learnopengl.com/PBR/IBL/Diffuse-irradiance">PBR Tutorial - Diffuse-irradiance</a></li>
+      <li><a href="https://learnopengl.com/PBR/IBL/Specular-IBL">PBR Tutorial - Specular-IBL</a></li>
+      <li><a href="https://learnopengl.com/Advanced-Lighting/Advanced-Lighting">PBR Tutorial - Advanced Lighting</a></li>
+      <li><a href="https://learnopengl.com/PBR/IBL/Diffuse-irradiance">Cubemap convolution</a></li>
+      <li><a href="https://learnopengl.com/PBR/IBL/Specular-IBL">Pre-computing the BRDF</a></li>
+    </ul>
+  </li>
+  <li><strong>其它</strong>
+    <ul>
+      <li><a href="http://www.codinglabs.net/article_physically_based_rendering.aspx">Physically Based Rendering</a></li>
+      <li><a href="http://www.codinglabs.net/article_physically_based_rendering_cook_torrance.aspx">Physically Based Rendering - Cook–Torrance</a></li>
+      <li><a href="https://www.aoa.org/patients-and-public/resources-for-teachers/how-your-eyes-work">How Your Eyes Work</a></li>
+      <li><a href="https://www.nkcf.org/about-keratoconus/how-the-human-eye-works/">How Does The Human Eye Work?</a></li>
+      <li><a href="http://blog.sciencenet.cn/blog-711486-1052519.html">为什么可见光是“可见”光</a></li>
+      <li><a href="https://baike.sogou.com/v175274.htm;jsessionid=5DB12EA04CF58C2AE24C846AC00C3C5B.n2">光学</a></li>
+      <li><a href="http://blog.sina.com.cn/s/blog_449e3b970102xa1n.html">“波粒二象性”本质是粒子磁矩与物质空间磁场相互作用的结果</a></li>
+      <li><a href="https://pdfs.semanticscholar.org/9e56/8b13ea51ca3c669186624566f672eb547857.pdf">A Multi-Ink Color-Separation Algorithm Maximizing Color Constancy</a></li>
+      <li><a href="https://www.onacademic.com/detail/journal_1000035238254910_7744.html#">Unidirectional Reflectance of Imperfectly Diffuse Surfaces</a></li>
+      <li><a href="https://seblagarde.wordpress.com/2011/08/17/hello-world/">Adopting a physically based shading model</a></li>
+      <li><a href="https://juejin.im/repo/5a8127a4f265da02d800abba">SaschaWillems / Vulkan-glTF-PBR</a></li>
+      <li><a href="https://blog.uwa4d.com/archives/Study_IBL.html">基于物理的渲染－用真实的环境光照亮物体</a></li>
+      <li><a href="https://blog.uwa4d.com/archives/1582.html">基于物理的渲染—更精确的微表面分布函数GGX</a></li>
+      <li><a href="https://www.latex-project.org/help/documentation/amsldoc.pdf">LaTeX Math document</a></li>
+      <li><a href="http://www.mohu.org/info/symbols/symbols.htm">常用数学符号的LaTeX表示方法</a></li>
+      <li><a href="https://en.wikibooks.org/wiki/LaTeX/Mathematics">LaTeX/Mathematics</a></li>
+      <li>一份不太简短的 LATEX 2ε 介绍</li>
+      <li><a href="https://blog.teamtreehouse.com/beginners-guide-physically-based-rendering-unity">The Beginner’s Guide to Physically Based Rendering in Unity</a></li>
+      <li><a href="https://chetanjags.wordpress.com/2015/08/26/image-based-lighting/">Image Based Lighting</a></li>
+      <li><a href="https://www.indiedb.com/features/using-image-based-lighting-ibl">Using Image Based Lighting (IBL)</a></li>
+      <li><a href="https://stackoverflow.com/questions/34250742/converting-a-cubemap-into-equirectangular-panorama">Converting a Cubemap into Equirectangular Panorama</a></li>
+      <li><a href="http://gad.qq.com/program/translateview/7196156">使用基于物理规则的渲染，你也可以做到！</a></li>
+      <li><a href="https://computergraphics.stackexchange.com/questions/1568/does-pbr-incur-a-performance-penalty-by-design">Does PBR incur a performance penalty by design?</a></li>
+      <li><a href="http://www.cs.cornell.edu/courses/cs5625/2013sp/lectures/Lec2ShadingModelsWeb.pdf">Lec 2: Shading Models</a></li>
+    </ul>
+  </li>
+</ul>
 
     </div>
   </div>
