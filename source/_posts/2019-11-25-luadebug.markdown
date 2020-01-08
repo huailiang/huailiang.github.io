@@ -68,6 +68,25 @@ tags:
 
 ![](/img/post-lua/lua11.jpg)
 
+### Lua Check
+
+关于lua的静态检查工具很多，这里着重介绍两种方法：
+
+__1、luac.exe__
+
+也就是lua的编译器，安装完lua的编译器之后，将自己的代码进行编译这是最好不过的静态检查，当然编译器由于参数的设置，对很多告警并不敏感。所以推荐第二种方法。
+
+__2、luacheck__
+
+ 这是google推出的一款针对lua静态检查的开源工具，其安装简单，操作容易，检查严格，参数可控，很适合项目的lua开发。
+
+EmmyLua 支持luacheck语法检测， 首先需要去[github][i8]下载对应平台的luacheck, 比如说windows平台是.exe, 如果不存在对应的平台release版本， 请下载c++源码编译对应平台的版本。下载完成之后， 如下图配置luacheck路径：
+
+![](/img/post-lua/lua21.jpg)
+
+配置好之后， 在lua的代码区右键选择luacheck, 就可以在LuaCheck窗口看到一些语法警告信息：
+
+![](/img/post-lua/lua22.jpg)
 
 
 ## VSCode 
@@ -141,3 +160,4 @@ path-reader
 [i5]: https://github.com/Tencent/LuaPanda/blob/master/Docs/Manual/debug-on-phone.md
 [i6]: https://github.com/Tencent/LuaPanda/blob/master/src/debug/luaDebug.ts
 [i7]: https://emmylua.github.io/
+[i8]: https://github.com/mpeterv/luacheck/releases
