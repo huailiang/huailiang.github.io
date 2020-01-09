@@ -200,17 +200,17 @@ __基础色（Base Color）：__
 
 下表是经过测量后得出的非金属材质的基础色强度（非金属材质只有单色，即强度）：
 
-|材质(Material)|基础色强度(BaseColor Intensity)|
-|--|:--:| 
-|木炭(Charcoal)|0.02| 
-|新沥青(Fresh asphalt)|0.02|
-|旧沥青(Worn asphalt)|0.08| 
-|土壤(Bare soil)|0.13| 
-|绿草(Green Grass)|0.21| 
-|沙漠沙(desert sand)|0.36| 
-|新混泥土(Fresh concrete)|0.51| 
-|海洋冰(Ocean Ice)|0.56 |
-|鲜雪(Fresh snow)|0.81| 
+| 材质(Material)           | 基础色强度(BaseColor Intensity) |
+| ------------------------ | :-----------------------------: |
+| 木炭(Charcoal)           |              0.02               |
+| 新沥青(Fresh asphalt)    |              0.02               |
+| 旧沥青(Worn asphalt)     |              0.08               |
+| 土壤(Bare soil)          |              0.13               |
+| 绿草(Green Grass)        |              0.21               |
+| 沙漠沙(desert sand)      |              0.36               |
+| 新混泥土(Fresh concrete) |              0.51               |
+| 海洋冰(Ocean Ice)        |              0.56               |
+| 鲜雪(Fresh snow)         |              0.81               |
   
 下表是经过测量后得出的金属材质的基础色（R, G, B），是在Linear色域空间的值：
 
@@ -432,7 +432,7 @@ vec3 halfwayDir = normalize(lightDir + viewDir);
 
 ![](/img/post-pbr/pbr43.png)
 
-*照射在平面的光被分成镜面反射和折射光，折射光在跟物体微粒发生若干次碰撞之后，有可能发射出表面，成为漫反射*
+照射在平面的光被分成镜面反射和折射光，折射光在跟物体微粒发生若干次碰撞之后，有可能发射出表面，成为漫反射
 
 通常情况下，PBR会简化折射光，将平面上所有折射光都视为被完全吸收而不会散开。而有一些被称为次表面散射(Subsurface Scattering)技术的着色器技术会计算折射光散开后的模拟，它们可以显著提升一些材质（如皮肤、大理石或蜡质）的视觉效果，不过性能也会随着下降。金属(Metallic)材质会立即吸收所有折射光，故而金属只有镜面反射，而没有折射光引起的漫反射。回到能量守恒话题。反射光与折射光它们二者之间是互斥的，被表面反射出去的光无法再被材质吸收。故而，进入材质内部的折射光就是入射光减去反射光后余下的能量。根据上面的能量守恒关系，可以先计算镜面反射部分，此部分等于入射光线被反射的能量所占的百分比。而折射部分可以由镜面反射部分计算得出。
 
@@ -451,15 +451,15 @@ $$
 
 反射方程看似很复杂，但如果拆分各个部分加以解析，就可以揭开其神秘的面纱。为了更好地理解反射方程，先了解辐射度量学(Radiometry)。辐射度量学是一种用来度量电磁场辐射（包括可见光）的手段。有很多种辐射度量(radiometric quantities)可以用来测量曲面或者某个方向上的光，此处只讨论和反射方程有关的一种量，它就是辐射率(Radiance)，用L来表示。
 
-|名称|符号&单位|公式|解析|
-|:--:| :--:| :--:| :--:| 
-|辐射能量(Radiant energy)|Q 焦耳(J) |	- | 电磁辐射能量
-|辐射通量(Radiant Flux)|$Φ$ 瓦(W)|$Φ=\frac{dQ}{dt}$|	单位时间辐射的能量，也叫辐射功率(Radiant Power)或通量(Flux)|
-|辐照度(Irradiance)	|$E$ 瓦/平方米($W/m^2$)|$E=\frac{dΦ}{dA^⊥}$|到达单位面积的辐射通量|
-|辐射度(Radiosity)	|$M$ 瓦/平方米($W/m^2$)	|$M=\frac{dΦ}{dA^⊥}$|离开单位面积的辐射通量，也叫辐出度、辐射出射度（Radiant Existance）|
-|辐射强度(Radiant Intensity)|$I$ 瓦/立体弧度(W/sr)|$I=\frac{dΦ}{dω}$|通过单位立体角的辐射通量|
-|辐射率(Radiance)|$L$ 瓦/平方米立体弧度($W/m^2sr$)| $L=\frac{dΦ}{dωdA^⊥}$	|通过单位面积单位立体角的辐射通量|
-|立体角(Solid Angle)|ω 立体弧度，球面度(sr)| $ω=\frac{S}{r^2}$	|是二维弧度在三维的扩展，1球面度等于单位球体的表面面积|
+|            名称             |            符号&单位             |         公式          |                                解析                                 |
+| :-------------------------: | :------------------------------: | :-------------------: | :-----------------------------------------------------------------: |
+|  辐射能量(Radiant energy)   |            Q 焦耳(J)             |           -           |                            电磁辐射能量                             |
+|   辐射通量(Radiant Flux)    |            $Φ$ 瓦(W)             |   $Φ=\frac{dQ}{dt}$   |     单位时间辐射的能量，也叫辐射功率(Radiant Power)或通量(Flux)     |
+|     辐照度(Irradiance)      |      $E$ 瓦/平方米($W/m^2$)      |  $E=\frac{dΦ}{dA^⊥}$  |                       到达单位面积的辐射通量                        |
+|      辐射度(Radiosity)      |      $M$ 瓦/平方米($W/m^2$)      |  $M=\frac{dΦ}{dA^⊥}$  | 离开单位面积的辐射通量，也叫辐出度、辐射出射度（Radiant Existance） |
+| 辐射强度(Radiant Intensity) |      $I$ 瓦/立体弧度(W/sr)       |   $I=\frac{dΦ}{dω}$   |                      通过单位立体角的辐射通量                       |
+|      辐射率(Radiance)       | $L$ 瓦/平方米立体弧度($W/m^2sr$) | $L=\frac{dΦ}{dωdA^⊥}$ |                  通过单位面积单位立体角的辐射通量                   |
+|     立体角(Solid Angle)     |      ω 立体弧度，球面度(sr)      |   $ω=\frac{S}{r^2}$   |        是二维弧度在三维的扩展，1球面度等于单位球体的表面面积        |
 
 
 辐射率被用来量化单一方向上发射来的光线的大小或者强度。辐射率是由多个物理变量集合而成的，它涉及的物理变量有以下几种：
@@ -725,15 +725,15 @@ $$
 
 下面的参数跟2.4 PBR在游戏引擎的应用描述的很多参数基本一致。
 
-  * __反射率（Albedo）__ 反射率纹理指定了材质表面每个像素的颜色，如果材质是金属那纹理包含的就是基础反射率。这个跟我们之前用过的漫反射纹理非常的类似，但是不包含任何光照信息。漫反射纹理通常会有轻微的阴影和较暗的裂缝，这些在Albedo贴图里面都不应该出现，仅仅只包含材质的颜色（金属材质是基础反射率）。
+  __反射率（Albedo）__ 反射率纹理指定了材质表面每个像素的颜色，如果材质是金属那纹理包含的就是基础反射率。这个跟我们之前用过的漫反射纹理非常的类似，但是不包含任何光照信息。漫反射纹理通常会有轻微的阴影和较暗的裂缝，这些在Albedo贴图里面都不应该出现，仅仅只包含材质的颜色（金属材质是基础反射率）。
 
-  * __法线（Normal）__ 法线纹理跟我们之前使用的是完全一样的。法线贴图可以逐像素指定表面法线，让平坦的表面也能渲染出凹凸不平的视觉效果。
+  __法线（Normal）__ 法线纹理跟我们之前使用的是完全一样的。法线贴图可以逐像素指定表面法线，让平坦的表面也能渲染出凹凸不平的视觉效果。
 
-  * __金属度（Metallic）__ 金属度贴图逐像素的指定表面是金属还是电介质。根据PBR引擎各自的设定，金属程度即可以是[0.0，1.0]区间的浮点值也可以是非0即1的布尔值。
+  __金属度（Metallic）__ 金属度贴图逐像素的指定表面是金属还是电介质。根据PBR引擎各自的设定，金属程度即可以是[0.0，1.0]区间的浮点值也可以是非0即1的布尔值。
 
-  * __粗糙度（Roughness）__ 粗糙度贴图逐像素的指定了表面有多粗糙，粗糙度的值影响了材质表面的微平面的平均朝向，粗糙的表面上反射效果更大更模糊，光滑的表面更亮更清晰。有些PBR引擎用光滑度贴图替代粗糙度贴图，因为他们觉得光滑度贴图更直观，将采样出来的光滑度使用（1-光滑度）= 粗糙度 就能转换成粗糙度了。
+  __粗糙度（Roughness）__ 粗糙度贴图逐像素的指定了表面有多粗糙，粗糙度的值影响了材质表面的微平面的平均朝向，粗糙的表面上反射效果更大更模糊，光滑的表面更亮更清晰。有些PBR引擎用光滑度贴图替代粗糙度贴图，因为他们觉得光滑度贴图更直观，将采样出来的光滑度使用（1-光滑度）= 粗糙度 就能转换成粗糙度了。
 
-  * __环境光遮挡（Ambient Occlusion，AO）__ AO贴图为材质表面和几何体周边可能的位置，提供了额外的阴影效果。比如有一面砖墙，在两块砖之间的缝隙里Albedo贴图包含的应该是没有阴影的颜色信息，而让AO贴图来指定这一块需要更暗一些，这个地方光线更难照射到。AO贴图在光照计算的最后一步使用可以显著的提高渲染效果，模型或者材质的AO贴图一般是在建模阶段手动生成的。
+ __环境光遮挡（Ambient Occlusion，AO）__ AO贴图为材质表面和几何体周边可能的位置，提供了额外的阴影效果。比如有一面砖墙，在两块砖之间的缝隙里Albedo贴图包含的应该是没有阴影的颜色信息，而让AO贴图来指定这一块需要更暗一些，这个地方光线更难照射到。AO贴图在光照计算的最后一步使用可以显著的提高渲染效果，模型或者材质的AO贴图一般是在建模阶段手动生成的。
 
 美术可以直接根据物体在真实世界里的物理属性，来设置和调整用于渲染的基于物理的材质。基于物理的渲染管线最大的优势在于，材质的物理属性是不变的，无论环境光怎么样设置都能得到一个接近真实的渲染结果，这让美术的人生都变得美好了。基于物理管线的材质可以很简单的移植到不同的渲染引擎，不管光照环境如何都能正确的渲染出一个自然的结果。
 
@@ -898,7 +898,6 @@ EMR的行为取决于其波长。较高频率具有较短波长，较低频率�
   * [《GPU Gems》](https://developer.nvidia.com/gpugems/GPUGems/gpugems_pref01.html)
   * [《GPU Gems 2》](https://developer.nvidia.com/gpugems/GPUGems2/gpugems2_inside_front_cover.html)
   * [《GPU Gems 3》](https://developer.nvidia.com/gpugems/GPUGems3/gpugems3_pref01.html)
-  * 《高等数学微积分(北大版)》
 * **专题、论文**
   * [Physically Based Shading at Disney](https://disney-animation.s3.amazonaws.com/library/s2012_pbs_disney_brdf_notes_v2.pdf)
   * [Real Shading in Unreal Engine 4](https://blog.selfshadow.com/publications/s2013-shading-course/karis/s2013_pbs_epic_notes_v2.pdf)
@@ -915,16 +914,6 @@ EMR的行为取决于其波长。较高频率具有较短波长，较低频率�
   * [Physically Based Shading and Image Based Lighting](https://www.trentreed.net/blog/physically-based-shading-and-image-based-lighting/)
   * [disney animation papers](https://www.disneyanimation.com/technology/publications/#papers)
   * [Physically Based Shading in Cry Engine](https://docs.cryengine.com/display/SDKDOC2/Physically+Based+Shading)
-  * Reflection Model Design for WALL-E and Up
-  * Background-Physics and Math of Shading (2013~2015)
-  * PBS Approx Models
-  * A Microfacet Based Coupled Specular-Matte BRDF Model
-  * A Multi-Ink Color-Separation Algorithm
-  * Arbitrarily Layered Micro-Facet Surfaces
-  * Microfacet Models for Refraction through Rough Surface
-  * Pre-Filter Antialiasing
-  * Printing Spatially-Varying Reflectance
-  * Volumetric Skin and Fabric Shading at Framestore
   * [The Mathematics of Shading](http://www.scratchapixel.com/lessons/mathematics-physics-for-computer-graphics/mathematics-of-shading)
   * [PHYSICALLY-BASED RENDERING REVOLUTIONIZES PRODUCT DEVELOPMENT](https://pny.com/File%20Library/Unassigned/Moor-Whitepaper-Download.pdf)
   * [A MultiAgent System for Physically based Rendering Optimization](http://www.weiss-gerhard.info/publications/D02.pdf)
@@ -1008,10 +997,8 @@ EMR的行为取决于其波长。较高频率具有较短波长，较低频率�
 * **其它**
   * [Physically Based Rendering](http://www.codinglabs.net/article_physically_based_rendering.aspx)
   * [Physically Based Rendering - Cook–Torrance](http://www.codinglabs.net/article_physically_based_rendering_cook_torrance.aspx)
-  * [How Your Eyes Work](https://www.aoa.org/patients-and-public/resources-for-teachers/how-your-eyes-work)
   * [How Does The Human Eye Work?](https://www.nkcf.org/about-keratoconus/how-the-human-eye-works/)
   * [为什么可见光是“可见”光](http://blog.sciencenet.cn/blog-711486-1052519.html)
-  * [光学](https://baike.sogou.com/v175274.htm;jsessionid=5DB12EA04CF58C2AE24C846AC00C3C5B.n2)
   * [“波粒二象性”本质是粒子磁矩与物质空间磁场相互作用的结果](http://blog.sina.com.cn/s/blog_449e3b970102xa1n.html)
   * [A Multi-Ink Color-Separation Algorithm Maximizing Color Constancy](https://pdfs.semanticscholar.org/9e56/8b13ea51ca3c669186624566f672eb547857.pdf)
   * [Unidirectional Reflectance of Imperfectly Diffuse Surfaces](https://www.onacademic.com/detail/journal_1000035238254910_7744.html#)
@@ -1019,10 +1006,6 @@ EMR的行为取决于其波长。较高频率具有较短波长，较低频率�
   * [SaschaWillems / Vulkan-glTF-PBR](https://juejin.im/repo/5a8127a4f265da02d800abba)
   * [基于物理的渲染－用真实的环境光照亮物体](https://blog.uwa4d.com/archives/Study_IBL.html)
   * [基于物理的渲染—更精确的微表面分布函数GGX](https://blog.uwa4d.com/archives/1582.html)
-  * [LaTeX Math document](https://www.latex-project.org/help/documentation/amsldoc.pdf)
-  * [常用数学符号的LaTeX表示方法](http://www.mohu.org/info/symbols/symbols.htm)
-  * [LaTeX/Mathematics](https://en.wikibooks.org/wiki/LaTeX/Mathematics)
-  * 一份不太简短的 LATEX 2ε 介绍
   * [The Beginner’s Guide to Physically Based Rendering in Unity](https://blog.teamtreehouse.com/beginners-guide-physically-based-rendering-unity)
   * [Image Based Lighting](https://chetanjags.wordpress.com/2015/08/26/image-based-lighting/)
   * [Using Image Based Lighting (IBL)](https://www.indiedb.com/features/using-image-based-lighting-ibl)
