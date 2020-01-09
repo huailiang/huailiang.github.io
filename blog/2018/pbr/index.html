@@ -434,6 +434,8 @@ MathJax.Hub.Config({
 
 <p><img src="/img/post-pbr/pbr33.png" alt="" /></p>
 
+<p><em>上排从左到右：木炭、生混凝土、旧沥青；下排从左到右：铜、铁、金、铝、银、镍、钛</em></p>
+
 <h4 id="142-unity的pbr">1.4.2 Unity的PBR</h4>
 
 <p>Unity的PBR已经纳入内建的标准着色器（Standard Shader），它的实现准则是用户友好的（user-friendly），故而在材质编辑器里呈现给用户是有限的参数，而且跟传统的各类贴图信息统一在了一起。Unity内部实现机制遵循了PBR的基本准则，支持金属度，表面粗糙度，能量守恒，菲涅尔反射，表面阴影遮蔽等特性。</p>
@@ -536,7 +538,7 @@ MathJax.Hub.Config({
 
 <p><img src="/img/post-pbr/pbr43.png" alt="" /></p>
 
-<p><em>照射在平面的光被分成镜面反射和折射光，折射光在跟物体微粒发生若干次碰撞之后，有可能发射出表面，成为漫反射</em></p>
+<p>照射在平面的光被分成镜面反射和折射光，折射光在跟物体微粒发生若干次碰撞之后，有可能发射出表面，成为漫反射</p>
 
 <p>通常情况下，PBR会简化折射光，将平面上所有折射光都视为被完全吸收而不会散开。而有一些被称为次表面散射(Subsurface Scattering)技术的着色器技术会计算折射光散开后的模拟，它们可以显著提升一些材质（如皮肤、大理石或蜡质）的视觉效果，不过性能也会随着下降。金属(Metallic)材质会立即吸收所有折射光，故而金属只有镜面反射，而没有折射光引起的漫反射。回到能量守恒话题。反射光与折射光它们二者之间是互斥的，被表面反射出去的光无法再被材质吸收。故而，进入材质内部的折射光就是入射光减去反射光后余下的能量。根据上面的能量守恒关系，可以先计算镜面反射部分，此部分等于入射光线被反射的能量所占的百分比。而折射部分可以由镜面反射部分计算得出。</p>
 
@@ -571,31 +573,31 @@ MathJax.Hub.Config({
     </tr>
     <tr>
       <td style="text-align: center">辐射通量(Radiant Flux)</td>
-      <td style="text-align: center">Φ 瓦(W)</td>
+      <td style="text-align: center">$Φ$ 瓦(W)</td>
       <td style="text-align: center">$Φ=\frac{dQ}{dt}$</td>
       <td style="text-align: center">单位时间辐射的能量，也叫辐射功率(Radiant Power)或通量(Flux)</td>
     </tr>
     <tr>
       <td style="text-align: center">辐照度(Irradiance)</td>
-      <td style="text-align: center">E 瓦/平方米($W/m^2$)</td>
-      <td style="text-align: center">$Φ=\frac{dΦ}{dA^⊥}$</td>
+      <td style="text-align: center">$E$ 瓦/平方米($W/m^2$)</td>
+      <td style="text-align: center">$E=\frac{dΦ}{dA^⊥}$</td>
       <td style="text-align: center">到达单位面积的辐射通量</td>
     </tr>
     <tr>
       <td style="text-align: center">辐射度(Radiosity)</td>
-      <td style="text-align: center">M 瓦/平方米($W/m^2$)</td>
+      <td style="text-align: center">$M$ 瓦/平方米($W/m^2$)</td>
       <td style="text-align: center">$M=\frac{dΦ}{dA^⊥}$</td>
       <td style="text-align: center">离开单位面积的辐射通量，也叫辐出度、辐射出射度（Radiant Existance）</td>
     </tr>
     <tr>
       <td style="text-align: center">辐射强度(Radiant Intensity)</td>
-      <td style="text-align: center">I 瓦/立体弧度(W/sr)</td>
+      <td style="text-align: center">$I$ 瓦/立体弧度(W/sr)</td>
       <td style="text-align: center">$I=\frac{dΦ}{dω}$</td>
       <td style="text-align: center">通过单位立体角的辐射通量</td>
     </tr>
     <tr>
       <td style="text-align: center">辐射率(Radiance)</td>
-      <td style="text-align: center">L 瓦/平方米立体弧度($W/m^2sr$)</td>
+      <td style="text-align: center">$L$ 瓦/平方米立体弧度($W/m^2sr$)</td>
       <td style="text-align: center">$L=\frac{dΦ}{dωdA^⊥}$</td>
       <td style="text-align: center">通过单位面积单位立体角的辐射通量</td>
     </tr>
@@ -858,23 +860,15 @@ Cook-Torrance BRDF分为漫反射和镜面反射两个部分：</p>
 
 <p>下面的参数跟2.4 PBR在游戏引擎的应用描述的很多参数基本一致。</p>
 
-<ul>
-  <li>
-    <p><strong>反射率（Albedo）</strong> 反射率纹理指定了材质表面每个像素的颜色，如果材质是金属那纹理包含的就是基础反射率。这个跟我们之前用过的漫反射纹理非常的类似，但是不包含任何光照信息。漫反射纹理通常会有轻微的阴影和较暗的裂缝，这些在Albedo贴图里面都不应该出现，仅仅只包含材质的颜色（金属材质是基础反射率）。</p>
-  </li>
-  <li>
-    <p><strong>法线（Normal）</strong> 法线纹理跟我们之前使用的是完全一样的。法线贴图可以逐像素指定表面法线，让平坦的表面也能渲染出凹凸不平的视觉效果。</p>
-  </li>
-  <li>
-    <p><strong>金属度（Metallic）</strong> 金属度贴图逐像素的指定表面是金属还是电介质。根据PBR引擎各自的设定，金属程度即可以是[0.0，1.0]区间的浮点值也可以是非0即1的布尔值。</p>
-  </li>
-  <li>
-    <p><strong>粗糙度（Roughness）</strong> 粗糙度贴图逐像素的指定了表面有多粗糙，粗糙度的值影响了材质表面的微平面的平均朝向，粗糙的表面上反射效果更大更模糊，光滑的表面更亮更清晰。有些PBR引擎用光滑度贴图替代粗糙度贴图，因为他们觉得光滑度贴图更直观，将采样出来的光滑度使用（1-光滑度）= 粗糙度 就能转换成粗糙度了。</p>
-  </li>
-  <li>
-    <p><strong>环境光遮挡（Ambient Occlusion，AO）</strong> AO贴图为材质表面和几何体周边可能的位置，提供了额外的阴影效果。比如有一面砖墙，在两块砖之间的缝隙里Albedo贴图包含的应该是没有阴影的颜色信息，而让AO贴图来指定这一块需要更暗一些，这个地方光线更难照射到。AO贴图在光照计算的最后一步使用可以显著的提高渲染效果，模型或者材质的AO贴图一般是在建模阶段手动生成的。</p>
-  </li>
-</ul>
+<p><strong>反射率（Albedo）</strong> 反射率纹理指定了材质表面每个像素的颜色，如果材质是金属那纹理包含的就是基础反射率。这个跟我们之前用过的漫反射纹理非常的类似，但是不包含任何光照信息。漫反射纹理通常会有轻微的阴影和较暗的裂缝，这些在Albedo贴图里面都不应该出现，仅仅只包含材质的颜色（金属材质是基础反射率）。</p>
+
+<p><strong>法线（Normal）</strong> 法线纹理跟我们之前使用的是完全一样的。法线贴图可以逐像素指定表面法线，让平坦的表面也能渲染出凹凸不平的视觉效果。</p>
+
+<p><strong>金属度（Metallic）</strong> 金属度贴图逐像素的指定表面是金属还是电介质。根据PBR引擎各自的设定，金属程度即可以是[0.0，1.0]区间的浮点值也可以是非0即1的布尔值。</p>
+
+<p><strong>粗糙度（Roughness）</strong> 粗糙度贴图逐像素的指定了表面有多粗糙，粗糙度的值影响了材质表面的微平面的平均朝向，粗糙的表面上反射效果更大更模糊，光滑的表面更亮更清晰。有些PBR引擎用光滑度贴图替代粗糙度贴图，因为他们觉得光滑度贴图更直观，将采样出来的光滑度使用（1-光滑度）= 粗糙度 就能转换成粗糙度了。</p>
+
+<p><strong>环境光遮挡（Ambient Occlusion，AO）</strong> AO贴图为材质表面和几何体周边可能的位置，提供了额外的阴影效果。比如有一面砖墙，在两块砖之间的缝隙里Albedo贴图包含的应该是没有阴影的颜色信息，而让AO贴图来指定这一块需要更暗一些，这个地方光线更难照射到。AO贴图在光照计算的最后一步使用可以显著的提高渲染效果，模型或者材质的AO贴图一般是在建模阶段手动生成的。</p>
 
 <p>美术可以直接根据物体在真实世界里的物理属性，来设置和调整用于渲染的基于物理的材质。基于物理的渲染管线最大的优势在于，材质的物理属性是不变的，无论环境光怎么样设置都能得到一个接近真实的渲染结果，这让美术的人生都变得美好了。基于物理管线的材质可以很简单的移植到不同的渲染引擎，不管光照环境如何都能正确的渲染出一个自然的结果。</p>
 
@@ -1042,7 +1036,6 @@ Cook-Torrance BRDF分为漫反射和镜面反射两个部分：</p>
       <li><a href="https://developer.nvidia.com/gpugems/GPUGems/gpugems_pref01.html">《GPU Gems》</a></li>
       <li><a href="https://developer.nvidia.com/gpugems/GPUGems2/gpugems2_inside_front_cover.html">《GPU Gems 2》</a></li>
       <li><a href="https://developer.nvidia.com/gpugems/GPUGems3/gpugems3_pref01.html">《GPU Gems 3》</a></li>
-      <li>《高等数学微积分(北大版)》</li>
     </ul>
   </li>
   <li><strong>专题、论文</strong>
@@ -1062,16 +1055,6 @@ Cook-Torrance BRDF分为漫反射和镜面反射两个部分：</p>
       <li><a href="https://www.trentreed.net/blog/physically-based-shading-and-image-based-lighting/">Physically Based Shading and Image Based Lighting</a></li>
       <li><a href="https://www.disneyanimation.com/technology/publications/#papers">disney animation papers</a></li>
       <li><a href="https://docs.cryengine.com/display/SDKDOC2/Physically+Based+Shading">Physically Based Shading in Cry Engine</a></li>
-      <li>Reflection Model Design for WALL-E and Up</li>
-      <li>Background-Physics and Math of Shading (2013~2015)</li>
-      <li>PBS Approx Models</li>
-      <li>A Microfacet Based Coupled Specular-Matte BRDF Model</li>
-      <li>A Multi-Ink Color-Separation Algorithm</li>
-      <li>Arbitrarily Layered Micro-Facet Surfaces</li>
-      <li>Microfacet Models for Refraction through Rough Surface</li>
-      <li>Pre-Filter Antialiasing</li>
-      <li>Printing Spatially-Varying Reflectance</li>
-      <li>Volumetric Skin and Fabric Shading at Framestore</li>
       <li><a href="http://www.scratchapixel.com/lessons/mathematics-physics-for-computer-graphics/mathematics-of-shading">The Mathematics of Shading</a></li>
       <li><a href="https://pny.com/File%20Library/Unassigned/Moor-Whitepaper-Download.pdf">PHYSICALLY-BASED RENDERING REVOLUTIONIZES PRODUCT DEVELOPMENT</a></li>
       <li><a href="http://www.weiss-gerhard.info/publications/D02.pdf">A MultiAgent System for Physically based Rendering Optimization</a></li>
@@ -1176,10 +1159,8 @@ Cook-Torrance BRDF分为漫反射和镜面反射两个部分：</p>
     <ul>
       <li><a href="http://www.codinglabs.net/article_physically_based_rendering.aspx">Physically Based Rendering</a></li>
       <li><a href="http://www.codinglabs.net/article_physically_based_rendering_cook_torrance.aspx">Physically Based Rendering - Cook–Torrance</a></li>
-      <li><a href="https://www.aoa.org/patients-and-public/resources-for-teachers/how-your-eyes-work">How Your Eyes Work</a></li>
       <li><a href="https://www.nkcf.org/about-keratoconus/how-the-human-eye-works/">How Does The Human Eye Work?</a></li>
       <li><a href="http://blog.sciencenet.cn/blog-711486-1052519.html">为什么可见光是“可见”光</a></li>
-      <li><a href="https://baike.sogou.com/v175274.htm;jsessionid=5DB12EA04CF58C2AE24C846AC00C3C5B.n2">光学</a></li>
       <li><a href="http://blog.sina.com.cn/s/blog_449e3b970102xa1n.html">“波粒二象性”本质是粒子磁矩与物质空间磁场相互作用的结果</a></li>
       <li><a href="https://pdfs.semanticscholar.org/9e56/8b13ea51ca3c669186624566f672eb547857.pdf">A Multi-Ink Color-Separation Algorithm Maximizing Color Constancy</a></li>
       <li><a href="https://www.onacademic.com/detail/journal_1000035238254910_7744.html#">Unidirectional Reflectance of Imperfectly Diffuse Surfaces</a></li>
@@ -1187,10 +1168,6 @@ Cook-Torrance BRDF分为漫反射和镜面反射两个部分：</p>
       <li><a href="https://juejin.im/repo/5a8127a4f265da02d800abba">SaschaWillems / Vulkan-glTF-PBR</a></li>
       <li><a href="https://blog.uwa4d.com/archives/Study_IBL.html">基于物理的渲染－用真实的环境光照亮物体</a></li>
       <li><a href="https://blog.uwa4d.com/archives/1582.html">基于物理的渲染—更精确的微表面分布函数GGX</a></li>
-      <li><a href="https://www.latex-project.org/help/documentation/amsldoc.pdf">LaTeX Math document</a></li>
-      <li><a href="http://www.mohu.org/info/symbols/symbols.htm">常用数学符号的LaTeX表示方法</a></li>
-      <li><a href="https://en.wikibooks.org/wiki/LaTeX/Mathematics">LaTeX/Mathematics</a></li>
-      <li>一份不太简短的 LATEX 2ε 介绍</li>
       <li><a href="https://blog.teamtreehouse.com/beginners-guide-physically-based-rendering-unity">The Beginner’s Guide to Physically Based Rendering in Unity</a></li>
       <li><a href="https://chetanjags.wordpress.com/2015/08/26/image-based-lighting/">Image Based Lighting</a></li>
       <li><a href="https://www.indiedb.com/features/using-image-based-lighting-ibl">Using Image Based Lighting (IBL)</a></li>
