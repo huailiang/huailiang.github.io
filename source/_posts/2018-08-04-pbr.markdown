@@ -336,6 +336,8 @@ UE4模拟的部分材质效果见下图。
 
 ![](/img/post-pbr/pbr33.png)
 
+*上排从左到右：木炭、生混凝土、旧沥青；下排从左到右：铜、铁、金、铝、银、镍、钛*
+
 #### 1.4.2 Unity的PBR
 
 Unity的PBR已经纳入内建的标准着色器（Standard Shader），它的实现准则是用户友好的（user-friendly），故而在材质编辑器里呈现给用户是有限的参数，而且跟传统的各类贴图信息统一在了一起。Unity内部实现机制遵循了PBR的基本准则，支持金属度，表面粗糙度，能量守恒，菲涅尔反射，表面阴影遮蔽等特性。
@@ -452,11 +454,11 @@ $$
 |名称|符号&单位|公式|解析|
 |:--:| :--:| :--:| :--:| 
 |辐射能量(Radiant energy)|Q 焦耳(J) |	- | 电磁辐射能量
-|辐射通量(Radiant Flux)|Φ 瓦(W)|$Φ=\frac{dQ}{dt}$|	单位时间辐射的能量，也叫辐射功率(Radiant Power)或通量(Flux)|
-|辐照度(Irradiance)	|E 瓦/平方米($W/m^2$)|$Φ=\frac{dΦ}{dA^⊥}$|到达单位面积的辐射通量|
-|辐射度(Radiosity)	|M 瓦/平方米($W/m^2$)	|$M=\frac{dΦ}{dA^⊥}$|离开单位面积的辐射通量，也叫辐出度、辐射出射度（Radiant Existance）|
-|辐射强度(Radiant Intensity)|I 瓦/立体弧度(W/sr)|$I=\frac{dΦ}{dω}$|通过单位立体角的辐射通量|
-|辐射率(Radiance)|L 瓦/平方米立体弧度($W/m^2sr$)| $L=\frac{dΦ}{dωdA^⊥}$	|通过单位面积单位立体角的辐射通量|
+|辐射通量(Radiant Flux)|$Φ$ 瓦(W)|$Φ=\frac{dQ}{dt}$|	单位时间辐射的能量，也叫辐射功率(Radiant Power)或通量(Flux)|
+|辐照度(Irradiance)	|$E$ 瓦/平方米($W/m^2$)|$E=\frac{dΦ}{dA^⊥}$|到达单位面积的辐射通量|
+|辐射度(Radiosity)	|$M$ 瓦/平方米($W/m^2$)	|$M=\frac{dΦ}{dA^⊥}$|离开单位面积的辐射通量，也叫辐出度、辐射出射度（Radiant Existance）|
+|辐射强度(Radiant Intensity)|$I$ 瓦/立体弧度(W/sr)|$I=\frac{dΦ}{dω}$|通过单位立体角的辐射通量|
+|辐射率(Radiance)|$L$ 瓦/平方米立体弧度($W/m^2sr$)| $L=\frac{dΦ}{dωdA^⊥}$	|通过单位面积单位立体角的辐射通量|
 |立体角(Solid Angle)|ω 立体弧度，球面度(sr)| $ω=\frac{S}{r^2}$	|是二维弧度在三维的扩展，1球面度等于单位球体的表面面积|
 
 

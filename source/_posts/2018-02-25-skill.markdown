@@ -225,4 +225,4 @@ void LateUpdate()
 
 [i2]: http://docs.groovy-lang.org/latest/html/api/groovy/util/GroovyScriptEngine.html
 
-[i3]: https://huailiang.github.io "Huailiang: A Progressive Web App"
+[i3]: https://huailiang.github.io 
