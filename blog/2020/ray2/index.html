@@ -5,7 +5,7 @@
   <meta http-equiv="X-UA-Compatible" content="IE=edge">
   <meta name="viewport" content="width=device-width, initial-scale=1">
 
-  <title>光线追踪-降噪</title>
+  <title>光线追踪-降噪与硬件加速</title>
   <meta name="description"
     content="  图像去噪是非常基础也是非常必要的研究，去噪常常在更高级的图像处理之前进行，是图像处理的基础。可惜的是，目前去噪算法并没有很好的解决方案，实际应用中，更多的是在效果和运算复杂度之间求得一个平衡。">
 
@@ -67,7 +67,7 @@ MathJax.Hub.Config({
 
   <div class="card">
     <header class="post-header">
-      <h1 class="post-title">光线追踪-降噪</h1>
+      <h1 class="post-title">光线追踪-降噪与硬件加速</h1>
       <p class="post-meta">Jan 6, 2020 •
         Huailiang</p>
     </header>
@@ -76,6 +76,8 @@ MathJax.Hub.Config({
       <blockquote>
   <p>图像去噪是非常基础也是非常必要的研究，去噪常常在更高级的图像处理之前进行，是图像处理的基础。可惜的是，目前去噪算法并没有很好的解决方案，实际应用中，更多的是在效果和运算复杂度之间求得一个平衡。</p>
 </blockquote>
+
+<p><img src="/img/post-ml/ray14.jpg" alt="" /></p>
 
 <h3 id="噪声模型">噪声模型</h3>
 
@@ -89,7 +91,7 @@ MathJax.Hub.Config({
 
 <p>工程上，图像中的噪声常常用高斯噪声$N(μ,σ^2)$来近似表示，其中$μ=0，σ^2$是噪声的方差，$σ^2$越大，噪声越大。一个有效的去除高斯噪声的方式是图像求平均，对N幅相同的图像求平均的结果将使得高斯噪声的方差降低到原来的N分之一，现在效果比较好的去噪算法都是基于这一思想来进行算法设计。</p>
 
-<iframe src="//player.bilibili.com/player.html?aid=29458366&amp;cid=51215573&amp;page=1" scrolling="no" border="0" frameborder="no" framespacing="0" allowfullscreen="true" width="700" height="460"> </iframe>
+<p>除了高斯噪音，还有poisson噪声， 蒙特卡洛噪音。 光线渲染在路径追踪的时候，往往由于蒙特卡洛采样过少，则会导致的噪点。</p>
 
 <h3 id="为什么光线追踪会出现噪点">为什么光线追踪会出现噪点</h3>
 
@@ -123,11 +125,11 @@ MathJax.Hub.Config({
 
 <p>一般地，针对 uint8 数据，最大像素值为 255,；针对浮点型数据，最大像素值为 1。n为每像素的比特数，一般取8，即像素灰阶数为256. PSNR的单位是dB，数值越大表示失真越小。</p>
 
-<p>上面是针对灰度图像的计算方法，如果是彩色图像，通常有三种方法来计算。</p>
+<p>上面是针对灰度图像的计算方法，如果是彩色图像，通常有三种方法来计算</p>
 <ul>
-  <li>分别计算 RGB 三个通道的 PSNR，然后取平均值。</li>
-  <li>计算 RGB 三通道的 MSE ，然后再除以 3 。</li>
-  <li>将图片转化为 YCbCr 格式，然后只计算 Y 分量也就是亮度分量的 PSNR。</li>
+  <li>分别计算 RGB 三个通道的 PSNR，然后取平均值</li>
+  <li>计算 RGB 三通道的 MSE ，然后再除以 3</li>
+  <li>将图片转化为 YCbCr 格式，然后只计算 Y 分量也就是亮度分量的 PSNR</li>
 </ul>
 
 <div class="language-py highlighter-rouge"><pre class="highlight"><code><span class="c"># im1 和 im2 都为灰度图像，uint8 类型</span>
@@ -312,40 +314,24 @@ x \quad \quad otherwise
 
 <h2 id="noise2noise">Noise2Noise</h2>
 
-<p><a href="https://arxiv.org/abs/1803.04189">Noise2Noise-Learning Image Restoration without Clean Data</a>在ICML2018上，是图像领域的重要的论文。训练图像去噪不需要无噪的原图像。Noise2Noise的AI系统是基于深度学习算法创建的，并且已利用ImageNet数据集提供的50000张图片进行了强化锻炼。每一张训练图片都是由清晰的高质量原图上随机地加上噪点而创建的。计算机生成的图像和核磁共振（MRI）扫描成像也被用于训练Noise2Noise的AI系统。</p>
+<p>深度学习方法进行图像去噪的时候，通常需要大量的训练图像样本对，即带有噪声的图片和去噪后的图片，可是去噪后的图片往往很难获得，比如在摄影中，需要长曝光才能获得无噪声图片。在MRI图像中，获取无噪声图片则更加难。</p>
 
-<p>如果我们接触过图像（信号）恢复中基于模型（重建）的算法，我们就知道：其难点和麻烦的地方，在于对似然函数（降质模型）和图像先验（稀疏、平滑等）的建模。而CNN很好地解决了这一问题，但需要大量的训练数据，通常是受损输入$x^i$和干净目标$y_i$，并且训练目标是最小化经验损失：</p>
-
-<script type="math/tex; mode=display">\arg\min_{\theta} \sum_i L(f_{\theta}(\hat{x}_i), y_i) \tag{1}</script>
-
-<p>其中，$f_θ$是参数化的映射（a parametric family of mappings），例如CNN。</p>
-
-<p>获取大量干净数据是很困难的。例如，为了获得无噪图像，我们需要长曝光；为了获得MRI图像的完整采样，图像中不能有动态目标等。</p>
-
-<p><strong>点估计</strong></p>
+<p>Noise2Noise一种不需要无噪声图片作为标签的去噪方法。方法非常有意思，实现起来也很简单。那就是：输入输出都是带有噪声的图片（噪声是人工加入的，0均值，高斯噪声），进行训练。</p>
 
 <p>假设我们有一组温度采样数据(y1,y2,…)。我们希望在某种损失度量L下，得到温度估计值z（希望该损失最小）：</p>
 
 <script type="math/tex; mode=display">\arg\min_z \mathbb{E}_y \{L(z,y)\} \tag{2}</script>
 
-<p>如果采用L2损失，那么估计值就是观测值的算术平均：</p>
+<p>于所有观测y，都要最小化损失。所以可以把L看成一个以y为变量的概率分布，最小化所有样本的损失，其实就是最小化期望（即损失的均值）。如果距离度量方式是2范数，那么真实温度z就是y的均值。所以，真实温度，其实是y的均值，至于每一次观测y(i)是什么，根本不重要，优化的目标是考虑所有观测的均值。</p>
 
-<script type="math/tex; mode=display">z = \mathbb{E}_y \{ y \} \tag{3}</script>
-
-<p>点估计带有一些统计平均的性质。比如，我们可以简单地对多点采样的温度取平均，得到最终的估计温度。</p>
-
-<p><strong>神经网络算法与点估计的关系</strong></p>
-
-<p>式1表达的是参数预测问题（不是简单地估计值，而是学习一个预测模型，服务千千万万的输入），式2是点估计问题，二者不是一个东西。理想状况下，网络的优化方式如下（提供准确的先验和似然）</p>
+<p>那么，对于图像去噪问题，输入噪声图像设为x(i)，输出的清晰图像设为y(i)。那么，我们可以将问题建模为如下优化问题：</p>
 
 <script type="math/tex; mode=display">\arg\min_{\theta} \mathbb{E}_{(x,y)} \{ L(f_{\theta}(x), y) \} = \arg\min_{\theta} \mathbb{E}_x \{ \mathbb{E}_{(y | x)} \{ L(f_{\theta}(x), y) \} \} \tag{4}</script>
 
-<p>上式可以理解为：对于每一个样本$x_i$，都在执行一次点估计。可以理解为：根据观测点y，估计点$z=f_θ(x)$，而估计完成时，参数θ就可以根据z推出（或者说二者本质是一样的）。</p>
+<p>上述公式的$\theta$是CNN的权重参数，x, y不是相互独立的，所以左式等于右式。</p>
 
-<p>当然，这种论证是很粗糙的，但提供给我们一个非常有用的见解。我们考虑超分辨问题：这是一个典型的病态问题，因为高频信息在采样过程中丢掉了，而同一张LR图像可以对应大量的HR图像。<br />
-借助上述点估计思想，我们不难理解：神经网络实际上是将这些大量的、可能的HR图像做了一个统计平均（点估计的特性），因此L2范数下超分辨图像常常被过度平滑。既然是统计平均，那么我们可以将干净图像y随意换成其他图像（信号），只要保证期望不变，那么也能得到我们想要的估计值$z=f_θ(x)$（式3），进而得到不变的参数θ（式4）！</p>
-
-<p>换句话说，如果假设噪声零均值（或保证期望仍然是无噪图像的期望），那么我们就可以让神经网络的输入和监督都是有噪图像，学习的参数是一样的！</p>
+<p>同样的，如果改变p(y/x)的分布，只要条件期望不变，最终求得的$\theta$<br />
+也不会变。所以，如果我们对标签y添加一个0均值的高斯噪声作为扰动得到y’。那么，上述建模</p>
 
 <script type="math/tex; mode=display">\mathbb{E} \{ \hat{y}_i | \hat{x}_i \} = y = \mathbb{E} \{ y_i | \hat{x}_i \} \tag{5}</script>
 
@@ -361,6 +347,47 @@ x \quad \quad otherwise
 
 <p>OptiX AI降噪技术与Quadro GV100和Titan V中的全新NVIDIA Tensor Cores相结合，可提供相当于前代GPU 3倍的性能，并首次实现了无噪声流体交互。</p>
 
+<p>Nvidia 允许开发者构建自己的神经网络， 使用Optix来加速降噪运算， 从而实现更好的效果， 详细参见<a href="https://research.nvidia.com/sites/default/files/publications/dnn_denoise_author.pdf">siggraph-2017</a>教程， 专门针对路径追踪，由于蒙特卡洛采样次数不足产生的noise picture降噪的神经网络。</p>
+
+<p><img src="/img/post-ml/ray15.jpg" alt="" /></p>
+
+<p>构建一个降噪神经网络， 如基于AutoEncoder实现的Noise2Noise， 训练的时候不需要清晰的图片一样可以产生降噪后的图片。</p>
+
+<iframe width="680" height="440" src="https://www.youtube.com/embed/l-5NVNgT70U" frameborder="0" allow="accelerometer; autoplay; encrypted-media; gyroscope; picture-in-picture" allowfullscreen=""></iframe>
+<p><em>OptiX 5 AI降噪效果视频 youtube</em></p>
+
+<h2 id="nvidia-rtx">NVIDIA RTX</h2>
+
+<p>NVIDIA正式推出了基于新的Turing架构的RTX系列显卡，除了全新的架构之外，我们还引入了一个全新的硬件单元叫RTCcore，主要是用来加速射线和几何体求交，为实时光线追踪奠定硬件上的基础。除此之外，我们还加入了Tensor Core用来加速AI计算。</p>
+
+<p>光线追踪需要快速的找到射线和场景中物体的交点，所以快速对场景进行遍历求交就显得尤为重要。为了加速这个过程，通常我们需要对场景里面的物体建立加速结构，就像普通的剔除一样，对场景中的物体建立八叉树之类的结构进行管理。</p>
+
+<h3 id="bvh-算法">BVH 算法</h3>
+
+<p>BVH即<em>bounding volume Hierachy</em>, 即专门用来求射线与三角形的交点的快速算法。</p>
+
+<p>如下图所示，是演示如何找到一条射线和兔子头部的交点。</p>
+
+<p><img src="/img/post-ml/ray19.jpg" alt="" /></p>
+
+<p>　　第一步，先找到包含整个兔子头部的大的包围盒，然后发现这个包围盒的子节点是更小的包围盒。</p>
+
+<p>　　第二步，看射线与哪个子包围盒相交。如果找到了相交的子包围盒，就重复递归以上过程，直到找到子节点里包含的不再是包围盒而是具体的图元信息，图元信息一般为三角形，我们就开始求交三角形与射线的交点，并返回交点信息。</p>
+
+<p>　　在Turing之前这些步骤都是在Shader里面模拟的。右侧的图可以看到Shader里面先产生一条射线，然后射线进入到加速结构遍历求交的过程。</p>
+
+<p><img src="/img/post-ml/ray16.png" alt="" /></p>
+
+<p>首先取出包围盒数据,包围盒解码。然后判断下一级是子包围盒还是三角形，如果是包围盒就重复以上过程，直到找到三角形，然后进行射线三角形求交计算并返回交点。</p>
+
+<p>　　黄色的部分就是加速结构的遍历求交过程，这一部分通常需要上千条指令，是比较耗时的一个过程。在Turing中就把黄色的这块加速结构遍历求交的计算，放在全新的硬件单元RTCore上去执行，所以速度会提升很多，而Shader还是在SM上执行的。</p>
+
+<p>那么光线追踪的过程就变成了执行在SM单元上的Shader里面产生射线信息，然后将这条射线的求交查询请求发往RTCore，RTCore收到请求后就进行加速结构的遍历及相交测试，如果找到交点就将交点信息返回到SM单元里面的Shader进行着色计算。所以在Turing中RTCore是放在SM旁边的，这就是硬件的架构图。</p>
+
+<p><img src="/img/post-ml/ray18.jpg" alt="" /></p>
+
+<p>RTCore极大的提升了射线与物体求交的速度，性能方面我们这边有组数据，上图中，在1080Ti上，我们使用Shader模拟大概支持的射线是每秒1G左右，在2080Ti上有RTCore可以达到每秒10G，所以性能提升了大概10倍。</p>
+
 <h2 id="参考资料">参考资料</h2>
 
 <ul>
@@ -372,7 +399,12 @@ x \quad \quad otherwise
   <li><a href="https://github.com/NVlabs/noise2noise">Learning Image Restoration without Clean Data, tensorflow, github</a></li>
   <li><a href="https://developer.nvidia.com/optix">NVIDIA Optix Instro</a></li>
   <li><a href="https://baike.baidu.com/item/v-ray/3745231?fr=aladdin">v-ray instro, 百科</a></li>
-  <li><a href="https://zhuanlan.zhihu.com/p/36429298">基于RTX的NVIDIA OptiX光线追踪</a></li>
+  <li><a href="https://developer.nvidia.com/optix-denoiser">NVIDIA OptiX Denoise</a></li>
+  <li><a href="https://zhuanlan.zhihu.com/p/36429298">基于RTX的NVIDIA OptiX光线追踪, 知乎</a></li>
+  <li><a href="https://devblogs.microsoft.com/directx/announcing-microsoft-directx-raytracing/">Microsoft’s DirectX Ray Tracing (DXR) </a></li>
+  <li><a href="https://developer.nvidia.com/rtx/raytracing/vkray">NVIDIA Vulkan Ray Tracing Tutorial</a></li>
+  <li><a href="https://developer.nvidia.com/optix-denoiser">Interactive Reconstruction of Monte Carlo Image Sequences</a></li>
+  <li><a href="https://my.oschina.net/abcijkxyz/blog/721183">图像处理之添加高斯与泊松噪声</a></li>
 </ul>
 
 
