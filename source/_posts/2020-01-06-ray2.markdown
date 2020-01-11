@@ -255,18 +255,11 @@ $$
 
 ### 两个算法的PSNR比较
 
-<table border="1">
- <tr>
-    <th></th>
-    <th>NL_Mean</th>
-    <th>BM3D</th>
-</tr>        
-<tr>
-    <td>PSNR</td>
-    <td>32.09</td>
-    <td>33.67</td>
-</tr>                
-</table>
+
+|       | NL_Mean | BM3D  |
+| :---: | :-----: | :---: |
+| PSNR  |  32.09  | 33.67 |
+
 
 NL-Means和BM3D可以说是目前效果最好的去噪算法，其中BM3D甚至宣称它可以得到迄今为止最高的PSNR。从最终的结果也可以看出来，BM3D的效果确实要好于NL-Means，噪声更少，能够更好地恢复出图像的细节。
 
