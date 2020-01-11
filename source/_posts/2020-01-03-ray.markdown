@@ -10,7 +10,7 @@ tags:
 >要说目前最热门的图形学话题，自然非实时光线追踪了莫属了。在GDC 2018上，微软率先为DX 12 API增加了光线追踪模块，并且将其命名为DirectX Raytracing (DXR)；而NV则紧随其后发布了基于实时光线追踪的RTX技术；并且直接将显卡型号都从GTX改成了RTX系列。此后，AMD也正式宣布了自家的ProRender渲染引擎将支持实时光线追踪。 当然，硬件厂商都这样了，游戏引擎也不能掉链子，诸如EA 寒霜引擎、EA Seed、Unreal 引擎、3DMark、Unity 引擎已经宣布将会引入光线追踪。不过，乍一听看起来这些似乎距离我们还有些遥远，直到前两天NVIDIA发布了RTX 2080 Ti、RTX 2080、RTX 2070游戏显卡，明确表示从硬件级别支持光线追踪。
 
 
-### 光线追踪的历史2
+### 光线追踪的历史
 
 其实光线追踪并不是近几年才有的概念，它的历史甚至可以追溯到上世纪70年代。Arthur Appel 于 1968 年提出将光线追踪算法应用于图片渲染的概念，那时还叫 ray casting，这也是后来光线追踪的基石。但一直等到 10 年后的 1979 年，*Turner Whitted*才继续在论文*[An Improved Illumination Model for Shaded Display][i8]*中，具体解析如何捕捉反射、阴影和反射。在光线投射的基础上，加入光与物体表面的交互。
 
@@ -663,6 +663,123 @@ bool IntersectTriangle_01(Ray ray, float3 vert0, float3 vert1, float3 vert2,
     return true;
 }
 ```
+
+
+#### 4. 射线与立方盒相交
+
+主要是BVH算法会用到， 下面一节会用到。
+
+默认在对象空间计算，需要将光线转至立方盒的对象空间
+
+射线：$R(t)=O+tD  （O原点,D方向,t距离）$
+
+立方体：$x=0;y=0;z=0;x=r_x;y=r_y;z=r_z$(由六个面组成)
+
+推导过程：
+
+① 寻找可能正面相交的平面（最多三个）
+
+通过光线方向的三个分量判断各自两个面的相交情况，以x轴为例：
+
+$D_x>0$:光线与平面x=0相交
+
+$D_x<0$：光线与平面$x=r_x$相交
+
+$D_x=0$ ：两个面都不相交
+
+② 计算与平面的焦点，得到最近的相交点（在矩形内部）
+
+将R(t)带入各个面，以$x=r_x$为例
+
+可以确定焦点的x值为$r_x$,带入R(t)推出t值
+
+$$ 
+t = \frac{r_x-O_x}{D_x}
+$$
+
+
+然后根据t得到交点的另外两个分量
+
+$$
+P=O+tD
+$$
+
+如果该交点另外两个分量满足下面两个条件，则该点就是最近的相交点，不用再考虑其他平面了。
+
+$$
+\left\{
+\begin{aligned}
+0 \leq P_y \leq r_y  \\
+0 \leq P_z \leq r_z
+\end{aligned}
+\right.
+$$
+
+代码：
+
+```c++
+#define ISPOINT(name,c1,c2) name.c1>=0&&name.c1<=cubeSize.c1&& name.c2>=0&&name.c2<=cubeSize.c2
+//立方体 对象空间
+bool IntersectCube(Ray ray,float3 cubeSize,inout float t,inout float3 normal){
+    //1.用矩阵将射线转为立方体的对象空间，略 后面的法线也应该转回世界空间 
+    float3 rayOri=ray.origin;
+    float3 rayDir=ray.direction;
+    float3 pos;
+    //x轴两个面
+    if(rayDir.x<0){ 
+        t=(cubeSize.x-rayOri.x)/rayDir.x;
+        pos=rayOri+t*rayDir;
+        if(ISPOINT(pos,y,z)){
+            normal=float3(1,0,0);
+            return true;
+        }
+    }
+    else if(rayDir.x>0){
+        t=-rayOri.x/rayDir.x;
+        pos=rayOri+t*rayDir;
+        if(ISPOINT(pos,y,z)){
+            normal=float3(-1,0,0);
+            return true;
+        }
+    }
+    //y轴两个面
+    if(rayDir.y<0){ 
+        t=(cubeSize.y-rayOri.y)/rayDir.y;
+        pos=rayOri+t*rayDir;
+        if(ISPOINT(pos,x,z)){
+            normal=float3(0,1,0);
+            return true;
+        }
+    }
+    else if(rayDir.y>0){
+        t=-rayOri.y/rayDir.y;
+        pos=rayOri+t*rayDir;
+        if(ISPOINT(pos,x,z)){
+            normal=float3(0,-1,0);
+            return true;
+        }
+    }
+    //z轴两个面
+    if(rayDir.z<0){ 
+        t=(cubeSize.z-rayOri.z)/rayDir.z;
+        pos=rayOri+t*rayDir;
+        if(ISPOINT(pos,x,y)){
+            normal=float3(0,0,1);
+            return true;
+        }
+    }
+    else if(rayDir.z>0){
+        t=-rayOri.z/rayDir.z;
+        pos=rayOri+t*rayDir;
+        if(ISPOINT(pos,x,y)){
+            normal=float3(0,0,-1);
+            return true;
+        }
+    }
+    return false;
+}
+```
+
 
 ## 参考资料
 
