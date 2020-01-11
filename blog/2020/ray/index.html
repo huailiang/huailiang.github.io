@@ -77,7 +77,7 @@ MathJax.Hub.Config({
   <p>要说目前最热门的图形学话题，自然非实时光线追踪了莫属了。在GDC 2018上，微软率先为DX 12 API增加了光线追踪模块，并且将其命名为DirectX Raytracing (DXR)；而NV则紧随其后发布了基于实时光线追踪的RTX技术；并且直接将显卡型号都从GTX改成了RTX系列。此后，AMD也正式宣布了自家的ProRender渲染引擎将支持实时光线追踪。 当然，硬件厂商都这样了，游戏引擎也不能掉链子，诸如EA 寒霜引擎、EA Seed、Unreal 引擎、3DMark、Unity 引擎已经宣布将会引入光线追踪。不过，乍一听看起来这些似乎距离我们还有些遥远，直到前两天NVIDIA发布了RTX 2080 Ti、RTX 2080、RTX 2070游戏显卡，明确表示从硬件级别支持光线追踪。</p>
 </blockquote>
 
-<h3 id="光线追踪的历史2">光线追踪的历史2</h3>
+<h3 id="光线追踪的历史">光线追踪的历史</h3>
 
 <p>其实光线追踪并不是近几年才有的概念，它的历史甚至可以追溯到上世纪70年代。Arthur Appel 于 1968 年提出将光线追踪算法应用于图片渲染的概念，那时还叫 ray casting，这也是后来光线追踪的基石。但一直等到 10 年后的 1979 年，<em>Turner Whitted</em>才继续在论文<em><a href="https://dl.acm.org/citation.cfm?id=358882">An Improved Illumination Model for Shaded Display</a></em>中，具体解析如何捕捉反射、阴影和反射。在光线投射的基础上，加入光与物体表面的交互。</p>
 
@@ -696,6 +696,114 @@ GPU里没有类似random()函数之类的算法， 需要自己去实现， 下�
     <span class="c1">//t=Q·E2  
 </span>    <span class="n">t</span> <span class="o">=</span> <span class="n">dot</span><span class="p">(</span><span class="n">edge2</span><span class="p">,</span> <span class="n">qvec</span><span class="p">)</span> <span class="o">*</span> <span class="n">inv_det</span><span class="p">;</span>
     <span class="k">return</span> <span class="nb">true</span><span class="p">;</span>
+<span class="p">}</span>
+</code></pre>
+</div>
+
+<h4 id="4-射线与立方盒相交">4. 射线与立方盒相交</h4>
+
+<p>主要是BVH算法会用到， 下面一节会用到。</p>
+
+<p>默认在对象空间计算，需要将光线转至立方盒的对象空间</p>
+
+<p>射线：$R(t)=O+tD  （O原点,D方向,t距离）$</p>
+
+<p>立方体：$x=0;y=0;z=0;x=r_x;y=r_y;z=r_z$(由六个面组成)</p>
+
+<p>推导过程：</p>
+
+<p>① 寻找可能正面相交的平面（最多三个）</p>
+
+<p>通过光线方向的三个分量判断各自两个面的相交情况，以x轴为例：</p>
+
+<p>$D_x&gt;0$:光线与平面x=0相交</p>
+
+<p>$D_x&lt;0$：光线与平面$x=r_x$相交</p>
+
+<p>$D_x=0$ ：两个面都不相交</p>
+
+<p>② 计算与平面的焦点，得到最近的相交点（在矩形内部）</p>
+
+<p>将R(t)带入各个面，以$x=r_x$为例</p>
+
+<p>可以确定焦点的x值为$r_x$,带入R(t)推出t值</p>
+
+<script type="math/tex; mode=display">t = \frac{r_x-O_x}{D_x}</script>
+
+<p>然后根据t得到交点的另外两个分量</p>
+
+<script type="math/tex; mode=display">P=O+tD</script>
+
+<p>如果该交点另外两个分量满足下面两个条件，则该点就是最近的相交点，不用再考虑其他平面了。</p>
+
+<script type="math/tex; mode=display">\left\{
+\begin{aligned}
+0 \leq P_y \leq r_y  \\
+0 \leq P_z \leq r_z
+\end{aligned}
+\right.</script>
+
+<p>代码：</p>
+
+<div class="language-c++ highlighter-rouge"><pre class="highlight"><code><span class="cp">#define ISPOINT(name,c1,c2) name.c1&gt;=0&amp;&amp;name.c1&lt;=cubeSize.c1&amp;&amp; name.c2&gt;=0&amp;&amp;name.c2&lt;=cubeSize.c2
+</span><span class="c1">//立方体 对象空间
+</span><span class="kt">bool</span> <span class="n">IntersectCube</span><span class="p">(</span><span class="n">Ray</span> <span class="n">ray</span><span class="p">,</span><span class="n">float3</span> <span class="n">cubeSize</span><span class="p">,</span><span class="n">inout</span> <span class="kt">float</span> <span class="n">t</span><span class="p">,</span><span class="n">inout</span> <span class="n">float3</span> <span class="n">normal</span><span class="p">){</span>
+    <span class="c1">//1.用矩阵将射线转为立方体的对象空间，略 后面的法线也应该转回世界空间 
+</span>    <span class="n">float3</span> <span class="n">rayOri</span><span class="o">=</span><span class="n">ray</span><span class="p">.</span><span class="n">origin</span><span class="p">;</span>
+    <span class="n">float3</span> <span class="n">rayDir</span><span class="o">=</span><span class="n">ray</span><span class="p">.</span><span class="n">direction</span><span class="p">;</span>
+    <span class="n">float3</span> <span class="n">pos</span><span class="p">;</span>
+    <span class="c1">//x轴两个面
+</span>    <span class="k">if</span><span class="p">(</span><span class="n">rayDir</span><span class="p">.</span><span class="n">x</span><span class="o">&lt;</span><span class="mi">0</span><span class="p">){</span> 
+        <span class="n">t</span><span class="o">=</span><span class="p">(</span><span class="n">cubeSize</span><span class="p">.</span><span class="n">x</span><span class="o">-</span><span class="n">rayOri</span><span class="p">.</span><span class="n">x</span><span class="p">)</span><span class="o">/</span><span class="n">rayDir</span><span class="p">.</span><span class="n">x</span><span class="p">;</span>
+        <span class="n">pos</span><span class="o">=</span><span class="n">rayOri</span><span class="o">+</span><span class="n">t</span><span class="o">*</span><span class="n">rayDir</span><span class="p">;</span>
+        <span class="k">if</span><span class="p">(</span><span class="n">ISPOINT</span><span class="p">(</span><span class="n">pos</span><span class="p">,</span><span class="n">y</span><span class="p">,</span><span class="n">z</span><span class="p">)){</span>
+            <span class="n">normal</span><span class="o">=</span><span class="n">float3</span><span class="p">(</span><span class="mi">1</span><span class="p">,</span><span class="mi">0</span><span class="p">,</span><span class="mi">0</span><span class="p">);</span>
+            <span class="k">return</span> <span class="nb">true</span><span class="p">;</span>
+        <span class="p">}</span>
+    <span class="p">}</span>
+    <span class="k">else</span> <span class="k">if</span><span class="p">(</span><span class="n">rayDir</span><span class="p">.</span><span class="n">x</span><span class="o">&gt;</span><span class="mi">0</span><span class="p">){</span>
+        <span class="n">t</span><span class="o">=-</span><span class="n">rayOri</span><span class="p">.</span><span class="n">x</span><span class="o">/</span><span class="n">rayDir</span><span class="p">.</span><span class="n">x</span><span class="p">;</span>
+        <span class="n">pos</span><span class="o">=</span><span class="n">rayOri</span><span class="o">+</span><span class="n">t</span><span class="o">*</span><span class="n">rayDir</span><span class="p">;</span>
+        <span class="k">if</span><span class="p">(</span><span class="n">ISPOINT</span><span class="p">(</span><span class="n">pos</span><span class="p">,</span><span class="n">y</span><span class="p">,</span><span class="n">z</span><span class="p">)){</span>
+            <span class="n">normal</span><span class="o">=</span><span class="n">float3</span><span class="p">(</span><span class="o">-</span><span class="mi">1</span><span class="p">,</span><span class="mi">0</span><span class="p">,</span><span class="mi">0</span><span class="p">);</span>
+            <span class="k">return</span> <span class="nb">true</span><span class="p">;</span>
+        <span class="p">}</span>
+    <span class="p">}</span>
+    <span class="c1">//y轴两个面
+</span>    <span class="k">if</span><span class="p">(</span><span class="n">rayDir</span><span class="p">.</span><span class="n">y</span><span class="o">&lt;</span><span class="mi">0</span><span class="p">){</span> 
+        <span class="n">t</span><span class="o">=</span><span class="p">(</span><span class="n">cubeSize</span><span class="p">.</span><span class="n">y</span><span class="o">-</span><span class="n">rayOri</span><span class="p">.</span><span class="n">y</span><span class="p">)</span><span class="o">/</span><span class="n">rayDir</span><span class="p">.</span><span class="n">y</span><span class="p">;</span>
+        <span class="n">pos</span><span class="o">=</span><span class="n">rayOri</span><span class="o">+</span><span class="n">t</span><span class="o">*</span><span class="n">rayDir</span><span class="p">;</span>
+        <span class="k">if</span><span class="p">(</span><span class="n">ISPOINT</span><span class="p">(</span><span class="n">pos</span><span class="p">,</span><span class="n">x</span><span class="p">,</span><span class="n">z</span><span class="p">)){</span>
+            <span class="n">normal</span><span class="o">=</span><span class="n">float3</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span><span class="mi">1</span><span class="p">,</span><span class="mi">0</span><span class="p">);</span>
+            <span class="k">return</span> <span class="nb">true</span><span class="p">;</span>
+        <span class="p">}</span>
+    <span class="p">}</span>
+    <span class="k">else</span> <span class="k">if</span><span class="p">(</span><span class="n">rayDir</span><span class="p">.</span><span class="n">y</span><span class="o">&gt;</span><span class="mi">0</span><span class="p">){</span>
+        <span class="n">t</span><span class="o">=-</span><span class="n">rayOri</span><span class="p">.</span><span class="n">y</span><span class="o">/</span><span class="n">rayDir</span><span class="p">.</span><span class="n">y</span><span class="p">;</span>
+        <span class="n">pos</span><span class="o">=</span><span class="n">rayOri</span><span class="o">+</span><span class="n">t</span><span class="o">*</span><span class="n">rayDir</span><span class="p">;</span>
+        <span class="k">if</span><span class="p">(</span><span class="n">ISPOINT</span><span class="p">(</span><span class="n">pos</span><span class="p">,</span><span class="n">x</span><span class="p">,</span><span class="n">z</span><span class="p">)){</span>
+            <span class="n">normal</span><span class="o">=</span><span class="n">float3</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span><span class="o">-</span><span class="mi">1</span><span class="p">,</span><span class="mi">0</span><span class="p">);</span>
+            <span class="k">return</span> <span class="nb">true</span><span class="p">;</span>
+        <span class="p">}</span>
+    <span class="p">}</span>
+    <span class="c1">//z轴两个面
+</span>    <span class="k">if</span><span class="p">(</span><span class="n">rayDir</span><span class="p">.</span><span class="n">z</span><span class="o">&lt;</span><span class="mi">0</span><span class="p">){</span> 
+        <span class="n">t</span><span class="o">=</span><span class="p">(</span><span class="n">cubeSize</span><span class="p">.</span><span class="n">z</span><span class="o">-</span><span class="n">rayOri</span><span class="p">.</span><span class="n">z</span><span class="p">)</span><span class="o">/</span><span class="n">rayDir</span><span class="p">.</span><span class="n">z</span><span class="p">;</span>
+        <span class="n">pos</span><span class="o">=</span><span class="n">rayOri</span><span class="o">+</span><span class="n">t</span><span class="o">*</span><span class="n">rayDir</span><span class="p">;</span>
+        <span class="k">if</span><span class="p">(</span><span class="n">ISPOINT</span><span class="p">(</span><span class="n">pos</span><span class="p">,</span><span class="n">x</span><span class="p">,</span><span class="n">y</span><span class="p">)){</span>
+            <span class="n">normal</span><span class="o">=</span><span class="n">float3</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span><span class="mi">0</span><span class="p">,</span><span class="mi">1</span><span class="p">);</span>
+            <span class="k">return</span> <span class="nb">true</span><span class="p">;</span>
+        <span class="p">}</span>
+    <span class="p">}</span>
+    <span class="k">else</span> <span class="k">if</span><span class="p">(</span><span class="n">rayDir</span><span class="p">.</span><span class="n">z</span><span class="o">&gt;</span><span class="mi">0</span><span class="p">){</span>
+        <span class="n">t</span><span class="o">=-</span><span class="n">rayOri</span><span class="p">.</span><span class="n">z</span><span class="o">/</span><span class="n">rayDir</span><span class="p">.</span><span class="n">z</span><span class="p">;</span>
+        <span class="n">pos</span><span class="o">=</span><span class="n">rayOri</span><span class="o">+</span><span class="n">t</span><span class="o">*</span><span class="n">rayDir</span><span class="p">;</span>
+        <span class="k">if</span><span class="p">(</span><span class="n">ISPOINT</span><span class="p">(</span><span class="n">pos</span><span class="p">,</span><span class="n">x</span><span class="p">,</span><span class="n">y</span><span class="p">)){</span>
+            <span class="n">normal</span><span class="o">=</span><span class="n">float3</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span><span class="mi">0</span><span class="p">,</span><span class="o">-</span><span class="mi">1</span><span class="p">);</span>
+            <span class="k">return</span> <span class="nb">true</span><span class="p">;</span>
+        <span class="p">}</span>
+    <span class="p">}</span>
+    <span class="k">return</span> <span class="nb">false</span><span class="p">;</span>
 <span class="p">}</span>
 </code></pre>
 </div>
