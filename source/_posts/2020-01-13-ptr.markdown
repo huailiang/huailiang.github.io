@@ -162,12 +162,15 @@ void mytest()
 
 DirectX11的API是由一系列的COM组件来管理的，这些前缀带I的接口类最终都继承自IUnknown接口类。IUnknown的三个方法如下：
 
-<table><thead><tr>
+<table>
+<thead>
+<tr>
   <th width="30%">方法</th>
-  <th >描述</th>
+  <th>描述</th>
 </tr>
 </thead>
-<tbody><tr>
+<tbody>
+<tr>
   <td>IUnknown::AddRef</td>
   <td>内部引用计数加1。在每次复制了一个这样的指针后，应当调用该方法以保证计数准确性</td>
 </tr>
@@ -187,6 +190,7 @@ DirectX11的API是由一系列的COM组件来管理的，这些前缀带I的接�
 ```C++
 #define ReleaseCOM(x) { if(x){ x->Release(); x = nullptr; } }
 ```
+
 而且如果出现了忘记释放某个接口指针的情况话，内存泄漏的提醒就有可能够你去调试一整天了。
 
 #### ComPtr智能指针
@@ -197,14 +201,36 @@ DirectX11的API是由一系列的COM组件来管理的，这些前缀带I的接�
 
 首先有五个比较常用的方法需要了解一下：
 
-
-|方法| 描述 |
-|-|--|
-|ComPtr::Get|该方法返回T*，并且不会触发引用计数加1，常用在COM组件接口的函数输入|
-|ComPtr::GetAddressOf| 该方法返回T**，常用在COM组件接口的函数输出|
-|ComPtr::Reset | 该方法对里面的实例调用Release方法，并将指针置为nullptr|
-|ComPtr::ReleaseAndGetAddressOf|该方法相当于先调用Reset方法，再调用GetAddressOf方法获取T**，常用在COM组件接口的函数输出，适用于实例可能会被反复构造的情况下|
-|ComPtr::As|一个模板函数，可以替代IUnknown::QueryInterface的调用，需要传递一个ComPtr实例的地址|
+<table>
+<thead>
+<tr>
+  <th width="30%">方法 </th>
+  <th>描述</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+  <td align="center">Get</td>
+  <td>该方法返回T*，并且不会触发引用计数加1，常用在COM组件接口的函数输入</td>
+</tr>
+<tr>
+  <td align="center">GetAddressOf</td>
+  <td>该方法返回T**，常用在COM组件接口的函数输出</td>
+</tr>
+<tr>
+  <td align="center">Reset</td>
+  <td>相当于先调用Reset方法，再调用GetAddressOf方法获取T**，常用在COM组件接口的函数输出，适用于实例可能会被反复构造</td>
+</tr>
+<tr>
+  <td align="center">ReleaseAndGetAddressOf</td>
+  <td>可以和nullptr，或者另一个ComPtr实例进行比较</td>
+</tr>
+<tr>
+  <td align="center">As</td>
+  <td>一个模板函数，可以替代IUnknown::QueryInterface的调用，需要传递一个ComPtr实例的地址</td>
+</tr>
+</tbody>
+</table>
 
 
 然后是一些运算符重载的方法：
@@ -213,13 +239,14 @@ DirectX11的API是由一系列的COM组件来管理的，这些前缀带I的接�
 <table>
 <thead>
 <tr>
-  <th width="13%">运算符</th>
+  <th width="15%">运算符</th>
   <th>描述</th>
 </tr>
 </thead>
-<tbody><tr>
+<tbody>
+<tr>
   <td align="center">&</td>
-  <td>相当于调用了ComPtr<T>::ReleaseAndGetAddressOf方法，不推荐使用</td>
+  <td>相当于调用了ReleaseAndGetAddressOf方法，不推荐使用</td>
 </tr>
 <tr>
   <td align="center">-></td>
