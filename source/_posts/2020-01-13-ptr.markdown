@@ -272,30 +272,28 @@ DirectX11的API是由一系列的COM组件来管理的，这些前缀带I的接�
 class D3DApp
 {
 public:
-    D3DApp(HINSTANCE hInstance);              // 在构造函数的初始化列表应当设置好初始参数
+    D3DApp(HINSTANCE hInstance);        // 在构造函数的初始化列表应当设置好初始参数
     virtual ~D3DApp();
 
-    HINSTANCE AppInst()const;                 // 获取应用实例的句柄
-    HWND      MainWnd()const;                 // 获取主窗口句柄
-    float     AspectRatio()const;             // 获取屏幕宽高比
+    HINSTANCE AppInst()const;           // 获取应用实例的句柄
+    HWND      MainWnd()const;           // 获取主窗口句柄
+    float     AspectRatio()const;       // 获取屏幕宽高比
+    int Run();                          // 运行程序，进行游戏主循环
 
-    int Run();                                // 运行程序，进行游戏主循环
-
-                                              // 框架方法。客户派生类需要重载这些方法以实现特定的应用需求
+    // 框架方法。客户派生类需要重载这些方法以实现特定的应用需求                                     
     virtual bool Init();                      // 该父类方法需要初始化窗口和Direct3D部分
     virtual void OnResize();                  // 该父类方法需要在窗口大小变动的时候调用
     virtual void UpdateScene(float dt) = 0;   // 子类需要实现该方法，完成每一帧的更新
     virtual void DrawScene() = 0;             // 子类需要实现该方法，完成每一帧的绘制
     virtual LRESULT MsgProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam);
     // 窗口的消息回调函数
+
 protected:
     bool InitMainWindow();      // 窗口初始化
     bool InitDirect3D();        // Direct3D初始化
-
     void CalculateFrameStats(); // 计算每秒帧数并在窗口显示
 
 protected:
-
     HINSTANCE m_hAppInst;        // 应用实例句柄
     HWND      m_hMainWnd;        // 主窗口句柄
     bool      m_AppPaused;       // 应用是否暂停
@@ -304,8 +302,6 @@ protected:
     bool      m_Resizing;        // 窗口大小是否变化
     bool      m_Enable4xMsaa;    // 是否开启4倍多重采样
     UINT      m_4xMsaaQuality;   // MSAA支持的质量等级
-
-
     GameTimer m_Timer;           // 计时器
 
     // 使用模板别名(C++11)简化类型名

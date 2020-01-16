@@ -343,7 +343,90 @@ BVH即*bounding volume Hierachy*, 即专门用来求射线与三角形的交点�
 
 RTCore极大的提升了射线与物体求交的速度，性能方面我们这边有组数据，上图中，在1080Ti上，我们使用Shader模拟大概支持的射线是每秒1G左右，在2080Ti上有RTCore可以达到每秒10G，所以性能提升了大概10倍。
 
+## DXR 光线追踪渲染过程
 
+
+
+#### 场景数据结构
+
+在Raytrace Pipeline中，几何数据由两层结构存储，其中底层的数据结构称之为Bottom Level Acceleration Structure，上层的数据结构叫做Top Level Acceleration Structure。
+
+在Unity(需要升级到2019.3之后的版本)中检查设备是否支持：
+```c#
+if (!SystemInfo.supportsRayTracing)
+{
+    Debug.LogError("You system is not support ray tracing. Please check your graphic API is D3D12 and os is Windows 10.");
+}
+```
+
+使用DX12的api检查是否支持这种硬件加速结构：
+
+```c++
+#define FAILED(hr) (((HRESULT)(hr)) < 0)
+
+ID3D12Device5Ptr pDevice;
+d3d_call(D3D12CreateDevice(pAdapter, D3D_FEATURE_LEVEL_12_0, IID_PPV_ARGS(&pDevice)));
+
+D3D12_FEATURE_DATA_D3D12_OPTIONS5 features5;
+HRESULT hr = pDevice->CheckFeatureSupport(D3D12_FEATURE_D3D12_OPTIONS5, &features5, sizeof(D3D12_FEATURE_DATA_D3D12_OPTIONS5));
+if (FAILED(hr) || features5.RaytracingTier == D3D12_RAYTRACING_TIER_NOT_SUPPORTED)
+{
+    msgBox("Raytracing is not supported on this device. Make sure your GPU supports DXR (such as Nvidia's Volta or Turing RTX) and you're on the latest drivers. The DXR fallback layer is not supported.");
+    exit(1);
+}
+return pDevice;
+```
+
+
+![](/img/post-ml/ray20.jpg)
+
+Bottom Level AS：这层存放一般意义上的顶点数据，类似于Raster Pipeline的Vertex/Index Buffer的集合。当然如果是非三角面的话，可能存放的是其他数据（比如参数曲面的控制点）。
+
+Top Level AS：Top Level AS是模型级别的场景信息描述，它的每一项数据引用一个Bottom Level AS（当做该模型的几何数据），并单独定义了该模型的模型变换矩阵以及包围盒。
+
+基于这样双层的数据结构，我们就可以调用DXR API创建整个场景的查询结构，这个查询结构是一个BVH（Bounding Volume Hierarchy），用来加速光线-场景的相交测试。可以想象，当一个相交测试开始时，光线首先会和BVH进行相交测试，通过的对象才会进一步访问其Bottom Level AS数据执行具体的光线-三角面相交测试。
+
+由于整个BVH只用于进行光线-场景相交测试，因此它只包含顶点位置的信息，如果我们需要顶点位置之外的信息（uv，normal等），则往往需要额外自定义一个SRV/UAV Buffer用于存储这些数据。
+
+在Unity2019.3版本中， 构建加速运算结构使用RayTracingAccelerationStructure， 例如：
+
+```c#
+var _accelerationStructure = new RayTracingAccelerationStructure();
+foreach (var r in renderers)
+{
+    if (r)
+        _accelerationStructure.AddInstance(r, subMeshFlagArray, subMeshCutoffArray);
+}
+_accelerationStructure.Build();
+```
+
+#### Raytrace Pipeline的流程
+
+下图是Raytrace Pipeline的基本流程图，其中绿色的部分表示可编程单元，灰色的则是固定单元。可以看出Raytrace Pipeline以可编程管线为主，只有极少的固定单元。基本概念中我们已经介绍过，任何一个光线追踪的渲染程序都是从Ray Generation Shader开始，它负责初始的光线生成，生成的初始光线会通过固定的软/硬件单元对整个场景（我们构建好的BVH，在DXR中也就是Top Acceleration Structure）进行遍历求交，这个求交过程可以是用户自定义的一个Intersection Shader，也可以是默认的三角形相交测试。一旦相交测试通过，即得到了一个交点，这个交点将会被送给Any Hit Shader去验证其有效性，如果该交点有效，则它会和已经找到的最近交点去比较并更新当前光线的最近交点。当整个场景和当前光线找不到新的交点后，则根据是否已经找到一个最近交点去调用接下来的流程，若没有找到则调用Miss Shader，否则调用Closest Hit Shader进行最终的着色。
+
+![](/img/post-ml/ray21.jpg)
+
+
+在DXR API中一共有五类着色器：
+
+__Ray Generation Shader：__
+
+这个Shader负责初始化光线，是整个DXR可编程管线的入口，我们在其中调用TraceRay函数向场景发射一条光线。Ray Generation Shader从结构上非常像Compute Shader（在 GPU硬件中，它很可能也是通过Compute Pipeline来实现的），不同的是Compute Shader的组织形式是Group->Thread这样的架构，同一个Group中的Thread可以使用Shared Memory及一些原子操作进行数据共享和同步，但在Ray Generation Shader中，每条光线是彼此独立的，他们之间不需要线程间的同步和共享。此外RayGeneration Shader也负责最终着色结果的输出（通常是输出到一个UAV对应的Texture上）。
+
+__Intersection Shader__
+
+这个Shader是可选的，它只负责一件事，就是定义场景内基本的几何单元和光线的相交判定方法。如果场景的基本几何单元是三角面，则用户不需要自定义这个Shader，但如果不是三角面，而是用户自定义的几何形式，比如是用于体渲染的体素结构，或者是用于曲面细分的参数曲面，则用户需要提供提供相交判定的方法。这样的设定使得一些过程生成式模型（细分曲面，烟雾，粒子等）也能够使用光线追踪的框架进行渲染。需要注意的是，对于三角面来说，通过相交测试返回的是交点的重心坐标，用户需要根据重心坐标自行插值得到交点的相关几何数据（uv, normal等）。
+
+__Any Hit Shader__
+
+这个Shader的作用是验证某个交点是否有效，典型的应用是alpha test，比如我们找到了一个光线和场景的交点，但该位置刚好是草地中被alpha通道过滤掉的像素位置，我们希望光线穿过它继续查找新的交点，那么就可以在这个Shader中忽略找到的交点，此外，我们也可以在这个Shader中发射新的光线，一个可能的应用场景是折射/反射效果的实现。
+
+__Closest Hit Shader__
+
+当一条发射的光线经过和场景的若干次求交最终找到一个有效的最近交点后，就会进入这个Shader，这个Shader的作用很像我们在Graphics Pipeline中用的Pixel Shader，它用于某个找到的样本点的最终着色。
+
+__Miss Shader__
+这是一个可能会被忽略的细节，即如果找不到有效的交点怎么办？在真实世界中一条光线总是会和某个表面相交，但虚拟场景的有限空间内却并非如此，这时候我们可能希望进行一次cube map的采样，或者告诉Ray Generation Shader它没找到交点，这些行为都可以在Miss Shader里定义。
 
 ## 参考资料
 
@@ -361,7 +444,9 @@ RTCore极大的提升了射线与物体求交的速度，性能方面我们这�
 * [NVIDIA Vulkan Ray Tracing Tutorial][i15]
 * [Interactive Reconstruction of Monte Carlo Image Sequences][i13]
 * [图像处理之添加高斯与泊松噪声][i16]
-
+* [DX 管理追踪光线流程][i17]
+* [光线追踪的入门, 知乎][i18]
+* [RayTracingAccelerationStructure in Unity API][i19]
 
 [i1]: https://www.embree.org/
 [i2]: https://github.com/joeylitalien/noise2noise-pytorch
@@ -379,3 +464,6 @@ RTCore极大的提升了射线与物体求交的速度，性能方面我们这�
 [i14]: https://devblogs.microsoft.com/directx/announcing-microsoft-directx-raytracing/
 [i15]: https://developer.nvidia.com/rtx/raytracing/vkray
 [i16]: https://my.oschina.net/abcijkxyz/blog/721183
+[I17]: https://blog.csdn.net/u014038143/article/details/101757982
+[i18]: https://zhuanlan.zhihu.com/p/41269520
+[i19]: https://docs.unity3d.com/2019.3/Documentation/ScriptReference/Experimental.Rendering.RayTracingAccelerationStructure.html
