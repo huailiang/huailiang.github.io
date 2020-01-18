@@ -80,13 +80,9 @@ MathJax.Hub.Config({
 <h3 id="技能编辑器界面预览">技能编辑器界面预览</h3>
 <p><img src="/img/post-skill/gif1.gif" alt="" /></p>
 
-<p><em>图片来源: <a href="https://huailiang.github.io">huailiang.github.io</a></em></p>
-
 <h3 id="在unity对应的编辑器">在unity对应的编辑器</h3>
 
 <p><img src="/img/post-skill/skill1.jpg" alt="" /></p>
-
-<p><em>图片来源: <a href="https://huailiang.github.io">huailiang.github.io</a></em></p>
 
 <h3 id="数据保存格式-xml">数据保存格式-xml</h3>
 <p>龙之谷的技能编辑生成的中间数据是 xml,用来供游戏逻辑来读取，进一步实现相关的逻辑。客户端使用System.Xml.Serialization.XmlSerializer序列化解析xml,服务器使用tinyxml来解析xml</p>
@@ -102,8 +98,6 @@ MathJax.Hub.Config({
 <p>配置打击点 子弹效果</p>
 
 <p><img src="/img/post-skill/skill2.jpg" alt="" /></p>
-
-<p><em>图片来源: <a href="https://huailiang.github.io">huailiang.github.io</a></em></p>
 
 <p>伤害范围一共分为两种Sector Damage勾选上表示扇形（配置360度就是圆形了）和方形<br />
 扇形和方形的范围计算参照：</p>
@@ -161,21 +155,15 @@ type是被打击的效果<br />
 
 <p><img src="/img/post-skill/skill3.jpg" alt="" /></p>
 
-<p><em>图片来源: <a href="https://huailiang.github.io">huailiang.github.io</a></em></p>
-
 <h3 id="fmod-技能使用的音效">FMOd 技能使用的音效</h3>
 <p>配置基本上播放其实帧数 还有就是fmod需要的一些参数如路径、还有频道</p>
 
 <p><img src="/img/post-skill/skill5.jpg" alt="" /></p>
 
-<p><em>图片来源: <a href="https://huailiang.github.io">huailiang.github.io</a></em></p>
-
 <h3 id="fx-配置技能在某帧播放的特效">Fx 配置技能在某帧播放的特效</h3>
 <p>配置帧的起始位置，特效对应的prefab 地址等相关的属性  <br />
 编辑器里还支持跟随效果、延时播放 transform 缩放和postion偏移<br />
 <img src="/img/post-skill/skill4.jpg" alt="" /></p>
-
-<p><em>图片来源: <a href="https://huailiang.github.io">huailiang.github.io</a></em></p>
 
 <p>对应的代码实现</p>
 

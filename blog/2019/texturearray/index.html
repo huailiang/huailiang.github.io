@@ -272,15 +272,104 @@ MathJax.Hub.Config({
 
 <h2 id="需要注意的地方有">需要注意的地方有:</h2>
 
-<p>一. Texture2DArray使用的图片需要保证大小相同，格式一致，并且开启了 read/write enabled 选项。</p>
+<p><strong>一.</strong> Texture2DArray使用的图片需要保证大小相同，格式一致，并且开启了 read/write enabled 选项。</p>
 
-<p>二. Graphics.CopyTexture和Texture2DArray.SetPixels，这两种方法都可以把图像信息传给Texture2DArray对象的每一个子Texture2D。</p>
+<p><strong>二.</strong> Graphics.CopyTexture和Texture2DArray.SetPixels，这两种方法都可以把图像信息传给Texture2DArray对象的每一个子Texture2D。</p>
 
 <p>整体上Graphics.CopyTexture 方法要比 Texture2DArray.SetPixels 快的多，大概是40到50倍的样子，原因大概是 Graphics.CopyTexture 只在GPU端进行操作，而Texture2DArray.SetPixels在CPU端操作，操作结束后需要调用Apply方法把图片数据传给GPU，所以比较耗时，<a href="https://docs.unity3d.com/ScriptReference/Texture2DArray.Apply.html">Texture2DArray.Apply文档</a> 中也建议如果不需要在CPU上读取像素信息的话建议使用更快的 Graphics.CopyTexture 方法。</p>
 
-<p>三. 从文档（https://docs.unity3d.com/Manual/SL-TextureArrays.html）上来看，GLES3 Metal 已经可以支持了。最容易想到的就是地形的splat层，如果是四层splat，那么就可以用一个Texture2DArray来代替，好处是减少了bind消耗(glBindTexture)。如果单从性能上看，Texture2DArray比Texture2D的确只是减少纹理绑定的开销，然后在游戏引擎中可能会对合批产生影响。bind texture对于api是非常费cpu的操作。 有了texture array,一个绑定操作就可以了。对于dx12 或者 Vulkan。没有绑定texture的概念。一个texture 已经很像cpu的一个内存指针。想用多少都可以。</p>
+<p><strong>三.</strong> 从文档（https://docs.unity3d.com/Manual/SL-TextureArrays.html）上来看，GLES3 Metal 已经可以支持了。最容易想到的就是地形的splat层，如果是四层splat，那么就可以用一个Texture2DArray来代替，好处是减少了bind消耗(glBindTexture)。如果单从性能上看，Texture2DArray比Texture2D的确只是减少纹理绑定的开销，然后在游戏引擎中可能会对合批产生影响。bind texture对于api是非常费cpu的操作。 有了texture array,一个绑定操作就可以了。对于dx12 或者 Vulkan。没有绑定texture的概念。一个texture 已经很像cpu的一个内存指针。想用多少都可以。</p>
 
-<p>四. 更多关于Texture2DArray的性能开销和测试， 可以参考<a href="https://baijiahao.baidu.com/s?id=1593107166928627425&amp;wfr=spider&amp;for=pc">uwa的分析</a>。</p>
+<p><strong>四.</strong> 更多关于Texture2DArray的性能开销和测试， 可以参考<a href="https://baijiahao.baidu.com/s?id=1593107166928627425&amp;wfr=spider&amp;for=pc">uwa的分析</a>。</p>
+
+<h2 id="采样器-sampler">采样器 sampler</h2>
+
+<p>多数时候当在shader中采样纹理时，纹理的采样状态都将来自texture settings 纹理设置，本质上，纹理与采样器都是成对使用的。这些在使用DX9风格的语法都是默认的行为。</p>
+
+<div class="language-c++ highlighter-rouge"><pre class="highlight"><code><span class="n">sampler2D</span> <span class="n">_MainTex</span><span class="p">;</span>
+<span class="c1">// ...
+</span><span class="n">half4</span> <span class="n">color</span> <span class="o">=</span> <span class="n">tex2D</span><span class="p">(</span><span class="n">_MainTex</span><span class="p">,</span> <span class="n">uv</span><span class="p">);</span>
+</code></pre>
+</div>
+<p>使用了sampler2D，sampler3D，samplerCUBE HLSL的关键字来定义纹理与采样器。</p>
+
+<p>多数时候这都是你想要的结果，并且这在老旧的图形API（OpenGL ES）都是唯一支持的选项。</p>
+
+<h3 id="separate-textures-and-samplers">Separate textures and samplers</h3>
+<p><em>将纹理与采样器分离</em></p>
+
+<p>许多图形API和GPU允许使用比纹理更少的采样器，而耦合的纹理+采样器语法可能不允许编写更复杂的着色器。例如Direct3D 11允许你在一个单独的shader中使用最多128个纹理，但采样器最多只有16个。</p>
+
+<p>Unity允许定义纹理和采样器，使用DX11风格的HLSL语法，和使用一个特殊的命名规则来匹配使用：采样器的名字以”sampler” + 纹理名称的形式规则，将会从纹理得到采样状态。</p>
+
+<p>上面的shader代码都可以使用DX11风格的HLSL语法来重写，它们的效果是一样的：</p>
+
+<div class="language-c highlighter-rouge"><pre class="highlight"><code><span class="n">Texture2D</span> <span class="n">_MainTex</span><span class="p">;</span>
+<span class="n">SamplerState</span> <span class="n">sampler_MainTex</span><span class="p">;</span> <span class="c1">// "sampler" + “_MainTex”
+// ...
+</span><span class="n">half4</span> <span class="n">color</span> <span class="o">=</span> <span class="n">_MainTex</span><span class="p">.</span><span class="n">Sample</span><span class="p">(</span><span class="n">sampler_MainTex</span><span class="p">,</span> <span class="n">uv</span><span class="p">);</span>
+</code></pre>
+</div>
+<p>然而，这种方式的shader，当需要采样的纹理不止一个的时候，可以写成从其他纹理中复用的采样器。下面的例子中，有三个纹理需要采样，但仅仅只有一个采样器使用就可以了：</p>
+<div class="language-c highlighter-rouge"><pre class="highlight"><code><span class="n">Texture2D</span> <span class="n">_MainTex</span><span class="p">;</span>
+<span class="n">Texture2D</span> <span class="n">_SecondTex</span><span class="p">;</span>
+<span class="n">Texture2D</span> <span class="n">_ThirdTex</span><span class="p">;</span>
+<span class="n">SamplerState</span> <span class="n">sampler_MainTex</span><span class="p">;</span> <span class="c1">// "sampler" + “_MainTex”
+// ...
+</span><span class="n">half4</span> <span class="n">color</span> <span class="o">=</span> <span class="n">_MainTex</span><span class="p">.</span><span class="n">Sample</span><span class="p">(</span><span class="n">sampler_MainTex</span><span class="p">,</span> <span class="n">uv</span><span class="p">);</span>
+<span class="n">color</span> <span class="o">+=</span> <span class="n">_SecondTex</span><span class="p">.</span><span class="n">Sample</span><span class="p">(</span><span class="n">sampler_MainTex</span><span class="p">,</span> <span class="n">uv</span><span class="p">);</span>
+<span class="n">color</span> <span class="o">+=</span> <span class="n">_ThirdTex</span><span class="p">.</span><span class="n">Sample</span><span class="p">(</span><span class="n">sampler_MainTex</span><span class="p">,</span> <span class="n">uv</span><span class="p">);</span>
+</code></pre>
+</div>
+<p>需要注意的是DX11风格的HLSL语法在一个老旧的平台上是不工作的（如：OpenGL ES 2.0），查看 shading language了解详情。你可以使用 #pragma target 3.5（查看 shader compilation targets 了解pragma target详情）来让该shader跳过老旧平台的支持。</p>
+
+<p>Unity提供一些shader宏来帮助定义采样纹理，使用这种”separate samplers”（纹理与采样器分离）方法，查看 built-in macros。上面的例子可以重写为，使用宏的方式：</p>
+
+<div class="language-c highlighter-rouge"><pre class="highlight"><code><span class="n">UNITY_DECLARE_TEX2D</span><span class="p">(</span><span class="n">_MainTex</span><span class="p">);</span>
+<span class="n">UNITY_DECLARE_TEX2D_NOSAMPLER</span><span class="p">(</span><span class="n">_SecondTex</span><span class="p">);</span>
+<span class="n">UNITY_DECLARE_TEX2D_NOSAMPLER</span><span class="p">(</span><span class="n">_ThirdTex</span><span class="p">);</span>
+<span class="c1">// ...
+</span><span class="n">half4</span> <span class="n">color</span> <span class="o">=</span> <span class="n">UNITY_SAMPLE_TEX2D</span><span class="p">(</span><span class="n">_MainTex</span><span class="p">,</span> <span class="n">uv</span><span class="p">);</span>
+<span class="n">color</span> <span class="o">+=</span> <span class="n">UNITY_SAMPLE_TEX2D_SAMPLER</span><span class="p">(</span><span class="n">_SecondTex</span><span class="p">,</span> <span class="n">_MainTex</span><span class="p">,</span> <span class="n">uv</span><span class="p">);</span>
+<span class="n">color</span> <span class="o">+=</span> <span class="n">UNITY_SAMPLE_TEX2D_SAMPLER</span><span class="p">(</span><span class="n">_ThirdTex</span><span class="p">,</span> <span class="n">_MainTex</span><span class="p">,</span> <span class="n">uv</span><span class="p">);</span>
+</code></pre>
+</div>
+<p>上面的代码可以在Unity支持的所有平台上编译，但是在像DX9这样的老平台上将会回退到使用三个采样器的方式。</p>
+
+<h3 id="inline-sampler-state">Inline sampler state</h3>
+<p><em>内联的采样器状态</em></p>
+
+<p>除了将HLSL SamplerState对象命名为“sampler”+TextureName之外，Unity还可以识别采样器名称中的其他一些模式。这对于直接在着色器中声明定义简单的硬编码采样状态来说是非常有用。例如：</p>
+
+<div class="language-c highlighter-rouge"><pre class="highlight"><code><span class="n">Texture2D</span> <span class="n">_MainTex</span><span class="p">;</span>
+<span class="n">SamplerState</span> <span class="n">my_point_clamp_sampler</span><span class="p">;</span>
+<span class="c1">// ...
+</span><span class="n">half4</span> <span class="n">color</span> <span class="o">=</span> <span class="n">_MainTex</span><span class="p">.</span><span class="n">Sample</span><span class="p">(</span><span class="n">my_point_clamp_sampler</span><span class="p">,</span> <span class="n">uv</span><span class="p">);</span>
+</code></pre>
+</div>
+
+<p>名为”my_point_clamp_sampler”将会被识别为一个使用纹理点（最近的点）filter（滤波），与纹理wrap模型为Clamp的采样器。</p>
+
+<p>采样器的名称被识别为”inline”（内联）的采样器状态（大小写不敏感的）：</p>
+
+<ul>
+  <li>Point, Linear 或 Trilinear（必要项）设置纹理的filter过滤模型。</li>
+  <li>Clamp, Repeat, Mirror 或 MirrorOnce（必要项）设置纹理的wrap模型。<br />
+  Wrap模式可以指定没轴向的模式（UVW），例如：ClampU_RepeatV，将指定U坐标使用Clamp，V坐标使用Repeat</li>
+  <li>Compare （可选项）设置采样的深度比较；使用HLSL <a href="https://docs.microsoft.com/zh-cn/windows/win32/direct3dhlsl/dx-graphics-hlsl-sampler">SamplerComparisonState</a> 类型和 <a href="https://docs.microsoft.com/zh-cn/windows/win32/direct3dhlsl/dx-graphics-hlsl-to-samplecmp">SampleCmp</a> 或 <a href="https://docs.microsoft.com/zh-cn/windows/win32/direct3dhlsl/t1darray-samplecmplevelzero-s-float-float-int-uint-">SampleCmpLevelZero</a> 函数</li>
+</ul>
+
+<p>这儿有个采样纹理的例子：分别使用 sampler_linear_repeat 和 sampler_point_repeat，下面的图片，就是对应名称如何控制过滤模式：</p>
+
+<p><img src="/img/post-unity/ta3.jpg" alt="" /></p>
+
+<p>这儿还有一个例子，分别使用 SmpClampPoint，SmpRepeatPoint，SmpMirrorPoint，SmpMirrorOncePoint，Smp_ClampU_RepeatV_Point 的采样器状态，下面展示如何控制wrap模式的。在最后的那个例子中，使用了水平u，和垂直v轴向都不一样的wrap模式。在这些例子中纹理坐标都是使用-2.0到+2.0</p>
+
+<p><img src="/img/post-unity/ta4.png" alt="" /></p>
+
+<p>就像分开 texture + sampler（纹理 + 采样器）的语法一样，内联的采样器状态在某些平台不支持。当前它们在Direct3D 11/12，PS4，XboxOne 和 Metal都支持。</p>
+
+<p>注意 “MirrorOnce” 纹理的Wrap模式在多数的移动设备的GPU/API都不知道，当它不支持的时候将会回退使用Mirror模式。</p>
 
 <p><br /><br />
 参考链接:<br />

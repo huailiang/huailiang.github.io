@@ -210,7 +210,7 @@ MathJax.Hub.Config({
 
 <script type="math/tex; mode=display">\varphi =  \arctan{\frac{y}{x}}</script>
 
-<p>想了解更多球面坐标系, 参考之前<a href="https://huailiang.github.io/blog/2019/harmonics/">球谐光照的部分</a>。</p>
+<p>想了解更多球面坐标系, 参考之前<a href="/blog/2019/harmonics/">球谐光照的部分</a>。</p>
 
 <div class="language-c++ highlighter-rouge"><pre class="highlight"><code><span class="c1">//因为我们天空盒导入的是2D的，所以要把方向转为球坐标系来采样 
 </span><span class="kt">float</span> <span class="n">theta</span> <span class="o">=</span> <span class="n">acos</span><span class="p">(</span><span class="n">ray</span><span class="p">.</span><span class="n">direction</span><span class="p">.</span><span class="n">y</span><span class="p">)</span> <span class="o">/</span> <span class="o">-</span><span class="n">PI</span><span class="p">;</span>
@@ -405,7 +405,7 @@ if (shadowHit.distance != 1.#INF)
 
 <p>前一章为了抗锯齿，我们使用addshader对多次采样进行平均取值，正好完成了公式中的这部分，但是因为OnRenderImage中的destination纹理精度为R8G8B8A8的类型，而我们希望的是RGBAfloat的精度，所以我们要再创建一个贴图用于来回倒，至于为什么要这样一个精度后面有提到。</p>
 
-<p>又是上一条光线的递归结果（也就是代码中的energy)，所以我们修改的就是绿色的这个部分。关于如何优雅计算BRDF, 采样方式 处理流程就是类似PBR对间接光的处理， 参照我之前的<a href="https://huailiang.github.io/blog/2019/ibl/">文章:基于图像的光照IBL</a>。下面是一些实现的细节：</p>
+<p>又是上一条光线的递归结果（也就是代码中的energy)，所以我们修改的就是绿色的这个部分。关于如何优雅计算BRDF, 采样方式 处理流程就是类似PBR对间接光的处理， 参照我之前的<a href="/blog/2019/ibl/">文章:基于图像的光照IBL</a>。下面是一些实现的细节：</p>
 
 <p><strong>随机值</strong><br />
 GPU里没有类似random()函数之类的算法， 需要自己去实现， 下面是网上的产生随机值算法。</p>
