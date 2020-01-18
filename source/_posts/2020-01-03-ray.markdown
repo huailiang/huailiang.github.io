@@ -801,8 +801,8 @@ bool IntersectCube(Ray ray,float3 cubeSize,inout float t,inout float3 normal){
 [i6]: http://pkuwwt.github.io/scholarship/2014-04-03-ray-triangle-intersection-tests-for-dummies/
 [i7]: https://github.com/huailiang/ray_tracing
 [i8]: https://dl.acm.org/citation.cfm?id=358882
-[i9]: https://huailiang.github.io/blog/2019/harmonics/
-[i10]: https://huailiang.github.io/blog/2019/ibl/
+[i9]: /blog/2019/harmonics/
+[i10]: /blog/2019/ibl/
 [i11]: https://www.cnblogs.com/timlly/p/11366199.html
 [i12]: https://devblogs.nvidia.com/introduction-ray-tracing-unreal-engine-422/
 [i13]: http://www.cse.chalmers.se/edu/year/2011/course/TDA361/2007/rend_eq.pdf

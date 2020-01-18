@@ -198,7 +198,7 @@ Keras使用fit方法拟合模型，关于keras的API使用我们这里就不多�
 
 
 [i1]:https://github.com/huailiang/video-face-recognition
-[i2]:https://huailiang.github.io/2018/03/12/cnn/
+[i2]:/blog/2018/cnn/
 [i3]:http://vis-www.cs.umass.edu/lfw/
 
 

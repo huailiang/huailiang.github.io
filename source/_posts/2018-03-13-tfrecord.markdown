@@ -187,5 +187,5 @@ plt.show()
 
   对比 PIL 和 TFRecord，我们发现二者虽有很多相同之处，但依旧存在着细微的差别，比如说 PIL 可以做图片合并、Blend 等，甚至基于像素的计算，而 TFRecord 更像是用来对图片做预处理，比如改变图像的大小、打标签等。
 
-[i1]:https://huailiang.github.io/2018/03/07/pil/
+[i1]:/blog/2018/pil/
 [i2]:http://blog.csdn.net/qq_31192383/article/details/53977822

@@ -405,8 +405,15 @@ tensorboard --host=10.10.101.2 --port=6099 --logdir="my_graph"
 
 感知器模型就变成了下面这样:
 
-![](/img/post-tf/tf21.png)
-
+$$ 
+\gamma (x) =
+\left\{
+\begin{aligned}
+0 \quad if \quad w \cdot x +b  \le 0  \\
+1 \quad if \quad w \cdot x +b \gt 0
+\end{aligned}
+\right.
+$$
 
 ### 神经网络的运作过程
 
@@ -422,8 +429,6 @@ tensorboard --host=10.10.101.2 --port=6099 --logdir="my_graph"
 这种方法就是试错法。其他参数都不变，w（或b）的微小变动，记作Δw（或Δb），然后观察输出有什么变化。不断重复这个过程，直至得到对应最精确输出的那组w和b，就是我们要的值。这个过程称为模型的训练。
 
 ### Tensorflow
-
-关于 TensorFlow 的基础知识的学习，读者可以参考上一节：[https://huailiang.github.io/2018/03/08/tensor/][i1]
 
 <b>求权重和阈值</b>
 
@@ -539,5 +544,4 @@ W: [1.97131],b: [-0.93244034],loss: 0.018509895
 通过上面的案例，我们再回到文章开篇提出的问题。加入我们知道小明数次选择，假使小明我们的考虑的因素是固定不变的而且外部环境没有发生变化，下次要不要出门，我们就能求出概率啦。哈哈。。。
 
 
-[i1]:https://huailiang.github.io/2018/03/08/tensor/
 [i2]:https://tensorflow.google.cn/api_docs/python/tf/train/GradientDescentOptimizer

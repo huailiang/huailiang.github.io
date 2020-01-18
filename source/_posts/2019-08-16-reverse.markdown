@@ -255,4 +255,4 @@ python parse_texture.py \
 [i4]: https://github.com/huailiang/reverse-engineer
 [i5]: https://baike.baidu.com/item/海贼王：燃烧之血/18711015?fr=aladdin
 [i6]: https://github.com/yukinogatari/Danganronpa-Tools
-[i7]: https://huailiang.github.io/blog/2018/pil/
+[i7]: /blog/2018/pil/

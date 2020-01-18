@@ -14,14 +14,12 @@ tags:
 ### 技能编辑器界面预览
 ![](/img/post-skill/gif1.gif)
 
-*图片来源: [huailiang.github.io][i3]*
 
 
 ### 在unity对应的编辑器
 
 ![](/img/post-skill/skill1.jpg)
 
-*图片来源: [huailiang.github.io][i3]*
 
 ### 数据保存格式-xml
 龙之谷的技能编辑生成的中间数据是 xml,用来供游戏逻辑来读取，进一步实现相关的逻辑。客户端使用System.Xml.Serialization.XmlSerializer序列化解析xml,服务器使用tinyxml来解析xml
@@ -38,7 +36,6 @@ tags:
 
 ![](/img/post-skill/skill2.jpg)
 
-*图片来源: [huailiang.github.io][i3]*
 
 伤害范围一共分为两种Sector Damage勾选上表示扇形（配置360度就是圆形了）和方形
 扇形和方形的范围计算参照：
@@ -98,14 +95,12 @@ type是被打击的效果
 
 ![](/img/post-skill/skill3.jpg)
 
-*图片来源: [huailiang.github.io][i3]*
 
 ### FMOd 技能使用的音效
 配置基本上播放其实帧数 还有就是fmod需要的一些参数如路径、还有频道
 
 ![](/img/post-skill/skill5.jpg)
 
-*图片来源: [huailiang.github.io][i3]*
 
 
 ### Fx 配置技能在某帧播放的特效
@@ -113,7 +108,6 @@ type是被打击的效果
 编辑器里还支持跟随效果、延时播放 transform 缩放和postion偏移
 ![](/img/post-skill/skill4.jpg)
 
-*图片来源: [huailiang.github.io][i3]*
 
 对应的代码实现
 {% highlight csharp %}
@@ -219,10 +213,3 @@ void LateUpdate()
     }
 }
 {% endhighlight %}
-
-
-[i1]: http://appleinsider.com/articles/08/10/03/latest_iphone_software_supports_full_screen_web_apps.html
-
-[i2]: http://docs.groovy-lang.org/latest/html/api/groovy/util/GroovyScriptEngine.html
-
-[i3]: https://huailiang.github.io 

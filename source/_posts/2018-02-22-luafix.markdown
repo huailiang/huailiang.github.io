@@ -237,7 +237,6 @@ RPC的发送：Hotfix.SendLuaRPC(46227, TestProtol.data, this.CB1, this.CB2)
 
 ![](/img/post-lua/lua3.jpg)
 
-*图片来源: [huailiang.github.io][i3]*
 
 
 [i1]: https://github.com/meta-42/ILRuntime

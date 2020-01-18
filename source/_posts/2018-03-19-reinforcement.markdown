@@ -306,4 +306,4 @@ Reinforcement做选择还是和之前一样，由 epsilon概率来由 q_table �
 
 [i1]:https://github.com/huailiang/bird
 [i2]:https://static.hdslb.com/miniloader.swf?aid=16921335&p=1
-[i3]:https://huailiang.github.io/2018/03/02/mlearn/
+[i3]:/blog/2018/mlearn/

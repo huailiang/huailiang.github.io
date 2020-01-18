@@ -79,5 +79,3 @@ sudo chown -R wentianen /usr/local
 [i1]: http://appleinsider.com/articles/08/10/03/latest_iphone_software_supports_full_screen_web_apps.html
 
 [i2]: https://developers.google.com/web/events/pwaroadshow/
-
-[i3]: https://huailiang.github.io "Huailiang: A Progressive Web App"

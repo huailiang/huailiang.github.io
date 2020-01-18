@@ -396,8 +396,8 @@ tensorboard --logdir=logs/
 
 
 [i1]:https://github.com/huailiang/bird
-[i2]:https://huailiang.github.io/2018/03/19/reinforcement/
+[i2]:/blog/2018//reinforcement/
 [i3]:https://github.com/huailiang/ConnectPy
 [i4]:https://github.com/huailiang/bird
-[i5]:https://huailiang.github.io/2018/03/19/reinforcement/
+[i5]:/blog/2018//reinforcement/
 [i6]:https://github.com/huailiang/ConnectPy

@@ -220,6 +220,5 @@ Extracting MNIST_data/t10k-labels-idx1-ubyte.gz
 通过上面的案例，我们再回到文章开篇提出的问题。加入我们知道小明数次选择，假使小明我们的考虑的因素是固定不变的而且外部环境没有发生变化，下次要不要出门，我们就能求出概率啦。哈哈。。。
 
 
-[i1]:https://huailiang.github.io/2018/03/08/tensor/
 [i2]:https://tensorflow.google.cn/api_docs/python/tf/train/GradientDescentOptimizer
 [i3]:https://www.thinksaas.cn/group/topic/491257/
