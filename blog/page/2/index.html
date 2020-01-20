@@ -68,6 +68,21 @@ MathJax.Hub.Config({
     <article class="post">
   <header class="post-header">
     <h1 class="post-title2">
+      <a class="post-link" href="/blog/2019/ndk/">NDK同步读取Unity资源</a>
+    </h1>
+    <div class="post-meta">
+      <time>Dec 3, 2019</time>
+    </div>
+  </header>
+
+  <p><a href="/blog/2019/ndk/" title="Permalink to: NDK同步读取Unity资源"
+      class="read-more">
+  本文主要介绍Android Studio下， Java与JNI（c/c++)与Unity(c#)之间的交互， 并利用Android原生的接口，解决StreamingAssets目录下资源IO问题。因为默认情况下，Unity StreamingAssets的资源， 在apk安装之后依旧在apk里压缩文件里，只能通过Assetbundle（吐槽）接口来加载，并不能使用File这样的IO的接...</a></p>
+</article>
+  
+    <article class="post">
+  <header class="post-header">
+    <h1 class="post-title2">
       <a class="post-link" href="/blog/2019/luadebug/">Unity lua脚本调试</a>
     </h1>
     <div class="post-meta">
@@ -211,28 +226,6 @@ AssetBundle文件的layout...</a></p>
 进入游戏资源目录， 看一看到一堆.cpk文件， 我们可以使用CPK File Builder解压成scz压缩格式的文件...</a></p>
 </article>
   
-    <article class="post">
-  <header class="post-header">
-    <h1 class="post-title2">
-      <a class="post-link" href="/blog/2019/vr/">AR探索</a>
-    </h1>
-    <div class="post-meta">
-      <time>Jul 18, 2019</time>
-    </div>
-  </header>
-
-  <p><a href="/blog/2019/vr/" title="Permalink to: AR探索"
-      class="read-more">
-  程序通过OpenCV实现对Marker的识别和定位，然后通过OpenGL将虚拟物体叠加到摄像头图像下，实现增强现实。这里以参考《深入理解OpenCV》这本书第二章节的例子，实现基于标记的的虚拟现实实现。看到网上很多的例子都是基于固定渲染管线来画虚拟物体的， 而且很多地方都经不起推敲。 本例使用现代OpenGL实现的整个绘制过程。
-
-
-固定标记识别
-
-访问相机
-
-增强现实应用必须包括视频...</a></p>
-</article>
-  
 
   
 <nav class="pagination" role="pagination">
@@ -242,7 +235,7 @@ AssetBundle文件的layout...</a></p>
     
     <li><a class="prev btn btn-ghost" href="/blog/" title="Articles new">&laquo; Prev</a></li>
     
-    <li><span class="page-number">Page 2 of 6</span></li>
+    <li><span class="page-number">Page 2 of 7</span></li>
     
     <li><a class="next btn btn-ghost" href="/blog/page/3"
         title="Articles old">Next &raquo;</a></li>
