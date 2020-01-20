@@ -306,7 +306,7 @@ Pass
 }
 ```
 
-这里之所以能够均值采样， 是因为shader设置了ZWrite Off ZTest Always， 每次深度测试都通过， 即每次都往颜色缓冲里写值，在写值的时候和颜色缓冲里的值进行Blend， 由于Blend方式是Blend SrcAlpha OneMinusSrcAlpha， 所以在_Sample递增的时候， 相当于与历史的值进行求平均。这样的求均值方式在后面的路径追踪算法里还会有别的用处。
+这里之所以能够均值采样， 是因为每次都往颜色缓冲里写值，在写值的时候和颜色缓冲里的值进行Blend， 由于Blend方式是Blend SrcAlpha OneMinusSrcAlpha， 所以在_Sample递增的时候， 相当于与历史的值进行求平均。这样的求均值方式在后面的路径追踪算法里还会有别的用处。
 
 ## 路径追踪 
 
