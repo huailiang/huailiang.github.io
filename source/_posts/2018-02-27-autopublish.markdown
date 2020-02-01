@@ -156,6 +156,65 @@ echo "打包参数 channel is:"${uid}
 
 如果你需要每个平台打包相关的脚本，你可以点击[这里][i4]。
 
+
+## Jenkins 分布式部署
+
+Jenkins的分布式构建，在Jenkins的配置中叫做节点，分布式构建能够让同一套代码或项目在不同的环境(如：Windows7\winxp和Linux系统)中编译、部署等。
+
+当我们使用多台服务器时，并且配置了tomcat或jboss集群服务，可通过jenkins的节点配置，将jenkins项目发布在不同服务器上（分布jenkins工作空间，部署项目到不同服务器的tomcat或jboss），这就形成了jenkins的分布式。节点服务器不需要安装jenkins（只需要运行一个slave节点服务），构建事件的分发由master端（jenkins主服务）来执行。
+
+__注意：__
+如果节点主机上不存在JDK，Jenkins会去自动下载，但Oracle对程序自动下载做了限制，会导致下载失败，然后一直循环这个问题。
+
+__建议：__
+所有Linux或者Windows机器的环境路径统一(如：JDK、Maven)，安装位置和jenkins所在服务器的JDK和maven必须一致，也就是说jenkins所在服务器和各个节点服务器中的JDK和Maven目录和文件名都是一样的。以便于管理、不容易出现问题。
+
+
+#### 节点管理
+
+##### １、新建节点
+
+![](/img/post-publish/re1.png)
+
+![](/img/post-publish/re3.png)
+
+##### ２、配置
+
+![](/img/post-publish/re2.png)
+
+##### ３、下载 安装节点服务
+
+![](/img/post-publish/re5.png)
+
+--点击Launch，下载文件为slave-agent.jnlp
+
+![](/img/post-publish/re10.png)
+
+--将slave-agent.jnlp文件复制到远程服务器的远程工作目录D：\jenkins9下
+
+--双击运行slave-agent.jnlp，如果如法运行，在cmd命令中输入Javaws D:\jenkins9\slave-agent.jnlp
+
+--运行过程如下所示：
+
+![](/img/post-publish/re4.png)
+
+--点击运行：
+
+![](/img/post-publish/re6.png)
+
+--显示Connected，即表示此节点创建成功。
+
+##### ４、将这个节点加入服务
+
+　　上面的窗口关闭或者电脑重启后，这个节点也就关闭了，所以最好把这个节点加入window服务。    　点击窗口的file菜单，点击Install as a service,完成
+
+![](/img/post-publish/re8.png)
+
+成功示例：（红框所示）　
+
+![](/img/post-publish/re9.png)
+
+
 ## 自制PHP站点,满足更加复杂的流程
 
 由于 Jenkins 只有一次 Build对应一个 Job，很难满足其他复杂的任务环境，比如一次 Build不是连续的，在龙之谷手游打补丁流程中， 先要合线，计算本次变更的更新的文件列表，然后停下来等待相应的主管确认更新无误之后，继续执行第二步，生成相应的 ab文件，上传到测试服务器，job 再次停下来，先在测试服验证通过之后，在上传到正式服，提升版本号。可能我中间还需要回退操作，清理中间环境。
