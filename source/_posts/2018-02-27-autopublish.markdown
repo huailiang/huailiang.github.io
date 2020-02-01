@@ -163,11 +163,9 @@ Jenkins的分布式构建，在Jenkins的配置中叫做节点，分布式构建
 
 当我们使用多台服务器时，并且配置了tomcat或jboss集群服务，可通过jenkins的节点配置，将jenkins项目发布在不同服务器上（分布jenkins工作空间，部署项目到不同服务器的tomcat或jboss），这就形成了jenkins的分布式。节点服务器不需要安装jenkins（只需要运行一个slave节点服务），构建事件的分发由master端（jenkins主服务）来执行。
 
-__注意：__
-如果节点主机上不存在JDK，Jenkins会去自动下载，但Oracle对程序自动下载做了限制，会导致下载失败，然后一直循环这个问题。
+__注意：__ 如果节点主机上不存在JDK，Jenkins会去自动下载，但Oracle对程序自动下载做了限制，会导致下载失败，然后一直循环这个问题。
 
-__建议：__
-所有Linux或者Windows机器的环境路径统一(如：JDK、Maven)，安装位置和jenkins所在服务器的JDK和maven必须一致，也就是说jenkins所在服务器和各个节点服务器中的JDK和Maven目录和文件名都是一样的。以便于管理、不容易出现问题。
+__建议：__ 所有Linux或者Windows机器的环境路径统一(如：JDK、Maven)，安装位置和jenkins所在服务器的JDK和maven必须一致，也就是说jenkins所在服务器和各个节点服务器中的JDK和Maven目录和文件名都是一样的。以便于管理、不容易出现问题。
 
 
 #### 节点管理
@@ -237,10 +235,18 @@ php 调用 shell_exec函数来调用 shell, 在实际部署的时候请记得保
 
 使用 web 方式来打包是相当便利的。任何人员都能很快的上手，基本上不需要给运维人员培训，程序员也可以省下更多的精力，来做游戏本省的开发。而且web 的方式也不局限于平台的限制，Windows、Mac、手机上都可以随时随地的Do Job。
 
+
+__参考:__
+
+[Jenkins的分布式构建及部署——节点][i5]
+[Jenkins 官方网站][i6]
+[jenkins分布式配置方式][i7]
+
+
 [i1]: http://appleinsider.com/articles/08/10/03/latest_iphone_software_supports_full_screen_web_apps.html
-
 [i2]: http://docs.groovy-lang.org/latest/html/api/groovy/util/GroovyScriptEngine.html
-
 [i3]: https://www.jianshu.com/p/dc6f3fea7aa9
-
 [i4]: https://github.com/huailiang/batch_build
+[i5]: https://www.linuxidc.com/Linux/2015-05/116903.htm
+[i6]: https://jenkins.io
+[i7]: https://www.cnblogs.com/benben-wu/p/11713295.html
