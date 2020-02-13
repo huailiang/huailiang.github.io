@@ -1,0 +1,375 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <meta http-equiv="X-UA-Compatible" content="IE=edge">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+
+  <title>Unity和Houdini场景程序化工作流程</title>
+  <meta name="description"
+    content="  本文将分享Unity的技术美术王靖在Unite 2019上的技术演讲－Unity和Houdini场景程序化工作流程。">
+
+  <link rel="shortcut icon" href="/img/favicon.ico">
+  <link rel="stylesheet" href="/css/main.css">
+  <link rel="canonical" href="https://huailiang.github.io/blog/2020/honidi/">
+
+</head>
+
+<body>
+  <main>
+    <header class="site-header">
+  <div class="container">
+    <h1><a href="/">Hom<span>e</span></a></h1>
+
+    <button type="button" class="sliding-panel-button">
+      <span></span>
+      <span></span>
+      <span></span>
+    </button>
+
+    <nav class="navbar sliding-panel-content">
+      <ul>
+        
+        <li><a href="/about" title="About">About</a>
+        </li>
+        
+        <li><a href="/blog" title="Blog">Blog</a>
+        </li>
+        
+       <li><a href="/category/" target="_blank"><i class="icon icon-feed"></i></a></li>
+      </ul>
+    </nav>
+  </div>
+</header>
+
+<div class="sliding-panel-fade-screen"></div>
+    <script type="text/javascript" src="/js/MathJax.js?config=TeX-AMS-MML_HTMLorMML"></script>
+
+<script type="text/x-mathjax-config">
+MathJax.Hub.Config({
+  tex2jax: {
+    inlineMath: [['$','$'], ['\\(','\\)']],
+    processEscapes: true
+  }
+});
+</script>
+
+<script type="text/x-mathjax-config">
+  MathJax.Hub.Config({
+    tex2jax: {
+      skipTags: ['script', 'noscript', 'style', 'textarea', 'pre', 'code']
+    }
+  });
+
+</script>
+    <div class="container">
+      <article role="article" class="post">
+
+  <div class="card">
+    <header class="post-header">
+      <h1 class="post-title">Unity和Houdini场景程序化工作流程</h1>
+      <p class="post-meta">Feb 12, 2020 •
+        王靖</p>
+    </header>
+
+    <div class="post-content">
+      <blockquote>
+  <p>本文将分享Unity的技术美术王靖在Unite 2019上的技术演讲－Unity和Houdini场景程序化工作流程。</p>
+</blockquote>
+
+<p>本文将介绍场景制作传统的工作流程和基于PDG的最新的程序化工作流程。</p>
+
+<p><img src="/img/post-unity/640.jpeg" alt="" /></p>
+
+<h2 id="演讲内容">演讲内容</h2>
+
+<p>各位好，我是王靖，现任Unity的技术美术，我今天演讲的主题是《Unity和Houdini场景程序化工作流程》。</p>
+
+<p>在座的很多听众对Houdini了解不多，接触比较少，所以今天的演讲也是进行科普Houdin，我将主要分享Unity和Houdini程序化的工作流程，主要针对大地形或者地形制作方面的场景。</p>
+
+<p><img src="/img/post-unity/640-2.jpeg" alt="" /></p>
+
+<p>首先，我们对比一下场景制作传统的工作流程。</p>
+
+<p>下图的右侧就是传统的工作流程，是当前普遍的工作流程。</p>
+
+<p>首先，我们使用DCC工具输出一些高度图到引擎中，用来制作地形，制作地表。我们可能会一步一步种植一些树木、石头、建筑，以及搭建道路、河流。</p>
+
+<p>如果是大地形的话，我们要进行加载。美术的工作一般把地形切成一块一块的，给程序进行加载。切分完之后，地形会有接缝，我们需要处理接缝。一般我们会用脚本，地形API把接缝处理掉。</p>
+
+<p><img src="/img/post-unity/640-3.jpeg" alt="" /></p>
+
+<p>在模型制作的流程中，可以看到模型制作人员会制作一些石头和建筑，然后提供给关卡制作人员，在关卡制作完成后就是进行关卡测试。</p>
+
+<p>现在制作大地形或者场景制作比较多的一些工具，像World Machine都是非常主流的制作高度图用的软件。我们可以使用很多的插件制作地形、地表。制作石头、种植树木、建筑。我们会用一些工具，例如刷Prefab的工具，以及一些道路和河流的工具。</p>
+
+<p>这就是非常普遍的传统制作大地形或地形类场景的主要流程。</p>
+
+<h4 id="传统制作流程有什么优势呢">传统制作流程有什么优势呢？</h4>
+
+<p><strong>成熟：</strong> 现在大部分的公司和从业人员对传统的工作流程非常熟悉，人员招聘快捷，前期学习成本非常低，团队可以快速成型。</p>
+
+<p><strong>资源丰富：</strong> 资源包括我们自己积累的资源以及外包资源，都非常丰富。由于传统流程的从业时间已经非常长，门槛也很低。所以外包快捷，很多公司和团队有大量早期的端游或手游资源的积累，可以快速换置。</p>
+
+<p><strong>工具链拓展：</strong> 工具链拓展起来是非常简单粗暴的。我们可以看到有很多Asset Store资源商店上的插件，包括我们自己项目以前开发的插件，都可以直接拿来用。</p>
+
+<p><strong>小型项目和独立项目：</strong> 小型与独立项目资金比较少，使用传统的工作流程，成本非常容易控制。</p>
+
+<p><img src="/img/post-unity/640-4.jpeg" alt="" /></p>
+
+<p>我们再看看 <strong>传统工作流程中有哪些缺点</strong> ？</p>
+
+<p>成本随资源量增加快速增长：传统工作流程有一个非常致命的缺点，随着开发时间的持续，项目规模会逐渐增长，项目规模越大，资源越多，成本要付出更多。</p>
+
+<p>项目成型后修改迭代成本剧增：在项目后期修改、迭代的成本非常高。很多客户遇到的一个问题是，当项目快完成的时候，可能策划要改一改，地形要改一改，资源要改一改。于是整个项目迭代周期就变长了。重新制作、重新迭代，成本会剧增。</p>
+
+<p><strong>各环节相对独立，不利于测试：</strong> 在传统工作流程中，开发的每个环节都是相对独立的。参与开发的人员都不知道项目最后是什么样，往往只有等到关卡制作好，客户端打包好，内容加载进来，才可以看到最终的效果。</p>
+
+<p>迭代反馈非常缓慢，无法及时的反馈，也不利于测试。由于每个环节都是不能单独拿出来测试，我们要把整个环节跑完，到实际运行环境看一下效果和进行测试。</p>
+
+<p><strong>工具插件过多，不利于维护和升级：</strong> 上图最右侧框线部分是传统的工作流程需要的一些工具和插件。但这些工具一旦版本更新，维护和升级成本是非常高的。</p>
+
+<p><strong>大世界、MMO、吃鸡类大型场景项目：</strong> 现在大世界、MMO、吃鸡类大型场景游戏特别多。可能传统的工作流程慢慢的就不太适合了，会被程序化工作流程替换掉。</p>
+
+<p><strong>资源重复使用，同质化严重：</strong> 很多项目的玩法必须依附于大量的资源，但为了节省成本，会大量的重复使用资源来填充项目，这造成美术结果同质化现象非常严重。</p>
+
+<p>上图橘色部分是最容易出问题的模型和关卡。模型人员需要生产大量的资源，不停提供给关卡，这导致关卡制作人员必须等待模型制作完成才能进行。二者无法并行开发。</p>
+
+<p>讲完传统的工作流程，现在，我们来了解基于PDG的最新的程序化工作流程。</p>
+
+<p><img src="/img/post-unity/640-5.jpeg" alt="" /></p>
+
+<p><strong>PDG</strong> 是Houdini 17最新发布的功能，它将各模块的环节转化成可以操作的流程图，通过TOP类的节点分配任务，从而进行流程化的管理、测试、并行计算。例如分布式渲染，机器学习等。</p>
+
+<p>对开发游戏而言，最重要的一个工作就是流程管理。通常，Houdini会输出HDA资源，我们可以通过PDG将繁多、复杂的HDA资源进行模块化，流程化管理，而且流程和模块完全都是动态的，可以实时改变的。</p>
+
+<p>在Houdini 17之前，使用HDA资源最大的痛点就是无法形成闭环的流程。但是，良好运行的的流程一定是闭环的。此前，虽然我们可以制作一些Houdini资源，但在这些资源导入进Unity引擎后，其实等于一些程序化的资源，而不能说是一个程序化的流程。</p>
+
+<p>如果一个流程达不到闭环的，它可能不是一个良好的流程，甚至不算一个流程，所以以前我们使用Houdini只是进行程序化的建模，不能说是真正进行一个程序化的流程。 <strong>现在，Houdini可以跟Unity进行无缝的衔接。</strong></p>
+
+<p>如上图所示，图片右侧就是在Unity中Houdini的界面。我们可以看到右侧下方是PDG的流程节点，我们可以非常方便的在Unity里选择每一个环节，然后来进行调度，计算和渲染。</p>
+
+<p>在Houdini内部，PDG的节点是什么样的？现在出了最新的一个节点是TOP节点，TOP节点里面是什么呢？</p>
+
+<p><img src="/img/post-unity/640-6.jpeg" alt="" /></p>
+
+<p>Houdini内部都是基于PDG的流程节点。这些节点不是用于程序化建模，或者跟传统的SOP一样用于做程序化建模。这些节点是用来做流程管理，调度HDA的资源。例如，粒子等资源都是在这里进行流程调度。</p>
+
+<p>上图的右侧是我们传统的在Houdini里面做的资源，传统的流程节点。右侧可以制作地形的映射、侵蚀、种树、道路，一个个节点都是在右边的模块做完。</p>
+
+<p>此后，有一个的箭头指向PDG。我们会把右侧每一个模块的内容，在PDG的节点里进行调度，把它们关联起来，形成一个流程。这个流程可以动态的修改，如果哪个流程不好，可以直接删除，也可以动态的添加，如果有修改的东西都可以实时向里面添加。</p>
+
+<p>下图是现在 <strong>最新的PDG程序化工作流程的流程图。</strong></p>
+
+<p><img src="/img/post-unity/640-7.jpeg" alt="" /></p>
+
+<p>从上图中，我们可以看到它的主要做法是：策划或制作关卡的人员可以在Unity使用Houdini或Unity的ProBuilder进行关卡的搭建。以前的关卡搭建非常的复杂，现在都是非常简单的模型，盒状或三角形都可以搭建这个关卡。</p>
+
+<p>搭建完关卡之后，如果使用程序化的流程，我们可以很快的看到结果是什么样。如果结果不对我们可以进行关卡测试，测试的过程中可以快速的迭代，使用Houdini提供的很多工具链，我们可以快速的进行关卡测试。</p>
+
+<p>我们可以再看看上图的下部。关卡测试完之后，我们可以把数据直接扔到PDG模块中，PDG模块就像一个加工厂一样，把原始数据即关卡数据拿进来。</p>
+
+<p>此前我们需要在Unity中，人工一步一步用插件完成的流程，我们会全都放到PDG节点里面，它完全都是程序化。我们可以把PDG的节点打包，以后使一些AI的算法进行更多的变化。</p>
+
+<p>是不是当工作流程程序化后，DCC工具或建模人员的工作就没了？</p>
+
+<p>并不是这样的，其实我们的PDG整个的流程，是可以直接把制作好的的美术资源，还有DCC里生成的一些贴图，直接使用程序化的流程来调度，直接形成最终的关卡。</p>
+
+<p><strong>基于PDG的工作流程优势是什么？</strong></p>
+
+<p><img src="/img/post-unity/640-8.jpeg" alt="" /></p>
+
+<p>首先对于策划或者说关卡人员、制作人以及需要观看最终效果的人，可以快速介入，贯穿整个流程，随时测试方法。</p>
+
+<p>PDG这个流程不是都规定好的，完全可以策划人员使用很简单的工具选择其中的一个模块。例如：我想观看地形、道路、树等，完全可以选择观看。如果结果不对，我们迅速返回到关卡设计的阶段，快速的修改关卡，迭代速度也是非常快。</p>
+
+<p>基于PDG的工作流程的各个环节可以独立显示，每个HDA的工作人员，你可以给他们不同的分工。不再像以前一样，关卡人员必须等模型人员把模型做完了才能拼关卡。每一个部分下都有一个人员的，他们可以并行工作。</p>
+
+<p>每个人制作完成后，只需要把内容放到这个流程里面。例如，使用Unity或Houdini，直接把流程加载进来，灌入到流程里，我们可以很快地看到结果，不需要等待。非常方便的察看最终效果。PDG的程序化工作流程一旦成形了，可以大量节省资源制作成本。</p>
+
+<p>它的工具链非常少，不需要过多的插件。我们以前需要用到Python或C#脚本等开发的工具，但现在就是Unity和Houdini，非常的便于维护，就是意味我们只需要维护一个引擎，一个工具就可以了。</p>
+
+<p><strong>基于PDG的工作流程缺点是什么？</strong></p>
+
+<p><img src="/img/post-unity/640-9.jpeg" alt="" /></p>
+
+<p>基于PDP的程序化工作流程现在主要问题是需要一个思路的转变。跟传统的工作流程相比，程序化的流程不再是看到原画就开始建模，搭建场景，它现在需要整体的思路。制作项目之前，要有一个整体的规划，区分一下哪些地方可以用程序化做流程，哪些不可以，我们需要对项目有整体化的思路。</p>
+
+<p>很多游戏公司发展到现在，有很多的积累，项目经验非常多。以前制作项目都是摸着石头过河，什么都不知道，从头做起。现在项目经验多了之后，有很多有经验的技术美术或主美，都是可以从全局一开始就能分析项目，知道从什么地方可以用程序化，什么地方不能用，这需要思路的转变，跟传统的工作流程不太一样。</p>
+
+<p>其次是前期的学习成本，不能快速成型。程序化的工作流程在国内来说可能非常新，造成的问题是它的资料和资源都非常少，前期需要学习和积累。资源可能现在还很少，需要对整个流程的时间的磨练，才会形成工作的资源。</p>
+
+<p>程序化流程不适合小型团队和小场景类的项目。小型团队项目时间非常少，可能半年，一年就上线了，但是可能半年时间流程都搭建不完善。所以建议小型团队可以进行程序化的建模，而不是程序化的流程，小型团队可以用Houdini作为程序化建模的物体或工具。</p>
+
+<p>最后是完善的流程搭建门槛较高。如果要制作非常完善完备的程序化工作流程，需要有一些非常懂流程和工具或者引擎的人专门搭建这个流程，来规划这个团队，优化流程。一般这种工作由技术美术来负责。</p>
+
+<p>我们来了解一些基于PDG程序化工作流程的误区。</p>
+
+<p><img src="/img/post-unity/640-10.jpeg" alt="" /></p>
+
+<p>首先是并非所有的美术人员都需要学习Houdini。</p>
+
+<p>上图右侧是一个非常经典的金字塔图。最顶层只需要技术美术来制作流程，或者程序开发的引擎或者图形工作人员制作一些Houdini的工作节点，或者对Houdini一些工具的开发。</p>
+
+<p>中间需要的是一些懂Houdini的美术或者技术美术，他们用Houdini来搭建一些HDA或者HDA的工具。</p>
+
+<p>大多数的美术人员在底层这块，只是把这些工具导入到Unity里面，然后来画一些资源，一些树、一些建筑，做完之后要进行程序化的生成，或者你可以直接把这些树和建筑直接成程序化的模型，来自动改变它的形状。</p>
+
+<p>有些做程序化的团队，他们喜欢把所有流程都做成程序化，这是完全没有必要的。需要在美术方面的雕刻和个性化的内容，例如雕像，建筑类的资源是很难程序化的，强制把这些东西程序化是完全没有意义的。</p>
+
+<p>最后一点误区，很多流程设计都设计过度。制作流程不可能把流程做得最好，只有最适合自己项目的流程。</p>
+
+<h2 id="小结">小结</h2>
+<p>在本篇中，我们介绍了场景制作传统的工作流程和基于PDG的最新的程序化工作流程，希望对程序化制作地形和场景的美术及开发人员能有所帮助。</p>
+
+<p>更多Unite大会精彩演讲内容分享，尽在Unity Connect平台(Connect.unity.com)。</p>
+
+<p>下载Unity Connect APP，请点击<a href="https://mp.weixin.qq.com/s?__biz=MzU5MjQ1NTEwOA==&amp;mid=2247498325&amp;idx=2&amp;sn=e19842609e38c5bc33769b7cee959ab2&amp;chksm=fe1dcefec96a47e8e36cd5be63d6537c60e9693ee200d623976ab17f3e2ec1490df00263c34e&amp;scene=21#wechat_redirect">此处</a>。 观看部分Unity官方视频，请关注B站帐户：Unity官方。</p>
+
+<p>推荐阅读:</p>
+<ul>
+  <li><a href="https://mp.weixin.qq.com/s?__biz=MzU5MjQ1NTEwOA==&amp;mid=2247494831&amp;idx=1&amp;sn=5ab56fb057580d388bf627c883e5b370&amp;chksm=fe1dd804c96a51120c2d7dd6e2e49017d8b0bc71fdfbc6a4d87d298b1afb0f090444eef2dbf1&amp;scene=21#wechat_redirect">使用Unity程序化方法制作游戏动画</a></li>
+  <li><a href="https://mp.weixin.qq.com/s?__biz=MzU5MjQ1NTEwOA==&amp;mid=2247497128&amp;idx=1&amp;sn=7f935ef715a29fe22d7bca0edab6aea6&amp;chksm=fe1dc103c96a4815efa9739efa877859171458af2ecf08c10c57f8c8b14ddfbd8a966ae6f198&amp;scene=21#wechat_redirect">Unity中的程序化随机纹理制作功能</a></li>
+  <li><a href="https://mp.weixin.qq.com/s?__biz=MzU5MjQ1NTEwOA==&amp;mid=2247493591&amp;idx=1&amp;sn=0b732e3eb307a960f4c4b85ff3591631&amp;chksm=fe1dd37cc96a5a6a40fdec7e358de4f4a30645a76ce7f4b354275a4fbe35fc78c4ecafdb59e3&amp;scene=21#wechat_redirect">创建程序化的游戏世界（2）</a></li>
+  <li><a href="https://mp.weixin.qq.com/s?__biz=MzU5MjQ1NTEwOA==&amp;mid=2247496859&amp;idx=1&amp;sn=3e598d1a62be8f3388bd77c40b80f8e9&amp;chksm=fe1dc030c96a4926f4cd556474f619ff2bde33f1997d4e985f22d330b0f8f50cef549d196a94&amp;scene=21#wechat_redirect">在Unity中程序化生成地牢环境</a></li>
+  <li><a href="https://mp.weixin.qq.com/s?__biz=MzU5MjQ1NTEwOA==&amp;mid=2247496047&amp;idx=1&amp;sn=a59a8e018319fc84f4005771a483973f&amp;chksm=fe1dc5c4c96a4cd259def1dd0533aa8bc661f8fb1db96c12d29906ba965c46387be9401abe05&amp;scene=21#wechat_redirect">《莫塔之子》：如何使用程序化生成功能</a></li>
+  <li><a href="https://mp.weixin.qq.com/s?__biz=MzU5MjQ1NTEwOA==&amp;mid=2247499985&amp;idx=1&amp;sn=0df824195d243e3b6180f0d3ff9ed5f5&amp;chksm=fe1df47ac96a7d6c53107685fb433173c7839690f1c424b92d7b0b11e890bfaa0eea28c7e50b&amp;scene=21#wechat_redirect">Inside the Vault：3D环境艺术挑战赛获奖作品</a></li>
+  <li><a href="https://mp.weixin.qq.com/s?__biz=MzU5MjQ1NTEwOA==&amp;mid=2247498987&amp;idx=1&amp;sn=beabaab5e3e6e1faf19bc57a3cb4e896&amp;chksm=fe1dc840c96a41561305965543f9a73222fb54c457553b3e85d3be569fdc6b9ecd70fbf4eeb3&amp;scene=21#wechat_redirect">Unity中的实时光线追踪技术剖析</a></li>
+  <li><a href="https://mp.weixin.qq.com/s?__biz=MzU5MjQ1NTEwOA==&amp;mid=2247499972&amp;idx=1&amp;sn=164f77c64c0919d08c72e9371b5a01b8&amp;chksm=fe1df46fc96a7d798271cb8c4ef998bdebabdc9f2ff31ae78ff4b6602f9514a77cc3d5f9a44b&amp;scene=21#wechat_redirect">Unity性能测试分析解决方案UPR正式上线</a></li>
+</ul>
+
+
+    </div>
+  </div>
+
+  <style>
+  .post-nav {
+    overflow: hidden;
+    /* margin-top: 60px; */
+    padding: 12px;
+    white-space: nowrap;
+    /* border-top: 1px solid #eee; */
+  }
+
+  .post-nav-item {
+    display: inline-block;
+    width: 50%;
+    white-space: normal;
+  }
+
+  .post-nav-item a {
+    position: relative;
+    display: inline-block;
+    line-height: 25px;
+    font-size: 14px;
+    color: #555;
+    border-bottom: none;
+  }
+
+  .post-nav-item a:hover {
+    color: #222;
+    font-weight: bold;
+    border-bottom: none;
+  }
+
+  .post-nav-item a:active {
+    top: 2px;
+  }
+
+  .post-nav-item a:before,
+  .post-nav-item a:after {
+    display: inline-block;
+    width: 16px;
+    height: 25px;
+    vertical-align: top;
+    opacity: 0.4;
+    background-size: 16px;
+  }
+
+  .post-nav-none a:none {
+    content: ' ';
+    background-size: 8px;
+  }
+
+  .post-nav-none a:hover:none {
+    opacity: 1;
+  }
+
+  .post-nav-prev a:before {
+    content: ' ';
+    background: url("data:image/svg+xml;base64,PD94bWwgdmVyc2lvbj0iMS4wIiA/PjxzdmcgaGVpZ2h0PSIxMnB4IiB2ZXJzaW9uPSIxLjEiIHZpZXdCb3g9IjAgMCA5IDEyIiB3aWR0aD0iOXB4IiB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHhtbG5zOnNrZXRjaD0iaHR0cDovL3d3dy5ib2hlbWlhbmNvZGluZy5jb20vc2tldGNoL25zIiB4bWxuczp4bGluaz0iaHR0cDovL3d3dy53My5vcmcvMTk5OS94bGluayI+PHRpdGxlLz48ZGVzYy8+PGRlZnMvPjxnIGZpbGw9Im5vbmUiIGZpbGwtcnVsZT0iZXZlbm9kZCIgaWQ9IlBhZ2UtMSIgc3Ryb2tlPSJub25lIiBzdHJva2Utd2lkdGg9IjEiPjxnIGZpbGw9IiMwMDAwMDAiIGlkPSJDb3JlIiB0cmFuc2Zvcm09InRyYW5zbGF0ZSgtMjE4LjAwMDAwMCwgLTkwLjAwMDAwMCkiPjxnIGlkPSJjaGV2cm9uLWxlZnQiIHRyYW5zZm9ybT0idHJhbnNsYXRlKDIxOC41MDAwMDAsIDkwLjAwMDAwMCkiPjxwYXRoIGQ9Ik03LjQsMS40IEw2LDAgTC04Ljg4MTc4NDJlLTE2LDYgTDYsMTIgTDcuNCwxMC42IEwyLjgsNiBMNy40LDEuNCBaIiBpZD0iU2hhcGUiLz48L2c+PC9nPjwvZz48L3N2Zz4=") no-repeat 0 50%;
+    background-size: 8px;
+  }
+
+  .post-nav-prev a:hover:before {
+    opacity: 1;
+  }
+
+  .post-nav-next {
+    text-align: right;
+  }
+
+  .post-nav-next a:after {
+    content: ' ';
+    background: url("data:image/svg+xml;base64,PD94bWwgdmVyc2lvbj0iMS4wIiA/PjxzdmcgaGVpZ2h0PSIxMnB4IiB2ZXJzaW9uPSIxLjEiIHZpZXdCb3g9IjAgMCA5IDEyIiB3aWR0aD0iOXB4IiB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHhtbG5zOnNrZXRjaD0iaHR0cDovL3d3dy5ib2hlbWlhbmNvZGluZy5jb20vc2tldGNoL25zIiB4bWxuczp4bGluaz0iaHR0cDovL3d3dy53My5vcmcvMTk5OS94bGluayI+PHRpdGxlLz48ZGVzYy8+PGRlZnMvPjxnIGZpbGw9Im5vbmUiIGZpbGwtcnVsZT0iZXZlbm9kZCIgaWQ9IlBhZ2UtMSIgc3Ryb2tlPSJub25lIiBzdHJva2Utd2lkdGg9IjEiPjxnIGZpbGw9IiMwMDAwMDAiIGlkPSJDb3JlIiB0cmFuc2Zvcm09InRyYW5zbGF0ZSgtMjYwLjAwMDAwMCwgLTkwLjAwMDAwMCkiPjxnIGlkPSJjaGV2cm9uLXJpZ2h0IiB0cmFuc2Zvcm09InRyYW5zbGF0ZSgyNjAuNTAwMDAwLCA5MC4wMDAwMDApIj48cGF0aCBkPSJNMSwwIEwtMC40LDEuNCBMNC4yLDYgTC0wLjQsMTAuNiBMMSwxMiBMNyw2IEwxLDAgWiIgaWQ9IlNoYXBlIi8+PC9nPjwvZz48L2c+PC9zdmc+") no-repeat 100% 50%;
+    background-size: 8px;
+  }
+
+  .post-nav-next a:hover:after {
+    opacity: 1;
+  }
+</style>
+
+
+
+<div class="post-nav">
+
+  
+  <div class="post-nav-none post-nav-item">
+    <a href=""> </a>
+  </div>
+  
+
+  
+  <div class="post-nav-next post-nav-item">
+    
+    <a href="/blog/2020/job/"> Unity C＃Job System</a>
+  </div>
+  
+
+</div>
+
+</article>
+    </div>
+
+    <footer class="site-footer">
+  <div class="container">
+    <ul class="social">
+  <li><a href="https://twitter.com/penghuailiang" target="_blank"><i class="icon icon-twitter"></i></a></li>
+  <li><a href="https://www.zhihu.com/people/huailiangpenguin" target="_blank"><i class="icon icon-zhihu"></i></a></li>
+  <li><a href="https://www.facebook.com/profile.php?id=100004290725320" target="_blank"><i class="icon icon-facebook"></i></a></li>
+  <li><a href="https://weibo.com/6212299692/profile?topnav=1&wvr=6" target="_blank"><i class="icon icon-sina"></i></a></li>
+  <li><a href="https://www.linkedin.com/in/penghuailiang/" target="_blank"><i class="icon icon-linkedin"></i></a></li>
+  <li><a href="https://github.com/huailiang" target="_blank"><i class="icon icon-github"></i></a></li>
+</ul>
+    <p class="txt-medium-gray">
+      <small>&copy;2020 All rights reserved. </small>
+    </p>
+  </div>
+</footer>
+    <a href="https://github.com/huailiang" target="_blank" class="github-corner"><svg width="80" height="80" viewBox="0 0 250 250" style="fill:#337ab7; color:#fff; position: absolute; top: 0; border: 0; right: 0;"><path d="M0,0 L115,115 L130,115 L142,142 L250,250 L250,0 Z"></path><path d="M128.3,109.0 C113.8,99.7 119.0,89.6 119.0,89.6 C122.0,82.7 120.5,78.6 120.5,78.6 C119.2,72.0 123.4,76.3 123.4,76.3 C127.3,80.9 125.5,87.3 125.5,87.3 C122.9,97.6 130.6,101.9 134.4,103.2" fill="currentColor" style="transform-origin: 130px 106px;" class="octo-arm"></path><path d="M115.0,115.0 C114.9,115.1 118.7,116.5 119.8,115.4 L133.7,101.6 C136.9,99.2 139.9,98.4 142.2,98.6 C133.8,88.0 127.5,74.4 143.8,58.0 C148.5,53.4 154.0,51.2 159.7,51.0 C160.3,49.4 163.2,43.6 171.4,40.1 C171.4,40.1 176.1,42.5 178.8,56.2 C183.1,58.6 187.2,61.8 190.9,65.4 C194.5,69.0 197.7,73.2 200.1,77.6 C213.8,80.2 216.3,84.9 216.3,84.9 C212.7,93.1 206.9,96.0 205.4,96.6 C205.1,102.4 203.0,107.8 198.3,112.5 C181.9,128.9 168.3,122.5 157.7,114.1 C157.9,116.9 156.7,120.9 152.7,124.9 L141.0,136.5 C139.8,137.7 141.6,141.9 141.8,141.8 Z" fill="currentColor" class="octo-body"></path></svg></a>
+
+
+    <script src="//code.jquery.com/jquery-1.11.3.min.js"></script>
+    <script>
+      $(document).ready(function () {
+        $('.sliding-panel-button,.sliding-panel-fade-screen,.sliding-panel-close').on('click touchstart', function (e) {
+          $('.sliding-panel-content,.sliding-panel-fade-screen').toggleClass('is-visible');
+          e.preventDefault();
+        });
+      });
+    </script>
+  </main>
+</body>
+
+</html>
