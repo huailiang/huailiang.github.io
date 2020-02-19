@@ -1,11 +1,54 @@
 ---
 layout:     post
-title:      "Unity C＃Job System"
+title:      "Unity DOTS"
 date:       2020-01-20 03:00:00
 author:     "Huailiang"
 tags:
     - Unity
 ---
+
+
+>Unity 的高性能多线程面向数据的技术堆栈 (DOTS) 充分利用了多核处理器的优势,可创建更加丰富的用户体验。使用它可以更快地迭代和创建易于重用的 C# 代码。
+
+## ECS
+
+### 块（Chunk）
+
+![](/img/post-unity/ecs1.jpg)
+
+我们有三个实体：
+
+EntityA：包含了Translation、Rotation、LocalToWorld、Render四个组件。
+
+EntityB：包含了Translation、Rotation、LocalToWorld、Render四个组件。
+
+EntityC：包含了Translation、Rotation、LocalToWorld三个组件。
+
+很明显的，EntityA和EntityB拥有的组件是一模一样的。
+
+在ECS中，底层会把这些拥有相同组件的实体放在一起，也就是我们所说的内存块（Chunk）。EntityA和EntityB是放在一个块（Chunk）里的，而EntityC则放在另一个块（Chunk）里。
+
+这涉及到一种”反正我也听不懂”的原理，把相同类型的数据连续存放在一块内存里，会提高提取数据的效率。
+
+
+这个”反正我也听不懂”原理是什么呢？大家感兴趣的可以移步官方文档：
+
+https://docs.unity3d.com/Packages/com.unity.entities@0.3/manual/ecs_core.html
+
+ 
+### 原型（Archetype）
+
+对于组件完全相同的那些实体，会放在一个块（Chunk）里。但是，块的大小是有上限的，当某个块里的实体数量达到某个程度时，就不能再增加了。这时候怎么办？简单了——再开一个块（Chunk）。
+
+![](/img/post-unity/ecs2.jpg)
+
+比如上面那张图，一共有三个块，其实这三个块里存放的都是拥有相同组件的实体，只不过数量太多，所以分开存放到不同的块里了。
+
+而这是存放相同组件的实体的所有块，都属于同一个类型，也就是官方所说的原型（Archetype）。
+
+某个原型（Archetype）下的所有块（Chunk），它们都存放了相同组件的实体。实际上，原型（Archetype）更多的是一种概念，实际在写代码的过程中，我们可能没法直接对原型进行操作。对于某种原型下的所有块，它们的大小是一样的。相当于预先申请了内存空间，不管塞没塞满，都占用一样的内存空间，一个块塞满之后，就又申请一个新的空的块。
+
+
 
 ## Job System概述
 
@@ -421,9 +464,15 @@ job拥有一个Run方法，你可以用它来替代Schedule从而让主线程立
 
 更多信息:
 
-[Unity GDC 2018: C# Job System的片段列表][i4]
+* [Unity GDC 2018: C# Job System的片段列表][i4]
+* [Unity AngryBots ECS Demo][i5]
+* [Unity DOTS技术详解 - 宣雨松 Bilibili][i6]
+* [Unity DOTS官方介绍文档][i7]
 
 [i1]: https://www.jianshu.com/p/f2306dad5e25
 [i2]: https://zhuanlan.zhihu.com/p/58125078
 [i3]: https://docs.unity3d.com/Manual/JobSystemParallelForJobs.html
 [i4]: https://www.youtube.com/playlist?list=PLX2vGYjWbI0RuXtGMYKqChoZC2b-H4tck
+[i5]: https://github.com/UnityTechnologies/AngryBots_ECS
+[i6]: https://www.bilibili.com/video/av79798154?t=2258
+[i7]: https://unity.com/cn/dots
