@@ -5,9 +5,9 @@
   <meta http-equiv="X-UA-Compatible" content="IE=edge">
   <meta name="viewport" content="width=device-width, initial-scale=1">
 
-  <title>Unity C＃Job System</title>
+  <title>Unity DOTS</title>
   <meta name="description"
-    content="Job System概述">
+    content="  Unity 的高性能多线程面向数据的技术堆栈 (DOTS) 充分利用了多核处理器的优势,可创建更加丰富的用户体验。使用它可以更快地迭代和创建易于重用的 C# 代码。">
 
   <link rel="shortcut icon" href="/img/favicon.ico">
   <link rel="stylesheet" href="/css/main.css">
@@ -67,13 +67,53 @@ MathJax.Hub.Config({
 
   <div class="card">
     <header class="post-header">
-      <h1 class="post-title">Unity C＃Job System</h1>
+      <h1 class="post-title">Unity DOTS</h1>
       <p class="post-meta">Jan 20, 2020 •
         Huailiang</p>
     </header>
 
     <div class="post-content">
-      <h2 id="job-system概述">Job System概述</h2>
+      <blockquote>
+  <p>Unity 的高性能多线程面向数据的技术堆栈 (DOTS) 充分利用了多核处理器的优势,可创建更加丰富的用户体验。使用它可以更快地迭代和创建易于重用的 C# 代码。</p>
+</blockquote>
+
+<h2 id="ecs">ECS</h2>
+
+<h3 id="块chunk">块（Chunk）</h3>
+
+<p><img src="/img/post-unity/ecs1.jpg" alt="" /></p>
+
+<p>我们有三个实体：</p>
+
+<p>EntityA：包含了Translation、Rotation、LocalToWorld、Render四个组件。</p>
+
+<p>EntityB：包含了Translation、Rotation、LocalToWorld、Render四个组件。</p>
+
+<p>EntityC：包含了Translation、Rotation、LocalToWorld三个组件。</p>
+
+<p>很明显的，EntityA和EntityB拥有的组件是一模一样的。</p>
+
+<p>在ECS中，底层会把这些拥有相同组件的实体放在一起，也就是我们所说的内存块（Chunk）。EntityA和EntityB是放在一个块（Chunk）里的，而EntityC则放在另一个块（Chunk）里。</p>
+
+<p>这涉及到一种”反正我也听不懂”的原理，把相同类型的数据连续存放在一块内存里，会提高提取数据的效率。</p>
+
+<p>这个”反正我也听不懂”原理是什么呢？大家感兴趣的可以移步官方文档：</p>
+
+<p>https://docs.unity3d.com/Packages/com.unity.entities@0.3/manual/ecs_core.html</p>
+
+<h3 id="原型archetype">原型（Archetype）</h3>
+
+<p>对于组件完全相同的那些实体，会放在一个块（Chunk）里。但是，块的大小是有上限的，当某个块里的实体数量达到某个程度时，就不能再增加了。这时候怎么办？简单了——再开一个块（Chunk）。</p>
+
+<p><img src="/img/post-unity/ecs2.jpg" alt="" /></p>
+
+<p>比如上面那张图，一共有三个块，其实这三个块里存放的都是拥有相同组件的实体，只不过数量太多，所以分开存放到不同的块里了。</p>
+
+<p>而这是存放相同组件的实体的所有块，都属于同一个类型，也就是官方所说的原型（Archetype）。</p>
+
+<p>某个原型（Archetype）下的所有块（Chunk），它们都存放了相同组件的实体。实际上，原型（Archetype）更多的是一种概念，实际在写代码的过程中，我们可能没法直接对原型进行操作。对于某种原型下的所有块，它们的大小是一样的。相当于预先申请了内存空间，不管塞没塞满，都占用一样的内存空间，一个块塞满之后，就又申请一个新的空的块。</p>
+
+<h2 id="job-system概述">Job System概述</h2>
 
 <p>Unity C＃ Job System允许用户编写与Unity其余部分良好交互的多线程代码，并使编写正确的代码变得更加容易。<br />
 编写多线程代码可以提供高性能的好处。其中包括显着提高帧速率和延长移动设备的电池寿命。</p>
@@ -491,7 +531,12 @@ MathJax.Hub.Config({
 
 <p>更多信息:</p>
 
-<p><a href="https://www.youtube.com/playlist?list=PLX2vGYjWbI0RuXtGMYKqChoZC2b-H4tck">Unity GDC 2018: C# Job System的片段列表</a></p>
+<ul>
+  <li><a href="https://www.youtube.com/playlist?list=PLX2vGYjWbI0RuXtGMYKqChoZC2b-H4tck">Unity GDC 2018: C# Job System的片段列表</a></li>
+  <li><a href="https://github.com/UnityTechnologies/AngryBots_ECS">Unity AngryBots ECS Demo</a></li>
+  <li><a href="https://www.bilibili.com/video/av79798154?t=2258">Unity DOTS技术详解 - 宣雨松 Bilibili</a></li>
+  <li><a href="https://unity.com/cn/dots">Unity DOTS官方介绍文档</a></li>
+</ul>
 
 
     </div>
