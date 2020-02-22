@@ -125,7 +125,8 @@ ComponentSystem为System在Unity ECS中的实现。一个ComponentSystem会对�
 
 多个不同的ComponentSystem可以在定义时通过UpdateBefore、UpdateAfter、UpdateBefored等标签来控制其执行顺序，这会在一定程度上影响并发执行，通常只在必要时使用。
 
-一个ComponentSystem通常关注一个包含特定的Component组合的Entity集合(称为ComponentGroup，下一篇重点讲)。这个ComponentGroup集合可以通过GetComponentGroup主动获取，
+一个ComponentSystem通常关注一个包含特定的Component组合的Entity集合(称为ComponentGroup。这个ComponentGroup集合可以通过GetComponentGroup主动获取，
+
 ```c#
 ComponentGroup m_Spawners;
 //获取包含ObjectSpawner和Position两个Component的ComponentGroup
@@ -135,6 +136,7 @@ protected override void OnCreateManager()
 }
 ```
 也可以使用IJobProcessComponentData中的定义和RequireSubtractiveComponentAttribute等标签自动注入(Inject)，同样也会生成一个ComponentGroup
+
 ```c#
 //通过RequireComponentTagAttribute为JobComponentSystem添加额外的依赖项
 //[RequireComponentTagAttribute(typeof(Object))]
@@ -156,7 +158,7 @@ Unity ECS中对于不同类型的对象由不同的Manager进行管理，这边�
 
 __EntityManager__
 
-ECS日常使用中使用最频繁的管理器，每个World都会有一个EnitityManager，不直接储存数据，但封装了常用的Enitity、Archetype、Component操作，包括了CreateEntity、CreateArchetype、Instantiate、AddComponent等操作，对应接口后面的章节会讲到，这里不作详细说明。
+ECS日常使用中使用最频繁的管理器，每个World都会有一个EnitityManager，不直接储存数据，但封装了常用的Enitity、Archetype、Component操作，包括了CreateEntity、CreateArchetype、Instantiate、AddComponent等操作。
 
 同时EntityManager提供了其他多个重要数据管理器的访问接口，包括Entity数据管理器EntityDataManager、原型管理器ArchetypeManager、Component集合管理器EntityGroupManager、以及共享数据管理器SharedComponentDataManager。可以说以EntityManager为入口，可以延伸到ECS系统中90%以上的内容，可谓包罗万象。
 
