@@ -114,9 +114,47 @@ MathJax.Hub.Config({
   <li>4, 不是原子操作。</li>
 </ul>
 
-<h2 id="ecs">ECS</h2>
+<p>只有当这四个条件同时成立的时候，Data Race 才会发生，所以为了避免它的发生，我们需要破坏掉其中的一个或多个条件。对于条件4，可以使用原子操作破坏，然而原子操作的复杂性颇高，实际应用中常用于实现底层库（无锁队列，线程池之类的）。而要破坏条件1、3，则是避免可变共享，完全进行拷贝（如erlang）。剩下条件2就是避免硬碰硬，在可能发生 Data Race 的时候直接放弃并行。但总得来说最重要的还是，要避免它的发生，一定要对这些条件足够敏感以预防遗漏，在这里通常封装就起了反作用，因为黑箱之内我们无法知道会发生什么。而此时相对于 OOP 的黑箱，函数式的纯粹（纯原子性）便能体现出它在并行上天生的优势，所以卡神推荐在 C++ 里也尽量使用函数式的思想来进行编码。</p>
 
-<h3 id="块chunk">块（Chunk）</h3>
+<h2 id="unity-ecs">Unity ECS</h2>
+
+<p><strong>1. Entity</strong></p>
+
+<p>Entity为ECS中基本的成员，实际上只是由一个Index和一个Version组成(Version只有在Entity被回收后会加1)，其实际的Component数据存储在一个Chunk上(Unity ECS特有的数据类型，后面会讲到)，需要操作其Component数据时，根据其index到EntityDataManager中找到其所在的Chunk和IndexInChunk，取到对应的Component数据后进行操作。</p>
+
+<div class="language-c# highlighter-rouge"><pre class="highlight"><code><span class="k">public</span> <span class="k">struct</span> <span class="nc">Entity</span> <span class="p">:</span> <span class="n">IEquatable</span><span class="p">&lt;</span><span class="n">Entity</span><span class="p">&gt;</span>
+<span class="p">{</span>
+    <span class="k">public</span> <span class="kt">int</span> <span class="n">Index</span><span class="p">;</span>
+    <span class="k">public</span> <span class="kt">int</span> <span class="n">Version</span><span class="p">;</span>
+    <span class="p">......</span>   
+<span class="p">}</span>
+</code></pre>
+</div>
+<p><strong>2. Component</strong></p>
+
+<p>Component是Entity的一个属性，通常是一个继承了IComponentData或ISharedComponentData接口的结构体(两个接口都为空接口，仅标记类型)。一个Entity可以包含多个Component，继承了ISharedComponentData的数据会在多个Entity之间共享，同时可以使用托管类型的成员，一般用来存放GameObject或RenderMesh等渲染相关的成员。</p>
+
+<p>一个Entity的Component可以在CreateEntity时指定，也可以使用一个ArcheType创建或从已有Entity复制来创建。同时已经创建的Entity还可以通过AddComponent和RemoveComponent来动态进行Component的添加或删除(由于效率问题不推荐)。</p>
+
+<p>Tips:Component可以用Proxy包装后直接挂在GameObject上，挂载多个Proxy的GameObject可以作为Prefab直接传入EntityManager.Instantiate来生成新的Entity，如：</p>
+
+<div class="language-c# highlighter-rouge"><pre class="highlight"><code><span class="c1">// Create an entity from the prefab set on the spawner component.
+</span><span class="kt">var</span> <span class="n">prefab</span> <span class="p">=</span> <span class="n">spawnerData</span><span class="p">.</span><span class="n">prefab</span><span class="p">;</span>
+<span class="kt">var</span> <span class="n">entity</span> <span class="p">=</span> <span class="n">EntityManager</span><span class="p">.</span><span class="nf">Instantiate</span><span class="p">(</span><span class="n">prefab</span><span class="p">);</span>
+</code></pre>
+</div>
+
+<p><strong>3. 块Chunk</strong></p>
+
+<p>Chunk是Unity ECS中特有的一个数据结构，在ECS部分代码中有大量使用，通常是指用来存放Component信息的与ArchetypeChunk，此外还有更一般的Chunk通过ChunkAllocator进行开辟，可以存放ArcheType中的各类型信息，大小和存储结构都与ArchetypeChunk不同，此处的Chunk特指存放ArcheType中Component信息的ArchetypeChunk。Chunk有以下几个特点：</p>
+
+<ul>
+  <li>EntityManager会将Component数据存放在固定的16kb大小的Chunk中(可以在Chunk定义中找到指定大小kChunkSize)</li>
+  <li>每个Chunk结构包含了这个区块中内容的相关信息</li>
+  <li>每个EntityArchetype都包括了一个Chunk的独特集合</li>
+  <li>一个chunk只能存在于一个archetype中</li>
+  <li>一个ArchetypeChunk结构是一个到具体Chunk的指针</li>
+</ul>
 
 <p><img src="/img/post-unity/ecs1.jpg" alt="" /></p>
 
@@ -132,42 +170,82 @@ MathJax.Hub.Config({
 
 <p>在ECS中，底层会把这些拥有相同组件的实体放在一起，也就是我们所说的内存块（Chunk）。EntityA和EntityB是放在一个块（Chunk）里的，而EntityC则放在另一个块（Chunk）里。</p>
 
-<p>这涉及到一种”反正我也听不懂”的原理，把相同类型的数据连续存放在一块内存里，会提高提取数据的效率。</p>
+<p>这涉及到一种”反正我也听不懂”的原理，把相同类型的数据连续存放在一块内存里，会提高提取数据的效率。参考<a href="https://docs.unity3d.com/Packages/com.unity.entities@0.3/manual/ecs_core.html">官方文档</a>。</p>
 
-<p>这个”反正我也听不懂”原理是什么呢？大家感兴趣的可以移步官方文档：</p>
+<p><strong>4. 原型Archetype</strong></p>
 
-<p>https://docs.unity3d.com/Packages/com.unity.entities@0.3/manual/ecs_core.html</p>
+<p>ArcheType是Unity ECS中特有的概念，也是Unity ECS内存管理中的一个核心部分，许多重要操作都与此相关。ArcheType是由某几个固定Component组成的Entity原型，有以下几个特点：</p>
 
-<h3 id="原型archetype">原型（Archetype）</h3>
+<ul>
+  <li>ArcheType管理所有属于它的Entity Component数据，对应数据存放在归属于它的chunk上</li>
+  <li>可以通过ArcheType快速访问所有该类型的Entity Component数据</li>
+  <li>拥有Component的Entity一定处在某个ArcheType的管理之下</li>
+  <li>ArcheType拥有缓存机制，第二次创建相同的ArcheType时会自动将现有的返回</li>
+</ul>
 
-<p>对于组件完全相同的那些实体，会放在一个块（Chunk）里。但是，块的大小是有上限的，当某个块里的实体数量达到某个程度时，就不能再增加了。这时候怎么办？简单了——再开一个块（Chunk）。</p>
+<p>我们可以使用EntityManager.CreateArchetype(params ComponentType[] types)来主动创建一个ArcheType，通过ArcheType可以直接调用EntityManager.CreateEntity(EntityArchetype archetype)来快速创建具有某一类特征的Entity。同时如果使用直接传入Components的方式来创建Entity时也会自动生成含有对应Component的ArcheType。</p>
 
-<p><img src="/img/post-unity/ecs2.jpg" alt="" /></p>
+<p><strong>5. ComponentSystem</strong></p>
 
-<p>比如上面那张图，一共有三个块，其实这三个块里存放的都是拥有相同组件的实体，只不过数量太多，所以分开存放到不同的块里了。</p>
+<p>ComponentSystem为System在Unity ECS中的实现。一个ComponentSystem会对含有某些Component的Entity执行一些特定的操作，通常继承自ComponentSystem或JobComponentSystem。区别是继承ComponentSystem只会在主线程执行，而继承自JobComponentSystem的则可以利用JobSystem来进行多线程并发处理，但同时对应操作过程中的限制也更严格。在大部分情况下应当尽量使用JobComponentSystem来完成相关的操作，从而提升性能。</p>
 
-<p>而这是存放相同组件的实体的所有块，都属于同一个类型，也就是官方所说的原型（Archetype）。</p>
+<p>多个不同的ComponentSystem可以在定义时通过UpdateBefore、UpdateAfter、UpdateBefored等标签来控制其执行顺序，这会在一定程度上影响并发执行，通常只在必要时使用。</p>
 
-<p>某个原型（Archetype）下的所有块（Chunk），它们都存放了相同组件的实体。实际上，原型（Archetype）更多的是一种概念，实际在写代码的过程中，我们可能没法直接对原型进行操作。对于某种原型下的所有块，它们的大小是一样的。相当于预先申请了内存空间，不管塞没塞满，都占用一样的内存空间，一个块塞满之后，就又申请一个新的空的块。</p>
+<p>一个ComponentSystem通常关注一个包含特定的Component组合的Entity集合(称为ComponentGroup，下一篇重点讲)。这个ComponentGroup集合可以通过GetComponentGroup主动获取，</p>
+<div class="language-c# highlighter-rouge"><pre class="highlight"><code><span class="n">ComponentGroup</span> <span class="n">m_Spawners</span><span class="p">;</span>
+<span class="c1">//获取包含ObjectSpawner和Position两个Component的ComponentGroup
+</span><span class="k">protected</span> <span class="k">override</span> <span class="k">void</span> <span class="nf">OnCreateManager</span><span class="p">()</span>
+<span class="p">{</span>
+    <span class="n">m_Spawners</span> <span class="p">=</span> <span class="nf">GetComponentGroup</span><span class="p">(</span><span class="k">typeof</span><span class="p">(</span><span class="n">ObjectSpawner</span><span class="p">),</span> <span class="k">typeof</span><span class="p">(</span><span class="n">Position</span><span class="p">));</span>
+<span class="p">}</span>
+</code></pre>
+</div>
+<p>也可以使用IJobProcessComponentData中的定义和RequireSubtractiveComponentAttribute等标签自动注入(Inject)，同样也会生成一个ComponentGroup</p>
+<div class="language-c# highlighter-rouge"><pre class="highlight"><code><span class="c1">//通过RequireComponentTagAttribute为JobComponentSystem添加额外的依赖项
+//[RequireComponentTagAttribute(typeof(Object))]
+//通过RequireSubtractiveComponentAttribute为JobComponentSystem添加额外的排除项
+</span><span class="na">[RequireSubtractiveComponentAttribute(typeof(ObjectSpawner))]</span>  
+<span class="k">struct</span> <span class="nc">ObjectMove</span> <span class="p">:</span> <span class="n">IJobProcessComponentData</span><span class="p">&lt;</span><span class="n">Position</span><span class="p">&gt;</span>
+<span class="p">{</span>
+    <span class="p">......</span>
+    <span class="k">public</span> <span class="k">void</span> <span class="nf">Execute</span><span class="p">(</span><span class="k">ref</span> <span class="n">Position</span> <span class="n">position</span><span class="p">)</span>
+    <span class="p">{</span>
+        <span class="p">......</span>
+    <span class="p">}</span>
+<span class="p">}</span>
+</code></pre>
+</div>
 
-<h2 id="job-system概述">Job System概述</h2>
+<h3 id="常用管理器介绍">常用管理器介绍</h3>
+
+<p>Unity ECS中对于不同类型的对象由不同的Manager进行管理，这边对常用的Manager进行一个归纳。</p>
+
+<p><strong>EntityManager</strong></p>
+
+<p>ECS日常使用中使用最频繁的管理器，每个World都会有一个EnitityManager，不直接储存数据，但封装了常用的Enitity、Archetype、Component操作，包括了CreateEntity、CreateArchetype、Instantiate、AddComponent等操作，对应接口后面的章节会讲到，这里不作详细说明。</p>
+
+<p>同时EntityManager提供了其他多个重要数据管理器的访问接口，包括Entity数据管理器EntityDataManager、原型管理器ArchetypeManager、Component集合管理器EntityGroupManager、以及共享数据管理器SharedComponentDataManager。可以说以EntityManager为入口，可以延伸到ECS系统中90%以上的内容，可谓包罗万象。</p>
+
+<p><strong>ArchetypeManager</strong></p>
+
+<p>管理所有的Archetype的创建、更新、删除等操作，管理了所有当前已创建的Archetype。当需要建立新的ComponentGroup时会到ArchetypeManager中读取所有Archetype的列表m_Archetypes，来筛选需要关注哪些Archetype，同时在Archetype发生变化时也会同时更新对应的ComponentGroup数据。</p>
+
+<p><strong>EntityDataManager</strong></p>
+
+<p>管理所有Entity相关的数据，可以通过m_Entities-&gt;ChunkData快速根据Entity Index获得Entity所在的Chunk和在该Chunk上的Index，从m_Entities-&gt;Archetype获取其Archetype,从而快速访问对应的Component数据。</p>
+
+<p><strong>EntityGroupManager</strong></p>
+
+<p>管理与ComponentSystem运作息息相关的ComponentGroup。从每个ComponentSystem中收集其需要关注的Component集合，同时在System的每次Update前更新这个集合，同样的集合只会存在一个。</p>
+
+<h3 id="job-system概述">Job System概述</h3>
 
 <p>Unity C＃ Job System允许用户编写与Unity其余部分良好交互的多线程代码，并使编写正确的代码变得更加容易。<br />
 编写多线程代码可以提供高性能的好处。其中包括显着提高帧速率和延长移动设备的电池寿命。</p>
 
 <p>C＃ Job System的一个重要方面是它与Unity内部使用的集成（Unity的native job system）。用户编写的代码和Unity共享工作线程。这种合作避免了导致争用CPU资源的问题，并且可以创建比CPU核心更多的线程。</p>
 
-<h2 id="什么是多线程">什么是多线程</h2>
-
-<p>在单线程计算机系统中，一次只能进入一条指令，并且只能得出一个结果。加载和完成程序的时间取决于CPU需要完成的工作量。多线程是一种编程，它利用CPU在多个内核上同时处理多个线程的能力，它不是一个接一个地执行任务或指令，而是同时运行的。</p>
-
-<p>默认情况下，一个线程在程序的开头运行。这是“主线程”。主线程创建新线程来处理任务。这些新线程彼此并行运行，并且通常在完成后将其结果与主线程同步。</p>
-
-<p>如果您有一些运行很长时间的任务，这种多线程方法很有效。但是，游戏开发代码通常包含许多一次执行的小指令。如果为每个小指令创建一个线程，最终可能会有许多线程，每个线程的生命周期都很短。这可以推动CPU和操作系统处理能力的极限。</p>
-
-<p>通过拥有一个线程池可以缓解线程生存期的问题。但是，即使您使用线程池，也可能同时激活大量线程。线程数多于CPU核心导致线程相互争用CPU资源，导致频繁的上下文切换。上下文切换是通过执行保存线程状态的过程，然后处理另一个线程，然后重新构建第一个线程，以便继续处理它。上下文切换是资源密集型的，因此您应尽可能避免使用它。</p>
-
-<h2 id="什么是job-system">什么是Job System</h2>
+<h3 id="什么是job-system">什么是Job System</h3>
 
 <p>Job System通过创建Job而不是线程来管理多线程代码。</p>
 
@@ -303,7 +381,7 @@ MathJax.Hub.Config({
 </code></pre>
 </div>
 
-<h2 id="调度jobs">调度Jobs</h2>
+<h3 id="调度jobs">调度Jobs</h3>
 
 <p>要在主线程中调度作业，您必须：</p>
 
@@ -573,6 +651,9 @@ MathJax.Hub.Config({
   <li><a href="https://github.com/UnityTechnologies/AngryBots_ECS">Unity AngryBots ECS Demo</a></li>
   <li><a href="https://www.bilibili.com/video/av79798154?t=2258">Unity DOTS技术详解 - 宣雨松 Bilibili</a></li>
   <li><a href="https://unity.com/cn/dots">Unity DOTS官方介绍文档</a></li>
+  <li><a href="https://blog.codingnow.com/2017/06/overwatch_ecs.html#more">浅谈《守望先锋》中的 ECS 构架</a></li>
+  <li><a href="https://blog.csdn.net/yudianxia/article/details/80498015">组件与Chunk的内存布局</a></li>
+  <li><a href="https://zhuanlan.zhihu.com/p/59879279">浅谈Unity ECS系列， zhihu</a></li>
 </ul>
 
 
