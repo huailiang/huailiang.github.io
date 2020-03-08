@@ -191,7 +191,8 @@ MathJax.Hub.Config({
 
 <p>多个不同的ComponentSystem可以在定义时通过UpdateBefore、UpdateAfter、UpdateBefored等标签来控制其执行顺序，这会在一定程度上影响并发执行，通常只在必要时使用。</p>
 
-<p>一个ComponentSystem通常关注一个包含特定的Component组合的Entity集合(称为ComponentGroup，下一篇重点讲)。这个ComponentGroup集合可以通过GetComponentGroup主动获取，</p>
+<p>一个ComponentSystem通常关注一个包含特定的Component组合的Entity集合(称为ComponentGroup。这个ComponentGroup集合可以通过GetComponentGroup主动获取，</p>
+
 <div class="language-c# highlighter-rouge"><pre class="highlight"><code><span class="n">ComponentGroup</span> <span class="n">m_Spawners</span><span class="p">;</span>
 <span class="c1">//获取包含ObjectSpawner和Position两个Component的ComponentGroup
 </span><span class="k">protected</span> <span class="k">override</span> <span class="k">void</span> <span class="nf">OnCreateManager</span><span class="p">()</span>
@@ -201,6 +202,7 @@ MathJax.Hub.Config({
 </code></pre>
 </div>
 <p>也可以使用IJobProcessComponentData中的定义和RequireSubtractiveComponentAttribute等标签自动注入(Inject)，同样也会生成一个ComponentGroup</p>
+
 <div class="language-c# highlighter-rouge"><pre class="highlight"><code><span class="c1">//通过RequireComponentTagAttribute为JobComponentSystem添加额外的依赖项
 //[RequireComponentTagAttribute(typeof(Object))]
 //通过RequireSubtractiveComponentAttribute为JobComponentSystem添加额外的排除项
@@ -222,7 +224,7 @@ MathJax.Hub.Config({
 
 <p><strong>EntityManager</strong></p>
 
-<p>ECS日常使用中使用最频繁的管理器，每个World都会有一个EnitityManager，不直接储存数据，但封装了常用的Enitity、Archetype、Component操作，包括了CreateEntity、CreateArchetype、Instantiate、AddComponent等操作，对应接口后面的章节会讲到，这里不作详细说明。</p>
+<p>ECS日常使用中使用最频繁的管理器，每个World都会有一个EnitityManager，不直接储存数据，但封装了常用的Enitity、Archetype、Component操作，包括了CreateEntity、CreateArchetype、Instantiate、AddComponent等操作。</p>
 
 <p>同时EntityManager提供了其他多个重要数据管理器的访问接口，包括Entity数据管理器EntityDataManager、原型管理器ArchetypeManager、Component集合管理器EntityGroupManager、以及共享数据管理器SharedComponentDataManager。可以说以EntityManager为入口，可以延伸到ECS系统中90%以上的内容，可谓包罗万象。</p>
 
@@ -745,7 +747,7 @@ MathJax.Hub.Config({
   
   <div class="post-nav-prev post-nav-item">
     
-    <a href="/blog/2020/honidi/"> Unity和Houdini场景程序化工作流程</a>
+    <a href="/blog/2020/honidi/"> Unity2和Houdini场景程序化工作流程</a>
   </div>
   
 

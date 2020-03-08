@@ -1,0 +1,568 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <meta http-equiv="X-UA-Compatible" content="IE=edge">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+
+  <title>AR 端对端直连技术</title>
+  <meta name="description"
+    content="  最近在看AR相关的东西， 其中一个ARWorldMap使用到的Multipeer的技术感觉棒极了。简单就是说， 不需要通过远程的服务器，只在局域网内通过wifi、蓝牙建立起来的通信，有点类似于Apple设备上的AirDrop。尽管对目前强连接的网络游戏环境格格不入（特别是5G大环境下），不过在我看来，对于实时...">
+
+  <link rel="shortcut icon" href="/img/favicon.ico">
+  <link rel="stylesheet" href="/css/main.css">
+  <link rel="canonical" href="https://huailiang.github.io/blog/2020/p2p/">
+
+</head>
+
+<body>
+  <main>
+    <header class="site-header">
+  <div class="container">
+    <h1><a href="/">Hom<span>e</span></a></h1>
+
+    <button type="button" class="sliding-panel-button">
+      <span></span>
+      <span></span>
+      <span></span>
+    </button>
+
+    <nav class="navbar sliding-panel-content">
+      <ul>
+        
+        <li><a href="/about" title="About">About</a>
+        </li>
+        
+        <li><a href="/blog" title="Blog">Blog</a>
+        </li>
+        
+       <li><a href="/category/" target="_blank"><i class="icon icon-feed"></i></a></li>
+      </ul>
+    </nav>
+  </div>
+</header>
+
+<div class="sliding-panel-fade-screen"></div>
+    <script type="text/javascript" src="/js/MathJax.js?config=TeX-AMS-MML_HTMLorMML"></script>
+
+<script type="text/x-mathjax-config">
+MathJax.Hub.Config({
+  tex2jax: {
+    inlineMath: [['$','$'], ['\\(','\\)']],
+    processEscapes: true
+  }
+});
+</script>
+
+<script type="text/x-mathjax-config">
+  MathJax.Hub.Config({
+    tex2jax: {
+      skipTags: ['script', 'noscript', 'style', 'textarea', 'pre', 'code']
+    }
+  });
+
+</script>
+    <div class="container">
+      <article role="article" class="post">
+
+  <div class="card">
+    <header class="post-header">
+      <h1 class="post-title">AR 端对端直连技术</h1>
+      <p class="post-meta">Mar 8, 2020 •
+        huailiang</p>
+    </header>
+
+    <div class="post-content">
+      <blockquote>
+  <p>最近在看AR相关的东西， 其中一个ARWorldMap使用到的Multipeer的技术感觉棒极了。简单就是说， 不需要通过远程的服务器，只在局域网内通过wifi、蓝牙建立起来的通信，有点类似于Apple设备上的AirDrop。尽管对目前强连接的网络游戏环境格格不入（特别是5G大环境下），不过在我看来，对于实时的每帧更新的大批量数据、多用户连接的通信场景，直连技术对缓解服务器压力有不可替代的作用。</p>
+</blockquote>
+
+<p>在AR中,对环境生成特征点发送在同一局域网的设备，这样另一台设备接到发送到的数据，这样就可以判断两台设备的相对关系，进一步交互操作。两台设备之间没有第三方的服务器来桥接，就可以自主快速的通信。我看在unity官方的例子中， 针对ios端MultipeerConnectivity进行封装，使之能在unity编辑器中使用c#调用其接口。</p>
+
+<div style="width: 100%;height: 400px;">
+    <iframe src="//player.youku.com/embed/XMzY3NzYzNDY1Ng==?client_id=d0b1b77a17cded3b" width="100%" height="100%" frameborder="0" allowfullscreen="true"></iframe>
+</div>
+<p><br /></p>
+
+<p><strong>什么是Multipeer Connectivity</strong></p>
+
+<p>在iOS7中，引入了一个全新的框架——Multipeer Connectivity（多点连接）。利用Multipeer Connectivity框架，即使在没有连接到WiFi（WLAN）或移动网络（xG）的情况下，距离较近的Apple设备（iMac/iPad/iPhone）之间可基于蓝牙和WiFi（P2P WiFi）技术进行发现和连接实现近场通信。</p>
+
+<p>相比AirDrop，Multipeer Connectivity在进行发现和会话时并不要求同时打开WiFi和蓝牙，也不像AirDrop那样强制打开这两个开关，而是根据条件适时选择使用蓝牙或（和）WiFi。</p>
+
+<p><strong>MultipeerConnectivity.framework</strong></p>
+
+<p>以下是MultipeerConnectivity.framework的四个核心对象：</p>
+
+<ul>
+  <li>Peer ID’s allow for unique identification.</li>
+  <li>Advertiser objects tells others they’re available.</li>
+  <li>Browser objects browse for advertised devices.</li>
+  <li>Session objects handle the communications.</li>
+</ul>
+
+<p><strong>@class MCPeerID</strong></p>
+
+<p>MCPeerID represents a peer in a multipeer session.</p>
+
+<p>Peer IDs (<a href="https://developer.apple.com/library/ios/documentation/MultipeerConnectivity/Reference/MCPeerID_class/index.html#//apple_ref/occ/cl/MCPeerID">MCPeerID</a>) uniquely identify an app running on a device to nearby peers.</p>
+
+<p>provide information that identifies the device and its user to other nearby devices.</p>
+
+<p>类似sockaddr，用于标识连接的两端endpoint，通常是昵称或设备名称。</p>
+
+<p>该对象只开放了displayName属性，私有MCPeerIDInternal对象持有的设备相关的_idString/_pid64字段并未公开。</p>
+
+<p>在许多情况下，客户端同时广播并发现同一个服务，这将导致一些混乱，尤其是在client/server模式中。所以，每一个服务都应有一个类型标示符——serviceType，它是由ASCII字母、数字和“-”组成的短文本串，最多15个字符。</p>
+
+<p><strong>@class MCNearbyServiceAdvertiser</strong></p>
+
+<p>MCNearbyServiceAdvertiser advertises availability of the local peer, and handles invitations from nearby peers.</p>
+
+<p>类似broadcaster。</p>
+
+<p>主线程（com.apple.main-thread(serial)）创建MCNearbyServiceAdvertiser并启动startAdvertisingPeer。<br />
+MCNearbyServiceAdvertiserDelegate异步回调（didReceiveInvitationFromPeer）切换回主线程。<br />
+在主线程didReceiveInvitationFromPeer中创建MCSession并invitationHandler(YES, session)接受会话连接请求（accept参数为YES）。</p>
+
+<p><strong>@class MCNearbyServiceBrowser</strong></p>
+
+<p>MCNearbyServiceBrowser looks for nearby peers, and connects them to sessions.</p>
+
+<p>类似servo listen+client connect。</p>
+
+<p>主线程（com.apple.main-thread(serial)）创建MCNearbyServiceBrowser并启动startBrowsingForPeers。<br />
+MCNearbyServiceBrowserDelegate异步回调（foundPeer/lostPeer）切换回主线程。<br />
+主线程创建MCSession并启动invitePeer。<br />
+ </p>
+
+<p><strong>@class MCSession</strong></p>
+
+<p>A MCSession facilitates communication among all peers in a multipeer session.</p>
+
+<p>(MCSession) provide support for communication between connected peer devices（identified by MCPeerID）. </p>
+
+<p>Session objects maintain a set of peer ID objects that represent the peers connected to the session. </p>
+
+<p>注意，peerID并不具备设备识别属性。</p>
+
+<p>类似TCP链接中的socket。创建MCSession时，需指定自身MCPeerID，类似bind。</p>
+
+<p>为避免频繁的会话数据通知阻塞主线程，MCSessionDelegate异步回调（didChangeState/didReceiveCertificate/didReceiveData/didReceiveStream）有一个专门的回调线程——com.apple.MCSession.callbackQueue(serial)。为避免阻塞MCSeesion回调线程，最好新建数据读（写）线程！</p>
+
+<p><img src="/img/post-vr/ar1.jpg" alt="" /></p>
+
+<h3 id="android-wi-fi-direct">Android Wi-Fi Direct</h3>
+
+<p>类似于ios平台的Multipeer Connectivity， Android用Wi-Fi Direct技术可以让具备硬件支持的设备在没有中间接入点的情况下进行直接互联。Android 4.0（API版本14）及以后的系统都提供了对Wi-Fi Direct的API支持。通过对这些API的使用，开发者可以实现支持Wi-Fi Direct的设备间进行相互探测和连接，从而获得较之蓝牙更远距离的高速数据通信效果。</p>
+
+<p>关于Wi-Fi Direct的API函数的使用需要注意一下几个要点：</p>
+
+<ul>
+  <li>用于探测（discover）对等设备（peers）、向对等设备发起请求（request）以及建立连接（connect）的方法定义在类<a href="http://developer.android.com/reference/android/net/wifi/p2p/WifiP2pManager.html">WifiP2pManager</a>中。</li>
+  <li>通过设置监听器（Listener）可以获知WifiP2pManager中方法调用的成功与否。监听器以参数的形式传递给被调用的方法。</li>
+  <li>当发现新对等设备或链接丢失的时候，Wi-Fi Direct系统（framework）以意向（Intent）的方式根据检测到的不同事件做出相应的通知。</li>
+</ul>
+
+<p>开发中，以上三点的配合使用相当普遍。简单举个例子，定义一个监听器<a href="http://developer.android.com/reference/android/net/wifi/p2p/WifiP2pManager.html">WifiP2pManager</a>.ActionListener并调用函数discoverPeers()，当相应事件发生的时候就会在ActionListener.onSuccess()和ActionListener.onFailure()两个方法中得到通知。当discoverPeers()方法检测到了对等设备列表变化的时候，可以收到由系统广播（broadcast）发出一个WIFI_P2P_PEERS_CHANGED_ACTION意向。</p>
+
+<p>WifiP2pManager类所提供的方法可用于操作当前设备中的Wi-Fi硬件，实现诸如探测对、连接对等设备等功能。目前所支持的功能如下：</p>
+
+<table>
+<thead>
+<tr>
+  <th width="24%">Method </th>
+  <th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+  <td align="center">initialize()</td>
+  <td>Registers the application with the Wi-Fi framework. This must be called before calling any other Wi-Fi Direct method.</td>
+</tr>
+<tr>
+<td align="center">connect()</td>
+<td>Starts a peer-to-peer connection with a device with the specified configuration.</td>
+</tr>
+<tr>
+<td align="center">cancelConnect()</td>
+<td>Cancels any ongoing peer-to-peer group negotiation.</td>
+</tr>
+<tr>
+<td align="center">requestConnectInfo()</td>
+<td>Requests a device's connection information.</td>
+</tr>
+<tr>
+<td align="center">createGroup()</td>
+<td>Creates a peer-to-peer group with the current device as the group owner.</td>
+</tr>
+<tr>
+<td align="center">removeGroup()</td>
+<td>Removes the current peer-to-peer group.</td>
+</tr>
+<tr>
+<td align="center">requestGroupInfo()</td>
+<td>Requests peer-to-peer group information.</td>
+</tr>
+<tr>
+<td align="center">discoverPeers()</td>
+<td>Initiates peer discovery</td></tr>
+<tr>
+<td align="center">requestPeers()</td>
+<td>Requests the current list of discovered peers.</td>
+</tr>
+</tbody>
+</table>
+
+<p>WifiP2pManager中所提供的方法允许特定的监听器作为参数传入，以便Wi-Fi Direct机制能够汇报函数调用的结果。下表中列出了目前支持的监听器接口以及WifiP2pManager中用到相应监听器的方法。</p>
+
+<table>
+<thead>
+<tr>
+  <th width="42%">Listener interface </th>
+  <th>Associated actions</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+    <td align="center">WifiP2pManager.ActionListener</td>
+    <td>connect(),cancelConnect(),createGroup(),removeGroup(), and discoverPeers()</td>
+</tr>
+<tr>
+    <td align="center">WifiP2pManager.ChannelListener</td>
+    <td>initialize()</td>
+</tr>
+<tr>
+    <td align="center">WifiP2pManager.ConnectionInfoListener</td>
+    <td>requestConnectInfo()</td>
+</tr>
+<tr>
+    <td align="center">WifiP2pManager.GroupInfoListener</td>
+    <td>requestGroupInfo()</td>
+</tr>
+<tr>
+    <td align="center">WifiP2pManager.PeerListListener</td>
+    <td>requestPeers()</td></tr>
+&lt;/tr&gt;
+</tbody>
+</table>
+
+<p>每当有Wi-Fi Direct事件发生的时候（例如，发现新的对等设备、设备的Wi-Fi状态改变等），Wi-Fi Direct API会以广播的形式发出一个意向。而在应用程序中需要做的事情就是创建广播接收器（creating a broadcast receiver）来处理这些意向：</p>
+
+<table>
+<thead>
+<tr>
+  <th width="48%">Intent </th>
+  <th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+    <td align="center">WIFI_P2P_CONNECTION_CHANGED_ACTION</td>
+    <td>Broadcast when the state of the device's Wi-Fi connection changes.</td>
+</tr>
+<tr>
+    <td align="center">WIFI_P2P_PEERS_CHANGED_ACTION</td>
+    <td>Broadcast when you calldiscoverPeers(). You usually want to call requestPeers() to get an updated list of peers if you handle this intent in your application.</td>
+</tr>
+<tr>
+    <td align="center">WIFI_P2P_STATE_CHANGED_ACTION</td>
+    <td>Broadcast when Wi-Fi Direct is enabled or disabled on the device.</td>
+</tr>
+<tr>
+    <td align="center">WIFI_P2P_THIS_DEVICE_CHANGED_ACTION</td>
+    <td>Broadcast when a device's details have changed, such as the device's name.</td>
+</tr>
+</tbody>
+</table>
+
+<p><strong>创建广播接收器以处理Wi-Fi Direct意向（Creating a Broadcast Receiver for Wi-Fi Direct Intents）</strong></p>
+
+<p>广播接收器可以让应用程序接收到Android系统所发出的广播意向。这样，应用程序就能对感兴趣的事件做出响应。创建广播接收器的基本步骤如下：</p>
+
+<p>创建一个继承BroadcastReceiver类的新类。构造函数的参数分别传递WifiP2pManager,WifiP2pManager.Channel，以及在这个广播接收器中需要注册的活动（activity）。这是一种最常见的参数设置模式，它让广播接收器能够引起活动作出更新，同时又能在必要时使用Wi-Fi硬件和通信信道。<br />
+在广播接收器的onReceive()函数中，针对感兴趣的特定意向可以执行相应的动作（actions）。例如，当广播接收器收到了意向WIFI_P2P_PEERS_CHANGED_ACTION，就可以调用requestPeers()方法来列举出当前探测到的对等设备。<br />
+下面的代码将展示了如何创建一个特定的广播接收器。例子中的广播接收器以WifiP2pManager对象和一个活动（activity）作为参数，并使用它们针对收到的意向（intent）做出相应的动作（action）:</p>
+
+<div class="language-java highlighter-rouge"><pre class="highlight"><code><span class="cm">/**
+ * A BroadcastReceiver that notifies of important Wi-Fi p2p events.
+ */</span>
+<span class="kd">public</span> <span class="kd">class</span> <span class="nc">WiFiDirectBroadcastReceiver</span> <span class="kd">extends</span> <span class="n">BroadcastReceiver</span> <span class="o">{</span>
+    <span class="kd">private</span> <span class="n">WifiP2pManager</span> <span class="n">manager</span><span class="o">;</span>
+    <span class="kd">private</span> <span class="n">Channel</span> <span class="n">channel</span><span class="o">;</span>
+    <span class="kd">private</span> <span class="n">MyWiFiActivity</span> <span class="n">activity</span><span class="o">;</span>
+ 
+    <span class="kd">public</span> <span class="nf">WiFiDirectBroadcastReceiver</span><span class="o">(</span><span class="n">WifiP2pManager</span> <span class="n">manager</span><span class="o">,</span> <span class="n">Channel</span> <span class="n">channel</span><span class="o">,</span>
+            <span class="n">MyWifiActivity</span> <span class="n">activity</span><span class="o">)</span> <span class="o">{</span>
+        <span class="kd">super</span><span class="o">();</span>
+        <span class="k">this</span><span class="o">.</span><span class="na">manager</span> <span class="o">=</span> <span class="n">manager</span><span class="o">;</span>
+        <span class="k">this</span><span class="o">.</span><span class="na">channel</span> <span class="o">=</span> <span class="n">channel</span><span class="o">;</span>
+        <span class="k">this</span><span class="o">.</span><span class="na">activity</span> <span class="o">=</span> <span class="n">activity</span><span class="o">;</span>
+    <span class="o">}</span>
+ 
+    <span class="nd">@Override</span>
+    <span class="kd">public</span> <span class="kt">void</span> <span class="nf">onReceive</span><span class="o">(</span><span class="n">Context</span> <span class="n">context</span><span class="o">,</span> <span class="n">Intent</span> <span class="n">intent</span><span class="o">)</span> <span class="o">{</span>
+        <span class="n">String</span> <span class="n">action</span> <span class="o">=</span> <span class="n">intent</span><span class="o">.</span><span class="na">getAction</span><span class="o">();</span>
+ 
+        <span class="k">if</span> <span class="o">(</span><span class="n">WifiP2pManager</span><span class="o">.</span><span class="na">WIFI_P2P_STATE_CHANGED_ACTION</span><span class="o">.</span><span class="na">equals</span><span class="o">(</span><span class="n">action</span><span class="o">))</span> <span class="o">{</span>
+            <span class="c1">// Check to see if Wi-Fi is enabled and notify appropriate activity</span>
+        <span class="o">}</span> <span class="k">else</span> <span class="k">if</span> <span class="o">(</span><span class="n">WifiP2pManager</span><span class="o">.</span><span class="na">WIFI_P2P_PEERS_CHANGED_ACTION</span><span class="o">.</span><span class="na">equals</span><span class="o">(</span><span class="n">action</span><span class="o">))</span> <span class="o">{</span>
+            <span class="c1">// Call WifiP2pManager.requestPeers() to get a list of current peers</span>
+        <span class="o">}</span> <span class="k">else</span> <span class="k">if</span> <span class="o">(</span><span class="n">WifiP2pManager</span><span class="o">.</span><span class="na">WIFI_P2P_CONNECTION_CHANGED_ACTION</span><span class="o">.</span><span class="na">equals</span><span class="o">(</span><span class="n">action</span><span class="o">))</span> <span class="o">{</span>
+            <span class="c1">// Respond to new connection or disconnections</span>
+        <span class="o">}</span> <span class="k">else</span> <span class="k">if</span> <span class="o">(</span><span class="n">WifiP2pManager</span><span class="o">.</span><span class="na">WIFI_P2P_THIS_DEVICE_CHANGED_ACTION</span><span class="o">.</span><span class="na">equals</span><span class="o">(</span><span class="n">action</span><span class="o">))</span> <span class="o">{</span>
+            <span class="c1">// Respond to this device's wifi state changing</span>
+        <span class="o">}</span>
+    <span class="o">}</span>
+<span class="o">}</span>
+</code></pre>
+</div>
+
+<p>在Android manifest文件中加入以下内容，允许使用Wi-Fi设备上的硬件并声明应用程序正确支持了调用API所需的最低SDK版本.</p>
+
+<p>在使用Wi-Fi Direct API之前，首先要确保应用程序能够访问硬件，并且设备支持Wi-Fi Direct协议。如果这些条件都满足，就可以获取一个WifiP2pManager实例，创建并注册广播接收器，最后就是使用Wi-Fi Direct API了。</p>
+
+<div class="language-xml highlighter-rouge"><pre class="highlight"><code><span class="nt">&lt;uses-sdk</span> <span class="na">android:minSdkVersion=</span><span class="s">"14"</span><span class="nt">/&gt;</span>
+<span class="nt">&lt;uses-permission</span> <span class="na">android:name=</span><span class="s">"android.permission.ACCESS_WIFI_STATE"</span><span class="nt">/&gt;</span>
+<span class="nt">&lt;uses-permission</span> <span class="na">android:name=</span><span class="s">"android.permission.CHANGE_WIFI_STATE"</span><span class="nt">/&gt;</span>
+<span class="nt">&lt;uses-permission</span> <span class="na">android:name=</span><span class="s">"android.permission.CHANGE_NETWORK_STATE"</span><span class="nt">/&gt;</span>
+<span class="nt">&lt;uses-permission</span> <span class="na">android:name=</span><span class="s">"android.permission.INTERNET"</span><span class="nt">/&gt;</span>
+<span class="nt">&lt;uses-permission</span> <span class="na">android:name=</span><span class="s">"android.permission.ACCESS_NETWORK_STATE"</span><span class="nt">/&gt;</span>
+</code></pre>
+</div>
+
+<p>检查Wi-Fi Direct支持并已开启。推荐在广播接收器收到WIFI_P2P_STATE_CHANGED_ACTION意向的时候进行检测。检测结果需要通告相应的活动并做出处理：</p>
+
+<div class="language-java highlighter-rouge"><pre class="highlight"><code><span class="nd">@Override</span>
+<span class="kd">public</span> <span class="kt">void</span> <span class="nf">onReceive</span><span class="o">(</span><span class="n">Context</span> <span class="n">context</span><span class="o">,</span> <span class="n">Intent</span> <span class="n">intent</span><span class="o">)</span> <span class="o">{</span>
+ 
+    <span class="n">String</span> <span class="n">action</span> <span class="o">=</span> <span class="n">intent</span><span class="o">.</span><span class="na">getAction</span><span class="o">();</span>
+    <span class="k">if</span> <span class="o">(</span><span class="n">WifiP2pManager</span><span class="o">.</span><span class="na">WIFI_P2P_STATE_CHANGED_ACTION</span><span class="o">.</span><span class="na">equals</span><span class="o">(</span><span class="n">action</span><span class="o">))</span> <span class="o">{</span>
+        <span class="kt">int</span> <span class="n">state</span> <span class="o">=</span> <span class="n">intent</span><span class="o">.</span><span class="na">getIntExtra</span><span class="o">(</span><span class="n">WifiP2pManager</span><span class="o">.</span><span class="na">EXTRA_WIFI_STATE</span><span class="o">,</span> <span class="o">-</span><span class="mi">1</span><span class="o">);</span>
+        <span class="k">if</span> <span class="o">(</span><span class="n">state</span> <span class="o">==</span> <span class="n">WifiP2pManager</span><span class="o">.</span><span class="na">WIFI_P2P_STATE_ENABLED</span><span class="o">)</span> <span class="o">{</span>
+            <span class="c1">// Wifi Direct is enabled</span>
+        <span class="o">}</span> <span class="k">else</span> <span class="o">{</span>
+            <span class="c1">// Wi-Fi Direct is not enabled</span>
+        <span class="o">}</span>
+    <span class="o">}</span>
+<span class="o">}</span>
+</code></pre>
+</div>
+<p>在活动的onCreate()方法中获取WifiP2pManager对象的一个实例，通过该对象的initialize()方法向Wi-Fi Direct系统注册当前的应用程序。注册成功后，会返回一个WifiP2pManager.Channel，通过它，应用程序就能和Wi-Fi Direct系统交互。WifiP2pManager和WifiP2pManager.Channel对象以及一个活动的引用最后都被作为参数传递给自定义的广播接收器。这样，该活动就能够响应广播接收器的通知并作出相应的更新。当然，这样做也使程序具备了操纵设备Wi-Fi状态的能力：</p>
+
+<div class="language-java highlighter-rouge"><pre class="highlight"><code><span class="n">WifiP2pManager</span> <span class="n">mManager</span><span class="o">;</span>
+<span class="n">Channel</span> <span class="n">mChannel</span><span class="o">;</span>
+<span class="n">BroadcastReceiver</span> <span class="n">mReceiver</span><span class="o">;</span>
+<span class="nd">@Override</span>
+<span class="kd">protected</span> <span class="kt">void</span> <span class="nf">onCreate</span><span class="o">(</span><span class="n">Bundle</span> <span class="n">savedInstanceState</span><span class="o">){</span>
+    <span class="n">mManager</span> <span class="o">=</span> <span class="o">(</span><span class="n">WifiP2pManager</span><span class="o">)</span> <span class="n">getSystemService</span><span class="o">(</span><span class="n">Context</span><span class="o">.</span><span class="na">WIFI_P2P_SERVICE</span><span class="o">);</span>
+    <span class="n">mChannel</span> <span class="o">=</span> <span class="n">mManager</span><span class="o">.</span><span class="na">initialize</span><span class="o">(</span><span class="k">this</span><span class="o">,</span> <span class="n">getMainLooper</span><span class="o">(),</span> <span class="kc">null</span><span class="o">);</span>
+    <span class="n">mReceiver</span> <span class="o">=</span> <span class="k">new</span> <span class="n">WiFiDirectBroadcastReceiver</span><span class="o">(</span><span class="n">manager</span><span class="o">,</span> <span class="n">channel</span><span class="o">,</span> <span class="k">this</span><span class="o">);</span>
+<span class="o">}</span>
+</code></pre>
+</div>
+
+<p>创建一个意向过滤器（intent filter），其中添加的意向种类和广播接收器中的保持一致</p>
+
+<div class="language-java highlighter-rouge"><pre class="highlight"><code><span class="n">IntentFilter</span> <span class="n">mIntentFilter</span><span class="o">;</span>
+<span class="nd">@Override</span>
+<span class="kd">protected</span> <span class="kt">void</span> <span class="nf">onCreate</span><span class="o">(</span><span class="n">Bundle</span> <span class="n">savedInstanceState</span><span class="o">){</span>
+    <span class="n">mIntentFilter</span> <span class="o">=</span> <span class="k">new</span> <span class="n">IntentFilter</span><span class="o">();</span>
+    <span class="n">mIntentFilter</span><span class="o">.</span><span class="na">addAction</span><span class="o">(</span><span class="n">WifiP2pManager</span><span class="o">.</span><span class="na">WIFI_P2P_STATE_CHANGED_ACTION</span><span class="o">);</span>
+    <span class="n">mIntentFilter</span><span class="o">.</span><span class="na">addAction</span><span class="o">(</span><span class="n">WifiP2pManager</span><span class="o">.</span><span class="na">WIFI_P2P_PEERS_CHANGED_ACTION</span><span class="o">);</span>
+    <span class="n">mIntentFilter</span><span class="o">.</span><span class="na">addAction</span><span class="o">(</span><span class="n">WifiP2pManager</span><span class="o">.</span><span class="na">WIFI_P2P_CONNECTION_CHANGED_ACTION</span><span class="o">);</span>
+    <span class="n">mIntentFilter</span><span class="o">.</span><span class="na">addAction</span><span class="o">(</span><span class="n">WifiP2pManager</span><span class="o">.</span><span class="na">WIFI_P2P_THIS_DEVICE_CHANGED_ACTION</span><span class="o">);</span>
+<span class="o">}</span>
+</code></pre>
+</div>
+
+<p>在活动的onResume()方法中注册广播接收器，并在活动的onPause()方法中注销它：</p>
+
+<div class="language-java highlighter-rouge"><pre class="highlight"><code><span class="cm">/* register the broadcast receiver with the intent values to be matched */</span>
+<span class="nd">@Override</span>
+<span class="kd">protected</span> <span class="kt">void</span> <span class="nf">onResume</span><span class="o">()</span> <span class="o">{</span>
+    <span class="kd">super</span><span class="o">.</span><span class="na">onResume</span><span class="o">();</span>
+    <span class="n">registerReceiver</span><span class="o">(</span><span class="n">mReceiver</span><span class="o">,</span> <span class="n">mIntentFilter</span><span class="o">);</span>
+<span class="o">}</span>
+<span class="cm">/* unregister the broadcast receiver */</span>
+<span class="nd">@Override</span>
+<span class="kd">protected</span> <span class="kt">void</span> <span class="nf">onPause</span><span class="o">()</span> <span class="o">{</span>
+    <span class="kd">super</span><span class="o">.</span><span class="na">onPause</span><span class="o">();</span>
+    <span class="n">unregisterReceiver</span><span class="o">(</span><span class="n">mReceiver</span><span class="o">);</span>
+<span class="o">}</span>
+</code></pre>
+</div>
+
+<p>一旦成功获取WifiP2pManager.Channel并创建了广播接收器，应用程序就已经具备了使用Wi-Fi Direct相关函数和接收Wi-Fi Direct意向的能力。尽管放手使用WifiP2pManager为你提供的方法，让程序也拥有Wi-Fi Direct的特殊能力吧！</p>
+
+<p><strong>探测对等设备（Discovering peers）</strong></p>
+
+<p>调用discoverPeers()函数可以探测到有效距离内的对等设备。它是一个异步函数，调用成功与否会在程序所创建WifiP2pManager.ActionListener监听器的onSuccess()和onFailure()中给出通知。值得注意的是，onSuccess()方法只会对成功探测到对等设备这一事件做出通知，而并不会提供任何关于已发现的对等设备的具体信息</p>
+
+<div class="language-java highlighter-rouge"><pre class="highlight"><code><span class="n">manager</span><span class="o">.</span><span class="na">discoverPeers</span><span class="o">(</span><span class="n">channel</span><span class="o">,</span> <span class="k">new</span> <span class="n">WifiP2pManager</span><span class="o">.</span><span class="na">ActionListener</span><span class="o">()</span> <span class="o">{</span>
+    <span class="nd">@Override</span>
+    <span class="kd">public</span> <span class="kt">void</span> <span class="nf">onSuccess</span><span class="o">()</span> <span class="o">{</span>
+        <span class="o">...</span>
+    <span class="o">}</span>
+ 
+    <span class="nd">@Override</span>
+    <span class="kd">public</span> <span class="kt">void</span> <span class="nf">onFailure</span><span class="o">(</span><span class="kt">int</span> <span class="n">reasonCode</span><span class="o">)</span> <span class="o">{</span>
+        <span class="o">...</span>
+    <span class="o">}</span>
+<span class="o">});</span>
+</code></pre>
+</div>
+
+<p><strong>传输数据（Transferring data）</strong></p>
+
+<p>连接一旦建立成功，数据传输也就是顺理成章的事情。以下是通过socket发送数据的基本步骤：</p>
+
+<p>创建ServerSocket。它将被用于监听特定端口，等待客户端发起的连接请求。该操作需要在后台线程中实现。<br />
+创建客户端Socket。客户端通过ServerSocket对应的IP和端口连接到服务设备。<br />
+客户端向服务器发生数据。客户socket成功连接到服务socket后，就能以字节流的形式向服务器发生数据了。<br />
+服务器socket通过accept()方法等待客户端数据连接的到来。该方法在收到客户端数据之前一直处于阻塞状态。因此，需要在单独的线程中调用它。数据连接一旦建立，服务设备就能接收到客户端的数据。这时要做的就是施以相应的动作，例如将数据保存到文件，或者是直接显示到用户界面上，等等。</p>
+
+<p><strong><em>参考文献</em></strong>:</p>
+<ul>
+  <li><a href="https://mp.weixin.qq.com/s">使用Unity程序化方法制作游戏动画</a></li>
+  <li><a href="https://github.com/Unity-Technologies/arfoundation-samples">Unity 官方ARFoundation例子</a></li>
+  <li><a href="https://support.apple.com/zh-cn/HT201369">iOS移动设备之间的跨平台AirDrop传输</a></li>
+  <li><a href="https://blog.csdn.net/eric_jing/article/details/39368567">MultipeerConnectivity 点对点连接</a></li>
+  <li><a href="http://developer.android.com/reference/android/net/wifi/p2p/WifiP2pManager.html">Android WifiP2pManager API</a></li>
+</ul>
+
+
+    </div>
+  </div>
+
+  <style>
+  .post-nav {
+    overflow: hidden;
+    /* margin-top: 60px; */
+    padding: 12px;
+    white-space: nowrap;
+    /* border-top: 1px solid #eee; */
+  }
+
+  .post-nav-item {
+    display: inline-block;
+    width: 50%;
+    white-space: normal;
+  }
+
+  .post-nav-item a {
+    position: relative;
+    display: inline-block;
+    line-height: 25px;
+    font-size: 14px;
+    color: #555;
+    border-bottom: none;
+  }
+
+  .post-nav-item a:hover {
+    color: #222;
+    font-weight: bold;
+    border-bottom: none;
+  }
+
+  .post-nav-item a:active {
+    top: 2px;
+  }
+
+  .post-nav-item a:before,
+  .post-nav-item a:after {
+    display: inline-block;
+    width: 16px;
+    height: 25px;
+    vertical-align: top;
+    opacity: 0.4;
+    background-size: 16px;
+  }
+
+  .post-nav-none a:none {
+    content: ' ';
+    background-size: 8px;
+  }
+
+  .post-nav-none a:hover:none {
+    opacity: 1;
+  }
+
+  .post-nav-prev a:before {
+    content: ' ';
+    background: url("data:image/svg+xml;base64,PD94bWwgdmVyc2lvbj0iMS4wIiA/PjxzdmcgaGVpZ2h0PSIxMnB4IiB2ZXJzaW9uPSIxLjEiIHZpZXdCb3g9IjAgMCA5IDEyIiB3aWR0aD0iOXB4IiB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHhtbG5zOnNrZXRjaD0iaHR0cDovL3d3dy5ib2hlbWlhbmNvZGluZy5jb20vc2tldGNoL25zIiB4bWxuczp4bGluaz0iaHR0cDovL3d3dy53My5vcmcvMTk5OS94bGluayI+PHRpdGxlLz48ZGVzYy8+PGRlZnMvPjxnIGZpbGw9Im5vbmUiIGZpbGwtcnVsZT0iZXZlbm9kZCIgaWQ9IlBhZ2UtMSIgc3Ryb2tlPSJub25lIiBzdHJva2Utd2lkdGg9IjEiPjxnIGZpbGw9IiMwMDAwMDAiIGlkPSJDb3JlIiB0cmFuc2Zvcm09InRyYW5zbGF0ZSgtMjE4LjAwMDAwMCwgLTkwLjAwMDAwMCkiPjxnIGlkPSJjaGV2cm9uLWxlZnQiIHRyYW5zZm9ybT0idHJhbnNsYXRlKDIxOC41MDAwMDAsIDkwLjAwMDAwMCkiPjxwYXRoIGQ9Ik03LjQsMS40IEw2LDAgTC04Ljg4MTc4NDJlLTE2LDYgTDYsMTIgTDcuNCwxMC42IEwyLjgsNiBMNy40LDEuNCBaIiBpZD0iU2hhcGUiLz48L2c+PC9nPjwvZz48L3N2Zz4=") no-repeat 0 50%;
+    background-size: 8px;
+  }
+
+  .post-nav-prev a:hover:before {
+    opacity: 1;
+  }
+
+  .post-nav-next {
+    text-align: right;
+  }
+
+  .post-nav-next a:after {
+    content: ' ';
+    background: url("data:image/svg+xml;base64,PD94bWwgdmVyc2lvbj0iMS4wIiA/PjxzdmcgaGVpZ2h0PSIxMnB4IiB2ZXJzaW9uPSIxLjEiIHZpZXdCb3g9IjAgMCA5IDEyIiB3aWR0aD0iOXB4IiB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHhtbG5zOnNrZXRjaD0iaHR0cDovL3d3dy5ib2hlbWlhbmNvZGluZy5jb20vc2tldGNoL25zIiB4bWxuczp4bGluaz0iaHR0cDovL3d3dy53My5vcmcvMTk5OS94bGluayI+PHRpdGxlLz48ZGVzYy8+PGRlZnMvPjxnIGZpbGw9Im5vbmUiIGZpbGwtcnVsZT0iZXZlbm9kZCIgaWQ9IlBhZ2UtMSIgc3Ryb2tlPSJub25lIiBzdHJva2Utd2lkdGg9IjEiPjxnIGZpbGw9IiMwMDAwMDAiIGlkPSJDb3JlIiB0cmFuc2Zvcm09InRyYW5zbGF0ZSgtMjYwLjAwMDAwMCwgLTkwLjAwMDAwMCkiPjxnIGlkPSJjaGV2cm9uLXJpZ2h0IiB0cmFuc2Zvcm09InRyYW5zbGF0ZSgyNjAuNTAwMDAwLCA5MC4wMDAwMDApIj48cGF0aCBkPSJNMSwwIEwtMC40LDEuNCBMNC4yLDYgTC0wLjQsMTAuNiBMMSwxMiBMNyw2IEwxLDAgWiIgaWQ9IlNoYXBlIi8+PC9nPjwvZz48L2c+PC9zdmc+") no-repeat 100% 50%;
+    background-size: 8px;
+  }
+
+  .post-nav-next a:hover:after {
+    opacity: 1;
+  }
+</style>
+
+
+
+<div class="post-nav">
+
+  
+  <div class="post-nav-none post-nav-item">
+    <a href=""> </a>
+  </div>
+  
+
+  
+  <div class="post-nav-next post-nav-item">
+    
+    <a href="/blog/2020/honidi/"> Unity2和Houdini场景程序化工作流程</a>
+  </div>
+  
+
+</div>
+
+</article>
+    </div>
+
+    <footer class="site-footer">
+  <div class="container">
+    <ul class="social">
+  <li><a href="https://twitter.com/penghuailiang" target="_blank"><i class="icon icon-twitter"></i></a></li>
+  <li><a href="https://www.zhihu.com/people/huailiangpenguin" target="_blank"><i class="icon icon-zhihu"></i></a></li>
+  <li><a href="https://www.facebook.com/profile.php?id=100004290725320" target="_blank"><i class="icon icon-facebook"></i></a></li>
+  <li><a href="https://weibo.com/6212299692/profile?topnav=1&wvr=6" target="_blank"><i class="icon icon-sina"></i></a></li>
+  <li><a href="https://www.linkedin.com/in/penghuailiang/" target="_blank"><i class="icon icon-linkedin"></i></a></li>
+  <li><a href="https://github.com/huailiang" target="_blank"><i class="icon icon-github"></i></a></li>
+</ul>
+    <p class="txt-medium-gray">
+      <small>&copy;2020 All rights reserved. </small>
+    </p>
+  </div>
+</footer>
+    <a href="https://github.com/huailiang" target="_blank" class="github-corner"><svg width="80" height="80" viewBox="0 0 250 250" style="fill:#337ab7; color:#fff; position: absolute; top: 0; border: 0; right: 0;"><path d="M0,0 L115,115 L130,115 L142,142 L250,250 L250,0 Z"></path><path d="M128.3,109.0 C113.8,99.7 119.0,89.6 119.0,89.6 C122.0,82.7 120.5,78.6 120.5,78.6 C119.2,72.0 123.4,76.3 123.4,76.3 C127.3,80.9 125.5,87.3 125.5,87.3 C122.9,97.6 130.6,101.9 134.4,103.2" fill="currentColor" style="transform-origin: 130px 106px;" class="octo-arm"></path><path d="M115.0,115.0 C114.9,115.1 118.7,116.5 119.8,115.4 L133.7,101.6 C136.9,99.2 139.9,98.4 142.2,98.6 C133.8,88.0 127.5,74.4 143.8,58.0 C148.5,53.4 154.0,51.2 159.7,51.0 C160.3,49.4 163.2,43.6 171.4,40.1 C171.4,40.1 176.1,42.5 178.8,56.2 C183.1,58.6 187.2,61.8 190.9,65.4 C194.5,69.0 197.7,73.2 200.1,77.6 C213.8,80.2 216.3,84.9 216.3,84.9 C212.7,93.1 206.9,96.0 205.4,96.6 C205.1,102.4 203.0,107.8 198.3,112.5 C181.9,128.9 168.3,122.5 157.7,114.1 C157.9,116.9 156.7,120.9 152.7,124.9 L141.0,136.5 C139.8,137.7 141.6,141.9 141.8,141.8 Z" fill="currentColor" class="octo-body"></path></svg></a>
+
+
+    <script src="//code.jquery.com/jquery-1.11.3.min.js"></script>
+    <script>
+      $(document).ready(function () {
+        $('.sliding-panel-button,.sliding-panel-fade-screen,.sliding-panel-close').on('click touchstart', function (e) {
+          $('.sliding-panel-content,.sliding-panel-fade-screen').toggleClass('is-visible');
+          e.preventDefault();
+        });
+      });
+    </script>
+  </main>
+</body>
+
+</html>
