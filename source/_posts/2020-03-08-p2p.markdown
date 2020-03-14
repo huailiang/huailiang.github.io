@@ -364,11 +364,11 @@ __传输数据（Transferring data）__
 
 
 ___参考文献___:
-* [使用Unity程序化方法制作游戏动画][i1]
 * [Unity 官方ARFoundation例子][i2]
 * [iOS移动设备之间的跨平台AirDrop传输][i3]
 * [MultipeerConnectivity 点对点连接][i5]
 * [Android WifiP2pManager API][i6]
+* [iOS被遗忘的近距离通讯利器-MultipeerConnectivity][i7]
 
 [i1]: https://mp.weixin.qq.com/s
 [i2]: https://github.com/Unity-Technologies/arfoundation-samples
@@ -376,3 +376,4 @@ ___参考文献___:
 [i4]: https://developer.apple.com/library/ios/documentation/MultipeerConnectivity/Reference/MCPeerID_class/index.html#//apple_ref/occ/cl/MCPeerID
 [i5]: https://blog.csdn.net/eric_jing/article/details/39368567
 [i6]: http://developer.android.com/reference/android/net/wifi/p2p/WifiP2pManager.html
+[i7]:https://www.jianshu.com/p/662dd49d82b6
