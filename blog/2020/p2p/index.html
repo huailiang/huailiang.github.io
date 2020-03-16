@@ -5,7 +5,7 @@
   <meta http-equiv="X-UA-Compatible" content="IE=edge">
   <meta name="viewport" content="width=device-width, initial-scale=1">
 
-  <title>AR 端对端直连技术</title>
+  <title>手机端对端直连技术</title>
   <meta name="description"
     content="  最近在看AR相关的东西， 其中一个ARWorldMap使用到的Multipeer的技术感觉棒极了。简单就是说， 不需要通过远程的服务器，只在局域网内通过wifi、蓝牙建立起来的通信，有点类似于Apple设备上的AirDrop。尽管对目前强连接的网络游戏环境格格不入（特别是5G大环境下），不过在我看来，对于实时...">
 
@@ -67,7 +67,7 @@ MathJax.Hub.Config({
 
   <div class="card">
     <header class="post-header">
-      <h1 class="post-title">AR 端对端直连技术</h1>
+      <h1 class="post-title">手机端对端直连技术</h1>
       <p class="post-meta">Mar 8, 2020 •
         huailiang</p>
     </header>
@@ -171,45 +171,46 @@ MCNearbyServiceBrowserDelegate异步回调（foundPeer/lostPeer）切换回主�
 <table>
 <thead>
 <tr>
-  <th width="24%">Method </th>
+  <th width="30%">Method </th>
   <th>Description</th>
 </tr>
 </thead>
 <tbody>
 <tr>
   <td align="center">initialize()</td>
-  <td>Registers the application with the Wi-Fi framework. This must be called before calling any other Wi-Fi Direct method.</td>
+  <td>通过Wi-Fi框架对应用来进行注册。这个方法必须在任何其他Wi-Fi直连方法使用之前调用</td>
 </tr>
 <tr>
 <td align="center">connect()</td>
-<td>Starts a peer-to-peer connection with a device with the specified configuration.</td>
+<td>开始一个拥有特定设置的设备的点对点连接</td>
 </tr>
 <tr>
 <td align="center">cancelConnect()</td>
-<td>Cancels any ongoing peer-to-peer group negotiation.</td>
+<td>取消任何一个正在进行的点对点组的连接</td>
 </tr>
 <tr>
 <td align="center">requestConnectInfo()</td>
-<td>Requests a device's connection information.</td>
+<td>获取一个设备的连接信息</td>
 </tr>
 <tr>
 <td align="center">createGroup()</td>
-<td>Creates a peer-to-peer group with the current device as the group owner.</td>
+<td>以当前设备为组拥有者来创建一个点对点连接组</td>
 </tr>
 <tr>
 <td align="center">removeGroup()</td>
-<td>Removes the current peer-to-peer group.</td>
+<td>移除当前的点对点连接组</td>
 </tr>
 <tr>
 <td align="center">requestGroupInfo()</td>
-<td>Requests peer-to-peer group information.</td>
+<td>获取点对点连接组的信息</td>
 </tr>
 <tr>
 <td align="center">discoverPeers()</td>
-<td>Initiates peer discovery</td></tr>
+<td>初始化对等设备的发现</td>
+</tr>
 <tr>
 <td align="center">requestPeers()</td>
-<td>Requests the current list of discovered peers.</td>
+<td>获取当前发现的对等设备列表</td>
 </tr>
 </tbody>
 </table>
@@ -252,26 +253,26 @@ MCNearbyServiceBrowserDelegate异步回调（foundPeer/lostPeer）切换回主�
 <table>
 <thead>
 <tr>
-  <th width="48%">Intent </th>
+  <th width="50%">Intent </th>
   <th>Description</th>
 </tr>
 </thead>
 <tbody>
 <tr>
-    <td align="center">WIFI_P2P_CONNECTION_CHANGED_ACTION</td>
-    <td>Broadcast when the state of the device's Wi-Fi connection changes.</td>
+    <td>WIFI_P2P_CONNECTION_CHANGED_ACTION</td>
+    <td>当设备的Wi-Fi连接信息状态改变时候进行广播。</td>
 </tr>
 <tr>
-    <td align="center">WIFI_P2P_PEERS_CHANGED_ACTION</td>
-    <td>Broadcast when you calldiscoverPeers(). You usually want to call requestPeers() to get an updated list of peers if you handle this intent in your application.</td>
+    <td>WIFI_P2P_PEERS_CHANGED_ACTION</td>
+    <td>当调用discoverPeers()方法的时候进行广播。在你的应用里处理此意图时，你通常会调用requestPeers()去获得对等设备列表的更新</td>
 </tr>
 <tr>
-    <td align="center">WIFI_P2P_STATE_CHANGED_ACTION</td>
-    <td>Broadcast when Wi-Fi Direct is enabled or disabled on the device.</td>
+    <td>WIFI_P2P_STATE_CHANGED_ACTION</td>
+    <td>当设备的Wi-Fi 直连功能打开或关闭时进行广播</td>
 </tr>
 <tr>
-    <td align="center">WIFI_P2P_THIS_DEVICE_CHANGED_ACTION</td>
-    <td>Broadcast when a device's details have changed, such as the device's name.</td>
+    <td>WIFI_P2P_THIS_DEVICE_CHANGED_ACTION</td>
+    <td>当设备的详细信息改变的时候进行广播，比如设备的名称</td>
 </tr>
 </tbody>
 </table>
@@ -422,13 +423,18 @@ MCNearbyServiceBrowserDelegate异步回调（foundPeer/lostPeer）切换回主�
 客户端向服务器发生数据。客户socket成功连接到服务socket后，就能以字节流的形式向服务器发生数据了。<br />
 服务器socket通过accept()方法等待客户端数据连接的到来。该方法在收到客户端数据之前一直处于阻塞状态。因此，需要在单独的线程中调用它。数据连接一旦建立，服务设备就能接收到客户端的数据。这时要做的就是施以相应的动作，例如将数据保存到文件，或者是直接显示到用户界面上，等等。</p>
 
+<h2 id="结语">结语</h2>
+
+<p>对于iOS和Android的内网、蓝牙直连功能，使用起来确实很方便， 基本上没有延时。不过遗憾的是，目前还没有一种通用的技术去使Android和iOS之间直连。对于文中诉述的MultipeerConnectivity和Wifi Connect技术， 我已封装成sdk，上传到<a href="https://github.com/huailiang/MultipeerConnectivity">github</a>, 后续还会考虑在Unity的Asset Store上架，方便更多的读者使用。</p>
+
 <p><strong><em>参考文献</em></strong>:</p>
 <ul>
-  <li><a href="https://mp.weixin.qq.com/s">使用Unity程序化方法制作游戏动画</a></li>
   <li><a href="https://github.com/Unity-Technologies/arfoundation-samples">Unity 官方ARFoundation例子</a></li>
   <li><a href="https://support.apple.com/zh-cn/HT201369">iOS移动设备之间的跨平台AirDrop传输</a></li>
   <li><a href="https://blog.csdn.net/eric_jing/article/details/39368567">MultipeerConnectivity 点对点连接</a></li>
   <li><a href="http://developer.android.com/reference/android/net/wifi/p2p/WifiP2pManager.html">Android WifiP2pManager API</a></li>
+  <li><a href="https://www.jianshu.com/p/662dd49d82b6">iOS被遗忘的近距离通讯利器-MultipeerConnectivity</a></li>
+  <li><a href="https://blog.csdn.net/asahinokawa/article/details/80826937?depth_1-utm_source=distribute.pc_relevant.none-task&amp;utm_source=distribute.pc_relevant.none-task">从Android源代码来看WiFi直连</a></li>
 </ul>
 
 

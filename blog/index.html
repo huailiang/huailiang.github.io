@@ -68,14 +68,14 @@ MathJax.Hub.Config({
     <article class="post">
   <header class="post-header">
     <h1 class="post-title2">
-      <a class="post-link" href="/blog/2020/p2p/">AR 端对端直连技术</a>
+      <a class="post-link" href="/blog/2020/p2p/">手机端对端直连技术</a>
     </h1>
     <div class="post-meta">
       <time>Mar 8, 2020</time>
     </div>
   </header>
 
-  <p><a href="/blog/2020/p2p/" title="Permalink to: AR 端对端直连技术"
+  <p><a href="/blog/2020/p2p/" title="Permalink to: 手机端对端直连技术"
       class="read-more">
   最近在看AR相关的东西， 其中一个ARWorldMap使用到的Multipeer的技术感觉棒极了。简单就是说， 不需要通过远程的服务器，只在局域网内通过wifi、蓝牙建立起来的通信，有点类似于Apple设备上的AirDrop。尽管对目前强连接的网络游戏环境格格不入（特别是5G大环境下），不过在我看来，对于实时的每帧更新的大批量数据、多用户连接的通信场景，直连技术对缓解服务器压力有不可替...</a></p>
 </article>
@@ -126,30 +126,6 @@ MathJax.Hub.Config({
 Cache Miss
 
 Cache（Cache Memory）作为储存器子系统的组成部分，存放着程序经常使用的指令和数据，是为了缓解访问慢设备的延时而预读的 Buffer，例如 CPU L1/L2/...</a></p>
-</article>
-  
-    <article class="post">
-  <header class="post-header">
-    <h1 class="post-title2">
-      <a class="post-link" href="/blog/2020/ptr/">c++ 智能指针</a>
-    </h1>
-    <div class="post-meta">
-      <time>Jan 13, 2020</time>
-    </div>
-  </header>
-
-  <p><a href="/blog/2020/ptr/" title="Permalink to: c++ 智能指针"
-      class="read-more">
-  C++11中有unique_ptr、shared_ptr与weak_ptr等智能指针(smart pointer)，定义在中。可以对动态资源进行管理，保证任何情况下，已构造的对象最终会销毁，即它的析构函数最终会被调用。
-
-
-1. auto_ptr
-
-auto_ptr主要是用来解决资源自动释放的问题，比如如下代码：
-
-void Function()
-{
-    Obj*p = new O...</a></p>
 </article>
   
     <article class="post">
@@ -231,6 +207,24 @@ Assets加载:
   <p><a href="/blog/2019/cuda/" title="Permalink to: CUDA学习笔记"
       class="read-more">
   传统的中央处理器（CPU，Central Processing Unit) 内部结构异常复杂，主要是因为其需要很强的通用性来处理各种不同的数据类型，同时又要逻辑判断又会引入大量的分支跳转和中断的处理。 为了提高计算能力，CPU通常会采取提高时钟频率或增加处理器核数量的策略。为了进一步获得更高效的计算，图形处理器（GPU, Graphics Processing Unit）应运而生。 G...</a></p>
+</article>
+  
+    <article class="post">
+  <header class="post-header">
+    <h1 class="post-title2">
+      <a class="post-link" href="/blog/2019/tts/">文字转语音TTS</a>
+    </h1>
+    <div class="post-meta">
+      <time>Dec 13, 2019</time>
+    </div>
+  </header>
+
+  <p><a href="/blog/2019/tts/" title="Permalink to: 文字转语音TTS"
+      class="read-more">概述
+
+Tacotron2是由Google Brain 2017年提出来的一个语音合成框架Tacotron2:一个完整神经网络语音合成方法。模型主要由三部分组成：
+• 声谱预测网络：一个引入注意力机制（attention）的基于循环的Seq2seq的特征预测网络，用于从输入的字符序列预测梅尔频谱的帧序列。
+• 声码器（vocoder）：一个WaveNet的修订版，用预测的梅尔频谱帧序列来生成...</a></p>
 </article>
   
 
