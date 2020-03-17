@@ -166,6 +166,8 @@ MCNearbyServiceBrowserDelegate异步回调（foundPeer/lostPeer）切换回主�
 
 <p>开发中，以上三点的配合使用相当普遍。简单举个例子，定义一个监听器<a href="http://developer.android.com/reference/android/net/wifi/p2p/WifiP2pManager.html">WifiP2pManager</a>.ActionListener并调用函数discoverPeers()，当相应事件发生的时候就会在ActionListener.onSuccess()和ActionListener.onFailure()两个方法中得到通知。当discoverPeers()方法检测到了对等设备列表变化的时候，可以收到由系统广播（broadcast）发出一个WIFI_P2P_PEERS_CHANGED_ACTION意向。</p>
 
+<p><img src="/img/post-vr/ar2.png" alt="" /></p>
+
 <p>WifiP2pManager类所提供的方法可用于操作当前设备中的Wi-Fi硬件，实现诸如探测对、连接对等设备等功能。目前所支持的功能如下：</p>
 
 <table>
@@ -435,6 +437,7 @@ MCNearbyServiceBrowserDelegate异步回调（foundPeer/lostPeer）切换回主�
   <li><a href="http://developer.android.com/reference/android/net/wifi/p2p/WifiP2pManager.html">Android WifiP2pManager API</a></li>
   <li><a href="https://www.jianshu.com/p/662dd49d82b6">iOS被遗忘的近距离通讯利器-MultipeerConnectivity</a></li>
   <li><a href="https://blog.csdn.net/asahinokawa/article/details/80826937?depth_1-utm_source=distribute.pc_relevant.none-task&amp;utm_source=distribute.pc_relevant.none-task">从Android源代码来看WiFi直连</a></li>
+  <li><a href="https://developer.android.com/guide/topics/connectivity/wifip2p.html">Android官方介绍Wifi-P2P</a></li>
 </ul>
 
 
