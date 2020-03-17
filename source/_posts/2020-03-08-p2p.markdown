@@ -101,6 +101,8 @@ Session objects maintain a set of peer ID objects that represent the peers conne
 
 开发中，以上三点的配合使用相当普遍。简单举个例子，定义一个监听器[WifiP2pManager][i6].ActionListener并调用函数discoverPeers()，当相应事件发生的时候就会在ActionListener.onSuccess()和ActionListener.onFailure()两个方法中得到通知。当discoverPeers()方法检测到了对等设备列表变化的时候，可以收到由系统广播（broadcast）发出一个WIFI_P2P_PEERS_CHANGED_ACTION意向。
 
+![](/img/post-vr/ar2.png)
+
 WifiP2pManager类所提供的方法可用于操作当前设备中的Wi-Fi硬件，实现诸如探测对、连接对等设备等功能。目前所支持的功能如下：
 
 
@@ -375,6 +377,7 @@ ___参考文献___:
 * [Android WifiP2pManager API][i6]
 * [iOS被遗忘的近距离通讯利器-MultipeerConnectivity][i7]
 * [从Android源代码来看WiFi直连][i8]
+* [Android官方介绍Wifi-P2P][i10]
 
 [i1]: https://mp.weixin.qq.com/s
 [i2]: https://github.com/Unity-Technologies/arfoundation-samples
@@ -385,3 +388,4 @@ ___参考文献___:
 [i7]:https://www.jianshu.com/p/662dd49d82b6
 [i8]: https://blog.csdn.net/asahinokawa/article/details/80826937?depth_1-utm_source=distribute.pc_relevant.none-task&utm_source=distribute.pc_relevant.none-task
 [i9]: https://github.com/huailiang/MultipeerConnectivity
+[i10]: https://developer.android.com/guide/topics/connectivity/wifip2p.html
