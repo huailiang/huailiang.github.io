@@ -1,0 +1,204 @@
+---
+layout:     post
+title:      "从抖音视频到游戏动作"
+date:       2020-03-25 02:00:00
+author:     "huailiang"
+tags:
+    - Unity
+---
+
+
+姿态估计旨在 RGB 图片和 Video 中的人体像素映射到肢体的三维曲面(3D surface)，其涉及了很多计算机视觉任务，如目标检测，姿态估计，分割，等等. 姿态估计的应用场景不仅包括关键点定位，如图形(Graphics)，增强显示(Augmented Reality, AR)，人机交互(Human-Computer Interaction，HCI)，还包括 3D 目标识别的很多方面. 
+
+层出不穷的姿态检测深度网络模型，在最近两三年如雨后春笋般出现。今天我们选AlphaPose导出骨骼3D关键点位置，并在游戏引擎的去运行相关的模型。相关的代码都已提交到[github][i8].
+
+## 识别视频
+
+我们将从抖音扒来的视频导入到模型，由[AlphaPose][i4]生产识别后的运动姿势, 并使用[Video3DPose][i11]中的方法渲染成视频， 如下：
+
+使用工具将numpy格式的数据转换成二进制（bytes）, 以供之后在unity里解析使用。
+
+
+## Unity 运行模型
+
+将上一步Python环境里生成的关键点信息(二进制文件)，导入到Unity里，使用IO接口解析出来，由于Video3DPose默认使用的[hunman3.6数据集]骨骼的标记是17个部位，这里我们创建了17个GameObject，代表17个关节节点， 并使用LineRender组件把相关的关节连接成线。在Mono的Update函数，我们更新导出模型的3d关键点位置信息，于是一个运动的骨骼人行动起来了。 关于[hunman3.6数据集]关节编号的详细介绍，见本文最后的附录。
+
+![](/img/post-vr/pose7.jpg)
+
+代码如下， 在Update中插值更新17组关节的位置，pose_joint数组的顺序对应到hunman3.6数据集关节编号。
+
+```csharp
+protected override void LerpUpdate(float lerp)
+{
+    Hip.transform.position = Vector3.Lerp(Hip.transform.position, pose_joint[0], lerp);
+    RHip.transform.position = Vector3.Lerp(RHip.transform.position, pose_joint[1], lerp);
+    RKnee.transform.position = Vector3.Lerp(RKnee.transform.position, pose_joint[2], lerp);
+    RFoot.transform.position = Vector3.Lerp(RFoot.transform.position, pose_joint[3], lerp);
+    LHip.transform.position = Vector3.Lerp(LHip.transform.position, pose_joint[4], lerp);
+    LKnee.transform.position = Vector3.Lerp(LKnee.transform.position, pose_joint[5], lerp);
+    LFoot.transform.position = Vector3.Lerp(LFoot.transform.position, pose_joint[6], lerp);
+    Spine.transform.position = Vector3.Lerp(Spine.transform.position, pose_joint[7], lerp);
+    Thorax.transform.position = Vector3.Lerp(Thorax.transform.position, pose_joint[8], lerp);
+    Neck.transform.position = Vector3.Lerp(Neck.transform.position, pose_joint[9], lerp);
+    Head.transform.position = Vector3.Lerp(Head.transform.position, pose_joint[10], lerp);
+    LShoulder.transform.position = Vector3.Lerp(LShoulder.transform.position, pose_joint[11], lerp);
+    LEblow.transform.position = Vector3.Lerp(LEblow.transform.position, pose_joint[12], lerp);
+    LWrist.transform.position = Vector3.Lerp(LWrist.transform.position, pose_joint[13], lerp);
+    RShoulder.transform.position = Vector3.Lerp(RShoulder.transform.position, pose_joint[14], lerp);
+    REblow.transform.position = Vector3.Lerp(REblow.transform.position, pose_joint[15], lerp);
+    RWrist.transform.position = Vector3.Lerp(RWrist.transform.position, pose_joint[16], lerp);
+}
+```
+
+
+怎么能使游戏的Avatar的3D模型也能像输入模型那样运动起来呢？ 换句话说，如何求一种解法将上一步的人形转换为游戏的绑定顶点的骨骼。我们知道3D角色的骨骼动画都是在CPU端层级计算的，上一级关节是下一节关节的原点坐标，由于关节之间的部位长度是固定的，于是问题转换成了求父关节的旋转，即四元数。当父关节的旋转固定的时候，子关节的位置随即也确定了。
+
+对于旋转的求法， 先根据父子关节关系求一个角度， 然后在根据关键点模型里的位置算一个角度， 使用Quaternion.FromToRotation得到一个旋转四元数， 然后在当前的基础上旋转得到目标四元数，最后在Update里由当前插值到目标四元数就行了。代码实现如下：
+
+```c#
+private void UpdateBone(AvatarTree tree, float lerp)
+{
+    var dir1 = tree.GetDir();
+    var dir2 = pose_joint[tree.idx] - pose_joint[tree.parent.idx];
+    Quaternion rot = Quaternion.FromToRotation(dir1, dir2);
+    Quaternion rot1 = tree.parent.transf.rotation;
+    tree.parent.transf.rotation = Quaternion.Lerp(rot1, rot * rot1, lerp);
+}
+```
+
+unity里运行效果如图所示：
+
+![](/img/post-vr/pose8.jpg)
+
+
+如果想看更多的运行效果，参考视频：
+
+
+从上面视频我们可以看到， AlphaPose 虽然能很好的识别出骨骼节点的位置， 但这不包含手指等小关节的姿势， 所以从上而下手都是僵硬的， 但是从卡内基梅隆大学的OpenPose（最新版）已经能识别手指的动作，甚至还包含一些脸部的表情，真的是非常强大了。
+
+## 附录1：
+
+姿态估计开源深度学习模型汇总：
+
+__AlphaPose__
+
+[AlphaPose][i4] 是上海交通大学开源的精确多人姿态估计，声称是第一个开源系统.
+AlphaPose 可以同时对图片, videos，以及图片列表，进行姿态估计和姿态追踪(pose tracking). 可以得到很多不同的输出，包括 PNG，JPEG，AVI 格式的关键点图片，JSON 格式的关键点输出，便于很多应用场景.AlphaPose 采用区域多人姿态估计(regional multi-person pose estimation, RMPE)框架，以在人体边界框不准确的情况下，提升姿态估计. 其主要包括三部分：
+
+* Symmetric Spatial Transformer Network (SSTN)
+* Parametric Pose Non-Maximum-Suppression (NMS)
+* Pose-Guided Proposals Generator (PGPG)
+
+
+![](/img/post-vr/pose2.gif)
+
+__OpenPose__
+
+[OpenPose][i6] 是 [CMU Perceptual Computing Lab][i5] 开源的一个实时多人关键点检测库.
+
+OpenPose 提供了 2D 和 3D 多人关键点检测方法，以及特定参数的姿态估计的标准化工具包.
+OpenPose 可以采用很多不同的输入方式，如，图片image, 视频video，IP相机camera，等等.
+OpenPose 的输出也可以是很多不同形式，如图片和关键点(PNG，JPG，AVI)，可读格式的关键点(JSON，XML，YML)，甚至是数组类.OpenPose 的输入和输出参数，还可以根据需要进行调整. OpenPose 提供了 C++ API，可以在 CPU 和 GPU 上运行，也兼容 AMD 显卡.
+
+![](/img/post-vr/pose1.gif)
+
+
+ __DensePose__
+
+
+[DensePose][i1] 出自 Facebook Research，其开源了 DensePose 实现的代码，模型和数据集.
+DensePose 数据集，DensePose-COCO，用于人体姿态估计的大规模数据集.
+DensePose-COCO 数据集，是在 50K COCO 图片上手工标注的图片-表面(image-to-surface)对应的大规模数据集.
+
+![](/img/post-vr/pose4.jpg)
+
+DensePose 论文提出了 DensePose-RCNN，是 Mask-RCNN 的一个变形，针对每秒多帧的每个人体区域，其回归密集地回归特定肢体部分的 UV 坐标.
+DensePose 基于 DenseReg: Fully Convolutional Dense Shape Regression In-the-Wild - 2016.
+DensePose 的目标是确定每个像素点的曲面位置(surface location)，以及该肢体曲面所属的对应 2D 参数化.
+
+DensePose 采用了基于 FPN 的 Mask R-CNN 结构，RoI-Align Pooling.
+此外，DensePose 在 RoI-Pooling 的输出端加入全卷积网路.
+
+![](/img/post-vr/pose3.jpg)
+
+
+## 附录2
+
+__human3.6m关节点标注顺序__
+
+
+
+| 序号 | 数据集标注顺序 | 关节名    | 中文名 |
+| ---- | -------------- | --------- | ------ |
+| 0    | 0              | hip       | 臀部   |
+| 1    | 1              | rhip      | 右臀部 |
+| 2    | 2              | rknee     | 右膝盖 |
+| 3    | 3              | rfoot     | 右脚踝 |
+| 4    | 6              | lhip      | 左臀部 |
+| 5    | 7              | lknee     | 左膝盖 |
+| 6    | 8              | lfoot     | 左脚踝 |
+| 7    | 12             | spine     | 脊柱   |
+| 8    | 13             | thorax    | 胸部   |
+| 9    | 14             | neck      | 颈部   |
+| 10   | 15             | head      | 头部   |
+| 11   | 17             | lshoulder | 左肩   |
+| 12   | 18             | lelbow    | 左手肘 |
+| 13   | 19             | lwrist    | 左手腕 |
+| 14   | 25             | rshoulder | 右肩   |
+| 15   | 26             | relbow    | 右手肘 |
+| 16   | 27             | rwrist    | 右手腕 |
+
+<br>
+
+![](/img/post-vr/pose5.jpg)
+
+__COCO数据集骨骼关节keypoint标注对应__
+
+
+| 序号 | 数据集标注顺序 | 关节名     | 中文名 |
+| ---- | -------------- | ---------- | ------ |
+| 0    | 0              | nose       | 鼻子   |
+| 1    | 1              | L eye      | 左眼   |
+| 2    | 2              | R eye      | 右眼   |
+| 3    | 3              | L ear      | 左耳   |
+| 4    | 4              | R ear      | 右耳   |
+| 5    | 5              | L shoulder | 左肩   |
+| 6    | 6              | R shoulder | 右肩   |
+| 7    | 7              | L elbow    | 左手肘 |
+| 8    | 8              | R elbow    | 右手肘 |
+| 9    | 9              | L wrist    | 左手腕 |
+| 10   | 10             | R wrist    | 右手腕 |
+| 11   | 11             | L hip      | 左臀部 |
+| 12   | 12             | R hip      | 右臀部 |
+| 13   | 13             | knee       | 左膝盖 |
+| 14   | 14             | R knee     | 右膝盖 |
+| 15   | 15             | L ankle    | 左脚踝 |
+| 16   | 16             | R ankle    | 右脚踝 |
+
+<br>
+
+![](/img/post-vr/pose6.jpg)
+
+___参考文献___:
+* [Densepose by Facebook][i1]
+* [Detectron by Facebook][i2]
+* [DensePose-COCO 数据集][i3]
+* [AlphaPose 上海交大][i4]
+* [CMU Perceptual Computing Lab][i5]
+* [OpenPose by CMU][i6]
+* [Paper - DensePose: Dense Human Pose Estimation In The Wild-2018][i7]
+* [human3.6m数据集骨骼关节keypoint标注对应][i9]
+* [COCO数据集骨骼关节keypoint标注对应][i10]
+* [VideoPose3D by Facebook][i11]
+
+[i1]: http://densepose.org
+[i2]: https://github.com/facebookresearch/Detectron
+[i3]: http://cocodataset.org
+[i4]: https://www.mvig.org/research/alphapose.html
+[i5]: https://github.com/CMU-Perceptual-Computing-Lab
+[i6]: http://domedb.perception.cs.cmu.edu/
+[i7]: https://arxiv.org/abs/1802.00434
+[i8]: https://github.com/huailiang/unity_pose3D
+[i9]: https://www.stubbornhuang.com/529/
+[i10]: https://www.stubbornhuang.com/525/
+[i11]: https://gitee.com/penghuailiang/VideoPose3D
