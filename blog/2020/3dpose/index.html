@@ -1,0 +1,605 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <meta http-equiv="X-UA-Compatible" content="IE=edge">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+
+  <title>从抖音视频到游戏动作</title>
+  <meta name="description"
+    content="姿态估计旨在 RGB 图片和 Video 中的人体像素映射到肢体的三维曲面(3D surface)，其涉及了很多计算机视觉任务，如目标检测，姿态估计，分割，等等. 姿态估计的应用场景不仅包括关键点定位，如图形(Graphics)，增强显示(Augmented Reality, AR)，人机交互(Human-Com...">
+
+  <link rel="shortcut icon" href="/img/favicon.ico">
+  <link rel="stylesheet" href="/css/main.css">
+  <link rel="canonical" href="https://huailiang.github.io/blog/2020/3dpose/">
+
+</head>
+
+<body>
+  <main>
+    <header class="site-header">
+  <div class="container">
+    <h1><a href="/">Hom<span>e</span></a></h1>
+
+    <button type="button" class="sliding-panel-button">
+      <span></span>
+      <span></span>
+      <span></span>
+    </button>
+
+    <nav class="navbar sliding-panel-content">
+      <ul>
+        
+        <li><a href="/about" title="About">About</a>
+        </li>
+        
+        <li><a href="/blog" title="Blog">Blog</a>
+        </li>
+        
+       <li><a href="/category/" target="_blank"><i class="icon icon-feed"></i></a></li>
+      </ul>
+    </nav>
+  </div>
+</header>
+
+<div class="sliding-panel-fade-screen"></div>
+    <script type="text/javascript" src="/js/MathJax.js?config=TeX-AMS-MML_HTMLorMML"></script>
+
+<script type="text/x-mathjax-config">
+MathJax.Hub.Config({
+  tex2jax: {
+    inlineMath: [['$','$'], ['\\(','\\)']],
+    processEscapes: true
+  }
+});
+</script>
+
+<script type="text/x-mathjax-config">
+  MathJax.Hub.Config({
+    tex2jax: {
+      skipTags: ['script', 'noscript', 'style', 'textarea', 'pre', 'code']
+    }
+  });
+
+</script>
+    <div class="container">
+      <article role="article" class="post">
+
+  <div class="card">
+    <header class="post-header">
+      <h1 class="post-title">从抖音视频到游戏动作</h1>
+      <p class="post-meta">Mar 25, 2020 •
+        huailiang</p>
+    </header>
+
+    <div class="post-content">
+      <p>姿态估计旨在 RGB 图片和 Video 中的人体像素映射到肢体的三维曲面(3D surface)，其涉及了很多计算机视觉任务，如目标检测，姿态估计，分割，等等. 姿态估计的应用场景不仅包括关键点定位，如图形(Graphics)，增强显示(Augmented Reality, AR)，人机交互(Human-Computer Interaction，HCI)，还包括 3D 目标识别的很多方面.</p>
+
+<p>层出不穷的姿态检测深度网络模型，在最近两三年如雨后春笋般出现。今天我们选AlphaPose导出骨骼3D关键点位置，并在游戏引擎的去运行相关的模型。相关的代码都已提交到<a href="https://github.com/huailiang/unity_pose3D">github</a>, 我们提供算法</p>
+
+<h2 id="识别视频">识别视频</h2>
+
+<p>我们将从抖音扒来的视频导入到模型，由<a href="https://www.mvig.org/research/alphapose.html">AlphaPose</a>生产识别后的运动姿势, 并使用<a href="https://gitee.com/penghuailiang/VideoPose3D">Video3DPose</a>中的方法渲染成视频， 如下：</p>
+
+<div style="width: 100%;height: 400px;">
+    <iframe src="//player.youku.com/embed/XNDYwNTY4NDM1Mg==" width="100%" height="100%" frameborder="0" allowfullscreen="true"></iframe>
+</div>
+<p><br /></p>
+
+<p>使用工具将numpy格式的数据转换成二进制（bytes）, 以供之后在unity里解析使用。</p>
+
+<h2 id="unity-运行模型">Unity 运行模型</h2>
+
+<p>将上一步Python环境里生成的关键点信息(二进制文件)，导入到Unity里，使用IO接口解析出来，由于Video3DPose默认使用的[hunman3.6数据集]骨骼的标记是17个部位，这里我们创建了17个GameObject，代表17个关节节点， 并使用LineRender组件把相关的关节连接成线。在Mono的Update函数，我们更新导出模型的3d关键点位置信息，于是一个运动的骨骼人行动起来了。 关于[hunman3.6数据集]关节编号的详细介绍，见本文最后的附录。</p>
+
+<p><img src="/img/post-vr/pose7.jpg" alt="" /></p>
+
+<p>代码如下， 在Update中插值更新17组关节的位置，pose_joint数组的顺序对应到hunman3.6数据集关节编号。</p>
+
+<div class="language-csharp highlighter-rouge"><pre class="highlight"><code><span class="k">protected</span> <span class="k">override</span> <span class="k">void</span> <span class="nf">LerpUpdate</span><span class="p">(</span><span class="kt">float</span> <span class="n">lerp</span><span class="p">)</span>
+<span class="p">{</span>
+    <span class="n">Hip</span><span class="p">.</span><span class="n">transform</span><span class="p">.</span><span class="n">position</span> <span class="p">=</span> <span class="n">Vector3</span><span class="p">.</span><span class="nf">Lerp</span><span class="p">(</span><span class="n">Hip</span><span class="p">.</span><span class="n">transform</span><span class="p">.</span><span class="n">position</span><span class="p">,</span> <span class="n">pose_joint</span><span class="p">[</span><span class="m">0</span><span class="p">],</span> <span class="n">lerp</span><span class="p">);</span>
+    <span class="n">RHip</span><span class="p">.</span><span class="n">transform</span><span class="p">.</span><span class="n">position</span> <span class="p">=</span> <span class="n">Vector3</span><span class="p">.</span><span class="nf">Lerp</span><span class="p">(</span><span class="n">RHip</span><span class="p">.</span><span class="n">transform</span><span class="p">.</span><span class="n">position</span><span class="p">,</span> <span class="n">pose_joint</span><span class="p">[</span><span class="m">1</span><span class="p">],</span> <span class="n">lerp</span><span class="p">);</span>
+    <span class="n">RKnee</span><span class="p">.</span><span class="n">transform</span><span class="p">.</span><span class="n">position</span> <span class="p">=</span> <span class="n">Vector3</span><span class="p">.</span><span class="nf">Lerp</span><span class="p">(</span><span class="n">RKnee</span><span class="p">.</span><span class="n">transform</span><span class="p">.</span><span class="n">position</span><span class="p">,</span> <span class="n">pose_joint</span><span class="p">[</span><span class="m">2</span><span class="p">],</span> <span class="n">lerp</span><span class="p">);</span>
+    <span class="n">RFoot</span><span class="p">.</span><span class="n">transform</span><span class="p">.</span><span class="n">position</span> <span class="p">=</span> <span class="n">Vector3</span><span class="p">.</span><span class="nf">Lerp</span><span class="p">(</span><span class="n">RFoot</span><span class="p">.</span><span class="n">transform</span><span class="p">.</span><span class="n">position</span><span class="p">,</span> <span class="n">pose_joint</span><span class="p">[</span><span class="m">3</span><span class="p">],</span> <span class="n">lerp</span><span class="p">);</span>
+    <span class="n">LHip</span><span class="p">.</span><span class="n">transform</span><span class="p">.</span><span class="n">position</span> <span class="p">=</span> <span class="n">Vector3</span><span class="p">.</span><span class="nf">Lerp</span><span class="p">(</span><span class="n">LHip</span><span class="p">.</span><span class="n">transform</span><span class="p">.</span><span class="n">position</span><span class="p">,</span> <span class="n">pose_joint</span><span class="p">[</span><span class="m">4</span><span class="p">],</span> <span class="n">lerp</span><span class="p">);</span>
+    <span class="n">LKnee</span><span class="p">.</span><span class="n">transform</span><span class="p">.</span><span class="n">position</span> <span class="p">=</span> <span class="n">Vector3</span><span class="p">.</span><span class="nf">Lerp</span><span class="p">(</span><span class="n">LKnee</span><span class="p">.</span><span class="n">transform</span><span class="p">.</span><span class="n">position</span><span class="p">,</span> <span class="n">pose_joint</span><span class="p">[</span><span class="m">5</span><span class="p">],</span> <span class="n">lerp</span><span class="p">);</span>
+    <span class="n">LFoot</span><span class="p">.</span><span class="n">transform</span><span class="p">.</span><span class="n">position</span> <span class="p">=</span> <span class="n">Vector3</span><span class="p">.</span><span class="nf">Lerp</span><span class="p">(</span><span class="n">LFoot</span><span class="p">.</span><span class="n">transform</span><span class="p">.</span><span class="n">position</span><span class="p">,</span> <span class="n">pose_joint</span><span class="p">[</span><span class="m">6</span><span class="p">],</span> <span class="n">lerp</span><span class="p">);</span>
+    <span class="n">Spine</span><span class="p">.</span><span class="n">transform</span><span class="p">.</span><span class="n">position</span> <span class="p">=</span> <span class="n">Vector3</span><span class="p">.</span><span class="nf">Lerp</span><span class="p">(</span><span class="n">Spine</span><span class="p">.</span><span class="n">transform</span><span class="p">.</span><span class="n">position</span><span class="p">,</span> <span class="n">pose_joint</span><span class="p">[</span><span class="m">7</span><span class="p">],</span> <span class="n">lerp</span><span class="p">);</span>
+    <span class="n">Thorax</span><span class="p">.</span><span class="n">transform</span><span class="p">.</span><span class="n">position</span> <span class="p">=</span> <span class="n">Vector3</span><span class="p">.</span><span class="nf">Lerp</span><span class="p">(</span><span class="n">Thorax</span><span class="p">.</span><span class="n">transform</span><span class="p">.</span><span class="n">position</span><span class="p">,</span> <span class="n">pose_joint</span><span class="p">[</span><span class="m">8</span><span class="p">],</span> <span class="n">lerp</span><span class="p">);</span>
+    <span class="n">Neck</span><span class="p">.</span><span class="n">transform</span><span class="p">.</span><span class="n">position</span> <span class="p">=</span> <span class="n">Vector3</span><span class="p">.</span><span class="nf">Lerp</span><span class="p">(</span><span class="n">Neck</span><span class="p">.</span><span class="n">transform</span><span class="p">.</span><span class="n">position</span><span class="p">,</span> <span class="n">pose_joint</span><span class="p">[</span><span class="m">9</span><span class="p">],</span> <span class="n">lerp</span><span class="p">);</span>
+    <span class="n">Head</span><span class="p">.</span><span class="n">transform</span><span class="p">.</span><span class="n">position</span> <span class="p">=</span> <span class="n">Vector3</span><span class="p">.</span><span class="nf">Lerp</span><span class="p">(</span><span class="n">Head</span><span class="p">.</span><span class="n">transform</span><span class="p">.</span><span class="n">position</span><span class="p">,</span> <span class="n">pose_joint</span><span class="p">[</span><span class="m">10</span><span class="p">],</span> <span class="n">lerp</span><span class="p">);</span>
+    <span class="n">LShoulder</span><span class="p">.</span><span class="n">transform</span><span class="p">.</span><span class="n">position</span> <span class="p">=</span> <span class="n">Vector3</span><span class="p">.</span><span class="nf">Lerp</span><span class="p">(</span><span class="n">LShoulder</span><span class="p">.</span><span class="n">transform</span><span class="p">.</span><span class="n">position</span><span class="p">,</span> <span class="n">pose_joint</span><span class="p">[</span><span class="m">11</span><span class="p">],</span> <span class="n">lerp</span><span class="p">);</span>
+    <span class="n">LEblow</span><span class="p">.</span><span class="n">transform</span><span class="p">.</span><span class="n">position</span> <span class="p">=</span> <span class="n">Vector3</span><span class="p">.</span><span class="nf">Lerp</span><span class="p">(</span><span class="n">LEblow</span><span class="p">.</span><span class="n">transform</span><span class="p">.</span><span class="n">position</span><span class="p">,</span> <span class="n">pose_joint</span><span class="p">[</span><span class="m">12</span><span class="p">],</span> <span class="n">lerp</span><span class="p">);</span>
+    <span class="n">LWrist</span><span class="p">.</span><span class="n">transform</span><span class="p">.</span><span class="n">position</span> <span class="p">=</span> <span class="n">Vector3</span><span class="p">.</span><span class="nf">Lerp</span><span class="p">(</span><span class="n">LWrist</span><span class="p">.</span><span class="n">transform</span><span class="p">.</span><span class="n">position</span><span class="p">,</span> <span class="n">pose_joint</span><span class="p">[</span><span class="m">13</span><span class="p">],</span> <span class="n">lerp</span><span class="p">);</span>
+    <span class="n">RShoulder</span><span class="p">.</span><span class="n">transform</span><span class="p">.</span><span class="n">position</span> <span class="p">=</span> <span class="n">Vector3</span><span class="p">.</span><span class="nf">Lerp</span><span class="p">(</span><span class="n">RShoulder</span><span class="p">.</span><span class="n">transform</span><span class="p">.</span><span class="n">position</span><span class="p">,</span> <span class="n">pose_joint</span><span class="p">[</span><span class="m">14</span><span class="p">],</span> <span class="n">lerp</span><span class="p">);</span>
+    <span class="n">REblow</span><span class="p">.</span><span class="n">transform</span><span class="p">.</span><span class="n">position</span> <span class="p">=</span> <span class="n">Vector3</span><span class="p">.</span><span class="nf">Lerp</span><span class="p">(</span><span class="n">REblow</span><span class="p">.</span><span class="n">transform</span><span class="p">.</span><span class="n">position</span><span class="p">,</span> <span class="n">pose_joint</span><span class="p">[</span><span class="m">15</span><span class="p">],</span> <span class="n">lerp</span><span class="p">);</span>
+    <span class="n">RWrist</span><span class="p">.</span><span class="n">transform</span><span class="p">.</span><span class="n">position</span> <span class="p">=</span> <span class="n">Vector3</span><span class="p">.</span><span class="nf">Lerp</span><span class="p">(</span><span class="n">RWrist</span><span class="p">.</span><span class="n">transform</span><span class="p">.</span><span class="n">position</span><span class="p">,</span> <span class="n">pose_joint</span><span class="p">[</span><span class="m">16</span><span class="p">],</span> <span class="n">lerp</span><span class="p">);</span>
+<span class="p">}</span>
+</code></pre>
+</div>
+
+<p>怎么能使游戏的Avatar的3D模型也能像输入模型那样运动起来呢？ 换句话说，如何求一种解法将上一步的人形转换为游戏的绑定顶点的骨骼。我们知道3D角色的骨骼动画都是在CPU端层级计算的，上一级关节是下一节关节的原点坐标，由于关节之间的部位长度是固定的，于是问题转换成了求父关节的旋转，即四元数。当父关节的旋转固定的时候，子关节的位置随即也确定了。</p>
+
+<p>对于旋转的求法， 先根据父子关节关系求一个角度， 然后在根据关键点模型里的位置算一个角度， 使用Quaternion.FromToRotation得到一个旋转四元数， 然后在当前的基础上旋转得到目标四元数，最后在Update里由当前插值到目标四元数就行了。代码实现如下：</p>
+
+<div class="language-c# highlighter-rouge"><pre class="highlight"><code><span class="k">private</span> <span class="k">void</span> <span class="nf">UpdateBone</span><span class="p">(</span><span class="n">AvatarTree</span> <span class="n">tree</span><span class="p">,</span> <span class="kt">float</span> <span class="n">lerp</span><span class="p">)</span>
+<span class="p">{</span>
+    <span class="kt">var</span> <span class="n">dir1</span> <span class="p">=</span> <span class="n">tree</span><span class="p">.</span><span class="nf">GetDir</span><span class="p">();</span>
+    <span class="kt">var</span> <span class="n">dir2</span> <span class="p">=</span> <span class="n">pose_joint</span><span class="p">[</span><span class="n">tree</span><span class="p">.</span><span class="n">idx</span><span class="p">]</span> <span class="p">-</span> <span class="n">pose_joint</span><span class="p">[</span><span class="n">tree</span><span class="p">.</span><span class="n">parent</span><span class="p">.</span><span class="n">idx</span><span class="p">];</span>
+    <span class="n">Quaternion</span> <span class="n">rot</span> <span class="p">=</span> <span class="n">Quaternion</span><span class="p">.</span><span class="nf">FromToRotation</span><span class="p">(</span><span class="n">dir1</span><span class="p">,</span> <span class="n">dir2</span><span class="p">);</span>
+    <span class="n">Quaternion</span> <span class="n">rot1</span> <span class="p">=</span> <span class="n">tree</span><span class="p">.</span><span class="n">parent</span><span class="p">.</span><span class="n">transf</span><span class="p">.</span><span class="n">rotation</span><span class="p">;</span>
+    <span class="n">tree</span><span class="p">.</span><span class="n">parent</span><span class="p">.</span><span class="n">transf</span><span class="p">.</span><span class="n">rotation</span> <span class="p">=</span> <span class="n">Quaternion</span><span class="p">.</span><span class="nf">Lerp</span><span class="p">(</span><span class="n">rot1</span><span class="p">,</span> <span class="n">rot</span> <span class="p">*</span> <span class="n">rot1</span><span class="p">,</span> <span class="n">lerp</span><span class="p">);</span>
+<span class="p">}</span>
+</code></pre>
+</div>
+
+<p>unity里运行效果如图所示：</p>
+
+<p><img src="/img/post-vr/pose8.jpg" alt="" /></p>
+
+<p>如果想看更多的运行效果，参考视频：</p>
+
+<p><strong>TIP</strong></p>
+
+<p>一般的情况下游戏里的Avatar关节和Human3.6数据集里的骨骼不是匹配的，往往游戏或者3D Max等美术制作的工具里的骨骼设置的更多，这时候可以跟动作设计师提出跟Hum3.6数据集的骨骼蒙皮解决方案。 如果是已经导出的fbx，我们也得保证关节层级的对应，应该上述算法得到的旋转四元数是基于父节点的local坐标系的。 解决方法就是把fbx在Unity引擎转换为Prefab, 然后再更改Prefab的关节层级结构。</p>
+
+<p><img src="/img/post-vr/pose9.jpg" alt="" /></p>
+
+<p>从上面视频我们可以看到， AlphaPose 虽然能很好的识别出骨骼节点的位置， 但这不包含手指等小关节的姿势， 所以从上而下手都是僵硬的， 但是从卡内基梅隆大学的OpenPose（最新版）已经能识别手指的动作，甚至还包含一些脸部的表情，真的是非常强大了。</p>
+
+<h2 id="附录1">附录1：</h2>
+
+<p>姿态估计开源深度学习模型汇总：</p>
+
+<p><strong>AlphaPose</strong></p>
+
+<p><a href="https://www.mvig.org/research/alphapose.html">AlphaPose</a> 是上海交通大学开源的精确多人姿态估计，声称是第一个开源系统.<br />
+AlphaPose 可以同时对图片, videos，以及图片列表，进行姿态估计和姿态追踪(pose tracking). 可以得到很多不同的输出，包括 PNG，JPEG，AVI 格式的关键点图片，JSON 格式的关键点输出，便于很多应用场景.AlphaPose 采用区域多人姿态估计(regional multi-person pose estimation, RMPE)框架，以在人体边界框不准确的情况下，提升姿态估计. 其主要包括三部分：</p>
+
+<ul>
+  <li>Symmetric Spatial Transformer Network (SSTN)</li>
+  <li>Parametric Pose Non-Maximum-Suppression (NMS)</li>
+  <li>Pose-Guided Proposals Generator (PGPG)</li>
+</ul>
+
+<p><img src="/img/post-vr/pose2.gif" alt="" /></p>
+
+<p><strong>OpenPose</strong></p>
+
+<p><a href="http://domedb.perception.cs.cmu.edu/">OpenPose</a> 是 <a href="https://github.com/CMU-Perceptual-Computing-Lab">CMU Perceptual Computing Lab</a> 开源的一个实时多人关键点检测库.</p>
+
+<p>OpenPose 提供了 2D 和 3D 多人关键点检测方法，以及特定参数的姿态估计的标准化工具包.<br />
+OpenPose 可以采用很多不同的输入方式，如，图片image, 视频video，IP相机camera，等等.<br />
+OpenPose 的输出也可以是很多不同形式，如图片和关键点(PNG，JPG，AVI)，可读格式的关键点(JSON，XML，YML)，甚至是数组类.OpenPose 的输入和输出参数，还可以根据需要进行调整. OpenPose 提供了 C++ API，可以在 CPU 和 GPU 上运行，也兼容 AMD 显卡.</p>
+
+<p><img src="/img/post-vr/pose1.gif" alt="" /></p>
+
+<p><strong>DensePose</strong></p>
+
+<p><a href="http://densepose.org">DensePose</a> 出自 Facebook Research，其开源了 DensePose 实现的代码，模型和数据集.<br />
+DensePose 数据集，DensePose-COCO，用于人体姿态估计的大规模数据集.<br />
+DensePose-COCO 数据集，是在 50K COCO 图片上手工标注的图片-表面(image-to-surface)对应的大规模数据集.</p>
+
+<p><img src="/img/post-vr/pose4.jpg" alt="" /></p>
+
+<p>DensePose 论文提出了 DensePose-RCNN，是 Mask-RCNN 的一个变形，针对每秒多帧的每个人体区域，其回归密集地回归特定肢体部分的 UV 坐标.<br />
+DensePose 基于 DenseReg: Fully Convolutional Dense Shape Regression In-the-Wild - 2016.<br />
+DensePose 的目标是确定每个像素点的曲面位置(surface location)，以及该肢体曲面所属的对应 2D 参数化.</p>
+
+<p>DensePose 采用了基于 FPN 的 Mask R-CNN 结构，RoI-Align Pooling.<br />
+此外，DensePose 在 RoI-Pooling 的输出端加入全卷积网路.</p>
+
+<p><img src="/img/post-vr/pose3.jpg" alt="" /></p>
+
+<h2 id="附录2">附录2</h2>
+
+<p><strong>human3.6m关节点标注顺序</strong></p>
+
+<table>
+  <thead>
+    <tr>
+      <th>序号</th>
+      <th>数据集标注顺序</th>
+      <th>关节名</th>
+      <th>中文名</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td>0</td>
+      <td>0</td>
+      <td>hip</td>
+      <td>臀部</td>
+    </tr>
+    <tr>
+      <td>1</td>
+      <td>1</td>
+      <td>rhip</td>
+      <td>右臀部</td>
+    </tr>
+    <tr>
+      <td>2</td>
+      <td>2</td>
+      <td>rknee</td>
+      <td>右膝盖</td>
+    </tr>
+    <tr>
+      <td>3</td>
+      <td>3</td>
+      <td>rfoot</td>
+      <td>右脚踝</td>
+    </tr>
+    <tr>
+      <td>4</td>
+      <td>6</td>
+      <td>lhip</td>
+      <td>左臀部</td>
+    </tr>
+    <tr>
+      <td>5</td>
+      <td>7</td>
+      <td>lknee</td>
+      <td>左膝盖</td>
+    </tr>
+    <tr>
+      <td>6</td>
+      <td>8</td>
+      <td>lfoot</td>
+      <td>左脚踝</td>
+    </tr>
+    <tr>
+      <td>7</td>
+      <td>12</td>
+      <td>spine</td>
+      <td>脊柱</td>
+    </tr>
+    <tr>
+      <td>8</td>
+      <td>13</td>
+      <td>thorax</td>
+      <td>胸部</td>
+    </tr>
+    <tr>
+      <td>9</td>
+      <td>14</td>
+      <td>neck</td>
+      <td>颈部</td>
+    </tr>
+    <tr>
+      <td>10</td>
+      <td>15</td>
+      <td>head</td>
+      <td>头部</td>
+    </tr>
+    <tr>
+      <td>11</td>
+      <td>17</td>
+      <td>lshoulder</td>
+      <td>左肩</td>
+    </tr>
+    <tr>
+      <td>12</td>
+      <td>18</td>
+      <td>lelbow</td>
+      <td>左手肘</td>
+    </tr>
+    <tr>
+      <td>13</td>
+      <td>19</td>
+      <td>lwrist</td>
+      <td>左手腕</td>
+    </tr>
+    <tr>
+      <td>14</td>
+      <td>25</td>
+      <td>rshoulder</td>
+      <td>右肩</td>
+    </tr>
+    <tr>
+      <td>15</td>
+      <td>26</td>
+      <td>relbow</td>
+      <td>右手肘</td>
+    </tr>
+    <tr>
+      <td>16</td>
+      <td>27</td>
+      <td>rwrist</td>
+      <td>右手腕</td>
+    </tr>
+  </tbody>
+</table>
+
+<p><br /></p>
+
+<p><img src="/img/post-vr/pose5.jpg" alt="" /></p>
+
+<p><br /></p>
+
+<p><strong>COCO数据集骨骼关节keypoint标注对应</strong></p>
+
+<table>
+  <thead>
+    <tr>
+      <th>序号</th>
+      <th>数据集标注顺序</th>
+      <th>关节名</th>
+      <th>中文名</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td>0</td>
+      <td>0</td>
+      <td>nose</td>
+      <td>鼻子</td>
+    </tr>
+    <tr>
+      <td>1</td>
+      <td>1</td>
+      <td>L eye</td>
+      <td>左眼</td>
+    </tr>
+    <tr>
+      <td>2</td>
+      <td>2</td>
+      <td>R eye</td>
+      <td>右眼</td>
+    </tr>
+    <tr>
+      <td>3</td>
+      <td>3</td>
+      <td>L ear</td>
+      <td>左耳</td>
+    </tr>
+    <tr>
+      <td>4</td>
+      <td>4</td>
+      <td>R ear</td>
+      <td>右耳</td>
+    </tr>
+    <tr>
+      <td>5</td>
+      <td>5</td>
+      <td>L shoulder</td>
+      <td>左肩</td>
+    </tr>
+    <tr>
+      <td>6</td>
+      <td>6</td>
+      <td>R shoulder</td>
+      <td>右肩</td>
+    </tr>
+    <tr>
+      <td>7</td>
+      <td>7</td>
+      <td>L elbow</td>
+      <td>左手肘</td>
+    </tr>
+    <tr>
+      <td>8</td>
+      <td>8</td>
+      <td>R elbow</td>
+      <td>右手肘</td>
+    </tr>
+    <tr>
+      <td>9</td>
+      <td>9</td>
+      <td>L wrist</td>
+      <td>左手腕</td>
+    </tr>
+    <tr>
+      <td>10</td>
+      <td>10</td>
+      <td>R wrist</td>
+      <td>右手腕</td>
+    </tr>
+    <tr>
+      <td>11</td>
+      <td>11</td>
+      <td>L hip</td>
+      <td>左臀部</td>
+    </tr>
+    <tr>
+      <td>12</td>
+      <td>12</td>
+      <td>R hip</td>
+      <td>右臀部</td>
+    </tr>
+    <tr>
+      <td>13</td>
+      <td>13</td>
+      <td>knee</td>
+      <td>左膝盖</td>
+    </tr>
+    <tr>
+      <td>14</td>
+      <td>14</td>
+      <td>R knee</td>
+      <td>右膝盖</td>
+    </tr>
+    <tr>
+      <td>15</td>
+      <td>15</td>
+      <td>L ankle</td>
+      <td>左脚踝</td>
+    </tr>
+    <tr>
+      <td>16</td>
+      <td>16</td>
+      <td>R ankle</td>
+      <td>右脚踝</td>
+    </tr>
+  </tbody>
+</table>
+
+<p><br /></p>
+
+<p><img src="/img/post-vr/pose6.jpg" alt="" /></p>
+
+<p><br /></p>
+
+<h2 id="附录3">附录3</h2>
+
+<p>更多从抖音扒来的的视频姿势识别</p>
+
+<div style="width: 100%;height: 400px;">
+    <iframe src="//player.youku.com/embed/XNDYwNTY4ODMwMA==" width="100%" height="100%" frameborder="0" allowfullscreen="true"></iframe>
+</div>
+<p><br /></p>
+
+<div style="width: 100%;height: 400px;">
+    <iframe src="//player.youku.com/embed/XNDYwNTY4NDM1Mg==" width="100%" height="100%" frameborder="0" allowfullscreen="true"></iframe>
+</div>
+<p><br /></p>
+
+<p><strong><em>参考文献</em></strong>:</p>
+<ul>
+  <li><a href="http://densepose.org">Densepose by Facebook</a></li>
+  <li><a href="https://github.com/facebookresearch/Detectron">Detectron by Facebook</a></li>
+  <li><a href="http://cocodataset.org">DensePose-COCO 数据集</a></li>
+  <li><a href="https://www.mvig.org/research/alphapose.html">AlphaPose 上海交大</a></li>
+  <li><a href="https://github.com/CMU-Perceptual-Computing-Lab">CMU Perceptual Computing Lab</a></li>
+  <li><a href="http://domedb.perception.cs.cmu.edu/">OpenPose by CMU</a></li>
+  <li><a href="https://arxiv.org/abs/1802.00434">Paper - DensePose: Dense Human Pose Estimation In The Wild-2018</a></li>
+  <li><a href="https://www.stubbornhuang.com/529/">human3.6m数据集骨骼关节keypoint标注对应</a></li>
+  <li><a href="https://www.stubbornhuang.com/525/">COCO数据集骨骼关节keypoint标注对应</a></li>
+  <li><a href="https://gitee.com/penghuailiang/VideoPose3D">VideoPose3D by Facebook</a></li>
+</ul>
+
+
+    </div>
+  </div>
+
+  <style>
+  .post-nav {
+    overflow: hidden;
+    /* margin-top: 60px; */
+    padding: 12px;
+    white-space: nowrap;
+    /* border-top: 1px solid #eee; */
+  }
+
+  .post-nav-item {
+    display: inline-block;
+    width: 50%;
+    white-space: normal;
+  }
+
+  .post-nav-item a {
+    position: relative;
+    display: inline-block;
+    line-height: 25px;
+    font-size: 14px;
+    color: #555;
+    border-bottom: none;
+  }
+
+  .post-nav-item a:hover {
+    color: #222;
+    font-weight: bold;
+    border-bottom: none;
+  }
+
+  .post-nav-item a:active {
+    top: 2px;
+  }
+
+  .post-nav-item a:before,
+  .post-nav-item a:after {
+    display: inline-block;
+    width: 16px;
+    height: 25px;
+    vertical-align: top;
+    opacity: 0.4;
+    background-size: 16px;
+  }
+
+  .post-nav-none a:none {
+    content: ' ';
+    background-size: 8px;
+  }
+
+  .post-nav-none a:hover:none {
+    opacity: 1;
+  }
+
+  .post-nav-prev a:before {
+    content: ' ';
+    background: url("data:image/svg+xml;base64,PD94bWwgdmVyc2lvbj0iMS4wIiA/PjxzdmcgaGVpZ2h0PSIxMnB4IiB2ZXJzaW9uPSIxLjEiIHZpZXdCb3g9IjAgMCA5IDEyIiB3aWR0aD0iOXB4IiB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHhtbG5zOnNrZXRjaD0iaHR0cDovL3d3dy5ib2hlbWlhbmNvZGluZy5jb20vc2tldGNoL25zIiB4bWxuczp4bGluaz0iaHR0cDovL3d3dy53My5vcmcvMTk5OS94bGluayI+PHRpdGxlLz48ZGVzYy8+PGRlZnMvPjxnIGZpbGw9Im5vbmUiIGZpbGwtcnVsZT0iZXZlbm9kZCIgaWQ9IlBhZ2UtMSIgc3Ryb2tlPSJub25lIiBzdHJva2Utd2lkdGg9IjEiPjxnIGZpbGw9IiMwMDAwMDAiIGlkPSJDb3JlIiB0cmFuc2Zvcm09InRyYW5zbGF0ZSgtMjE4LjAwMDAwMCwgLTkwLjAwMDAwMCkiPjxnIGlkPSJjaGV2cm9uLWxlZnQiIHRyYW5zZm9ybT0idHJhbnNsYXRlKDIxOC41MDAwMDAsIDkwLjAwMDAwMCkiPjxwYXRoIGQ9Ik03LjQsMS40IEw2LDAgTC04Ljg4MTc4NDJlLTE2LDYgTDYsMTIgTDcuNCwxMC42IEwyLjgsNiBMNy40LDEuNCBaIiBpZD0iU2hhcGUiLz48L2c+PC9nPjwvZz48L3N2Zz4=") no-repeat 0 50%;
+    background-size: 8px;
+  }
+
+  .post-nav-prev a:hover:before {
+    opacity: 1;
+  }
+
+  .post-nav-next {
+    text-align: right;
+  }
+
+  .post-nav-next a:after {
+    content: ' ';
+    background: url("data:image/svg+xml;base64,PD94bWwgdmVyc2lvbj0iMS4wIiA/PjxzdmcgaGVpZ2h0PSIxMnB4IiB2ZXJzaW9uPSIxLjEiIHZpZXdCb3g9IjAgMCA5IDEyIiB3aWR0aD0iOXB4IiB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHhtbG5zOnNrZXRjaD0iaHR0cDovL3d3dy5ib2hlbWlhbmNvZGluZy5jb20vc2tldGNoL25zIiB4bWxuczp4bGluaz0iaHR0cDovL3d3dy53My5vcmcvMTk5OS94bGluayI+PHRpdGxlLz48ZGVzYy8+PGRlZnMvPjxnIGZpbGw9Im5vbmUiIGZpbGwtcnVsZT0iZXZlbm9kZCIgaWQ9IlBhZ2UtMSIgc3Ryb2tlPSJub25lIiBzdHJva2Utd2lkdGg9IjEiPjxnIGZpbGw9IiMwMDAwMDAiIGlkPSJDb3JlIiB0cmFuc2Zvcm09InRyYW5zbGF0ZSgtMjYwLjAwMDAwMCwgLTkwLjAwMDAwMCkiPjxnIGlkPSJjaGV2cm9uLXJpZ2h0IiB0cmFuc2Zvcm09InRyYW5zbGF0ZSgyNjAuNTAwMDAwLCA5MC4wMDAwMDApIj48cGF0aCBkPSJNMSwwIEwtMC40LDEuNCBMNC4yLDYgTC0wLjQsMTAuNiBMMSwxMiBMNyw2IEwxLDAgWiIgaWQ9IlNoYXBlIi8+PC9nPjwvZz48L2c+PC9zdmc+") no-repeat 100% 50%;
+    background-size: 8px;
+  }
+
+  .post-nav-next a:hover:after {
+    opacity: 1;
+  }
+</style>
+
+
+
+<div class="post-nav">
+
+  
+  <div class="post-nav-none post-nav-item">
+    <a href=""> </a>
+  </div>
+  
+
+  
+  <div class="post-nav-next post-nav-item">
+    
+    <a href="/blog/2020/p2p/"> 手机端对端直连技术</a>
+  </div>
+  
+
+</div>
+
+</article>
+    </div>
+
+    <footer class="site-footer">
+  <div class="container">
+    <ul class="social">
+  <li><a href="https://twitter.com/penghuailiang" target="_blank"><i class="icon icon-twitter"></i></a></li>
+  <li><a href="https://www.zhihu.com/people/huailiangpenguin" target="_blank"><i class="icon icon-zhihu"></i></a></li>
+  <li><a href="https://www.facebook.com/profile.php?id=100004290725320" target="_blank"><i class="icon icon-facebook"></i></a></li>
+  <li><a href="https://weibo.com/6212299692/profile?topnav=1&wvr=6" target="_blank"><i class="icon icon-sina"></i></a></li>
+  <li><a href="https://www.linkedin.com/in/penghuailiang/" target="_blank"><i class="icon icon-linkedin"></i></a></li>
+  <li><a href="https://github.com/huailiang" target="_blank"><i class="icon icon-github"></i></a></li>
+</ul>
+    <p class="txt-medium-gray">
+      <small>&copy;2020 All rights reserved. </small>
+    </p>
+  </div>
+</footer>
+    <a href="https://github.com/huailiang" target="_blank" class="github-corner"><svg width="80" height="80" viewBox="0 0 250 250" style="fill:#337ab7; color:#fff; position: absolute; top: 0; border: 0; right: 0;"><path d="M0,0 L115,115 L130,115 L142,142 L250,250 L250,0 Z"></path><path d="M128.3,109.0 C113.8,99.7 119.0,89.6 119.0,89.6 C122.0,82.7 120.5,78.6 120.5,78.6 C119.2,72.0 123.4,76.3 123.4,76.3 C127.3,80.9 125.5,87.3 125.5,87.3 C122.9,97.6 130.6,101.9 134.4,103.2" fill="currentColor" style="transform-origin: 130px 106px;" class="octo-arm"></path><path d="M115.0,115.0 C114.9,115.1 118.7,116.5 119.8,115.4 L133.7,101.6 C136.9,99.2 139.9,98.4 142.2,98.6 C133.8,88.0 127.5,74.4 143.8,58.0 C148.5,53.4 154.0,51.2 159.7,51.0 C160.3,49.4 163.2,43.6 171.4,40.1 C171.4,40.1 176.1,42.5 178.8,56.2 C183.1,58.6 187.2,61.8 190.9,65.4 C194.5,69.0 197.7,73.2 200.1,77.6 C213.8,80.2 216.3,84.9 216.3,84.9 C212.7,93.1 206.9,96.0 205.4,96.6 C205.1,102.4 203.0,107.8 198.3,112.5 C181.9,128.9 168.3,122.5 157.7,114.1 C157.9,116.9 156.7,120.9 152.7,124.9 L141.0,136.5 C139.8,137.7 141.6,141.9 141.8,141.8 Z" fill="currentColor" class="octo-body"></path></svg></a>
+
+
+    <script src="//code.jquery.com/jquery-1.11.3.min.js"></script>
+    <script>
+      $(document).ready(function () {
+        $('.sliding-panel-button,.sliding-panel-fade-screen,.sliding-panel-close').on('click touchstart', function (e) {
+          $('.sliding-panel-content,.sliding-panel-fade-screen').toggleClass('is-visible');
+          e.preventDefault();
+        });
+      });
+    </script>
+  </main>
+</body>
+
+</html>
