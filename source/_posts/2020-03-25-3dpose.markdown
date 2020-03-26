@@ -1,6 +1,6 @@
 ---
 layout:     post
-title:      "从抖音视频到游戏动作"
+title:      "从抖音视频提取游戏动作"
 date:       2020-03-25 02:00:00
 author:     "huailiang"
 tags:
@@ -10,18 +10,18 @@ tags:
 
 姿态估计旨在 RGB 图片和 Video 中的人体像素映射到肢体的三维曲面(3D surface)，其涉及了很多计算机视觉任务，如目标检测，姿态估计，分割，等等. 姿态估计的应用场景不仅包括关键点定位，如图形(Graphics)，增强显示(Augmented Reality, AR)，人机交互(Human-Computer Interaction，HCI)，还包括 3D 目标识别的很多方面. 
 
-层出不穷的姿态检测深度网络模型，在最近两三年如雨后春笋般出现。今天我们选AlphaPose导出骨骼3D关键点位置，并在游戏引擎的去运行相关的模型。相关的代码都已提交到[github][i8], 我们提供算法
+层出不穷的姿态检测深度网络模型，在最近两三年如雨后春笋般出现。今天我们选AlphaPose导出骨骼3D关键点位置，并在游戏引擎的去运行相关的模型。相关的代码都已提交到[github][i8], 我们提供算法解决视频2D到游戏3D骨骼的转换。
 
 ## 识别视频
 
-我们将从抖音扒来的视频导入到模型，由[AlphaPose][i4]生产识别后的运动姿势, 并使用[Video3DPose][i11]中的方法渲染成视频， 如下：
+首先将从抖音扒来的视频导入到模型，由[AlphaPose][i4]生产识别后的运动姿势, 并使用[Video3DPose][i11]中的方法渲染成视频， 如下：
 
 
 <div style="width: 100%;height: 400px;">
     <iframe src="//player.youku.com/embed/XNDYwNTY4NDM1Mg==" width="100%" height="100%" frameborder="0" allowfullscreen="true"></iframe>
 </div><br>
 
-使用工具将numpy格式的数据转换成二进制（bytes）, 以供之后在unity里解析使用。
+使用工具将numpy格式的数据转换成二进制（bytes）, 以供之后在unity里解析使用。我们输出的时候查看numpy对象shape是(x,17,3), 地一维x代表帧数， 第二维代表17个关节，第三维代表关键点（joint）的3d位置。
 
 
 ## Unity 运行模型
