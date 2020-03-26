@@ -92,7 +92,10 @@ MathJax.Hub.Config({
 
 <p>将上一步Python环境里生成的关键点信息(二进制文件)，导入到Unity里，使用IO接口解析出来，由于Video3DPose默认使用的[hunman3.6数据集]骨骼的标记是17个部位，这里我们创建了17个GameObject，代表17个关节节点， 并使用LineRender组件把相关的关节连接成线。在Mono的Update函数，我们更新导出模型的3d关键点位置信息，于是一个运动的骨骼人行动起来了。 关于[hunman3.6数据集]关节编号的详细介绍，见本文最后的附录。</p>
 
-<p><img src="/img/post-vr/pose7.jpg" alt="" /></p>
+<div style="width: 100%;height: 400px;">
+    <iframe src="//player.youku.com/embed/XNDYwNTcwNjE3Mg==" width="100%" height="100%" frameborder="0" allowfullscreen="true"></iframe>
+</div>
+<p><br /></p>
 
 <p>代码如下， 在Update中插值更新17组关节的位置，pose_joint数组的顺序对应到hunman3.6数据集关节编号。</p>
 
@@ -138,7 +141,7 @@ MathJax.Hub.Config({
 
 <p><img src="/img/post-vr/pose8.jpg" alt="" /></p>
 
-<p>如果想看更多的运行效果，参考视频：</p>
+<p>如果想看更多的运行效果，参考附录视频。</p>
 
 <p><strong>TIP</strong></p>
 
@@ -451,6 +454,11 @@ DensePose 的目标是确定每个像素点的曲面位置(surface location)，�
 
 <div style="width: 100%;height: 400px;">
     <iframe src="//player.youku.com/embed/XNDYwNTY4NDM1Mg==" width="100%" height="100%" frameborder="0" allowfullscreen="true"></iframe>
+</div>
+<p><br /></p>
+
+<div style="width: 100%;height: 400px;">
+    <iframe src="//player.youku.com/embed/XNDYwNTcwODc4MA==" width="100%" height="100%" frameborder="0" allowfullscreen="true"></iframe>
 </div>
 <p><br /></p>
 
