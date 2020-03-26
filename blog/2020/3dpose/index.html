@@ -5,7 +5,7 @@
   <meta http-equiv="X-UA-Compatible" content="IE=edge">
   <meta name="viewport" content="width=device-width, initial-scale=1">
 
-  <title>从抖音视频到游戏动作</title>
+  <title>从抖音视频提取游戏动作</title>
   <meta name="description"
     content="姿态估计旨在 RGB 图片和 Video 中的人体像素映射到肢体的三维曲面(3D surface)，其涉及了很多计算机视觉任务，如目标检测，姿态估计，分割，等等. 姿态估计的应用场景不仅包括关键点定位，如图形(Graphics)，增强显示(Augmented Reality, AR)，人机交互(Human-Com...">
 
@@ -67,7 +67,7 @@ MathJax.Hub.Config({
 
   <div class="card">
     <header class="post-header">
-      <h1 class="post-title">从抖音视频到游戏动作</h1>
+      <h1 class="post-title">从抖音视频提取游戏动作</h1>
       <p class="post-meta">Mar 25, 2020 •
         huailiang</p>
     </header>
@@ -75,18 +75,18 @@ MathJax.Hub.Config({
     <div class="post-content">
       <p>姿态估计旨在 RGB 图片和 Video 中的人体像素映射到肢体的三维曲面(3D surface)，其涉及了很多计算机视觉任务，如目标检测，姿态估计，分割，等等. 姿态估计的应用场景不仅包括关键点定位，如图形(Graphics)，增强显示(Augmented Reality, AR)，人机交互(Human-Computer Interaction，HCI)，还包括 3D 目标识别的很多方面.</p>
 
-<p>层出不穷的姿态检测深度网络模型，在最近两三年如雨后春笋般出现。今天我们选AlphaPose导出骨骼3D关键点位置，并在游戏引擎的去运行相关的模型。相关的代码都已提交到<a href="https://github.com/huailiang/unity_pose3D">github</a>, 我们提供算法</p>
+<p>层出不穷的姿态检测深度网络模型，在最近两三年如雨后春笋般出现。今天我们选AlphaPose导出骨骼3D关键点位置，并在游戏引擎的去运行相关的模型。相关的代码都已提交到<a href="https://github.com/huailiang/unity_pose3D">github</a>, 我们提供算法解决视频2D到游戏3D骨骼的转换。</p>
 
 <h2 id="识别视频">识别视频</h2>
 
-<p>我们将从抖音扒来的视频导入到模型，由<a href="https://www.mvig.org/research/alphapose.html">AlphaPose</a>生产识别后的运动姿势, 并使用<a href="https://gitee.com/penghuailiang/VideoPose3D">Video3DPose</a>中的方法渲染成视频， 如下：</p>
+<p>首先将从抖音扒来的视频导入到模型，由<a href="https://www.mvig.org/research/alphapose.html">AlphaPose</a>生产识别后的运动姿势, 并使用<a href="https://gitee.com/penghuailiang/VideoPose3D">Video3DPose</a>中的方法渲染成视频， 如下：</p>
 
 <div style="width: 100%;height: 400px;">
     <iframe src="//player.youku.com/embed/XNDYwNTY4NDM1Mg==" width="100%" height="100%" frameborder="0" allowfullscreen="true"></iframe>
 </div>
 <p><br /></p>
 
-<p>使用工具将numpy格式的数据转换成二进制（bytes）, 以供之后在unity里解析使用。</p>
+<p>使用工具将numpy格式的数据转换成二进制（bytes）, 以供之后在unity里解析使用。我们输出的时候查看numpy对象shape是(x,17,3), 地一维x代表帧数， 第二维代表17个关节，第三维代表关键点（joint）的3d位置。</p>
 
 <h2 id="unity-运行模型">Unity 运行模型</h2>
 
