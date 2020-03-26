@@ -40,23 +40,23 @@ tags:
 ```csharp
 protected override void LerpUpdate(float lerp)
 {
-    Hip.transform.position = Vector3.Lerp(Hip.transform.position, pose_joint[0], lerp);
-    RHip.transform.position = Vector3.Lerp(RHip.transform.position, pose_joint[1], lerp);
-    RKnee.transform.position = Vector3.Lerp(RKnee.transform.position, pose_joint[2], lerp);
-    RFoot.transform.position = Vector3.Lerp(RFoot.transform.position, pose_joint[3], lerp);
-    LHip.transform.position = Vector3.Lerp(LHip.transform.position, pose_joint[4], lerp);
-    LKnee.transform.position = Vector3.Lerp(LKnee.transform.position, pose_joint[5], lerp);
-    LFoot.transform.position = Vector3.Lerp(LFoot.transform.position, pose_joint[6], lerp);
-    Spine.transform.position = Vector3.Lerp(Spine.transform.position, pose_joint[7], lerp);
-    Thorax.transform.position = Vector3.Lerp(Thorax.transform.position, pose_joint[8], lerp);
-    Neck.transform.position = Vector3.Lerp(Neck.transform.position, pose_joint[9], lerp);
-    Head.transform.position = Vector3.Lerp(Head.transform.position, pose_joint[10], lerp);
-    LShoulder.transform.position = Vector3.Lerp(LShoulder.transform.position, pose_joint[11], lerp);
-    LEblow.transform.position = Vector3.Lerp(LEblow.transform.position, pose_joint[12], lerp);
-    LWrist.transform.position = Vector3.Lerp(LWrist.transform.position, pose_joint[13], lerp);
-    RShoulder.transform.position = Vector3.Lerp(RShoulder.transform.position, pose_joint[14], lerp);
-    REblow.transform.position = Vector3.Lerp(REblow.transform.position, pose_joint[15], lerp);
-    RWrist.transform.position = Vector3.Lerp(RWrist.transform.position, pose_joint[16], lerp);
+    Hip.position = Vector3.Lerp(Hip.position, pose_joint[0], lerp);
+    RHip.position = Vector3.Lerp(RHip.position, pose_joint[1], lerp);
+    RKnee.position = Vector3.Lerp(RKnee.position, pose_joint[2], lerp);
+    RFoot.position = Vector3.Lerp(RFoot.position, pose_joint[3], lerp);
+    LHip.position = Vector3.Lerp(LHip.position, pose_joint[4], lerp);
+    LKnee.position = Vector3.Lerp(LKnee.position, pose_joint[5], lerp);
+    LFoot.position = Vector3.Lerp(LFoot.position, pose_joint[6], lerp);
+    Spine.position = Vector3.Lerp(Spine.position, pose_joint[7], lerp);
+    Thorax.position = Vector3.Lerp(Thorax.position, pose_joint[8], lerp);
+    Neck.position = Vector3.Lerp(Neck.position, pose_joint[9], lerp);
+    Head.position = Vector3.Lerp(Head.position, pose_joint[10], lerp);
+    LShoulder.position = Vector3.Lerp(LShoulder.position, pose_joint[11], lerp);
+    LEblow.position = Vector3.Lerp(LEblow.position, pose_joint[12], lerp);
+    LWrist.position = Vector3.Lerp(LWrist.position, pose_joint[13], lerp);
+    RShoulder.position = Vector3.Lerp(RShoulder.position, pose_joint[14], lerp);
+    REblow.position = Vector3.Lerp(REblow.position, pose_joint[15], lerp);
+    RWrist.position = Vector3.Lerp(RWrist.position, pose_joint[16], lerp);
 }
 ```
 
@@ -210,8 +210,10 @@ __COCO数据集骨骼关节keypoint标注对应__
 
 
 <div style="width: 100%;height: 400px;">
-    <iframe src="//player.youku.com/embed/XNDYwNTY4NDM1Mg==" width="100%" height="100%" frameborder="0" allowfullscreen="true"></iframe>
+    <iframe src="//player.youku.com/embed/XNDYwNTY5MDgyMA==" width="100%" height="100%" frameborder="0" allowfullscreen="true"></iframe>
 </div><br>
+
+
 
 <div style="width: 100%;height: 400px;">
     <iframe src="//player.youku.com/embed/XNDYwNTcwODc4MA==" width="100%" height="100%" frameborder="0" allowfullscreen="true"></iframe>
