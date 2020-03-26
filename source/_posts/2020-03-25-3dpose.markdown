@@ -10,11 +10,16 @@ tags:
 
 姿态估计旨在 RGB 图片和 Video 中的人体像素映射到肢体的三维曲面(3D surface)，其涉及了很多计算机视觉任务，如目标检测，姿态估计，分割，等等. 姿态估计的应用场景不仅包括关键点定位，如图形(Graphics)，增强显示(Augmented Reality, AR)，人机交互(Human-Computer Interaction，HCI)，还包括 3D 目标识别的很多方面. 
 
-层出不穷的姿态检测深度网络模型，在最近两三年如雨后春笋般出现。今天我们选AlphaPose导出骨骼3D关键点位置，并在游戏引擎的去运行相关的模型。相关的代码都已提交到[github][i8].
+层出不穷的姿态检测深度网络模型，在最近两三年如雨后春笋般出现。今天我们选AlphaPose导出骨骼3D关键点位置，并在游戏引擎的去运行相关的模型。相关的代码都已提交到[github][i8], 我们提供算法
 
 ## 识别视频
 
 我们将从抖音扒来的视频导入到模型，由[AlphaPose][i4]生产识别后的运动姿势, 并使用[Video3DPose][i11]中的方法渲染成视频， 如下：
+
+
+<div style="width: 100%;height: 400px;">
+    <iframe src="//player.youku.com/embed/XNDYwNTY4NDM1Mg==" width="100%" height="100%" frameborder="0" allowfullscreen="true"></iframe>
+</div><br>
 
 使用工具将numpy格式的数据转换成二进制（bytes）, 以供之后在unity里解析使用。
 
@@ -24,6 +29,7 @@ tags:
 将上一步Python环境里生成的关键点信息(二进制文件)，导入到Unity里，使用IO接口解析出来，由于Video3DPose默认使用的[hunman3.6数据集]骨骼的标记是17个部位，这里我们创建了17个GameObject，代表17个关节节点， 并使用LineRender组件把相关的关节连接成线。在Mono的Update函数，我们更新导出模型的3d关键点位置信息，于是一个运动的骨骼人行动起来了。 关于[hunman3.6数据集]关节编号的详细介绍，见本文最后的附录。
 
 ![](/img/post-vr/pose7.jpg)
+
 
 代码如下， 在Update中插值更新17组关节的位置，pose_joint数组的顺序对应到hunman3.6数据集关节编号。
 
@@ -73,6 +79,12 @@ unity里运行效果如图所示：
 
 如果想看更多的运行效果，参考视频：
 
+
+__TIP__
+
+一般的情况下游戏里的Avatar关节和Human3.6数据集里的骨骼不是匹配的，往往游戏或者3D Max等美术制作的工具里的骨骼设置的更多，这时候可以跟动作设计师提出跟Hum3.6数据集的骨骼蒙皮解决方案。 如果是已经导出的fbx，我们也得保证关节层级的对应，应该上述算法得到的旋转四元数是基于父节点的local坐标系的。 解决方法就是把fbx在Unity引擎转换为Prefab, 然后再更改Prefab的关节层级结构。
+
+![](/img/post-vr/pose9.jpg)
 
 从上面视频我们可以看到， AlphaPose 虽然能很好的识别出骨骼节点的位置， 但这不包含手指等小关节的姿势， 所以从上而下手都是僵硬的， 但是从卡内基梅隆大学的OpenPose（最新版）已经能识别手指的动作，甚至还包含一些脸部的表情，真的是非常强大了。
 
@@ -152,6 +164,8 @@ __human3.6m关节点标注顺序__
 
 ![](/img/post-vr/pose5.jpg)
 
+<br>
+
 __COCO数据集骨骼关节keypoint标注对应__
 
 
@@ -178,6 +192,23 @@ __COCO数据集骨骼关节keypoint标注对应__
 <br>
 
 ![](/img/post-vr/pose6.jpg)
+
+<br>
+
+
+## 附录3
+
+更多从抖音扒来的的视频姿势识别
+
+<div style="width: 100%;height: 400px;">
+    <iframe src="//player.youku.com/embed/XNDYwNTY4ODMwMA==" width="100%" height="100%" frameborder="0" allowfullscreen="true"></iframe>
+</div><br>
+
+
+<div style="width: 100%;height: 400px;">
+    <iframe src="//player.youku.com/embed/XNDYwNTY4NDM1Mg==" width="100%" height="100%" frameborder="0" allowfullscreen="true"></iframe>
+</div><br>
+
 
 ___参考文献___:
 * [Densepose by Facebook][i1]
