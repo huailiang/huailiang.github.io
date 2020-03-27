@@ -16,10 +16,7 @@ tags:
 
 首先将从抖音扒来的视频导入到模型，由[AlphaPose][i4]生产识别后的运动姿势, 并使用[Video3DPose][i11]中的方法渲染成视频， 如下：
 
-
-<div style="width: 100%;height: 400px;">
-    <iframe src="//player.youku.com/embed/XNDYwNTY4NDM1Mg==" width="100%" height="100%" frameborder="0" allowfullscreen="true"></iframe>
-</div><br>
+![](/img/post-vr/o_dai1.gif)
 
 使用工具将numpy格式的数据转换成二进制（bytes）, 以供之后在unity里解析使用。我们输出的时候查看numpy对象shape是(x,17,3), 地一维x代表帧数， 第二维代表17个关节，第三维代表关键点（joint）的3d位置。
 
@@ -29,10 +26,7 @@ tags:
 将上一步Python环境里生成的关键点信息(二进制文件)，导入到Unity里，使用IO接口解析出来，由于Video3DPose默认使用的[hunman3.6数据集]骨骼的标记是17个部位，这里我们创建了17个GameObject，代表17个关节节点， 并使用LineRender组件把相关的关节连接成线。在Mono的Update函数，我们更新导出模型的3d关键点位置信息，于是一个运动的骨骼人行动起来了。 关于[hunman3.6数据集]关节编号的详细介绍，见本文最后的附录。
 
 
-<div style="width: 100%;height: 400px;">
-    <iframe src="//player.youku.com/embed/XNDYwNTcwNjE3Mg==" width="100%" height="100%" frameborder="0" allowfullscreen="true"></iframe>
-</div><br>
-
+![](/img/post-vr/skeleton.gif)
 
 
 代码如下， 在Update中插值更新17组关节的位置，pose_joint数组的顺序对应到hunman3.6数据集关节编号。
@@ -78,7 +72,7 @@ private void UpdateBone(AvatarTree tree, float lerp)
 
 unity里运行效果如图所示：
 
-![](/img/post-vr/pose8.jpg)
+![](/img/post-vr/avatar.gif)
 
 
 如果想看更多的运行效果，参考附录视频。
@@ -205,6 +199,10 @@ __COCO数据集骨骼关节keypoint标注对应__
 更多从抖音扒来的的视频姿势识别
 
 <div style="width: 100%;height: 400px;">
+    <iframe src="//player.youku.com/embed/XNDYwNTY4NDM1Mg==" width="100%" height="100%" frameborder="0" allowfullscreen="true"></iframe>
+</div><br>
+
+<div style="width: 100%;height: 400px;">
     <iframe src="//player.youku.com/embed/XNDYwNTY4ODMwMA==" width="100%" height="100%" frameborder="0" allowfullscreen="true"></iframe>
 </div><br>
 
@@ -213,7 +211,9 @@ __COCO数据集骨骼关节keypoint标注对应__
     <iframe src="//player.youku.com/embed/XNDYwNTY5MDgyMA==" width="100%" height="100%" frameborder="0" allowfullscreen="true"></iframe>
 </div><br>
 
-
+<div style="width: 100%;height: 400px;">
+    <iframe src="//player.youku.com/embed/XNDYwNTcwNjE3Mg==" width="100%" height="100%" frameborder="0" allowfullscreen="true"></iframe>
+</div><br>
 
 <div style="width: 100%;height: 400px;">
     <iframe src="//player.youku.com/embed/XNDYwNTcwODc4MA==" width="100%" height="100%" frameborder="0" allowfullscreen="true"></iframe>
@@ -231,6 +231,7 @@ ___参考文献___:
 * [human3.6m数据集骨骼关节keypoint标注对应][i9]
 * [COCO数据集骨骼关节keypoint标注对应][i10]
 * [VideoPose3D by Facebook][i11]
+* [【目标检测】YOLO][i12]
 
 [i1]: http://densepose.org
 [i2]: https://github.com/facebookresearch/Detectron
@@ -243,3 +244,4 @@ ___参考文献___:
 [i9]: https://www.stubbornhuang.com/529/
 [i10]: https://www.stubbornhuang.com/525/
 [i11]: https://gitee.com/penghuailiang/VideoPose3D
+[i12]: https://zhuanlan.zhihu.com/p/63507794
