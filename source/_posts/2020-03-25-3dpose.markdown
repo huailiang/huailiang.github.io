@@ -10,7 +10,7 @@ tags:
 
 姿态估计旨在 RGB 图片和 Video 中的人体像素映射到肢体的三维曲面(3D surface)，其涉及了很多计算机视觉任务，如目标检测，姿态估计，分割，等等. 姿态估计的应用场景不仅包括关键点定位，如图形(Graphics)，增强显示(Augmented Reality, AR)，人机交互(Human-Computer Interaction，HCI)，还包括 3D 目标识别的很多方面. 
 
-层出不穷的姿态检测深度网络模型，在最近两三年如雨后春笋般出现。今天我们选AlphaPose导出骨骼3D关键点位置，并在游戏引擎的去运行相关的模型。相关的代码都已提交到[github][i8], 我们提供算法解决视频2D到游戏3D骨骼的转换。
+层出不穷的姿态检测深度网络模型，在最近两三年如雨后春笋般出现。今天我们选AlphaPose导出骨骼3D关键点位置，并在游戏引擎的去运行相关的模型。相关的代码都已提交到[github][i8], 我们提供算法解决视频2D到游戏3D骨骼的转换。算法不局限于抖音上的视频， 只是作者使用的视频都是从抖音上爬来的。
 
 ## 识别视频
 
@@ -86,7 +86,7 @@ __TIP__
 
 从上面视频我们可以看到， AlphaPose 虽然能很好的识别出骨骼节点的位置， 但这不包含手指等小关节的姿势， 所以从上而下手都是僵硬的， 但是从卡内基梅隆大学的OpenPose（最新版）已经能识别手指的动作，甚至还包含一些脸部的表情，真的是非常强大了。
 
-## 附录1：
+### 附录1：
 
 姿态估计开源深度学习模型汇总：
 
@@ -132,7 +132,7 @@ DensePose 采用了基于 FPN 的 Mask R-CNN 结构，RoI-Align Pooling.
 ![](/img/post-vr/pose3.jpg)
 
 
-## 附录2
+### 附录2
 
 __human3.6m关节点标注顺序__
 
@@ -194,30 +194,15 @@ __COCO数据集骨骼关节keypoint标注对应__
 <br>
 
 
-## 附录3
+### 附录3
 
-更多从抖音扒来的的视频姿势识别
+更多从抖音扒来的的视频姿势识别参见：
 
-<div style="width: 100%;height: 400px;">
-    <iframe src="//player.youku.com/embed/XNDYwNTY4NDM1Mg==" width="100%" height="100%" frameborder="0" allowfullscreen="true"></iframe>
-</div><br>
+* [Alphapose 模型渲染系列][i13]
+* [Unity Skeleton动画][i14]
+* [Unity Avatar动画][i15]
 
-<div style="width: 100%;height: 400px;">
-    <iframe src="//player.youku.com/embed/XNDYwNTY4ODMwMA==" width="100%" height="100%" frameborder="0" allowfullscreen="true"></iframe>
-</div><br>
-
-
-<div style="width: 100%;height: 400px;">
-    <iframe src="//player.youku.com/embed/XNDYwNTY5MDgyMA==" width="100%" height="100%" frameborder="0" allowfullscreen="true"></iframe>
-</div><br>
-
-<div style="width: 100%;height: 400px;">
-    <iframe src="//player.youku.com/embed/XNDYwNTcwNjE3Mg==" width="100%" height="100%" frameborder="0" allowfullscreen="true"></iframe>
-</div><br>
-
-<div style="width: 100%;height: 400px;">
-    <iframe src="//player.youku.com/embed/XNDYwNTcwODc4MA==" width="100%" height="100%" frameborder="0" allowfullscreen="true"></iframe>
-</div><br>
+<br>
 
 
 ___参考文献___:
@@ -231,7 +216,7 @@ ___参考文献___:
 * [human3.6m数据集骨骼关节keypoint标注对应][i9]
 * [COCO数据集骨骼关节keypoint标注对应][i10]
 * [VideoPose3D by Facebook][i11]
-* [【目标检测】YOLO][i12]
+* [[目标检测] YOLO][i12]
 
 [i1]: http://densepose.org
 [i2]: https://github.com/facebookresearch/Detectron
@@ -245,3 +230,6 @@ ___参考文献___:
 [i10]: https://www.stubbornhuang.com/525/
 [i11]: https://gitee.com/penghuailiang/VideoPose3D
 [i12]: https://zhuanlan.zhihu.com/p/63507794
+[i13]: https://www.bilibili.com/video/BV1gT4y157jb/
+[i14]: https://www.bilibili.com/video/BV1Jg4y1a7vi/
+[i15]: https://www.bilibili.com/video/BV1SZ4y1j7Vc/
