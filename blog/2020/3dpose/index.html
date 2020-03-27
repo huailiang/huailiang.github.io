@@ -75,16 +75,13 @@ MathJax.Hub.Config({
     <div class="post-content">
       <p>姿态估计旨在 RGB 图片和 Video 中的人体像素映射到肢体的三维曲面(3D surface)，其涉及了很多计算机视觉任务，如目标检测，姿态估计，分割，等等. 姿态估计的应用场景不仅包括关键点定位，如图形(Graphics)，增强显示(Augmented Reality, AR)，人机交互(Human-Computer Interaction，HCI)，还包括 3D 目标识别的很多方面.</p>
 
-<p>层出不穷的姿态检测深度网络模型，在最近两三年如雨后春笋般出现。今天我们选AlphaPose导出骨骼3D关键点位置，并在游戏引擎的去运行相关的模型。相关的代码都已提交到<a href="https://github.com/huailiang/unity_pose3D">github</a>, 我们提供算法解决视频2D到游戏3D骨骼的转换。</p>
+<p>层出不穷的姿态检测深度网络模型，在最近两三年如雨后春笋般出现。今天我们选AlphaPose导出骨骼3D关键点位置，并在游戏引擎的去运行相关的模型。相关的代码都已提交到<a href="https://github.com/huailiang/unity_pose3D">github</a>, 我们提供算法解决视频2D到游戏3D骨骼的转换。算法不局限于抖音上的视频， 只是作者使用的视频都是从抖音上爬来的。</p>
 
 <h2 id="识别视频">识别视频</h2>
 
 <p>首先将从抖音扒来的视频导入到模型，由<a href="https://www.mvig.org/research/alphapose.html">AlphaPose</a>生产识别后的运动姿势, 并使用<a href="https://gitee.com/penghuailiang/VideoPose3D">Video3DPose</a>中的方法渲染成视频， 如下：</p>
 
-<div style="width: 100%;height: 400px;">
-    <iframe src="//player.youku.com/embed/XNDYwNTY4NDM1Mg==" width="100%" height="100%" frameborder="0" allowfullscreen="true"></iframe>
-</div>
-<p><br /></p>
+<p><img src="/img/post-vr/o_dai1.gif" alt="" /></p>
 
 <p>使用工具将numpy格式的数据转换成二进制（bytes）, 以供之后在unity里解析使用。我们输出的时候查看numpy对象shape是(x,17,3), 地一维x代表帧数， 第二维代表17个关节，第三维代表关键点（joint）的3d位置。</p>
 
@@ -92,10 +89,7 @@ MathJax.Hub.Config({
 
 <p>将上一步Python环境里生成的关键点信息(二进制文件)，导入到Unity里，使用IO接口解析出来，由于Video3DPose默认使用的[hunman3.6数据集]骨骼的标记是17个部位，这里我们创建了17个GameObject，代表17个关节节点， 并使用LineRender组件把相关的关节连接成线。在Mono的Update函数，我们更新导出模型的3d关键点位置信息，于是一个运动的骨骼人行动起来了。 关于[hunman3.6数据集]关节编号的详细介绍，见本文最后的附录。</p>
 
-<div style="width: 100%;height: 400px;">
-    <iframe src="//player.youku.com/embed/XNDYwNTcwNjE3Mg==" width="100%" height="100%" frameborder="0" allowfullscreen="true"></iframe>
-</div>
-<p><br /></p>
+<p><img src="/img/post-vr/skeleton.gif" alt="" /></p>
 
 <p>代码如下， 在Update中插值更新17组关节的位置，pose_joint数组的顺序对应到hunman3.6数据集关节编号。</p>
 
@@ -139,7 +133,7 @@ MathJax.Hub.Config({
 
 <p>unity里运行效果如图所示：</p>
 
-<p><img src="/img/post-vr/pose8.jpg" alt="" /></p>
+<p><img src="/img/post-vr/avatar.gif" alt="" /></p>
 
 <p>如果想看更多的运行效果，参考附录视频。</p>
 
@@ -151,7 +145,7 @@ MathJax.Hub.Config({
 
 <p>从上面视频我们可以看到， AlphaPose 虽然能很好的识别出骨骼节点的位置， 但这不包含手指等小关节的姿势， 所以从上而下手都是僵硬的， 但是从卡内基梅隆大学的OpenPose（最新版）已经能识别手指的动作，甚至还包含一些脸部的表情，真的是非常强大了。</p>
 
-<h2 id="附录1">附录1：</h2>
+<h3 id="附录1">附录1：</h3>
 
 <p>姿态估计开源深度学习模型汇总：</p>
 
@@ -195,7 +189,7 @@ DensePose 的目标是确定每个像素点的曲面位置(surface location)，�
 
 <p><img src="/img/post-vr/pose3.jpg" alt="" /></p>
 
-<h2 id="附录2">附录2</h2>
+<h3 id="附录2">附录2</h3>
 
 <p><strong>human3.6m关节点标注顺序</strong></p>
 
@@ -443,23 +437,187 @@ DensePose 的目标是确定每个像素点的曲面位置(surface location)，�
 
 <p><br /></p>
 
-<h2 id="附录3">附录3</h2>
+<p><strong>Openpose-Body25数据集骨骼关节keypoint标注对应</strong></p>
 
-<p>更多从抖音扒来的的视频姿势识别</p>
+<table>
+  <thead>
+    <tr>
+      <th>序号</th>
+      <th>数据集标注顺序</th>
+      <th>关节名</th>
+      <th>中文名</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td>0</td>
+      <td>0</td>
+      <td>Nose</td>
+      <td>鼻子</td>
+    </tr>
+    <tr>
+      <td>1</td>
+      <td>1</td>
+      <td>Neck</td>
+      <td>脖子</td>
+    </tr>
+    <tr>
+      <td>2</td>
+      <td>2</td>
+      <td>RShoulder</td>
+      <td>右肩</td>
+    </tr>
+    <tr>
+      <td>3</td>
+      <td>3</td>
+      <td>RElbow</td>
+      <td>右手肘</td>
+    </tr>
+    <tr>
+      <td>4</td>
+      <td>4</td>
+      <td>RWrist</td>
+      <td>右手腕</td>
+    </tr>
+    <tr>
+      <td>5</td>
+      <td>5</td>
+      <td>LShoulder</td>
+      <td>左肩</td>
+    </tr>
+    <tr>
+      <td>6</td>
+      <td>6</td>
+      <td>LElbow</td>
+      <td>左手肘</td>
+    </tr>
+    <tr>
+      <td>7</td>
+      <td>7</td>
+      <td>LWrist</td>
+      <td>左手腕</td>
+    </tr>
+    <tr>
+      <td>8</td>
+      <td>8</td>
+      <td>MidHip</td>
+      <td>中臀</td>
+    </tr>
+    <tr>
+      <td>9</td>
+      <td>9</td>
+      <td>RHip</td>
+      <td>右臀</td>
+    </tr>
+    <tr>
+      <td>10</td>
+      <td>10</td>
+      <td>RKnee</td>
+      <td>右膝盖</td>
+    </tr>
+    <tr>
+      <td>11</td>
+      <td>11</td>
+      <td>RAnkle</td>
+      <td>右脚踝</td>
+    </tr>
+    <tr>
+      <td>12</td>
+      <td>12</td>
+      <td>LHip</td>
+      <td>左臀</td>
+    </tr>
+    <tr>
+      <td>13</td>
+      <td>13</td>
+      <td>LKnee</td>
+      <td>左膝盖</td>
+    </tr>
+    <tr>
+      <td>14</td>
+      <td>14</td>
+      <td>LAnkle</td>
+      <td>左脚踝</td>
+    </tr>
+    <tr>
+      <td>15</td>
+      <td>15</td>
+      <td>REye</td>
+      <td>右眼</td>
+    </tr>
+    <tr>
+      <td>16</td>
+      <td>16</td>
+      <td>LEye</td>
+      <td>左眼</td>
+    </tr>
+    <tr>
+      <td>17</td>
+      <td>17</td>
+      <td>REar</td>
+      <td>右耳</td>
+    </tr>
+    <tr>
+      <td>18</td>
+      <td>18</td>
+      <td>LEar</td>
+      <td>左耳</td>
+    </tr>
+    <tr>
+      <td>19</td>
+      <td>19</td>
+      <td>LBigToe</td>
+      <td>左大拇指</td>
+    </tr>
+    <tr>
+      <td>20</td>
+      <td>20</td>
+      <td>LSmallToe</td>
+      <td>左小拇指</td>
+    </tr>
+    <tr>
+      <td>21</td>
+      <td>21</td>
+      <td>LHeel</td>
+      <td>左脚跟</td>
+    </tr>
+    <tr>
+      <td>22</td>
+      <td>22</td>
+      <td>RBigToe</td>
+      <td>右大拇指</td>
+    </tr>
+    <tr>
+      <td>23</td>
+      <td>23</td>
+      <td>RSmallToe</td>
+      <td>右小拇指</td>
+    </tr>
+    <tr>
+      <td>24</td>
+      <td>24</td>
+      <td>RHeel</td>
+      <td>右脚跟</td>
+    </tr>
+  </tbody>
+</table>
 
-<div style="width: 100%;height: 400px;">
-    <iframe src="//player.youku.com/embed/XNDYwNTY4ODMwMA==" width="100%" height="100%" frameborder="0" allowfullscreen="true"></iframe>
-</div>
 <p><br /></p>
 
-<div style="width: 100%;height: 400px;">
-    <iframe src="//player.youku.com/embed/XNDYwNTY5MDgyMA==" width="100%" height="100%" frameborder="0" allowfullscreen="true"></iframe>
-</div>
+<p><img src="/img/post-vr/pose7.png" alt="" /></p>
+
 <p><br /></p>
 
-<div style="width: 100%;height: 400px;">
-    <iframe src="//player.youku.com/embed/XNDYwNTcwODc4MA==" width="100%" height="100%" frameborder="0" allowfullscreen="true"></iframe>
-</div>
+<h3 id="附录3">附录3</h3>
+
+<p>更多从抖音扒来的的视频姿势识别参见：</p>
+
+<ul>
+  <li><a href="https://www.bilibili.com/video/BV1gT4y157jb/">Alphapose 模型渲染系列</a></li>
+  <li><a href="https://www.bilibili.com/video/BV1Jg4y1a7vi/">Unity Skeleton动画</a></li>
+  <li><a href="https://www.bilibili.com/video/BV1SZ4y1j7Vc/">Unity Avatar动画</a></li>
+</ul>
+
 <p><br /></p>
 
 <p><strong><em>参考文献</em></strong>:</p>
@@ -474,6 +632,8 @@ DensePose 的目标是确定每个像素点的曲面位置(surface location)，�
   <li><a href="https://www.stubbornhuang.com/529/">human3.6m数据集骨骼关节keypoint标注对应</a></li>
   <li><a href="https://www.stubbornhuang.com/525/">COCO数据集骨骼关节keypoint标注对应</a></li>
   <li><a href="https://gitee.com/penghuailiang/VideoPose3D">VideoPose3D by Facebook</a></li>
+  <li><a href="https://zhuanlan.zhihu.com/p/63507794">[目标检测] YOLO</a></li>
+  <li><a href="https://www.0-tech.com/archives/48309">商汤科技 AR游戏同步角色动作</a></li>
 </ul>
 
 
