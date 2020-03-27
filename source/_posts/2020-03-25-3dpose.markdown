@@ -12,6 +12,7 @@ tags:
 
 层出不穷的姿态检测深度网络模型，在最近两三年如雨后春笋般出现。今天我们选AlphaPose导出骨骼3D关键点位置，并在游戏引擎的去运行相关的模型。相关的代码都已提交到[github][i8], 我们提供算法解决视频2D到游戏3D骨骼的转换。算法不局限于抖音上的视频， 只是作者使用的视频都是从抖音上爬来的。
 
+
 ## 识别视频
 
 首先将从抖音扒来的视频导入到模型，由[AlphaPose][i4]生产识别后的运动姿势, 并使用[Video3DPose][i11]中的方法渲染成视频， 如下：
@@ -84,7 +85,7 @@ __TIP__
 
 ![](/img/post-vr/pose9.jpg)
 
-从上面视频我们可以看到， AlphaPose 虽然能很好的识别出骨骼节点的位置， 但这不包含手指等小关节的姿势， 所以从上而下手都是僵硬的， 但是从卡内基梅隆大学的OpenPose（最新版）已经能识别手指的动作，甚至还包含一些脸部的表情，真的是非常强大了。
+从上面视频我们可以看到， AlphaPose 虽然能很好的识别出骨骼节点的位置， 但这不包含手指等小关节的姿势， 所以从上而下手都是僵硬的， 但是从卡内基梅隆大学的OpenPose（最新版）已经能识别手指的动作，甚至还包含一些脸部的表情，真的是非常强大了。 
 
 ### 附录1：
 
@@ -217,6 +218,7 @@ ___参考文献___:
 * [COCO数据集骨骼关节keypoint标注对应][i10]
 * [VideoPose3D by Facebook][i11]
 * [[目标检测] YOLO][i12]
+* [商汤科技 AR游戏同步角色动作][i16]
 
 [i1]: http://densepose.org
 [i2]: https://github.com/facebookresearch/Detectron
@@ -233,3 +235,4 @@ ___参考文献___:
 [i13]: https://www.bilibili.com/video/BV1gT4y157jb/
 [i14]: https://www.bilibili.com/video/BV1Jg4y1a7vi/
 [i15]: https://www.bilibili.com/video/BV1SZ4y1j7Vc/
+[i16]: https://www.0-tech.com/archives/48309
