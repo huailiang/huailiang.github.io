@@ -792,6 +792,7 @@ bool IntersectCube(Ray ray,float3 cubeSize,inout float t,inout float3 normal){
 * [蒙特卡洛 渲染方程论文][i13]
 * [Microsoft’s DirectX Ray Tracing (DXR) ][i14]
 * [NVIDIA Vulkan Ray Tracing Tutorial][i15]
+* [一个99行的c++版本的path tracer][i16]
 
 [i1]: http://blog.three-eyed-games.com/2018/05/03/gpu-ray-tracing-in-unity-part-1/
 [i2]: https://blog.csdn.net/qq_38275140/article/details/90345582
@@ -808,3 +809,4 @@ bool IntersectCube(Ray ray,float3 cubeSize,inout float t,inout float3 normal){
 [i13]: http://www.cse.chalmers.se/edu/year/2011/course/TDA361/2007/rend_eq.pdf
 [i14]: https://devblogs.microsoft.com/directx/announcing-microsoft-directx-raytracing/
 [i15]: https://developer.nvidia.com/rtx/raytracing/vkray
+[i16]: http://www.kevinbeason.com/smallpt/

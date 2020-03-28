@@ -447,6 +447,7 @@ __Miss Shader__
 * [DX 管理追踪光线流程][i17]
 * [光线追踪的入门, 知乎][i18]
 * [RayTracingAccelerationStructure in Unity API][i19]
+* [CUDA-Path-Tracer-Denoising -github][i20]
 
 [i1]: https://www.embree.org/
 [i2]: https://github.com/joeylitalien/noise2noise-pytorch
@@ -467,3 +468,4 @@ __Miss Shader__
 [I17]: https://blog.csdn.net/u014038143/article/details/101757982
 [i18]: https://zhuanlan.zhihu.com/p/41269520
 [i19]: https://docs.unity3d.com/2019.3/Documentation/ScriptReference/Experimental.Rendering.RayTracingAccelerationStructure.html
+[i20]: https://github.com/ZheyuanXie/CUDA-Path-Tracer-Denoising
