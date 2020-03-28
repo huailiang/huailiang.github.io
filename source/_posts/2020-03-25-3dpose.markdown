@@ -19,7 +19,7 @@ tags:
 
 ![](/img/post-vr/o_dai1.gif)
 
-使用工具将numpy格式的数据转换成二进制（bytes）, 以供之后在unity里解析使用。我们输出的时候查看numpy对象shape是(x,17,3), 地一维x代表帧数， 第二维代表17个关节，第三维代表关键点（joint）的3d位置。
+使用工具将numpy格式的数据转换成二进制（bytes）, 以供之后在unity里解析使用。我们输出的时候查看numpy对象shape是(x,17,3), 第一维x代表帧数， 第二维代表17个关节，第三维代表关键点（joint）的3d位置。
 
 
 ## Unity 运行模型
@@ -196,33 +196,33 @@ __COCO数据集骨骼关节keypoint标注对应__
 __Openpose-Body25数据集骨骼关节keypoint标注对应__
 
 
-|序号	|数据集标注顺序|	关节名|	中文名|
-| ---- | -------------- | ---------- | ------ |
-|0  |	0   |	Nose    |	鼻子|
-|1	|   1	|   Neck	|   脖子|
-|2	|   2	|   RShoulder |    右肩|
-|3	|   3	|   RElbow	   |    右手肘|
-|4	|   4	|   RWrist |   右手腕|
-|5	|   5	|   LShoulder|	左肩|
-|6	|   6	|   LElbow	|   左手肘|
-|7	|   7	|   LWrist	|   左手腕|
-|8	|   8	|   MidHip	|   中臀|
-|9	|   9	|   RHip	|   右臀|
-|10	|   10	|   RKnee	|   右膝盖|
-|11	|   11	|   RAnkle	|   右脚踝|
-|12	|   12	|   LHip	|   左臀|
-|13	|   13	|   LKnee	|   左膝盖|
-|14	|   14	|   LAnkle	|   左脚踝|
-|15	|   15	|   REye	|   右眼|
-|16	|   16	|   LEye	|   左眼|
-|17	|   17	|   REar	|   右耳|
-|18	|   18	|   LEar	|   左耳|
-|19	|   19	|   LBigToe|	左大拇指|
-|20	|   20	|   LSmallToe  |	左小拇指|
-|21	|   21	|   LHeel	|   左脚跟|
-|22	|   22	|   RBigToe    |	右大拇指|
-|23	|   23	|   RSmallToe  |	右小拇指|
-|24	|   24	|   RHeel	|   右脚跟|
+| 序号 | 数据集标注顺序 | 关节名    | 中文名   |
+| ---- | -------------- | --------- | -------- |
+| 0    | 0              | Nose      | 鼻子     |
+| 1    | 1              | Neck      | 脖子     |
+| 2    | 2              | RShoulder | 右肩     |
+| 3    | 3              | RElbow    | 右手肘   |
+| 4    | 4              | RWrist    | 右手腕   |
+| 5    | 5              | LShoulder | 左肩     |
+| 6    | 6              | LElbow    | 左手肘   |
+| 7    | 7              | LWrist    | 左手腕   |
+| 8    | 8              | MidHip    | 中臀     |
+| 9    | 9              | RHip      | 右臀     |
+| 10   | 10             | RKnee     | 右膝盖   |
+| 11   | 11             | RAnkle    | 右脚踝   |
+| 12   | 12             | LHip      | 左臀     |
+| 13   | 13             | LKnee     | 左膝盖   |
+| 14   | 14             | LAnkle    | 左脚踝   |
+| 15   | 15             | REye      | 右眼     |
+| 16   | 16             | LEye      | 左眼     |
+| 17   | 17             | REar      | 右耳     |
+| 18   | 18             | LEar      | 左耳     |
+| 19   | 19             | LBigToe   | 左大拇指 |
+| 20   | 20             | LSmallToe | 左小拇指 |
+| 21   | 21             | LHeel     | 左脚跟   |
+| 22   | 22             | RBigToe   | 右大拇指 |
+| 23   | 23             | RSmallToe | 右小拇指 |
+| 24   | 24             | RHeel     | 右脚跟   |
 
 <br>
 
@@ -254,7 +254,8 @@ ___参考文献___:
 * [VideoPose3D by Facebook][i11]
 * [[目标检测] YOLO][i12]
 * [商汤科技 AR游戏同步角色动作][i16]
-
+* [PanopticStudio 3D PointCloud Dataset][i17]
+* [基于跨视角信息融合的三维人体姿态估计 微软][i18]
 
 
 [i1]: http://densepose.org
@@ -273,3 +274,5 @@ ___参考文献___:
 [i14]: https://www.bilibili.com/video/BV1Jg4y1a7vi/
 [i15]: https://www.bilibili.com/video/BV1SZ4y1j7Vc/
 [i16]: https://www.0-tech.com/archives/48309
+[i17]: http://domedb.perception.cs.cmu.edu/index.html
+[i18]: https://www.msra.cn/zh-cn/news/features/iccv-2019-cross-view-fusion-for-3d-human-pose-estimation
