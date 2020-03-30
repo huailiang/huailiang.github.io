@@ -352,7 +352,7 @@ NVTOOLSEXT_PATH：  C:<span class="se">\P</span>rogram Files<span class="se">\N<
 
 <h3 id="41-函数类型限定符">4.1 函数类型限定符</h3>
 
-<p>函数类型限定符用来标识函数运行在主机还是设备上，函数由主机还是设备调用。</p>
+<p>函数类型限定符用来标识函数运行在主机(CPU)还是设备(GPU)上，函数由主机还是设备调用。</p>
 
 <h5 id="__global__">__global__</h5>
 
@@ -382,6 +382,11 @@ NVTOOLSEXT_PATH：  C:<span class="se">\P</span>rogram Files<span class="se">\N<
   <li>效果等同于函数不加任何限定符</li>
   <li>不能与__global__共同使用， 但可以和__device__联合使用</li>
 </ul>
+
+<div class="highlighter-rouge"><pre class="highlight"><code>__host__ __device__能够用来修饰类的成员函数，__global__不能（类的静态函数也不行）
+__global__只能修饰普通的全局函数。
+</code></pre>
+</div>
 
 <h5 id="__noinline__">__noinline__</h5>
 
