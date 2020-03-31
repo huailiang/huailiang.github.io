@@ -171,7 +171,7 @@ cron，是一个Linux定时执行工具，可以在无需人工干预的情况�
 
 plist文件里具体的key可以参考：
 
-[苹果官方文档：The Mac OS X launchd plist format | launchd plist file format (valid keys) | alvinalexander.com][i10]
+[苹果官方文档：The Mac OS X launchd plist format][i10]
 
 上图使用的定时脚本为test.sh, 在test.sh 里调用打包的job。 需要将test.sh置为可执行文件，可用命令：
 
@@ -186,7 +186,9 @@ shell 调用Jenkins上的job可以使用curl命令：
 CRUMB=$(curl -s 'http://user:token-api@127.0.0.1:8080/crumbIssuer/api/xml?xpath=concat(//crumbRequestField,":",//crumb)')
 
 # post的参数之间记得加转义字符\ 否则只能传一个参数过去 用户名和密码换成自己的
-curl -v -X POST -H ${CRUMB} -H 'Content-Type: application/json' --user user:password http://127.0.0.1:8080/job/buildWithParameters?branch=master\&clean=true\&token=abc123
+curl -v -X POST -H ${CRUMB} -H 'Content-Type: application/json' \
+--user user:password \
+http://127.0.0.1:8080/job/buildWithParameters?branch=master\&clean=true\&token=abc123
 ```
 
 mac 上开启定时任务命令:
