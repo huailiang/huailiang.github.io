@@ -146,7 +146,6 @@ fi
 #!/bin/bash
 
 echo "打包参数 channel is:"${uid}
-
 ```
 
 
@@ -155,6 +154,66 @@ echo "打包参数 channel is:"${uid}
 目前Jenkins上的插件（Plugin）很多, 且质量参差不齐。比如说git、邮件、通知Notificatioin。作者这里认为都没有必要装，很多东西都是几行shell就搞定了，出了问题也好比较排查。
 
 如果你需要每个平台打包相关的脚本，你可以点击[这里][i4]。
+
+
+## 定时触发任务
+
+有时候 我们需要打包机在夜里下班的时候自动打包，第二天上班的时候，能够自动获取出好的版本，或者知悉不能打包出错的原因（通过查看打包日志）
+
+cron，是一个Linux定时执行工具，可以在无需人工干预的情况下运行作业。通过脚本在每天的同一时间运行或者每周一次、每月一次触发任务。 但由于一般我们的打包机器都是部署在MacOS上， 这里我更倾向于使用mac原生的launchctl来实现。
+
+
+首先需要编写plist文件
+
+![](/img/post-publish/plist.jpg)
+
+可以使用plutil -lint来验证plist的格式是否正确（这只是代表plist格式正确，不代表里面的命令是有效的）
+
+plist文件里具体的key可以参考：
+
+[苹果官方文档：The Mac OS X launchd plist format | launchd plist file format (valid keys) | alvinalexander.com][i10]
+
+上图使用的定时脚本为test.sh, 在test.sh 里调用打包的job。 需要将test.sh置为可执行文件，可用命令：
+
+```sh
+chmod a+x test.sh
+```
+
+shell 调用Jenkins上的job可以使用curl命令：
+
+```sh
+# 先拿到crumb user是用户名 token-api可以在jenkins-user面板查看 
+CRUMB=$(curl -s 'http://user:token-api@127.0.0.1:8080/crumbIssuer/api/xml?xpath=concat(//crumbRequestField,":",//crumb)')
+
+# post的参数之间记得加转义字符\ 否则只能传一个参数过去 用户名和密码换成自己的
+curl -v -X POST -H ${CRUMB} -H 'Content-Type: application/json' --user user:password http://127.0.0.1:8080/job/buildWithParameters?branch=master\&clean=true\&token=abc123
+```
+
+mac 上开启定时任务命令:
+
+加载任务
+```sh
+launchctl load ***.plist 
+```
+
+删除任务
+
+```sh
+launchctl unload ***.plist
+```
+
+查看任务列表 
+```
+launchctl list 
+```
+
+查看的时候列表会显示很多， 建议过滤一下：
+
+```sh
+# 任务的名字对应的是plist的Program字段
+launchctl list | grep '任务的部分名字'
+```
+
 
 
 ## Jenkins 分布式部署
@@ -238,9 +297,11 @@ php 调用 shell_exec函数来调用 shell, 在实际部署的时候请记得保
 
 __参考:__
 
-[Jenkins的分布式构建及部署——节点][i5]
-[Jenkins 官方网站][i6]
-[jenkins分布式配置方式][i7]
+* [Jenkins的分布式构建及部署—节点][i5]
+* [Jenkins 官方网站][i6]
+* [jenkins分布式配置方式][i7]
+* [MacOS 定时任务][i8]
+* [Cron Linux定时执行工具][i9]
 
 
 [i1]: http://appleinsider.com/articles/08/10/03/latest_iphone_software_supports_full_screen_web_apps.html
@@ -250,3 +311,6 @@ __参考:__
 [i5]: https://www.linuxidc.com/Linux/2015-05/116903.htm
 [i6]: https://jenkins.io
 [i7]: https://www.cnblogs.com/benben-wu/p/11713295.html
+[i8]: https://my.oschina.net/shede333/blog/470377
+[i9]: https://blog.csdn.net/zhizhengguan/article/details/88552501
+[i10]: https://developer.apple.com/library/mac/documentation/Darwin/Reference/ManPages/man5/launchd.plist.5.html
