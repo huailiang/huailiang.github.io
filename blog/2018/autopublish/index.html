@@ -210,7 +210,6 @@ open .
 <div class="language-sh highlighter-rouge"><pre class="highlight"><code><span class="c">#!/bin/bash</span>
 
 <span class="nb">echo</span> <span class="s2">"打包参数 channel is:"</span><span class="k">${</span><span class="nv">uid</span><span class="k">}</span>
-
 </code></pre>
 </div>
 
@@ -219,6 +218,65 @@ open .
 <p>目前Jenkins上的插件（Plugin）很多, 且质量参差不齐。比如说git、邮件、通知Notificatioin。作者这里认为都没有必要装，很多东西都是几行shell就搞定了，出了问题也好比较排查。</p>
 
 <p>如果你需要每个平台打包相关的脚本，你可以点击<a href="https://github.com/huailiang/batch_build">这里</a>。</p>
+
+<h2 id="定时触发任务">定时触发任务</h2>
+
+<p>有时候 我们需要打包机在夜里下班的时候自动打包，第二天上班的时候，能够自动获取出好的版本，或者知悉不能打包出错的原因（通过查看打包日志）</p>
+
+<p>cron，是一个Linux定时执行工具，可以在无需人工干预的情况下运行作业。通过脚本在每天的同一时间运行或者每周一次、每月一次触发任务。 但由于一般我们的打包机器都是部署在MacOS上， 这里我更倾向于使用mac原生的launchctl来实现。</p>
+
+<p>首先需要编写plist文件</p>
+
+<p><img src="/img/post-publish/plist.jpg" alt="" /></p>
+
+<p>可以使用plutil -lint来验证plist的格式是否正确（这只是代表plist格式正确，不代表里面的命令是有效的）</p>
+
+<p>plist文件里具体的key可以参考：</p>
+
+<p><a href="https://developer.apple.com/library/mac/documentation/Darwin/Reference/ManPages/man5/launchd.plist.5.html">苹果官方文档：The Mac OS X launchd plist format</a></p>
+
+<p>上图使用的定时脚本为test.sh, 在test.sh 里调用打包的job。 需要将test.sh置为可执行文件，可用命令：</p>
+
+<div class="language-sh highlighter-rouge"><pre class="highlight"><code>chmod a+x test.sh
+</code></pre>
+</div>
+
+<p>shell 调用Jenkins上的job可以使用curl命令：</p>
+
+<div class="language-sh highlighter-rouge"><pre class="highlight"><code><span class="c"># 先拿到crumb user是用户名 token-api可以在jenkins-user面板查看 </span>
+<span class="nv">CRUMB</span><span class="o">=</span><span class="k">$(</span>curl -s <span class="s1">'http://user:token-api@127.0.0.1:8080/crumbIssuer/api/xml?xpath=concat(//crumbRequestField,":",//crumb)'</span><span class="k">)</span>
+
+<span class="c"># post的参数之间记得加转义字符\ 否则只能传一个参数过去 用户名和密码换成自己的</span>
+curl -v -X POST -H <span class="k">${</span><span class="nv">CRUMB</span><span class="k">}</span> -H <span class="s1">'Content-Type: application/json'</span> <span class="se">\</span>
+--user user:password <span class="se">\</span>
+http://127.0.0.1:8080/job/buildWithParameters?branch<span class="o">=</span>master<span class="se">\&amp;</span><span class="nv">clean</span><span class="o">=</span><span class="nb">true</span><span class="se">\&amp;</span><span class="nv">token</span><span class="o">=</span>abc123
+</code></pre>
+</div>
+
+<p>mac 上开启定时任务命令:</p>
+
+<p>加载任务</p>
+<div class="language-sh highlighter-rouge"><pre class="highlight"><code>launchctl load <span class="k">***</span>.plist 
+</code></pre>
+</div>
+
+<p>删除任务</p>
+
+<div class="language-sh highlighter-rouge"><pre class="highlight"><code>launchctl unload <span class="k">***</span>.plist
+</code></pre>
+</div>
+
+<p>查看任务列表</p>
+<div class="highlighter-rouge"><pre class="highlight"><code>launchctl list 
+</code></pre>
+</div>
+
+<p>查看的时候列表会显示很多， 建议过滤一下：</p>
+
+<div class="language-sh highlighter-rouge"><pre class="highlight"><code><span class="c"># 任务的名字对应的是plist的Program字段</span>
+launchctl list | grep <span class="s1">'任务的部分名字'</span>
+</code></pre>
+</div>
 
 <h2 id="jenkins-分布式部署">Jenkins 分布式部署</h2>
 
@@ -298,9 +356,13 @@ open .
 
 <p><strong>参考:</strong></p>
 
-<p><a href="https://www.linuxidc.com/Linux/2015-05/116903.htm">Jenkins的分布式构建及部署——节点</a><br />
-<a href="https://jenkins.io">Jenkins 官方网站</a><br />
-<a href="https://www.cnblogs.com/benben-wu/p/11713295.html">jenkins分布式配置方式</a></p>
+<ul>
+  <li><a href="https://www.linuxidc.com/Linux/2015-05/116903.htm">Jenkins的分布式构建及部署—节点</a></li>
+  <li><a href="https://jenkins.io">Jenkins 官方网站</a></li>
+  <li><a href="https://www.cnblogs.com/benben-wu/p/11713295.html">jenkins分布式配置方式</a></li>
+  <li><a href="https://my.oschina.net/shede333/blog/470377">MacOS 定时任务</a></li>
+  <li><a href="https://blog.csdn.net/zhizhengguan/article/details/88552501">Cron Linux定时执行工具</a></li>
+</ul>
 
 
     </div>
