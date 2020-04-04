@@ -15,12 +15,12 @@ tags:
 
 近年来，随着深度学习为代表的AI浪潮的到来，AI这项高大上的技术也逐渐触手可及，有些应用甚至引爆了公众。想象一下，当你跟游戏中的NPC或动画中的虚拟角色交互对话时，NPC开口说话了，而且嘴型随声而动，这个要求一点也不高吧。但殊不知，这个嘴型动画与语音相匹配的事情，其实并不好做，甚至需要美术同学大量的手工K帧。现在，有了深度学习的方案，这都不是事啦！那么这个系统到底是怎么工作的呢？且听我慢慢道来。
 
-<video id="video" controls="" preload="none" poster="/img/post-reinforcement/re6.jpg" width="674" height="379">
+<video id="video" controls="" preload="none" poster="/img/post-vr/mou6.jpg" width="674" height="379">
       <source id="mp4" src="/img/post-vr/mou1.mp4" type="video/mp4">
       <p>Your user agent does not support the HTML5 Video element.</p>
 </video>
 
-<video id="video" controls="" preload="none" poster="/img/post-reinforcement/re6.jpg" width="674" height="379">
+<video id="video" controls="" preload="none" poster="/img/post-vr/mou6.jpg" width="674" height="379">
       <source id="mp4" src="/img/post-vr/obama.mp4" type="video/mp4">
       <p>Your user agent does not support the HTML5 Video element.</p>
 </video>
@@ -55,7 +55,7 @@ __口型特征__
 
 ## 网络架构
 
-该如何搭建网络呢？这里我们参考了Karras等人在SIGGRAPH 2017的论文 [Audio driven Facial Animation by Joint End-to-end Learning of Pose and Emotion][i1] 中的工作，搭建了图 1‑5中所示的网络架构。
+该如何搭建网络呢？这里我们参考了Karras等人在SIGGRAPH 2017的论文 [Audio driven Facial Animation by Joint End-to-end Learning of Pose and Emotion][i1] 中的工作，搭建了下图所示的网络架构。
 
 
 ![](/img/post-vr/mou4.jpg)
@@ -71,8 +71,8 @@ __口型特征__
 
 那我们为什么不直接使用第三方SDK制作口型动画呢？主要原因有两点：
 
-1. 这两种方法均需要字幕文件（Annosoft提供不带字幕的音素标注方法，但效果很差）。
-2. 这两种方法针对不同语种音频的音素标注需要的配置文件不相同，操作比较繁琐。而我们的系统针对中英文音频的音素标注可使用同一套配置，且仅需音频文件就可合成高质量的嘴型动画。
+* 这两种方法均需要字幕文件（Annosoft提供不带字幕的音素标注方法，但效果很差）。
+* 这两种方法针对不同语种音频的音素标注需要的配置文件不相同，操作比较繁琐。而我们的系统针对中英文音频的音素标注可使用同一套配置，且仅需音频文件就可合成高质量的嘴型动画。
 
 
 ## 总结
@@ -81,8 +81,9 @@ __口型特征__
 
 当然，该系统还存在一定的局限性，具体表现为两方面：
 
-1. 该系统没有对人说话时的情绪和说话风格做特殊处理，这导致带情绪和不带情绪说话时合成的口型动画区别不明显，其主要原因是样本数据中带情绪的音频过少，难以提取出情绪特征。
-2.  该系统暂时无法根据音频内容生成相应的表情动画，这主要是由于相比于口型动画，表情动画的制作会简单得多，也就没有成为我们的研究重点。需要说明的是，我们的系统支持二次编辑，允许用户在口型动画的基础上添加表情。
+1、该系统没有对人说话时的情绪和说话风格做特殊处理，这导致带情绪和不带情绪说话时合成的口型动画区别不明显，其主要原因是样本数据中带情绪的音频过少，难以提取出情绪特征。
+   
+2、该系统暂时无法根据音频内容生成相应的表情动画，这主要是由于相比于口型动画，表情动画的制作会简单得多，也就没有成为我们的研究重点。需要说明的是，我们的系统支持二次编辑，允许用户在口型动画的基础上添加表情。
 
 最后，该系统现已集成到Unity插件中，并被用于主机项目中。我们可以提供全套的口型动画生成支持或者根据现有的口型制作流程调整适配我们的口型动画生成系统，感兴趣的同学欢迎联系我们，一起交流，共同进步。
 
