@@ -7,7 +7,7 @@
 
   <title>基于深度学习的口型动画合成系统</title>
   <meta name="description"
-    content="  转发一篇公司内部分享的关于语音嘴型的文字">
+    content="  近年来， 基于语音驱动的人脸动画技术在虚拟主持人、数字娱乐、人机交互以及远程会议等方面有广泛的应用。如何快速、高效的实现语音驱动的唇形自动合成，以及优化语音与唇形面部表情之间的同步是此项技术的关键。表情动画作为语音驱动人脸动画的一部分，在增加人脸动画逼真性方面起着重要的作用，但已有的工作没 有定量分析人脸表情...">
 
   <link rel="shortcut icon" href="/img/favicon.ico">
   <link rel="stylesheet" href="/css/main.css">
@@ -74,22 +74,16 @@ MathJax.Hub.Config({
 
     <div class="post-content">
       <blockquote>
-  <p>转发一篇公司内部分享的关于语音嘴型的文字</p>
+  <p>近年来， 基于语音驱动的人脸动画技术在虚拟主持人、数字娱乐、人机交互以及远程会议等方面有广泛的应用。如何快速、高效的实现语音驱动的唇形自动合成，以及优化语音与唇形面部表情之间的同步是此项技术的关键。表情动画作为语音驱动人脸动画的一部分，在增加人脸动画逼真性方面起着重要的作用，但已有的工作没 有定量分析人脸表情动 画与语音之间的关系.</p>
 </blockquote>
 
-<h2 id="前言">前言</h2>
+<p>目前音视频模型主要集中在矢量量化的方法 (VQ)、神经网络(Neural Network，NN)、高斯混合模型 (Gaussian Mixture Mode1．GMM)、隐马尔可夫模型现代计算机2015．05中 (Hidden Markov ModeL HMM)和动态贝叶斯模型(Dv．namic Bayesian Network，DBN)的探索 ，而人脸模型主要集中在基于图像的模型、基于2D模型和基于3D模型的探索。</p>
 
-<p>近年来，随着深度学习为代表的AI浪潮的到来，AI这项高大上的技术也逐渐触手可及，有些应用甚至引爆了公众。想象一下，当你跟游戏中的NPC或动画中的虚拟角色交互对话时，NPC开口说话了，而且嘴型随声而动，这个要求一点也不高吧。但殊不知，这个嘴型动画与语音相匹配的事情，其实并不好做，甚至需要美术同学大量的手工K帧。现在，有了深度学习的方案，这都不是事啦！那么这个系统到底是怎么工作的呢？且听我慢慢道来。</p>
-
-<video id="video" controls="" preload="none" poster="/img/post-vr/mou6.jpg" width="674" height="379">
-      <source id="mp4" src="/img/post-vr/mou1.mp4" type="video/mp4" />
-      <p>Your user agent does not support the HTML5 Video element.</p>
-</video>
-
-<video id="video" controls="" preload="none" poster="/img/post-vr/mou6.jpg" width="674" height="379">
-      <source id="mp4" src="/img/post-vr/obama.mp4" type="video/mp4" />
-      <p>Your user agent does not support the HTML5 Video element.</p>
-</video>
+<div style="width: 100%;height: 400px;">
+    <iframe src="//player.youku.com/embed/XNzA2NDM1MTg4==?client_id=d0b1b77a17cded3b" width="100%" height="100%" frameborder="0" allowfullscreen="true"></iframe>
+</div>
+<p><em>AutoLip-Sync可以根据音频的来自动做嘴唇动画</em><br />
+<br /></p>
 
 <h2 id="原理">原理</h2>
 
@@ -120,7 +114,7 @@ MathJax.Hub.Config({
 
 <h2 id="网络架构">网络架构</h2>
 
-<p>该如何搭建网络呢？这里我们参考了Karras等人在SIGGRAPH 2017的论文 <a href="https://research.nvidia.com/publication/2017-07_Audio-Driven-Facial-Animation">Audio driven Facial Animation by Joint End-to-end Learning of Pose and Emotion</a> 中的工作，搭建了图 1‑5中所示的网络架构。</p>
+<p>该如何搭建网络呢？这里我们参考了Karras等人在SIGGRAPH 2017的论文 <a href="https://research.nvidia.com/publication/2017-07_Audio-Driven-Facial-Animation">Audio driven Facial Animation by Joint End-to-end Learning of Pose and Emotion</a> 中的工作，搭建了下图所示的网络架构。</p>
 
 <p><img src="/img/post-vr/mou4.jpg" alt="" /></p>
 
@@ -130,14 +124,31 @@ MathJax.Hub.Config({
 
 <h2 id="数据集">数据集</h2>
 
-<p>实验中，我们采用了LibriSpeech和AISHELL两个大型语料数据集，其中英文音频要多于中文音频，这也使得系统对于英文的口型合成的效果要略好于中文。两个数据集上，音频特征的提取是通过我们编写的代码得到的，而口型特征的提取则分为两个部分：针对英文音频，40个音素权重是利用第三方SDK Annosoft生成的。针对中文音频，这40个音素权重是本组基于Annosoft进行改进优化之后重新生成的。</p>
+<p>实验中，我们采用了LibriSpeech和AISHELL两个大型语料数据集，其中英文音频要多于中文音频，这也使得系统对于英文的口型合成的效果要略好于中文。两个数据集上，音频特征的提取是通过我们编写的代码得到的，而口型特征的提取则分为两个部分：针对英文音频，40个音素权重是利用第三方SDK <a href="http://www.annosoft.com/index">Annosoft</a>生成的。针对中文音频，这40个音素权重是本组基于Annosoft进行改进优化之后重新生成的。</p>
 
 <p>那我们为什么不直接使用第三方SDK制作口型动画呢？主要原因有两点：</p>
 
 <ul>
-  <li>这两种方法均需要字幕文件（Annosoft提供不带字幕的音素标注方法，但效果很差）。</li>
+  <li>这两种方法均需要字幕文件（<a href="http://www.annosoft.com/index">Annosoft</a>提供不带字幕的音素标注方法，但效果很差）。</li>
   <li>这两种方法针对不同语种音频的音素标注需要的配置文件不相同，操作比较繁琐。而我们的系统针对中英文音频的音素标注可使用同一套配置，且仅需音频文件就可合成高质量的嘴型动画。</li>
 </ul>
+
+<iframe src="//player.bilibili.com/player.html?aid=59708647&amp;bvid=BV1st41137L5&amp;cid=104010639&amp;page=1" scrolling="no" border="0" frameborder="no" framespacing="0" allowfullscreen="true" style="width: 100%;height: 400px;"> </iframe>
+<p><em>Lipsync官方自动口型插件</em></p>
+
+<h2 id="效果">效果</h2>
+
+<p>在引擎中显示的效果如下:</p>
+
+<video id="video" controls="" preload="none" poster="/img/post-vr/mou6.jpg" width="674" height="379">
+      <source id="mp4" src="/img/post-vr/mou1.mp4" type="video/mp4" />
+      <p>Your user agent does not support the HTML5 Video element.</p>
+</video>
+
+<video id="video" controls="" preload="none" poster="/img/post-vr/mou6.jpg" width="674" height="379">
+      <source id="mp4" src="/img/post-vr/obama.mp4" type="video/mp4" />
+      <p>Your user agent does not support the HTML5 Video element.</p>
+</video>
 
 <h2 id="总结">总结</h2>
 
@@ -150,6 +161,19 @@ MathJax.Hub.Config({
 <p>2、该系统暂时无法根据音频内容生成相应的表情动画，这主要是由于相比于口型动画，表情动画的制作会简单得多，也就没有成为我们的研究重点。需要说明的是，我们的系统支持二次编辑，允许用户在口型动画的基础上添加表情。</p>
 
 <p>最后，该系统现已集成到Unity插件中，并被用于主机项目中。我们可以提供全套的口型动画生成支持或者根据现有的口型制作流程调整适配我们的口型动画生成系统，感兴趣的同学欢迎联系我们，一起交流，共同进步。</p>
+
+<p><strong><em>参考文献</em></strong>:</p>
+<ul>
+  <li><a href="https://research.nvidia.com/publication/2017-07_Audio-Driven-Facial-Animation">Audio-Driven-Facial-Animation</a></li>
+  <li><a href="https://www.sohu.com/a/197252744_468636">跟脸有关的最新玩法是你说什么，表情包就演什么</a></li>
+  <li><a href="http://qikan.cqvip.com/Qikan/Article/ReadIndex?id=30550592&amp;info=knwEXTMddsIiB765E2wuYmD7qxIdF8aBt+lkrOidNQ8=">一种基于共振峰分析的语音驱动人脸动画方法</a></li>
+  <li><a href="https://www.doc88.com/p-5520157935.html">基于机器学习的语音驱动人脸动画方法</a></li>
+  <li><a href="http://qikan.cqvip.com/Qikan/Article/ReadIndex?id=37684952&amp;info=4ts9VpOmD2kiSp7n5pJMv4Zd9Fqnm/QTG+NT+2rs9eo=">人脸表情动画与语音的典型相关性分析</a></li>
+  <li><a href="https://www.doc88.com/p-7582360137704.html">基于汉语驱动人脸语音动画的研究</a></li>
+  <li><a href="https://www.doc88.com/p-7088944526128.html">基于参数控制的语音驱动唇形同步人脸动画</a></li>
+  <li><a href="http://www.gfxcamp.com/auto-lip-sync-107">AE嘴唇自动口型动画</a></li>
+  <li><a href="http://www.annosoft.com/lipsync-sdks">lipsync-sdks annosoft</a></li>
+</ul>
 
 
     </div>
