@@ -447,4 +447,5 @@ librosa.feature.mfcc(y=None,
 
 [i1]: https://en.wikipedia.org/wiki/Dynamic_range_compression
 [i2]: https://www.cnblogs.com/LXP-Never/p/11561355.html#频谱图
-[i3]: http:// blog.csdn.net/zzc15806/article/details/79246716
+[i3]: http://blog.csdn.net/zzc15806/article/details/79246716
+

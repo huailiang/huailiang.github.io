@@ -112,7 +112,7 @@ ___参考文献___:
 
 [i1]: https://research.nvidia.com/publication/2017-07_Audio-Driven-Facial-Animation
 [i2]: https://www.sohu.com/a/197252744_468636
-[i3]: http://qikan.cqvip.com/Qikan/Article/ReadIndex?id=30550592&info=knwEXTMddsIiB765E2wuYmD7qxIdF8aBt+lkrOidNQ8=
+[i3]: http://qikan.cqvip.com/Qikan/Article/ReadIndex?id=30550592&info=knwEXTMddsIiB765E2wuYjDNw3Jym47qQiJwBqauXPY=
 [i4]: https://www.doc88.com/p-5520157935.html
 [i5]: http://qikan.cqvip.com/Qikan/Article/ReadIndex?id=37684952&info=4ts9VpOmD2kiSp7n5pJMv4Zd9Fqnm/QTG+NT+2rs9eo=
 [i6]: https://www.doc88.com/p-7582360137704.html
