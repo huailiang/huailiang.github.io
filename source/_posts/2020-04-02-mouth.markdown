@@ -1,6 +1,6 @@
 ---
 layout:     post
-title:      "基于深度学习的口型动画合成系统"
+title:      "游戏中口型动画合成系统"
 date:       2020-04-02 02:00:00
 author:     "huailiang"
 tags:
@@ -16,7 +16,7 @@ tags:
 <div style="width: 100%;height: 400px;">
     <iframe src="//player.youku.com/embed/XNzA2NDM1MTg4==?client_id=d0b1b77a17cded3b" width="100%" height="100%" frameborder="0" allowfullscreen="true"></iframe>
 </div> 
-*AutoLip-Sync可以根据音频的来自动做嘴唇动画*
+*来自Annosoft公司的AutoLip-Sync语音-嘴唇动画*
 <br>
 
 
@@ -147,6 +147,8 @@ public static void FindLocalLargestPeaks(float[] data, float[] peakValue, int[] 
 一般改变口型都是通过BlendShape， 也可以改变骨骼，或者通过Live2D。通过每帧控制参数来调节口型。例如BlendShape, 五个口型对应到日语的五个元音。在Update里分析每一帧的声谱，通过共振峰提取得到相应的元音， 然后插值表现相应的口型。通过[github][i11]下载工程，本地运行同样的效果。
 
 ![](/img/post-vr/mou1.jpg)
+
+<br><br>
 
 
 ## 神经网络提取音素
