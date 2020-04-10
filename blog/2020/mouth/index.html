@@ -85,14 +85,138 @@ MathJax.Hub.Config({
 <p><em>AutoLip-Sync可以根据音频的来自动做嘴唇动画</em><br />
 <br /></p>
 
-<h2 id="原理">原理</h2>
-
-<p>我们的想法很直接，就是基于音频生成口型动画，或者说，输入是一段音频，经过我们的系统，输出为相应的口型动画。而如果先忽略音频和动画的时序，问题就变成了将音频关键帧经过一个深度神经网络，得到一个口型关键帧。那么就存在两个问题：</p>
+<p>今天主要介绍的是两种语音口型动画的实现， 两种都是先从音频文件(.wav .mp3)提取出音素（主要是元音), 然后再根据不同的音素去制作不同的口型，最后不同口型之间差值得到连续的动作。</p>
 
 <ul>
-  <li>1、如何表示音频关键帧和口型关键帧？</li>
-  <li>2、网络如何设计？</li>
+  <li>基于共振峰提取元音</li>
+  <li>基于神经网络提取音素</li>
 </ul>
+
+<h2 id="基于共振峰提取元音">基于共振峰提取元音</h2>
+
+<p>这里先简单介绍一下人类发声的原理。</p>
+
+<p>人在发声时，肺部收缩送出一股直流空气，经器官流至喉头声门处（即声带），使声带产生振动，并且具有一定的振动周期，从而带动原先的空气发生振动，这可以称为气流的激励过程。之后，空气经过声带以上的主声道部分（包括咽喉、口腔）以及鼻道（包括小舌、鼻腔），不同的发音会使声道的肌肉处在不同的部位，这形成了各种语音的不同音色，这可以称为气流在声道的冲激响应过程。</p>
+
+<p>对于语音识别来说，重要的部分是第二个过程，因为口型就是声道形状的一部分。而这一冲激响应过程，在频谱上的表现为若干个凸起的包络峰。这些包络峰出现的频率，就被称为共振峰频率，简称为共振峰。</p>
+
+<h3 id="1-从音频文件获取语音数据">1. 从音频文件获取语音数据</h3>
+
+<p>从AudioSource处获取是实时匹配时采用的方法。AudioSource本身提供了一个GetOutputData函数，可以获取当前正在播放的语音数据段。 从AudioClip处获取是烘焙是采用的方法。AudioClip本身其实是对语音文件的一个封装，可以使用GetData函数直接获得语音数据。 这过程中也包含了分帧与窗口化的步骤。</p>
+
+<h3 id="2-剔除无声帧">2. 剔除无声帧</h3>
+
+<p>从信号处理的角度上说，这一步是一种时域分析方法。对数据帧中的所有值进行求和，如果结果大于用户预设的一个阈值（也就是AmplitudeThreshold），那么就认为这一帧是没有声音的，不对它进行后续处理。这可以节省不必要的分析过程。如果适当调高阈值，一定程度上可以降噪。</p>
+
+<h3 id="3-获取语音数据的频域信息">3. 获取语音数据的频域信息</h3>
+
+<p>你在使用一些音乐播放器时，有时候会看到一根根跳动的长条，这就是“频谱”的一种表现方式，频域信息指的就是频谱。这对于语音识别来说是非常重要的信息。 在Unity提供的API AudioSource的GetSpecturmData可以高效地获取当前播放的语音数据频谱。 如果你的项目使用了fmod的开发环境，可以使用如下获取声谱信息：</p>
+<div class="language-cs highlighter-rouge"><pre class="highlight"><code><span class="k">public</span> <span class="n">StudioEventEmitter</span> <span class="n">emiter</span><span class="p">;</span>
+<span class="n">FMOD</span><span class="p">.</span><span class="n">DSP</span> <span class="n">m_FFTDsp</span><span class="p">;</span>
+<span class="n">FMOD</span><span class="p">.</span><span class="n">ChannelGroup</span> <span class="n">master</span><span class="p">;</span>
+<span class="n">FMOD</span><span class="p">.</span><span class="n">DSP</span> <span class="n">mixerHead</span><span class="p">;</span>
+
+<span class="k">void</span> <span class="nf">Start</span><span class="p">()</span> <span class="p">{</span>
+    <span class="n">emiter</span><span class="p">.</span><span class="nf">Play</span><span class="p">();</span>
+    <span class="nf">InitDsp</span><span class="p">();</span>
+<span class="p">}</span>
+
+<span class="k">void</span> <span class="nf">InitDsp</span><span class="p">()</span> <span class="p">{</span>
+    <span class="c1">// 初始化均衡器 DSP
+</span>    <span class="n">RuntimeManager</span><span class="p">.</span><span class="n">CoreSystem</span><span class="p">.</span><span class="nf">createDSPByType</span><span class="p">(</span><span class="n">FMOD</span><span class="p">.</span><span class="n">DSP_TYPE</span><span class="p">.</span><span class="n">FFT</span><span class="p">,</span> <span class="k">out</span> <span class="n">m_FFTDsp</span><span class="p">);</span>
+    <span class="n">m_FFTDsp</span><span class="p">.</span><span class="nf">setParameterInt</span><span class="p">((</span><span class="kt">int</span><span class="p">)</span><span class="n">FMOD</span><span class="p">.</span><span class="n">DSP_FFT</span><span class="p">.</span><span class="n">WINDOWTYPE</span><span class="p">,</span> <span class="p">(</span><span class="kt">int</span><span class="p">)</span><span class="n">FMOD</span><span class="p">.</span><span class="n">DSP_FFT_WINDOW</span><span class="p">.</span><span class="n">HANNING</span><span class="p">);</span>
+    <span class="n">m_FFTDsp</span><span class="p">.</span><span class="nf">setParameterInt</span><span class="p">((</span><span class="kt">int</span><span class="p">)</span><span class="n">FMOD</span><span class="p">.</span><span class="n">DSP_FFT</span><span class="p">.</span><span class="n">WINDOWSIZE</span><span class="p">,</span> <span class="n">windowSize</span><span class="p">);</span>
+    <span class="n">RuntimeManager</span><span class="p">.</span><span class="n">CoreSystem</span><span class="p">.</span><span class="nf">getMasterChannelGroup</span><span class="p">(</span><span class="k">out</span> <span class="n">master</span><span class="p">);</span>
+    <span class="kt">var</span> <span class="n">m_Result</span> <span class="p">=</span> <span class="n">master</span><span class="p">.</span><span class="nf">addDSP</span><span class="p">(</span><span class="n">FMOD</span><span class="p">.</span><span class="n">CHANNELCONTROL_DSP_INDEX</span><span class="p">.</span><span class="n">HEAD</span><span class="p">,</span> <span class="n">m_FFTDsp</span><span class="p">);</span>
+    <span class="n">m_Result</span> <span class="p">=</span> <span class="n">master</span><span class="p">.</span><span class="nf">getDSP</span><span class="p">(</span><span class="m">0</span><span class="p">,</span> <span class="k">out</span> <span class="n">mixerHead</span><span class="p">);</span>
+    <span class="n">mixerHead</span><span class="p">.</span><span class="nf">setMeteringEnabled</span><span class="p">(</span><span class="k">true</span><span class="p">,</span> <span class="k">true</span><span class="p">);</span>
+<span class="p">}</span>
+
+<span class="k">void</span> <span class="nf">Update</span><span class="p">()</span> <span class="p">{</span>
+    <span class="kt">string</span> <span class="n">result</span> <span class="p">=</span> <span class="k">null</span><span class="p">;</span>
+    <span class="n">IntPtr</span> <span class="n">unmanagedData</span><span class="p">;</span>
+    <span class="kt">uint</span> <span class="n">length</span><span class="p">;</span>
+    <span class="n">m_FFTDsp</span><span class="p">.</span><span class="nf">getParameterData</span><span class="p">((</span><span class="kt">int</span><span class="p">)</span><span class="n">FMOD</span><span class="p">.</span><span class="n">DSP_FFT</span><span class="p">.</span><span class="n">SPECTRUMDATA</span><span class="p">,</span> <span class="k">out</span> <span class="n">unmanagedData</span><span class="p">,</span> <span class="k">out</span> <span class="n">length</span><span class="p">);</span>
+    <span class="n">FMOD</span><span class="p">.</span><span class="n">DSP_PARAMETER_FFT</span> <span class="n">fftData</span> <span class="p">=</span> <span class="p">(</span><span class="n">FMOD</span><span class="p">.</span><span class="n">DSP_PARAMETER_FFT</span><span class="p">)</span><span class="n">Marshal</span><span class="p">.</span><span class="nf">PtrToStructure</span><span class="p">(</span><span class="n">unmanagedData</span><span class="p">,</span> <span class="k">typeof</span><span class="p">(</span><span class="n">FMOD</span><span class="p">.</span><span class="n">DSP_PARAMETER_FFT</span><span class="p">));</span>
+    <span class="k">if</span> <span class="p">(</span><span class="n">fftData</span><span class="p">.</span><span class="n">spectrum</span> <span class="p">!=</span> <span class="k">null</span> <span class="p">&amp;&amp;</span> <span class="n">fftData</span><span class="p">.</span><span class="n">spectrum</span><span class="p">.</span><span class="n">Length</span> <span class="p">&gt;</span> <span class="m">0</span><span class="p">)</span>
+    <span class="p">{</span>
+        <span class="n">playingAudioSpectrum</span> <span class="p">=</span> <span class="n">fftData</span><span class="p">.</span><span class="n">spectrum</span><span class="p">[</span><span class="m">0</span><span class="p">];</span> <span class="c1">//声谱信息，针对立体音 只获取0声道频谱
+</span>    <span class="p">}</span>
+<span class="p">}</span>
+</code></pre>
+</div>
+
+<p>对于离线处理的音频可以借助了一个数学工具——离散余弦变换（DCT），它可以用来获取一个时域信息段的频域信息。它与另一个著名的数学工具——傅里叶变换是等价的，所不同的是余弦变换只获取频率信息，而舍弃了相位信息。实际上这就够了，我们并不需要相位信息。</p>
+
+<div class="language-cs highlighter-rouge"><pre class="highlight"><code><span class="k">public</span> <span class="k">static</span> <span class="kt">float</span><span class="p">[]</span> <span class="nf">DiscreteCosineTransform</span><span class="p">(</span><span class="kt">float</span><span class="p">[]</span> <span class="n">data</span><span class="p">)</span>
+<span class="p">{</span>
+    <span class="kt">float</span><span class="p">[]</span> <span class="n">result</span> <span class="p">=</span> <span class="k">new</span> <span class="kt">float</span><span class="p">[</span><span class="n">data</span><span class="p">.</span><span class="n">Length</span><span class="p">];</span>
+    <span class="kt">float</span> <span class="n">sumCos</span><span class="p">;</span>
+    <span class="k">for</span> <span class="p">(</span><span class="kt">int</span> <span class="n">m</span> <span class="p">=</span> <span class="m">0</span><span class="p">;</span> <span class="n">m</span> <span class="p">&lt;</span> <span class="n">data</span><span class="p">.</span><span class="n">Length</span><span class="p">;</span> <span class="p">++</span><span class="n">m</span><span class="p">)</span>
+    <span class="p">{</span>
+        <span class="n">sumCos</span> <span class="p">=</span> <span class="m">0.0f</span><span class="p">;</span>
+        <span class="k">for</span> <span class="p">(</span><span class="kt">int</span> <span class="n">k</span> <span class="p">=</span> <span class="m">0</span><span class="p">;</span> <span class="n">k</span> <span class="p">&lt;</span> <span class="n">data</span><span class="p">.</span><span class="n">Length</span><span class="p">;</span> <span class="p">++</span><span class="n">k</span><span class="p">)</span>
+        <span class="p">{</span>
+            <span class="n">sumCos</span> <span class="p">+=</span> <span class="n">data</span><span class="p">[</span><span class="n">k</span><span class="p">]</span> <span class="p">*</span> <span class="n">Mathf</span><span class="p">.</span><span class="nf">Cos</span><span class="p">((</span><span class="n">Mathf</span><span class="p">.</span><span class="n">PI</span> <span class="p">/</span> <span class="n">data</span><span class="p">.</span><span class="n">Length</span><span class="p">)</span> <span class="p">*</span> <span class="n">m</span> <span class="p">*</span> <span class="p">(</span><span class="n">k</span> <span class="p">+</span> <span class="m">0.5f</span><span class="p">));</span>
+        <span class="p">}</span>
+        <span class="n">result</span><span class="p">[</span><span class="n">m</span><span class="p">]</span> <span class="p">=</span> <span class="p">(</span><span class="n">sumCos</span> <span class="p">&gt;</span> <span class="m">0</span><span class="p">)</span> <span class="p">?</span> <span class="n">sumCos</span> <span class="p">:</span> <span class="p">-</span><span class="n">sumCos</span><span class="p">;</span>
+    <span class="p">}</span>
+    <span class="k">return</span> <span class="n">result</span><span class="p">;</span>
+<span class="p">}</span>
+</code></pre>
+</div>
+
+<h3 id="4-提取共振峰">4. 提取共振峰</h3>
+
+<p>一般来说，通过求得一段语音数据的第一、第二共振峰，就可以非常精确地得知这段语音的“元音”是什么。只求第一共振峰，也可以知道大致结果。提取共振峰的方法是，在前一步骤中获取的频谱上求出局部最大值的最大值.</p>
+
+<div class="language-cs highlighter-rouge"><pre class="highlight"><code><span class="k">public</span> <span class="k">static</span> <span class="k">void</span> <span class="nf">FindLocalLargestPeaks</span><span class="p">(</span><span class="kt">float</span><span class="p">[]</span> <span class="n">data</span><span class="p">,</span> <span class="kt">float</span><span class="p">[]</span> <span class="n">peakValue</span><span class="p">,</span> <span class="kt">int</span><span class="p">[]</span> <span class="n">peakPosition</span><span class="p">)</span>
+<span class="p">{</span>
+    <span class="kt">int</span> <span class="n">peakNum</span> <span class="p">=</span> <span class="m">0</span><span class="p">;</span>
+    <span class="kt">float</span> <span class="n">lastPeak</span> <span class="p">=</span> <span class="m">0.0f</span><span class="p">;</span>
+    <span class="kt">int</span> <span class="n">lastPeakPosition</span> <span class="p">=</span> <span class="m">0</span><span class="p">;</span>
+    <span class="kt">bool</span> <span class="n">isIncreasing</span> <span class="p">=</span> <span class="k">false</span><span class="p">;</span>
+    <span class="kt">bool</span> <span class="n">isPeakIncreasing</span> <span class="p">=</span> <span class="k">false</span><span class="p">;</span>
+
+    <span class="k">for</span> <span class="p">(</span><span class="kt">int</span> <span class="n">i</span> <span class="p">=</span> <span class="m">0</span><span class="p">;</span> <span class="n">i</span> <span class="p">&lt;</span> <span class="n">data</span><span class="p">.</span><span class="n">Length</span> <span class="p">-</span> <span class="m">1</span><span class="p">;</span> <span class="p">++</span><span class="n">i</span><span class="p">)</span> <span class="p">{</span>
+        <span class="k">if</span> <span class="p">(</span><span class="n">data</span><span class="p">[</span><span class="n">i</span><span class="p">]</span> <span class="p">&lt;</span> <span class="n">data</span><span class="p">[</span><span class="n">i</span> <span class="p">+</span> <span class="m">1</span><span class="p">])</span> <span class="p">{</span>
+            <span class="n">isIncreasing</span> <span class="p">=</span> <span class="k">true</span><span class="p">;</span>
+        <span class="p">}</span>
+        <span class="k">else</span> <span class="p">{</span>
+            <span class="k">if</span> <span class="p">(</span><span class="n">isIncreasing</span><span class="p">)</span> <span class="p">{</span>
+                <span class="k">if</span> <span class="p">(</span><span class="n">lastPeak</span> <span class="p">&lt;</span> <span class="n">data</span><span class="p">[</span><span class="n">i</span><span class="p">])</span>  <span class="c1">// Peak found.
+</span>                <span class="p">{</span>
+                    <span class="n">isPeakIncreasing</span> <span class="p">=</span> <span class="k">true</span><span class="p">;</span>
+                <span class="p">}</span> <span class="k">else</span> <span class="p">{</span>
+                    <span class="k">if</span> <span class="p">(</span><span class="n">isPeakIncreasing</span><span class="p">)</span> <span class="p">{</span>
+                        <span class="n">peakValue</span><span class="p">[</span><span class="n">peakNum</span><span class="p">]</span> <span class="p">=</span> <span class="n">lastPeak</span><span class="p">;</span> <span class="c1">// Local largest peak found. 
+</span>                        <span class="n">peakPosition</span><span class="p">[</span><span class="n">peakNum</span><span class="p">]</span> <span class="p">=</span> <span class="n">lastPeakPosition</span><span class="p">;</span>
+                        <span class="p">++</span><span class="n">peakNum</span><span class="p">;</span>
+                    <span class="p">}</span>
+                    <span class="n">isPeakIncreasing</span> <span class="p">=</span> <span class="k">false</span><span class="p">;</span>
+                <span class="p">}</span>
+                <span class="n">lastPeak</span> <span class="p">=</span> <span class="n">data</span><span class="p">[</span><span class="n">i</span><span class="p">];</span>
+                <span class="n">lastPeakPosition</span> <span class="p">=</span> <span class="n">i</span><span class="p">;</span>
+            <span class="p">}</span>
+            <span class="n">isIncreasing</span> <span class="p">=</span> <span class="k">false</span><span class="p">;</span>
+        <span class="p">}</span>
+        <span class="k">if</span> <span class="p">(</span><span class="n">peakNum</span> <span class="p">&gt;=</span> <span class="n">peakValue</span><span class="p">.</span><span class="n">Length</span><span class="p">)</span> <span class="k">break</span><span class="p">;</span>
+    <span class="p">}</span>
+<span class="p">}</span>
+</code></pre>
+</div>
+
+<p>提取语音共振峰的方法比较多，除了使用最大值法，常用的方法还有倒谱法、LPC（线性预测编码）谱估计法、LPC倒谱法等。</p>
+
+<h3 id="5-制作元音口型">5. 制作元音口型</h3>
+
+<p>一般改变口型都是通过BlendShape， 也可以改变骨骼，或者通过Live2D。通过每帧控制参数来调节口型。例如BlendShape, 五个口型对应到日语的五个元音。在Update里分析每一帧的声谱，通过共振峰提取得到相应的元音， 然后插值表现相应的口型。通过<a href="https://github.com/huailiang/LipSync">github</a>下载工程，本地运行同样的效果。</p>
+
+<p><img src="/img/post-vr/mou1.jpg" alt="" /></p>
+
+<h2 id="神经网络提取音素">神经网络提取音素</h2>
+
+<p>我们的想法很直接，就是基于音频生成口型动画，或者说，输入是一段音频，经过我们的系统，输出为相应的口型动画。而如果先忽略音频和动画的时序，问题就变成了将音频关键帧经过一个深度神经网络，得到一个口型关键帧。</p>
 
 <h3 id="特征表示">特征表示</h3>
 
@@ -112,7 +236,7 @@ MathJax.Hub.Config({
 
 <p><img src="/img/post-vr/mou3.jpg" alt="" /></p>
 
-<h2 id="网络架构">网络架构</h2>
+<h3 id="网络架构">网络架构</h3>
 
 <p>该如何搭建网络呢？这里我们参考了Karras等人在SIGGRAPH 2017的论文 <a href="https://research.nvidia.com/publication/2017-07_Audio-Driven-Facial-Animation">Audio driven Facial Animation by Joint End-to-end Learning of Pose and Emotion</a> 中的工作，搭建了下图所示的网络架构。</p>
 
@@ -122,7 +246,7 @@ MathJax.Hub.Config({
 
 <p><img src="/img/post-vr/mou5.jpg" alt="" /></p>
 
-<h2 id="数据集">数据集</h2>
+<h3 id="数据集">数据集</h3>
 
 <p>实验中，我们采用了LibriSpeech和AISHELL两个大型语料数据集，其中英文音频要多于中文音频，这也使得系统对于英文的口型合成的效果要略好于中文。两个数据集上，音频特征的提取是通过我们编写的代码得到的，而口型特征的提取则分为两个部分：针对英文音频，40个音素权重是利用第三方SDK <a href="http://www.annosoft.com/index">Annosoft</a>生成的。针对中文音频，这40个音素权重是本组基于Annosoft进行改进优化之后重新生成的。</p>
 
@@ -136,17 +260,12 @@ MathJax.Hub.Config({
 <iframe src="//player.bilibili.com/player.html?aid=59708647&amp;bvid=BV1st41137L5&amp;cid=104010639&amp;page=1" scrolling="no" border="0" frameborder="no" framespacing="0" allowfullscreen="true" style="width: 100%;height: 400px;"> </iframe>
 <p><em>Lipsync官方自动口型插件</em></p>
 
-<h2 id="效果">效果</h2>
+<h3 id="效果">效果</h3>
 
 <p>在引擎中显示的效果如下:</p>
 
 <video id="video" controls="" preload="none" poster="/img/post-vr/mou6.jpg" width="674" height="379">
       <source id="mp4" src="/img/post-vr/mou1.mp4" type="video/mp4" />
-      <p>Your user agent does not support the HTML5 Video element.</p>
-</video>
-
-<video id="video" controls="" preload="none" poster="/img/post-vr/mou6.jpg" width="674" height="379">
-      <source id="mp4" src="/img/post-vr/obama.mp4" type="video/mp4" />
       <p>Your user agent does not support the HTML5 Video element.</p>
 </video>
 
@@ -166,7 +285,7 @@ MathJax.Hub.Config({
 <ul>
   <li><a href="https://research.nvidia.com/publication/2017-07_Audio-Driven-Facial-Animation">Audio-Driven-Facial-Animation</a></li>
   <li><a href="https://www.sohu.com/a/197252744_468636">跟脸有关的最新玩法是你说什么，表情包就演什么</a></li>
-  <li><a href="http://qikan.cqvip.com/Qikan/Article/ReadIndex?id=30550592&amp;info=knwEXTMddsIiB765E2wuYmD7qxIdF8aBt+lkrOidNQ8=">一种基于共振峰分析的语音驱动人脸动画方法</a></li>
+  <li><a href="http://qikan.cqvip.com/Qikan/Article/ReadIndex?id=30550592&amp;info=knwEXTMddsIiB765E2wuYjDNw3Jym47qQiJwBqauXPY=">一种基于共振峰分析的语音驱动人脸动画方法</a></li>
   <li><a href="https://www.doc88.com/p-5520157935.html">基于机器学习的语音驱动人脸动画方法</a></li>
   <li><a href="http://qikan.cqvip.com/Qikan/Article/ReadIndex?id=37684952&amp;info=4ts9VpOmD2kiSp7n5pJMv4Zd9Fqnm/QTG+NT+2rs9eo=">人脸表情动画与语音的典型相关性分析</a></li>
   <li><a href="https://www.doc88.com/p-7582360137704.html">基于汉语驱动人脸语音动画的研究</a></li>
