@@ -20,12 +20,138 @@ tags:
 <br>
 
 
-## 原理
+今天主要介绍的是两种语音口型动画的实现， 两种都是先从音频文件(.wav .mp3)提取出音素（主要是元音), 然后再根据不同的音素去制作不同的口型，最后不同口型之间差值得到连续的动作。
 
-我们的想法很直接，就是基于音频生成口型动画，或者说，输入是一段音频，经过我们的系统，输出为相应的口型动画。而如果先忽略音频和动画的时序，问题就变成了将音频关键帧经过一个深度神经网络，得到一个口型关键帧。那么就存在两个问题：
+* 基于共振峰提取元音
+* 基于神经网络提取音素
 
-* 1、如何表示音频关键帧和口型关键帧？
-* 2、网络如何设计？
+## 基于共振峰提取元音
+
+这里先简单介绍一下人类发声的原理。
+
+人在发声时，肺部收缩送出一股直流空气，经器官流至喉头声门处（即声带），使声带产生振动，并且具有一定的振动周期，从而带动原先的空气发生振动，这可以称为气流的激励过程。之后，空气经过声带以上的主声道部分（包括咽喉、口腔）以及鼻道（包括小舌、鼻腔），不同的发音会使声道的肌肉处在不同的部位，这形成了各种语音的不同音色，这可以称为气流在声道的冲激响应过程。
+
+对于语音识别来说，重要的部分是第二个过程，因为口型就是声道形状的一部分。而这一冲激响应过程，在频谱上的表现为若干个凸起的包络峰。这些包络峰出现的频率，就被称为共振峰频率，简称为共振峰。
+
+### 1. 从音频文件获取语音数据
+
+从AudioSource处获取是实时匹配时采用的方法。AudioSource本身提供了一个GetOutputData函数，可以获取当前正在播放的语音数据段。 从AudioClip处获取是烘焙是采用的方法。AudioClip本身其实是对语音文件的一个封装，可以使用GetData函数直接获得语音数据。 这过程中也包含了分帧与窗口化的步骤。
+
+### 2. 剔除无声帧
+
+从信号处理的角度上说，这一步是一种时域分析方法。对数据帧中的所有值进行求和，如果结果大于用户预设的一个阈值（也就是AmplitudeThreshold），那么就认为这一帧是没有声音的，不对它进行后续处理。这可以节省不必要的分析过程。如果适当调高阈值，一定程度上可以降噪。
+
+### 3. 获取语音数据的频域信息
+
+你在使用一些音乐播放器时，有时候会看到一根根跳动的长条，这就是“频谱”的一种表现方式，频域信息指的就是频谱。这对于语音识别来说是非常重要的信息。 在Unity提供的API AudioSource的GetSpecturmData可以高效地获取当前播放的语音数据频谱。 如果你的项目使用了fmod的开发环境，可以使用如下获取声谱信息：
+```cs
+public StudioEventEmitter emiter;
+FMOD.DSP m_FFTDsp;
+FMOD.ChannelGroup master;
+FMOD.DSP mixerHead;
+
+void Start() {
+    emiter.Play();
+    InitDsp();
+}
+
+void InitDsp() {
+    // 初始化均衡器 DSP
+    RuntimeManager.CoreSystem.createDSPByType(FMOD.DSP_TYPE.FFT, out m_FFTDsp);
+    m_FFTDsp.setParameterInt((int)FMOD.DSP_FFT.WINDOWTYPE, (int)FMOD.DSP_FFT_WINDOW.HANNING);
+    m_FFTDsp.setParameterInt((int)FMOD.DSP_FFT.WINDOWSIZE, windowSize);
+    RuntimeManager.CoreSystem.getMasterChannelGroup(out master);
+    var m_Result = master.addDSP(FMOD.CHANNELCONTROL_DSP_INDEX.HEAD, m_FFTDsp);
+    m_Result = master.getDSP(0, out mixerHead);
+    mixerHead.setMeteringEnabled(true, true);
+}
+
+void Update() {
+    string result = null;
+    IntPtr unmanagedData;
+    uint length;
+    m_FFTDsp.getParameterData((int)FMOD.DSP_FFT.SPECTRUMDATA, out unmanagedData, out length);
+    FMOD.DSP_PARAMETER_FFT fftData = (FMOD.DSP_PARAMETER_FFT)Marshal.PtrToStructure(unmanagedData, typeof(FMOD.DSP_PARAMETER_FFT));
+    if (fftData.spectrum != null && fftData.spectrum.Length > 0)
+    {
+        playingAudioSpectrum = fftData.spectrum[0]; //声谱信息，针对立体音 只获取0声道频谱
+    }
+}
+```
+
+对于离线处理的音频可以借助了一个数学工具——离散余弦变换（DCT），它可以用来获取一个时域信息段的频域信息。它与另一个著名的数学工具——傅里叶变换是等价的，所不同的是余弦变换只获取频率信息，而舍弃了相位信息。实际上这就够了，我们并不需要相位信息。
+
+```cs
+public static float[] DiscreteCosineTransform(float[] data)
+{
+    float[] result = new float[data.Length];
+    float sumCos;
+    for (int m = 0; m < data.Length; ++m)
+    {
+        sumCos = 0.0f;
+        for (int k = 0; k < data.Length; ++k)
+        {
+            sumCos += data[k] * Mathf.Cos((Mathf.PI / data.Length) * m * (k + 0.5f));
+        }
+        result[m] = (sumCos > 0) ? sumCos : -sumCos;
+    }
+    return result;
+}
+```
+
+### 4. 提取共振峰
+
+ 一般来说，通过求得一段语音数据的第一、第二共振峰，就可以非常精确地得知这段语音的“元音”是什么。只求第一共振峰，也可以知道大致结果。提取共振峰的方法是，在前一步骤中获取的频谱上求出局部最大值的最大值.
+
+```cs
+public static void FindLocalLargestPeaks(float[] data, float[] peakValue, int[] peakPosition)
+{
+    int peakNum = 0;
+    float lastPeak = 0.0f;
+    int lastPeakPosition = 0;
+    bool isIncreasing = false;
+    bool isPeakIncreasing = false;
+
+    for (int i = 0; i < data.Length - 1; ++i) {
+        if (data[i] < data[i + 1]) {
+            isIncreasing = true;
+        }
+        else {
+            if (isIncreasing) {
+                if (lastPeak < data[i])  // Peak found.
+                {
+                    isPeakIncreasing = true;
+                } else {
+                    if (isPeakIncreasing) {
+                        peakValue[peakNum] = lastPeak; // Local largest peak found. 
+                        peakPosition[peakNum] = lastPeakPosition;
+                        ++peakNum;
+                    }
+                    isPeakIncreasing = false;
+                }
+                lastPeak = data[i];
+                lastPeakPosition = i;
+            }
+            isIncreasing = false;
+        }
+        if (peakNum >= peakValue.Length) break;
+    }
+}
+```
+
+提取语音共振峰的方法比较多，除了使用最大值法，常用的方法还有倒谱法、LPC（线性预测编码）谱估计法、LPC倒谱法等。
+
+
+### 5. 制作元音口型
+
+一般改变口型都是通过BlendShape， 也可以改变骨骼，或者通过Live2D。通过每帧控制参数来调节口型。例如BlendShape, 五个口型对应到日语的五个元音。在Update里分析每一帧的声谱，通过共振峰提取得到相应的元音， 然后插值表现相应的口型。通过[github][i11]下载工程，本地运行同样的效果。
+
+![](/img/post-vr/mou1.jpg)
+
+
+## 神经网络提取音素
+
+我们的想法很直接，就是基于音频生成口型动画，或者说，输入是一段音频，经过我们的系统，输出为相应的口型动画。而如果先忽略音频和动画的时序，问题就变成了将音频关键帧经过一个深度神经网络，得到一个口型关键帧。
 
 ### 特征表示
 
@@ -48,7 +174,7 @@ __口型特征__
 
 ![](/img/post-vr/mou3.jpg)
 
-## 网络架构
+### 网络架构
 
 该如何搭建网络呢？这里我们参考了Karras等人在SIGGRAPH 2017的论文 [Audio driven Facial Animation by Joint End-to-end Learning of Pose and Emotion][i1] 中的工作，搭建了下图所示的网络架构。
 
@@ -60,7 +186,7 @@ __口型特征__
 
 ![](/img/post-vr/mou5.jpg)
 
-## 数据集
+### 数据集
 
 实验中，我们采用了LibriSpeech和AISHELL两个大型语料数据集，其中英文音频要多于中文音频，这也使得系统对于英文的口型合成的效果要略好于中文。两个数据集上，音频特征的提取是通过我们编写的代码得到的，而口型特征的提取则分为两个部分：针对英文音频，40个音素权重是利用第三方SDK [Annosoft][i9]生成的。针对中文音频，这40个音素权重是本组基于Annosoft进行改进优化之后重新生成的。
 
@@ -72,7 +198,7 @@ __口型特征__
 <iframe src="//player.bilibili.com/player.html?aid=59708647&bvid=BV1st41137L5&cid=104010639&page=1" scrolling="no" border="0" frameborder="no" framespacing="0" allowfullscreen="true"  style="width: 100%;height: 400px;"> </iframe>
 *Lipsync官方自动口型插件*
 
-## 效果
+### 效果
 
 在引擎中显示的效果如下:
 
@@ -81,10 +207,6 @@ __口型特征__
       <p>Your user agent does not support the HTML5 Video element.</p>
 </video>
 
-<video id="video" controls="" preload="none" poster="/img/post-vr/mou6.jpg" width="674" height="379">
-      <source id="mp4" src="/img/post-vr/obama.mp4" type="video/mp4">
-      <p>Your user agent does not support the HTML5 Video element.</p>
-</video>
 
 ## 总结
 
@@ -120,3 +242,4 @@ ___参考文献___:
 [i8]: http://www.gfxcamp.com/auto-lip-sync-107
 [i9]: http://www.annosoft.com/index
 [i10]: http://www.annosoft.com/lipsync-sdks
+[i11]: https://github.com/huailiang/LipSync
