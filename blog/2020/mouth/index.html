@@ -5,7 +5,7 @@
   <meta http-equiv="X-UA-Compatible" content="IE=edge">
   <meta name="viewport" content="width=device-width, initial-scale=1">
 
-  <title>基于深度学习的口型动画合成系统</title>
+  <title>游戏中口型动画合成系统</title>
   <meta name="description"
     content="  近年来， 基于语音驱动的人脸动画技术在虚拟主持人、数字娱乐、人机交互以及远程会议等方面有广泛的应用。如何快速、高效的实现语音驱动的唇形自动合成，以及优化语音与唇形面部表情之间的同步是此项技术的关键。表情动画作为语音驱动人脸动画的一部分，在增加人脸动画逼真性方面起着重要的作用，但已有的工作没 有定量分析人脸表情...">
 
@@ -67,7 +67,7 @@ MathJax.Hub.Config({
 
   <div class="card">
     <header class="post-header">
-      <h1 class="post-title">基于深度学习的口型动画合成系统</h1>
+      <h1 class="post-title">游戏中口型动画合成系统</h1>
       <p class="post-meta">Apr 2, 2020 •
         huailiang</p>
     </header>
@@ -82,7 +82,7 @@ MathJax.Hub.Config({
 <div style="width: 100%;height: 400px;">
     <iframe src="//player.youku.com/embed/XNzA2NDM1MTg4==?client_id=d0b1b77a17cded3b" width="100%" height="100%" frameborder="0" allowfullscreen="true"></iframe>
 </div>
-<p><em>AutoLip-Sync可以根据音频的来自动做嘴唇动画</em><br />
+<p><em>来自Annosoft公司的AutoLip-Sync语音-嘴唇动画</em><br />
 <br /></p>
 
 <p>今天主要介绍的是两种语音口型动画的实现， 两种都是先从音频文件(.wav .mp3)提取出音素（主要是元音), 然后再根据不同的音素去制作不同的口型，最后不同口型之间差值得到连续的动作。</p>
@@ -213,6 +213,8 @@ MathJax.Hub.Config({
 <p>一般改变口型都是通过BlendShape， 也可以改变骨骼，或者通过Live2D。通过每帧控制参数来调节口型。例如BlendShape, 五个口型对应到日语的五个元音。在Update里分析每一帧的声谱，通过共振峰提取得到相应的元音， 然后插值表现相应的口型。通过<a href="https://github.com/huailiang/LipSync">github</a>下载工程，本地运行同样的效果。</p>
 
 <p><img src="/img/post-vr/mou1.jpg" alt="" /></p>
+
+<p><br /><br /></p>
 
 <h2 id="神经网络提取音素">神经网络提取音素</h2>
 
