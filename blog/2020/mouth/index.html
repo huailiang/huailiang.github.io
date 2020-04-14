@@ -146,7 +146,34 @@ MathJax.Hub.Config({
 </code></pre>
 </div>
 
-<p>对于离线处理的音频可以借助了一个数学工具——离散余弦变换（DCT），它可以用来获取一个时域信息段的频域信息。它与另一个著名的数学工具——傅里叶变换是等价的，所不同的是余弦变换只获取频率信息，而舍弃了相位信息。实际上这就够了，我们并不需要相位信息。</p>
+<p>对于离线处理的音频可以借助了一个数学工具——离散余弦变换（<a href="https://www.cnblogs.com/wyuzl/p/7880124.html">DCT</a>），它可以用来获取一个时域信息段的频域信息。它与另一个著名的数学工具——傅里叶变换是等价的，所不同的是余弦变换只获取频率信息，而舍弃了相位信息。实际上这就够了，我们并不需要相位信息。</p>
+
+<p><strong>一维DCT变换：</strong></p>
+
+<script type="math/tex; mode=display">F(u) = c(u) \sum^{N-1}_{i=0} f(i) cos \left[ \frac{(i+0.5)\pi}{N} u \right]</script>
+
+<script type="math/tex; mode=display">c(u) = \left\{
+\begin{aligned}
+\sqrt{ \frac{1}{N}}, {u=0}   \\
+\sqrt{ \frac{2}{N}}, {u \neq 0}
+\end{aligned}
+\right.</script>
+
+<p>其中，f(i)为原始的信号，F(u)是DCT变换后的系数，N为原始信号的点数，c(u)可以认为是一个补偿系数，可以使DCT变换矩阵为正交矩阵</p>
+
+<p><strong>二维DCT变换：</strong></p>
+
+<script type="math/tex; mode=display">F(u,v) = c(u)c(v) \sum^{N-1}_{i=0} f(i,j) cos\left[ {\frac{(i+0.5)\pi}{N}u}\right]
+    cos \left[  {\frac{(j+0.5)\pi}{N}v} \right]</script>
+
+<script type="math/tex; mode=display">c(u) = \left\{
+\begin{aligned}
+\sqrt{ \frac{1}{N}}, {u=0}   \\
+\sqrt{ \frac{2}{N}}, {u \neq 0}
+\end{aligned}
+\right.</script>
+
+<p>声音是不像图像， 是一维序列。因此这里应用的是一维DCT变换。 <a href="https://github.com/huailiang/LipSync">github</a>示例工程里对应的代码如下：</p>
 
 <div class="language-cs highlighter-rouge"><pre class="highlight"><code><span class="k">public</span> <span class="k">static</span> <span class="kt">float</span><span class="p">[]</span> <span class="nf">DiscreteCosineTransform</span><span class="p">(</span><span class="kt">float</span><span class="p">[]</span> <span class="n">data</span><span class="p">)</span>
 <span class="p">{</span>
@@ -294,6 +321,7 @@ MathJax.Hub.Config({
   <li><a href="https://www.doc88.com/p-7088944526128.html">基于参数控制的语音驱动唇形同步人脸动画</a></li>
   <li><a href="http://www.gfxcamp.com/auto-lip-sync-107">AE嘴唇自动口型动画</a></li>
   <li><a href="http://www.annosoft.com/lipsync-sdks">lipsync-sdks annosoft</a></li>
+  <li><a href="https://www.cnblogs.com/wyuzl/p/7880124.html">详解离散余弦变换（DCT）</a></li>
 </ul>
 
 
