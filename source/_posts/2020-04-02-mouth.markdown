@@ -79,7 +79,42 @@ void Update() {
 }
 ```
 
-对于离线处理的音频可以借助了一个数学工具——离散余弦变换（DCT），它可以用来获取一个时域信息段的频域信息。它与另一个著名的数学工具——傅里叶变换是等价的，所不同的是余弦变换只获取频率信息，而舍弃了相位信息。实际上这就够了，我们并不需要相位信息。
+对于离线处理的音频可以借助了一个数学工具——离散余弦变换（[DCT][i12]），它可以用来获取一个时域信息段的频域信息。它与另一个著名的数学工具——傅里叶变换是等价的，所不同的是余弦变换只获取频率信息，而舍弃了相位信息。实际上这就够了，我们并不需要相位信息。
+
+__一维DCT变换：__
+
+$$
+F(u) = c(u) \sum^{N-1}_{i=0} f(i) cos \left[ \frac{(i+0.5)\pi}{N} u \right]
+$$
+
+$$
+c(u) = \left\{
+\begin{aligned}
+\sqrt{ \frac{1}{N}}, {u=0}   \\
+\sqrt{ \frac{2}{N}}, {u \neq 0}
+\end{aligned}
+\right.
+$$
+
+其中，f(i)为原始的信号，F(u)是DCT变换后的系数，N为原始信号的点数，c(u)可以认为是一个补偿系数，可以使DCT变换矩阵为正交矩阵
+
+__二维DCT变换：__
+
+$$
+F(u,v) = c(u)c(v) \sum^{N-1}_{i=0} f(i,j) cos\left[ {\frac{(i+0.5)\pi}{N}u}\right]
+    cos \left[  {\frac{(j+0.5)\pi}{N}v} \right]
+$$
+
+$$
+c(u) = \left\{
+\begin{aligned}
+\sqrt{ \frac{1}{N}}, {u=0}   \\
+\sqrt{ \frac{2}{N}}, {u \neq 0}
+\end{aligned}
+\right.
+$$
+
+声音是不像图像， 是一维序列。因此这里应用的是一维DCT变换。 [github][i11]示例工程里对应的代码如下：
 
 ```cs
 public static float[] DiscreteCosineTransform(float[] data)
@@ -233,6 +268,7 @@ ___参考文献___:
 * [基于参数控制的语音驱动唇形同步人脸动画][i7]
 * [AE嘴唇自动口型动画][i8]
 * [lipsync-sdks annosoft][i10]
+* [详解离散余弦变换（DCT）][i12]
 
 [i1]: https://research.nvidia.com/publication/2017-07_Audio-Driven-Facial-Animation
 [i2]: https://www.sohu.com/a/197252744_468636
@@ -245,3 +281,4 @@ ___参考文献___:
 [i9]: http://www.annosoft.com/index
 [i10]: http://www.annosoft.com/lipsync-sdks
 [i11]: https://github.com/huailiang/LipSync
+[i12]: https://www.cnblogs.com/wyuzl/p/7880124.html
