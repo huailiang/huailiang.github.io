@@ -22,8 +22,8 @@ tags:
 
 今天主要介绍的是两种语音口型动画的实现， 两种都是先从音频文件(.wav .mp3)提取出音素（主要是元音), 然后再根据不同的音素去制作不同的口型，最后不同口型之间差值得到连续的动作。
 
-* 基于共振峰提取元音
-* 基于神经网络提取音素
+* __基于共振峰提取元音__
+* __基于神经网络提取音素__
 
 ## 基于共振峰提取元音
 
@@ -78,6 +78,23 @@ void Update() {
     }
 }
 ```
+
+语音信号一般在10ms到30ms之间，我们可以把它看成是平稳的。为了处理语音信号，我们要对语音信号进行加窗，也就是一次仅处理窗中的数据。因为实际的语音信号是很长的，我们不能也不必对非常长的数据进行一次性处理。明智的解决办法就是每次取一段数据，进行分析，然后再取下一段数据。
+
+Hanning窗函数：
+
+$$
+W(n) = 0.5 *(1.0 - \cos (n/N))
+$$
+
+
+拿到声谱之后， 我们先使用一个[高斯滤波器][i13]过滤掉噪音。通俗的讲，高斯滤波就是对整声谱进行加权平均的过程，每一个点的值，都由其本身和邻域内的其他像素值经过加权平均后得到。
+
+$$
+G(x) = \frac{1}{\sqrt{2\pi}\sigma} e^{-\frac{(x-\mu)^2}{2\sigma^2}}
+$$
+
+其中$\mu$, $\sigma(\sigma>0)$为常数， 则称X服从参数为$\mu$, $\sigma(\sigma>0)$的正态分布或者高斯分布。
 
 对于离线处理的音频可以借助了一个数学工具——离散余弦变换（[DCT][i12]），它可以用来获取一个时域信息段的频域信息。它与另一个著名的数学工具——傅里叶变换是等价的，所不同的是余弦变换只获取频率信息，而舍弃了相位信息。实际上这就够了，我们并不需要相位信息。
 
@@ -136,7 +153,7 @@ public static float[] DiscreteCosineTransform(float[] data)
 
 ### 4. 提取共振峰
 
- 一般来说，通过求得一段语音数据的第一、第二共振峰，就可以非常精确地得知这段语音的“元音”是什么。只求第一共振峰，也可以知道大致结果。提取共振峰的方法是，在前一步骤中获取的频谱上求出局部最大值的最大值.
+ 一般来说，通过求得一段语音数据的第一、第二共振峰，就可以非常精确地得知这段语音的"元音"是什么。只求第一共振峰，也可以知道大致结果。提取共振峰的方法是，在前一步骤中获取的频谱上求出局部最大值的最大值.
 
 ```cs
 public static void FindLocalLargestPeaks(float[] data, float[] peakValue, int[] peakPosition)
@@ -183,7 +200,7 @@ public static void FindLocalLargestPeaks(float[] data, float[] peakValue, int[] 
 
 ![](/img/post-vr/mou1.jpg)
 
-<br><br>
+<br>
 
 
 ## 神经网络提取音素
@@ -269,6 +286,8 @@ ___参考文献___:
 * [AE嘴唇自动口型动画][i8]
 * [lipsync-sdks annosoft][i10]
 * [详解离散余弦变换（DCT）][i12]
+* [高斯滤波 百度百科][i13]
+* [海明窗 百度百科][i14]
 
 [i1]: https://research.nvidia.com/publication/2017-07_Audio-Driven-Facial-Animation
 [i2]: https://www.sohu.com/a/197252744_468636
@@ -282,3 +301,5 @@ ___参考文献___:
 [i10]: http://www.annosoft.com/lipsync-sdks
 [i11]: https://github.com/huailiang/LipSync
 [i12]: https://www.cnblogs.com/wyuzl/p/7880124.html
+[i13]: https://blog.csdn.net/jgj123321/article/details/94448463
+[i14]: https://baike.baidu.com/item/%E6%B5%B7%E6%98%8E%E7%AA%97/8696634?fr=aladdin
