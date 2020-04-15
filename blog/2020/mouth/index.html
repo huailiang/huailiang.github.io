@@ -88,8 +88,8 @@ MathJax.Hub.Config({
 <p>今天主要介绍的是两种语音口型动画的实现， 两种都是先从音频文件(.wav .mp3)提取出音素（主要是元音), 然后再根据不同的音素去制作不同的口型，最后不同口型之间差值得到连续的动作。</p>
 
 <ul>
-  <li>基于共振峰提取元音</li>
-  <li>基于神经网络提取音素</li>
+  <li><strong>基于共振峰提取元音</strong></li>
+  <li><strong>基于神经网络提取音素</strong></li>
 </ul>
 
 <h2 id="基于共振峰提取元音">基于共振峰提取元音</h2>
@@ -146,6 +146,18 @@ MathJax.Hub.Config({
 </code></pre>
 </div>
 
+<p>语音信号一般在10ms到30ms之间，我们可以把它看成是平稳的。为了处理语音信号，我们要对语音信号进行加窗，也就是一次仅处理窗中的数据。因为实际的语音信号是很长的，我们不能也不必对非常长的数据进行一次性处理。明智的解决办法就是每次取一段数据，进行分析，然后再取下一段数据。</p>
+
+<p>Hanning窗函数：</p>
+
+<script type="math/tex; mode=display">W(n) = 0.5 *(1.0 - \cos (n/N))</script>
+
+<p>拿到声谱之后， 我们先使用一个<a href="https://blog.csdn.net/jgj123321/article/details/94448463">高斯滤波器</a>过滤掉噪音。通俗的讲，高斯滤波就是对整声谱进行加权平均的过程，每一个点的值，都由其本身和邻域内的其他像素值经过加权平均后得到。</p>
+
+<script type="math/tex; mode=display">G(x) = \frac{1}{\sqrt{2\pi}\sigma} e^{-\frac{(x-\mu)^2}{2\sigma^2}}</script>
+
+<p>其中$\mu$, $\sigma(\sigma&gt;0)$为常数， 则称X服从参数为$\mu$, $\sigma(\sigma&gt;0)$的正态分布或者高斯分布。</p>
+
 <p>对于离线处理的音频可以借助了一个数学工具——离散余弦变换（<a href="https://www.cnblogs.com/wyuzl/p/7880124.html">DCT</a>），它可以用来获取一个时域信息段的频域信息。它与另一个著名的数学工具——傅里叶变换是等价的，所不同的是余弦变换只获取频率信息，而舍弃了相位信息。实际上这就够了，我们并不需要相位信息。</p>
 
 <p><strong>一维DCT变换：</strong></p>
@@ -195,7 +207,7 @@ MathJax.Hub.Config({
 
 <h3 id="4-提取共振峰">4. 提取共振峰</h3>
 
-<p>一般来说，通过求得一段语音数据的第一、第二共振峰，就可以非常精确地得知这段语音的“元音”是什么。只求第一共振峰，也可以知道大致结果。提取共振峰的方法是，在前一步骤中获取的频谱上求出局部最大值的最大值.</p>
+<p>一般来说，通过求得一段语音数据的第一、第二共振峰，就可以非常精确地得知这段语音的”元音”是什么。只求第一共振峰，也可以知道大致结果。提取共振峰的方法是，在前一步骤中获取的频谱上求出局部最大值的最大值.</p>
 
 <div class="language-cs highlighter-rouge"><pre class="highlight"><code><span class="k">public</span> <span class="k">static</span> <span class="k">void</span> <span class="nf">FindLocalLargestPeaks</span><span class="p">(</span><span class="kt">float</span><span class="p">[]</span> <span class="n">data</span><span class="p">,</span> <span class="kt">float</span><span class="p">[]</span> <span class="n">peakValue</span><span class="p">,</span> <span class="kt">int</span><span class="p">[]</span> <span class="n">peakPosition</span><span class="p">)</span>
 <span class="p">{</span>
@@ -241,7 +253,7 @@ MathJax.Hub.Config({
 
 <p><img src="/img/post-vr/mou1.jpg" alt="" /></p>
 
-<p><br /><br /></p>
+<p><br /></p>
 
 <h2 id="神经网络提取音素">神经网络提取音素</h2>
 
@@ -322,6 +334,8 @@ MathJax.Hub.Config({
   <li><a href="http://www.gfxcamp.com/auto-lip-sync-107">AE嘴唇自动口型动画</a></li>
   <li><a href="http://www.annosoft.com/lipsync-sdks">lipsync-sdks annosoft</a></li>
   <li><a href="https://www.cnblogs.com/wyuzl/p/7880124.html">详解离散余弦变换（DCT）</a></li>
+  <li><a href="https://blog.csdn.net/jgj123321/article/details/94448463">高斯滤波 百度百科</a></li>
+  <li><a href="https://baike.baidu.com/item/%E6%B5%B7%E6%98%8E%E7%AA%97/8696634?fr=aladdin">海明窗 百度百科</a></li>
 </ul>
 
 
