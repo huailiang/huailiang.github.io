@@ -14,7 +14,7 @@ tags:
  * jetbrains旗下软件（IntelliJ IDEA、 Pycharm、 Rider等）
  * vscode（LuaPanda）
 
-<br><center><img src="/img/post-lua/lua0.jpg"></center><br>
+![](/img/post-lua/lua0.jpg)
 
 两款ide都是跨平台的， 在windows和macos上都有很好的支持, 而且都支持以下lua的特性：
 
@@ -51,7 +51,7 @@ tags:
 
 菜单栏选中Run->Attach to Process, 在本机所有的进程中选择Unity进程即可调试了。
 
-<center><img src="/img/post-lua/lua8.jpg"></center><br>
+![](/img/post-lua/lua8.jpg)
 
 运行效果如下， 既可以看到调用堆栈， 又可以查看过程变量，非常的方便。
 
@@ -146,6 +146,72 @@ path-reader
 
 
 
+## 原生Lua的调试
+
+针对原生的lua调试， 建议使用本地安装luarocks, 以mac为例, 打开终端
+
+```sh
+brew install luarocks
+```
+
+这里调试用到了luasocket了， 所以本地需要安装luasocket. 如果你安装有 Lua 模块的安装和部署工具 – LuaRocks，那么一条指令就能安装部署好 LuaSocket：
+```sh
+luarocks install luasocket
+```
+
+验证luasocket是否安装成功， 写一个lua脚本
+
+```lua
+require("socket")
+```
+
+运行如果没有报错， 就证明安装成功了。 如果报错如下：
+```
+LuaScriptException: error loading module 'socket.core' from file '/usr/local/lib/lua/5.1/socket/core.so':
+    dlopen(/usr/local/lib/lua/5.1/socket/core.so, 2): no suitable image found.  Did find:
+    /usr/local/lib/lua/5.1/socket/core.so: mach-o, but wrong architecture
+```
+
+则是因为在 64bit Mac OSX 下使用 luarocks 编译安装的 luasocket 默认是 x86_64 架构的，所以出现不兼容情况。
+
+需要修改 luarocks 的编译和链接参数，增加 i386 构架的支持：
+```sh
+vim /usr/local/share/lua/5.3/luarocks/core/cfg.lua
+```
+
+找到 if detected.unix then 后面的 defaults.variables.CFLAGS 在参数中追加 -arch i386 -arch x86_64
+
+```lua
+if detected.unix then
+    ...
+    defaults.variables.CFLAGS = "-O2 -arch i386 -arch x86_64"
+    ...
+```
+
+同上，找到 if detected.macosx then 后面的 defaults.variables.LD 在参数中追加 -arch i386 -arch x86_64
+
+```lua
+if detected.macosx then
+    ...
+    defaults.variables.LD = "export MACOSX_DEPLOYMENT_TARGET=10."..version.."; gcc -arch i386 -arch x86_64"
+    ...
+```
+
+保存 cfg.lua 后重新安装 luasocket 即可:
+```sh
+luarocks install luasocket
+```
+
+在JetBrains的产品，比如Rider中设置lua的安装路径和搜索路径，以及执行入口lua文件：
+
+![](/img/post-lua/lua16.jpg)
+
+设置之后，点击运行按钮，能得到和Attach Unity进程一样的体验, 既能看运行内存的一些变量，还能添加一些监视， 比如下图去查看某些table的原表。
+
+![](/img/post-lua/lua17.jpg)
+
+
+
 ## 写在最后
 
 由于作者经常使用pycharm写python脚本， 已经很熟悉Jetbrains的那一套环境了，所以我更倾向于使用第一种方式来调试lua。 然而vscode显然更轻量级一些， 读者喜欢使用哪一款，萝卜青菜 各有所爱吧。
@@ -161,3 +227,4 @@ path-reader
 [i6]: https://github.com/Tencent/LuaPanda/blob/master/src/debug/luaDebug.ts
 [i7]: https://emmylua.github.io/
 [i8]: https://github.com/mpeterv/luacheck/releases
+[i9]: https://blog.mutoo.im/2015/08/remote-debugging-with-ulua-on-mac-osx/
