@@ -80,7 +80,7 @@ MathJax.Hub.Config({
   <li>vscode（LuaPanda）</li>
 </ul>
 
-<p><br /><center><img src="/img/post-lua/lua0.jpg" /></center><br /></p>
+<p><img src="/img/post-lua/lua0.jpg" alt="" /></p>
 
 <p>两款ide都是跨平台的， 在windows和macos上都有很好的支持, 而且都支持以下lua的特性：</p>
 
@@ -115,8 +115,7 @@ MathJax.Hub.Config({
 
 <p>菜单栏选中Run-&gt;Attach to Process, 在本机所有的进程中选择Unity进程即可调试了。</p>
 
-<center><img src="/img/post-lua/lua8.jpg" /></center>
-<p><br /></p>
+<p><img src="/img/post-lua/lua8.jpg" alt="" /></p>
 
 <p>运行效果如下， 既可以看到调用堆栈， 又可以查看过程变量，非常的方便。</p>
 
@@ -199,6 +198,70 @@ path-reader
 </div>
 
 <p>更多关于LuaPanda的介绍， <a href="https://github.com/Tencent/LuaPanda/blob/master/Docs/Manual/access-guidelines.md">参考这里</a></p>
+
+<h2 id="原生lua的调试">原生Lua的调试</h2>
+
+<p>针对原生的lua调试， 建议使用本地安装luarocks, 以mac为例, 打开终端</p>
+
+<div class="language-sh highlighter-rouge"><pre class="highlight"><code>brew install luarocks
+</code></pre>
+</div>
+
+<p>这里调试用到了luasocket了， 所以本地需要安装luasocket. 如果你安装有 Lua 模块的安装和部署工具 – LuaRocks，那么一条指令就能安装部署好 LuaSocket：</p>
+<div class="language-sh highlighter-rouge"><pre class="highlight"><code>luarocks install luasocket
+</code></pre>
+</div>
+
+<p>验证luasocket是否安装成功， 写一个lua脚本</p>
+
+<div class="language-lua highlighter-rouge"><pre class="highlight"><code><span class="nb">require</span><span class="p">(</span><span class="s2">"socket"</span><span class="p">)</span>
+</code></pre>
+</div>
+
+<p>运行如果没有报错， 就证明安装成功了。 如果报错如下：</p>
+<div class="highlighter-rouge"><pre class="highlight"><code>LuaScriptException: error loading module 'socket.core' from file '/usr/local/lib/lua/5.1/socket/core.so':
+    dlopen(/usr/local/lib/lua/5.1/socket/core.so, 2): no suitable image found.  Did find:
+    /usr/local/lib/lua/5.1/socket/core.so: mach-o, but wrong architecture
+</code></pre>
+</div>
+
+<p>则是因为在 64bit Mac OSX 下使用 luarocks 编译安装的 luasocket 默认是 x86_64 架构的，所以出现不兼容情况。</p>
+
+<p>需要修改 luarocks 的编译和链接参数，增加 i386 构架的支持：</p>
+<div class="language-sh highlighter-rouge"><pre class="highlight"><code>vim /usr/local/share/lua/5.3/luarocks/core/cfg.lua
+</code></pre>
+</div>
+
+<p>找到 if detected.unix then 后面的 defaults.variables.CFLAGS 在参数中追加 -arch i386 -arch x86_64</p>
+
+<div class="language-lua highlighter-rouge"><pre class="highlight"><code><span class="k">if</span> <span class="n">detected</span><span class="p">.</span><span class="n">unix</span> <span class="k">then</span>
+    <span class="o">...</span>
+    <span class="n">defaults</span><span class="p">.</span><span class="n">variables</span><span class="p">.</span><span class="n">CFLAGS</span> <span class="o">=</span> <span class="s2">"-O2 -arch i386 -arch x86_64"</span>
+    <span class="o">...</span>
+</code></pre>
+</div>
+
+<p>同上，找到 if detected.macosx then 后面的 defaults.variables.LD 在参数中追加 -arch i386 -arch x86_64</p>
+
+<div class="language-lua highlighter-rouge"><pre class="highlight"><code><span class="k">if</span> <span class="n">detected</span><span class="p">.</span><span class="n">macosx</span> <span class="k">then</span>
+    <span class="o">...</span>
+    <span class="n">defaults</span><span class="p">.</span><span class="n">variables</span><span class="p">.</span><span class="n">LD</span> <span class="o">=</span> <span class="s2">"export MACOSX_DEPLOYMENT_TARGET=10."</span><span class="o">..</span><span class="n">version</span><span class="o">..</span><span class="s2">"; gcc -arch i386 -arch x86_64"</span>
+    <span class="o">...</span>
+</code></pre>
+</div>
+
+<p>保存 cfg.lua 后重新安装 luasocket 即可:</p>
+<div class="language-sh highlighter-rouge"><pre class="highlight"><code>luarocks install luasocket
+</code></pre>
+</div>
+
+<p>在JetBrains的产品，比如Rider中设置lua的安装路径和搜索路径，以及执行入口lua文件：</p>
+
+<p><img src="/img/post-lua/lua16.jpg" alt="" /></p>
+
+<p>设置之后，点击运行按钮，能得到和Attach Unity进程一样的体验, 既能看运行内存的一些变量，还能添加一些监视， 比如下图去查看某些table的原表。</p>
+
+<p><img src="/img/post-lua/lua17.jpg" alt="" /></p>
 
 <h2 id="写在最后">写在最后</h2>
 
