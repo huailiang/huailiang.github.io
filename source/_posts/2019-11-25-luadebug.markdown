@@ -154,7 +154,11 @@ path-reader
 brew install luarocks
 ```
 
+windows 安装使用luarocks, 比较麻烦， 具体可以参考[这篇文章][i10]。
+
 这里调试用到了luasocket了， 所以本地需要安装luasocket. 如果你安装有 Lua 模块的安装和部署工具 – LuaRocks，那么一条指令就能安装部署好 LuaSocket：
+
+
 ```sh
 luarocks install luasocket
 ```
@@ -228,3 +232,4 @@ luarocks install luasocket
 [i7]: https://emmylua.github.io/
 [i8]: https://github.com/mpeterv/luacheck/releases
 [i9]: https://blog.mutoo.im/2015/08/remote-debugging-with-ulua-on-mac-osx/
+[i10]: https://blog.csdn.net/mengzhisuoliu/article/details/52245964
