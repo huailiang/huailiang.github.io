@@ -202,6 +202,13 @@ public static void FindLocalLargestPeaks(float[] data, float[] peakValue, int[] 
 
 <br>
 
+最后的效果就是下面展示的视频所示:
+
+<div style="width: 100%;height: 400px;">
+      <iframe src="//player.bilibili.com/player.html?aid=497979009&bvid=BV1BK411578P&cid=184441588&page=1" scrolling="no" border="0" frameborder="no" framespacing="0" allowfullscreen="true">
+      <p>Your user agent does not support the HTML5 Video element.</p>
+</div>
+
 
 ## 神经网络提取音素
 
