@@ -82,8 +82,10 @@ MathJax.Hub.Config({
 <div style="width: 100%;height: 400px;">
     <iframe src="//player.youku.com/embed/XNzA2NDM1MTg4==?client_id=d0b1b77a17cded3b" width="100%" height="100%" frameborder="0" allowfullscreen="true"></iframe>
 </div>
-<p><em>来自Annosoft公司的AutoLip-Sync语音-嘴唇动画</em><br />
-<br /></p>
+
+<p><em>来自Annosoft公司的AutoLip-Sync语音-嘴唇动画</em></p>
+
+<p><br /></p>
 
 <p>今天主要介绍的是两种语音口型动画的实现， 两种都是先从音频文件(.wav .mp3)提取出音素（主要是元音), 然后再根据不同的音素去制作不同的口型，最后不同口型之间差值得到连续的动作。</p>
 
@@ -252,6 +254,12 @@ MathJax.Hub.Config({
 <p>一般改变口型都是通过BlendShape， 也可以改变骨骼，或者通过Live2D。通过每帧控制参数来调节口型。例如BlendShape, 五个口型对应到日语的五个元音。在Update里分析每一帧的声谱，通过共振峰提取得到相应的元音， 然后插值表现相应的口型。通过<a href="https://github.com/huailiang/LipSync">github</a>下载工程，本地运行同样的效果。</p>
 
 <p><img src="/img/post-vr/mou1.jpg" alt="" /></p>
+
+<p><br /></p>
+
+<p>最后的效果就是下面展示的视频所示:</p>
+
+<iframe src="//player.bilibili.com/player.html?aid=497979009&amp;bvid=BV1BK411578P&amp;cid=184441588&amp;page=1" scrolling="no" border="0" width="680" height="500" frameborder="no" framespacing="0" allowfullscreen="true"> </iframe>
 
 <p><br /></p>
 
