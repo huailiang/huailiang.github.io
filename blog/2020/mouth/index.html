@@ -102,6 +102,12 @@ MathJax.Hub.Config({
 
 <p>对于语音识别来说，重要的部分是第二个过程，因为口型就是声道形状的一部分。而这一冲激响应过程，在频谱上的表现为若干个凸起的包络峰。这些包络峰出现的频率，就被称为共振峰频率，简称为共振峰。</p>
 
+<p><img src="/img/post-vr/mou7.jpg" alt="" /></p>
+
+<p>发前元音时舌的最高部位移向口腔前部并稍许拱起。后元音发音时舌后部向软腭抬起。舌面的位置和唇的形状是元音分类的一个标准。发音时从肺部呼出的气流通过起共鸣器作用的口腔，发出阻力极小并无摩擦声音的语音。尽管在一般情况下发元音时声带都振动，但也可使声带不振动，发成清音或耳语音。</p>
+
+<p><em>元音的高低，取决于舌面与上腭的距离，而非嘴巴的张合大小，因为嘴巴的张合大小不一定可以引起舌面的高低。如发 [æ] 时，舌面与上腭的距离较 [ɛ]大</em></p>
+
 <h3 id="1-从音频文件获取语音数据">1. 从音频文件获取语音数据</h3>
 
 <p>从AudioSource处获取是实时匹配时采用的方法。AudioSource本身提供了一个GetOutputData函数，可以获取当前正在播放的语音数据段。 从AudioClip处获取是烘焙是采用的方法。AudioClip本身其实是对语音文件的一个封装，可以使用GetData函数直接获得语音数据。 这过程中也包含了分帧与窗口化的步骤。</p>
@@ -263,6 +269,8 @@ MathJax.Hub.Config({
 
 <p><br /></p>
 
+<p>作者体验下来， 这套系统对日语有很好的的支持， 但对中文支持的却并不是那么的友好，分析下来发现， 日语之所以表现良好， 是因为元音的个数只有五个，非常的少。 普通话有三十九个韵母。韵母主要由元音构百成，也有的由元音加鼻辅音构成。韵母按结构可分单元音韵母、复元音韵母和带鼻音韵母三度类。单元音韵母由单元音构成，有a、o、e、ê、i、u、ü、问-i<a href="前i">¹</a>和-i<a href="后i">ι</a>、er等十个；复元答音韵母由复元音构成版，有ai、ei、ao、ou、ia、ie、ua、uo、üe、iao、iou、uai、uei等十三个， 因此汉语的发音更加复杂， 使用同样的算法，支持的就差一些。</p>
+
 <h2 id="神经网络提取音素">神经网络提取音素</h2>
 
 <p>我们的想法很直接，就是基于音频生成口型动画，或者说，输入是一段音频，经过我们的系统，输出为相应的口型动画。而如果先忽略音频和动画的时序，问题就变成了将音频关键帧经过一个深度神经网络，得到一个口型关键帧。</p>
@@ -334,7 +342,7 @@ MathJax.Hub.Config({
 <ul>
   <li><a href="https://research.nvidia.com/publication/2017-07_Audio-Driven-Facial-Animation">Audio-Driven-Facial-Animation</a></li>
   <li><a href="https://www.sohu.com/a/197252744_468636">跟脸有关的最新玩法是你说什么，表情包就演什么</a></li>
-  <li><a href="http://qikan.cqvip.com/Qikan/Article/ReadIndex?id=30550592&amp;info=knwEXTMddsIiB765E2wuYjDNw3Jym47qQiJwBqauXPY=">一种基于共振峰分析的语音驱动人脸动画方法</a></li>
+  <li><a href="http://qikan.cqvip.com/Qikan/Article/ReadIndex?id=30550592&amp;info=knwEXTMddsIiB765E2wuYrw3l7hqQdL4BdXPQHeU61w=">一种基于共振峰分析的语音驱动人脸动画方法</a></li>
   <li><a href="https://www.doc88.com/p-5520157935.html">基于机器学习的语音驱动人脸动画方法</a></li>
   <li><a href="http://qikan.cqvip.com/Qikan/Article/ReadIndex?id=37684952&amp;info=4ts9VpOmD2kiSp7n5pJMv4Zd9Fqnm/QTG+NT+2rs9eo=">人脸表情动画与语音的典型相关性分析</a></li>
   <li><a href="https://www.doc88.com/p-7582360137704.html">基于汉语驱动人脸语音动画的研究</a></li>
@@ -344,6 +352,8 @@ MathJax.Hub.Config({
   <li><a href="https://www.cnblogs.com/wyuzl/p/7880124.html">详解离散余弦变换（DCT）</a></li>
   <li><a href="https://blog.csdn.net/jgj123321/article/details/94448463">高斯滤波 百度百科</a></li>
   <li><a href="https://baike.baidu.com/item/%E6%B5%B7%E6%98%8E%E7%AA%97/8696634?fr=aladdin">海明窗 百度百科</a></li>
+  <li><a href="https://wenku.baidu.com/view/a290cf57996648d7c1c708a1284ac850ad020422.html">共振峰频率 ppt 百度文库</a></li>
+  <li><a href="https://github.com/keijiro/unity-audio-spectrum">unity-audio-spectrum 算法源码</a></li>
 </ul>
 
 
