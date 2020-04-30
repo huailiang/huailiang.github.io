@@ -295,10 +295,12 @@ ___参考文献___:
 * [详解离散余弦变换（DCT）][i12]
 * [高斯滤波 百度百科][i13]
 * [海明窗 百度百科][i14]
+* [共振峰频率 ppt 百度文库][i15]
+* [unity-audio-spectrum 算法源码][i16]
 
 [i1]: https://research.nvidia.com/publication/2017-07_Audio-Driven-Facial-Animation
 [i2]: https://www.sohu.com/a/197252744_468636
-[i3]: http://qikan.cqvip.com/Qikan/Article/ReadIndex?id=30550592&info=knwEXTMddsIiB765E2wuYjDNw3Jym47qQiJwBqauXPY=
+[i3]: http://qikan.cqvip.com/Qikan/Article/ReadIndex?id=30550592&info=knwEXTMddsIiB765E2wuYrw3l7hqQdL4BdXPQHeU61w=
 [i4]: https://www.doc88.com/p-5520157935.html
 [i5]: http://qikan.cqvip.com/Qikan/Article/ReadIndex?id=37684952&info=4ts9VpOmD2kiSp7n5pJMv4Zd9Fqnm/QTG+NT+2rs9eo=
 [i6]: https://www.doc88.com/p-7582360137704.html
@@ -310,3 +312,5 @@ ___参考文献___:
 [i12]: https://www.cnblogs.com/wyuzl/p/7880124.html
 [i13]: https://blog.csdn.net/jgj123321/article/details/94448463
 [i14]: https://baike.baidu.com/item/%E6%B5%B7%E6%98%8E%E7%AA%97/8696634?fr=aladdin
+[i15]: https://wenku.baidu.com/view/a290cf57996648d7c1c708a1284ac850ad020422.html
+[i16]: https://github.com/keijiro/unity-audio-spectrum
