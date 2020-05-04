@@ -226,6 +226,12 @@ public static void FindLocalLargestPeaks(float[] data, float[] peakValue, int[] 
 
 ![](/img/post-vr/mou8.jpg)
 
+
+[formant-analyzer][i17]项目中对元音(英语中包含长元音和短元音)和共振峰关系的可视化显示：
+
+
+![](/img/post-vr/mou9.jpg)
+
 还有对第一共振峰F1的判定算法是找一个递增的峰值，且其下一个峰值的不高于记录的峰值，即判定为F1， 实际上有可能这两个峰值都不是F1，后面还会实现线性预测技术(LPC)、倒谱法来求峰值， 并对比数据和效果以实现更一步的优化。
 
 
@@ -333,3 +339,4 @@ ___参考文献___:
 [i14]: https://baike.baidu.com/item/%E6%B5%B7%E6%98%8E%E7%AA%97/8696634?fr=aladdin
 [i15]: https://wenku.baidu.com/view/a290cf57996648d7c1c708a1284ac850ad020422.html
 [i16]: https://github.com/keijiro/unity-audio-spectrum
+[i17]: https://github.com/fulldecent/formant-analyzer/
