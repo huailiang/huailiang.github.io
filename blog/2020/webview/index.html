@@ -1,0 +1,461 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <meta http-equiv="X-UA-Compatible" content="IE=edge">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+
+  <title>Webview优化</title>
+  <meta name="description"
+    content="  webview是太强大了，微信简直一个webview的app。在游戏中集成webview，已经很多厂商都已经做了，大多集中在活动系统，网络直播推流等在游戏中有了广泛的应用。在腾讯的游戏中，一般都会集成MSDK，里面自带了webview, 算是一个典型的应用吧。">
+
+  <link rel="shortcut icon" href="/img/favicon.ico">
+  <link rel="stylesheet" href="/css/main.css">
+  <link rel="canonical" href="https://huailiang.github.io/blog/2020/webview/">
+
+</head>
+
+<body>
+  <main>
+    <header class="site-header">
+  <div class="container">
+    <h1><a href="/">Hom<span>e</span></a></h1>
+
+    <button type="button" class="sliding-panel-button">
+      <span></span>
+      <span></span>
+      <span></span>
+    </button>
+
+    <nav class="navbar sliding-panel-content">
+      <ul>
+        
+        <li><a href="/about" title="About">About</a>
+        </li>
+        
+        <li><a href="/blog" title="Blog">Blog</a>
+        </li>
+        
+       <li><a href="/category/" target="_blank"><i class="icon icon-feed"></i></a></li>
+      </ul>
+    </nav>
+  </div>
+</header>
+
+<div class="sliding-panel-fade-screen"></div>
+    <script type="text/javascript" src="/js/MathJax.js?config=TeX-AMS-MML_HTMLorMML"></script>
+
+<script type="text/x-mathjax-config">
+MathJax.Hub.Config({
+  tex2jax: {
+    inlineMath: [['$','$'], ['\\(','\\)']],
+    processEscapes: true
+  }
+});
+</script>
+
+<script type="text/x-mathjax-config">
+  MathJax.Hub.Config({
+    tex2jax: {
+      skipTags: ['script', 'noscript', 'style', 'textarea', 'pre', 'code']
+    }
+  });
+
+</script>
+    <div class="container">
+      <article role="article" class="post">
+
+  <div class="card">
+    <header class="post-header">
+      <h1 class="post-title">Webview优化</h1>
+      <p class="post-meta">Jun 21, 2020 •
+        huailiang</p>
+    </header>
+
+    <div class="post-content">
+      <blockquote>
+  <p>webview是太强大了，微信简直一个webview的app。在游戏中集成webview，已经很多厂商都已经做了，大多集中在活动系统，网络直播推流等在游戏中有了广泛的应用。在腾讯的游戏中，一般都会集成MSDK，里面自带了webview, 算是一个典型的应用吧。</p>
+</blockquote>
+
+<p>此文主要针对webview一些特性，提出一些优化建议。目前一般游戏引擎不会自带Webview, 需要开发者独自以Native的方式接入Webview。</p>
+
+<h3 id="webview与游戏通信">Webview与游戏通信</h3>
+
+<p>一般web都是使用js来编写动态逻辑，当我们向webview通过url是哟get或者post的方式来请求的时候，native底层能截获发送的信息，native根据定义的协议来判断是派发给游戏逻辑，还是给webview来加载页面。</p>
+
+<p>游戏收到通知之后，可以做出相应的响应，比如关闭webview。 又时候webview是放在子进程里了（Android平台），游戏进程就在后台如果长时间不发送心跳，游戏服务器会自动断开连接，这时候用处就显而易见了。</p>
+
+<h3 id="ios-kitview">IOS KitView</h3>
+
+<p>UIWebview会在iOS12之后弃用，全面普及WKWebview。所以还在使用UIWebview的话需要考虑一下迁移到WKWebview了。下面是把项目WKWebview脱敏之后的一些基础功能的封装。</p>
+
+<h5 id="uiwebview特点">UIwebview特点：</h5>
+
+<ul>
+  <li>加载速度慢；</li>
+  <li>内存占用多，内存优化困难；</li>
+  <li>内存泄漏;</li>
+  <li>第一次加载要卡一段时间白屏</li>
+  <li>wkwebview特点：</li>
+</ul>
+
+<h5 id="wkwebview特点">wkwebview特点：</h5>
+
+<ul>
+  <li>支持更多的HTML5的特性</li>
+  <li>高达60fps的滚动刷新率以及内置手势</li>
+  <li>Safari相同的JavaScript引擎</li>
+  <li>将UIWebViewDelegate与UIWebView拆分成了14类与3个协议[2]</li>
+  <li>增加加载进度属性：estimatedProgress</li>
+  <li>自身不附带cookie</li>
+</ul>
+
+<p>建议在ios8以上都使用wkwebview，并通过宏的方式兼容ios7之下的webview.</p>
+
+<div class="language-c highlighter-rouge"><pre class="highlight"><code><span class="cp">#if __IPHONE_OS_VERSION_MAX_ALLOWED &gt;= __IPHONE_8_0
+#import &lt;WebKit/WebKit.h&gt;
+#endif
+</span></code></pre>
+</div>
+
+<h3 id="android-独立进程">Android 独立进程</h3>
+
+<p>大量Web页面的使用容易导致App内存占用巨大，存在内存泄露，崩溃率高等问题, WebView独立进程的使用是解决Android WebView相关问题的一个合理的方案。</p>
+
+<p>WebView独立进程的实现比较简单，只需要在AndroidManifest中找到对应的WebViewActivity，对其配置”android: process”属性即可</p>
+
+<pre><code class="language-xmll">
+&lt;activity
+    android:name=".remote.RemoteCommonWebActivity"
+    android:configChanges="orientation|keyboardHidden|screenSize"
+    android:process=":remoteWeb"/&gt;
+</code></pre>
+
+<p><img src="/img/post-unity/web2.png" alt="" /></p>
+
+<p>Android多进程的通讯方式有很多种，主要的方式有以下几种：</p>
+
+<ul>
+  <li>AIDL</li>
+  <li>Messenger</li>
+  <li>ContentProvider</li>
+  <li>共享文件</li>
+  <li>组件间Bundle传递</li>
+  <li>Socket传输</li>
+</ul>
+
+<p>考虑到WebView主要的通讯方式就是方法调用，所以采用AIDL方式。AIDL本质采用的是Binder机制，这里贴一张网上的Binder机制原理图，具体的AIDL的使用方式这里不赘述, 以下是几个核心AIDL文件</p>
+
+<p><img src="/img/post-unity/web1.png" alt="" /><br />
+IBinderPool： Webview进程和主进程的通讯可能涉及到多个AIDL Binder，从功能上来讲，我们也会把不同功能的接口写成不同的AIDL Binder，所以IBinderPool用于满足调用方根据不同类型获取不同的Binder。</p>
+
+<div class="language-java highlighter-rouge"><pre class="highlight"><code><span class="kd">interface</span> <span class="nc">IBinderPool</span> <span class="o">{</span>
+    <span class="n">IBinder</span> <span class="nf">queryBinder</span><span class="o">(</span><span class="kt">int</span> <span class="n">binderCode</span><span class="o">);</span>  <span class="c1">//查找特定Binder的方法</span>
+<span class="o">}</span>
+</code></pre>
+</div>
+
+<p>IWebAidlInterface: 最核心的AIDL Binder，这里把WebView进程对主进程的每一个调用看做一次action， 每个action都会有唯一的actionName, 主进程会提前注册好这些action，action 也有级别level，每次调用结束通过IWebAidlCallback返回结果</p>
+
+<div class="language-java highlighter-rouge"><pre class="highlight"><code><span class="kd">interface</span> <span class="nc">IWebAidlInterface</span> <span class="o">{</span>
+    
+    <span class="cm">/**
+     * actionName: 不同的action， jsonParams: 需要根据不同的action从map中读取并依次转成其他
+     */</span>
+    <span class="kt">void</span> <span class="nf">handleWebAction</span><span class="o">(</span><span class="kt">int</span> <span class="n">level</span><span class="o">,</span> <span class="n">String</span> <span class="n">actionName</span><span class="o">,</span> <span class="n">String</span> <span class="n">jsonParams</span><span class="o">,</span> <span class="n">in</span> <span class="n">IWebAidlCallback</span> <span class="n">callback</span><span class="o">);</span>
+
+ <span class="o">}</span>
+</code></pre>
+</div>
+
+<p>IWebAidlCallback: 结果回调</p>
+
+<div class="language-java highlighter-rouge"><pre class="highlight"><code> <span class="kd">interface</span> <span class="nc">IWebAidlCallback</span> <span class="o">{</span>
+    <span class="kt">void</span> <span class="nf">onResult</span><span class="o">(</span><span class="kt">int</span> <span class="n">responseCode</span><span class="o">,</span> <span class="n">String</span> <span class="n">actionName</span><span class="o">,</span> <span class="n">String</span> <span class="n">response</span><span class="o">);</span>
+<span class="o">}</span>
+</code></pre>
+</div>
+
+<p>为了维护独立进程和主进程之间的连接，避免每次aidl调用时都去重新进行binder连接和获取，需要专门提供一个类去维护连接，并根据条件返回Binder. 这个类就叫做 RemoteWebBinderPool</p>
+
+<div class="language-java highlighter-rouge"><pre class="highlight"><code><span class="kd">public</span> <span class="kd">class</span> <span class="nc">RemoteWebBinderPool</span> <span class="o">{</span>
+
+    <span class="kd">public</span> <span class="kd">static</span> <span class="kd">final</span> <span class="kt">int</span> <span class="n">BINDER_WEB_AIDL</span> <span class="o">=</span> <span class="mi">1</span><span class="o">;</span>
+
+    <span class="kd">private</span> <span class="n">Context</span> <span class="n">mContext</span><span class="o">;</span>
+    <span class="kd">private</span> <span class="n">IBinderPool</span> <span class="n">mBinderPool</span><span class="o">;</span>
+    <span class="kd">private</span> <span class="kd">static</span> <span class="kd">volatile</span> <span class="n">RemoteWebBinderPool</span> <span class="n">sInstance</span><span class="o">;</span>
+    <span class="kd">private</span> <span class="n">CountDownLatch</span> <span class="n">mConnectBinderPoolCountDownLatch</span><span class="o">;</span>
+
+    <span class="kd">private</span> <span class="nf">RemoteWebBinderPool</span><span class="o">(</span><span class="n">Context</span> <span class="n">context</span><span class="o">)</span> <span class="o">{</span>
+        <span class="n">mContext</span> <span class="o">=</span> <span class="n">context</span><span class="o">.</span><span class="na">getApplicationContext</span><span class="o">();</span>
+        <span class="n">connectBinderPoolService</span><span class="o">();</span>
+    <span class="o">}</span>
+
+    <span class="kd">public</span> <span class="kd">static</span> <span class="n">RemoteWebBinderPool</span> <span class="nf">getInstance</span><span class="o">(</span><span class="n">Context</span> <span class="n">context</span><span class="o">)</span> <span class="o">{</span>
+        <span class="k">if</span> <span class="o">(</span><span class="n">sInstance</span> <span class="o">==</span> <span class="kc">null</span><span class="o">)</span> <span class="o">{</span>
+            <span class="kd">synchronized</span> <span class="o">(</span><span class="n">RemoteWebBinderPool</span><span class="o">.</span><span class="na">class</span><span class="o">)</span> <span class="o">{</span>
+                <span class="k">if</span> <span class="o">(</span><span class="n">sInstance</span> <span class="o">==</span> <span class="kc">null</span><span class="o">)</span> <span class="o">{</span>
+                    <span class="n">sInstance</span> <span class="o">=</span> <span class="k">new</span> <span class="n">RemoteWebBinderPool</span><span class="o">(</span><span class="n">context</span><span class="o">);</span>
+                <span class="o">}</span>
+            <span class="o">}</span>
+        <span class="o">}</span>
+        <span class="k">return</span> <span class="n">sInstance</span><span class="o">;</span>
+    <span class="o">}</span>
+
+    <span class="kd">private</span> <span class="kd">synchronized</span> <span class="kt">void</span> <span class="nf">connectBinderPoolService</span><span class="o">()</span> <span class="o">{</span>
+        <span class="n">mConnectBinderPoolCountDownLatch</span> <span class="o">=</span> <span class="k">new</span> <span class="n">CountDownLatch</span><span class="o">(</span><span class="mi">1</span><span class="o">);</span>
+        <span class="n">Intent</span> <span class="n">service</span> <span class="o">=</span> <span class="k">new</span> <span class="n">Intent</span><span class="o">(</span><span class="n">mContext</span><span class="o">,</span> <span class="n">MainProHandleRemoteService</span><span class="o">.</span><span class="na">class</span><span class="o">);</span>
+        <span class="n">mContext</span><span class="o">.</span><span class="na">bindService</span><span class="o">(</span><span class="n">service</span><span class="o">,</span> <span class="n">mBinderPoolConnection</span><span class="o">,</span> <span class="n">Context</span><span class="o">.</span><span class="na">BIND_AUTO_CREATE</span><span class="o">);</span>
+        <span class="k">try</span> <span class="o">{</span>
+            <span class="n">mConnectBinderPoolCountDownLatch</span><span class="o">.</span><span class="na">await</span><span class="o">();</span>
+        <span class="o">}</span> <span class="k">catch</span> <span class="o">(</span><span class="n">InterruptedException</span> <span class="n">e</span><span class="o">)</span> <span class="o">{</span>
+            <span class="n">e</span><span class="o">.</span><span class="na">printStackTrace</span><span class="o">();</span>
+        <span class="o">}</span>
+    <span class="o">}</span>
+
+    <span class="kd">public</span> <span class="n">IBinder</span> <span class="nf">queryBinder</span><span class="o">(</span><span class="kt">int</span> <span class="n">binderCode</span><span class="o">)</span> <span class="o">{</span>
+        <span class="n">IBinder</span> <span class="n">binder</span> <span class="o">=</span> <span class="kc">null</span><span class="o">;</span>
+        <span class="k">try</span> <span class="o">{</span>
+            <span class="k">if</span> <span class="o">(</span><span class="n">mBinderPool</span> <span class="o">!=</span> <span class="kc">null</span><span class="o">)</span> <span class="o">{</span>
+                <span class="n">binder</span> <span class="o">=</span> <span class="n">mBinderPool</span><span class="o">.</span><span class="na">queryBinder</span><span class="o">(</span><span class="n">binderCode</span><span class="o">);</span>
+            <span class="o">}</span>
+        <span class="o">}</span> <span class="k">catch</span> <span class="o">(</span><span class="n">RemoteException</span> <span class="n">e</span><span class="o">)</span> <span class="o">{</span>
+            <span class="n">e</span><span class="o">.</span><span class="na">printStackTrace</span><span class="o">();</span>
+        <span class="o">}</span>
+        <span class="k">return</span> <span class="n">binder</span><span class="o">;</span>
+    <span class="o">}</span>
+
+    <span class="kd">private</span> <span class="n">ServiceConnection</span> <span class="n">mBinderPoolConnection</span> <span class="o">=</span> <span class="k">new</span> <span class="n">ServiceConnection</span><span class="o">()</span> <span class="o">{</span>   <span class="c1">// 5</span>
+
+        <span class="nd">@Override</span>
+        <span class="kd">public</span> <span class="kt">void</span> <span class="nf">onServiceDisconnected</span><span class="o">(</span><span class="n">ComponentName</span> <span class="n">name</span><span class="o">)</span> <span class="o">{</span>
+
+        <span class="o">}</span>
+
+        <span class="nd">@Override</span>
+        <span class="kd">public</span> <span class="kt">void</span> <span class="nf">onServiceConnected</span><span class="o">(</span><span class="n">ComponentName</span> <span class="n">name</span><span class="o">,</span> <span class="n">IBinder</span> <span class="n">service</span><span class="o">)</span> <span class="o">{</span>
+            <span class="n">mBinderPool</span> <span class="o">=</span> <span class="n">IBinderPool</span><span class="o">.</span><span class="na">Stub</span><span class="o">.</span><span class="na">asInterface</span><span class="o">(</span><span class="n">service</span><span class="o">);</span>
+            <span class="k">try</span> <span class="o">{</span>
+                <span class="n">mBinderPool</span><span class="o">.</span><span class="na">asBinder</span><span class="o">().</span><span class="na">linkToDeath</span><span class="o">(</span><span class="n">mBinderPoolDeathRecipient</span><span class="o">,</span> <span class="mi">0</span><span class="o">);</span>
+            <span class="o">}</span> <span class="k">catch</span> <span class="o">(</span><span class="n">RemoteException</span> <span class="n">e</span><span class="o">)</span> <span class="o">{</span>
+                <span class="n">e</span><span class="o">.</span><span class="na">printStackTrace</span><span class="o">();</span>
+            <span class="o">}</span>
+            <span class="n">mConnectBinderPoolCountDownLatch</span><span class="o">.</span><span class="na">countDown</span><span class="o">();</span>
+        <span class="o">}</span>
+    <span class="o">};</span>
+
+    <span class="kd">private</span> <span class="n">IBinder</span><span class="o">.</span><span class="na">DeathRecipient</span> <span class="n">mBinderPoolDeathRecipient</span> <span class="o">=</span> <span class="k">new</span> <span class="n">IBinder</span><span class="o">.</span><span class="na">DeathRecipient</span><span class="o">()</span> <span class="o">{</span>    <span class="c1">// 6</span>
+        <span class="nd">@Override</span>
+        <span class="kd">public</span> <span class="kt">void</span> <span class="nf">binderDied</span><span class="o">()</span> <span class="o">{</span>
+            <span class="n">mBinderPool</span><span class="o">.</span><span class="na">asBinder</span><span class="o">().</span><span class="na">unlinkToDeath</span><span class="o">(</span><span class="n">mBinderPoolDeathRecipient</span><span class="o">,</span> <span class="mi">0</span><span class="o">);</span>
+            <span class="n">mBinderPool</span> <span class="o">=</span> <span class="kc">null</span><span class="o">;</span>
+            <span class="n">connectBinderPoolService</span><span class="o">();</span>
+        <span class="o">}</span>
+    <span class="o">};</span>
+
+    <span class="kd">public</span> <span class="kd">static</span> <span class="kd">class</span> <span class="nc">BinderPoolImpl</span> <span class="kd">extends</span> <span class="n">IBinderPool</span><span class="o">.</span><span class="na">Stub</span> <span class="o">{</span>
+
+        <span class="kd">private</span> <span class="n">Context</span> <span class="n">context</span><span class="o">;</span>
+
+        <span class="kd">public</span> <span class="nf">BinderPoolImpl</span><span class="o">(</span><span class="n">Context</span> <span class="n">context</span><span class="o">)</span> <span class="o">{</span>
+            <span class="k">this</span><span class="o">.</span><span class="na">context</span> <span class="o">=</span> <span class="n">context</span><span class="o">;</span>
+        <span class="o">}</span>
+
+        <span class="nd">@Override</span>
+        <span class="kd">public</span> <span class="n">IBinder</span> <span class="nf">queryBinder</span><span class="o">(</span><span class="kt">int</span> <span class="n">binderCode</span><span class="o">)</span> <span class="kd">throws</span> <span class="n">RemoteException</span> <span class="o">{</span>
+            <span class="n">IBinder</span> <span class="n">binder</span> <span class="o">=</span> <span class="kc">null</span><span class="o">;</span>
+            <span class="k">switch</span> <span class="o">(</span><span class="n">binderCode</span><span class="o">)</span> <span class="o">{</span>
+                <span class="k">case</span> <span class="nl">BINDER_WEB_AIDL:</span> <span class="o">{</span>
+                    <span class="n">binder</span> <span class="o">=</span> <span class="k">new</span> <span class="n">MainProAidlInterface</span><span class="o">(</span><span class="n">context</span><span class="o">);</span>
+                    <span class="k">break</span><span class="o">;</span>
+                <span class="o">}</span>
+                <span class="k">default</span><span class="o">:</span>
+                    <span class="k">break</span><span class="o">;</span>
+            <span class="o">}</span>
+            <span class="k">return</span> <span class="n">binder</span><span class="o">;</span>
+        <span class="o">}</span>
+    <span class="o">}</span>
+
+<span class="o">}</span>
+</code></pre>
+</div>
+
+<p>从代码中可以看到这个连接池连接的是主进程 MainProHandleRemoteService.</p>
+
+<div class="language-java highlighter-rouge"><pre class="highlight"><code><span class="kd">public</span> <span class="kd">class</span> <span class="nc">MainProHandleRemoteService</span> <span class="kd">extends</span> <span class="n">Service</span> <span class="o">{</span>
+    <span class="nd">@Nullable</span>
+    <span class="nd">@Override</span>
+    <span class="kd">public</span> <span class="n">IBinder</span> <span class="nf">onBind</span><span class="o">(</span><span class="n">Intent</span> <span class="n">intent</span><span class="o">)</span> <span class="o">{</span>
+        <span class="n">Binder</span> <span class="n">mBinderPool</span> <span class="o">=</span> <span class="k">new</span> <span class="n">RemoteWebBinderPool</span><span class="o">.</span><span class="na">BinderPoolImpl</span><span class="o">(</span><span class="n">context</span><span class="o">);</span>
+        <span class="k">return</span> <span class="n">mBinderPool</span><span class="o">;</span>
+    <span class="o">}</span>
+<span class="o">}</span>
+</code></pre>
+</div>
+
+<h4 id="native-web交互和接口管理">Native-Web交互和接口管理</h4>
+
+<p>一次完整的Web页面和Native交互过程是这样的：</p>
+
+<ol>
+  <li>Native打开页面时注册接口：“webView.addJavascriptInterface(jsInterface, “webview”);” 其中jsInterface是JsRemoteInterface类的实例：</li>
+</ol>
+
+<div class="language-java highlighter-rouge"><pre class="highlight"><code><span class="kd">public</span> <span class="kd">final</span> <span class="kd">class</span> <span class="nc">JsRemoteInterface</span> <span class="o">{</span>
+<span class="nd">@JavascriptInterface</span>
+<span class="kd">public</span> <span class="kt">void</span> <span class="nf">post</span><span class="o">(</span><span class="n">String</span> <span class="n">cmd</span><span class="o">,</span> <span class="n">String</span> <span class="n">param</span><span class="o">)</span> <span class="o">{</span>
+    <span class="o">...</span>
+<span class="o">}</span>
+</code></pre>
+</div>
+<ol>
+  <li>Web页面通过“window.webview.post(cmd,JSON.stringify(para))”调用native；</li>
+  <li>Native（即Webview进程）收到调用之后，通过IWebAidlInterface实例传递给主进程执行；</li>
+  <li>主进程收到action请求之后，根据actionname分发处理，执行结束之后通过IWebAidlCallback完成进程间回调。</li>
+</ol>
+
+<h2 id="总结">总结</h2>
+
+<p>我们实现了一套口型动画合成系统，该系统利用深度学习完成从语音到口型动画的映射，可以有效解决语音动画同步的难题，增强动画的真实感和逼真性。同时，该系统对于说话人和语言不敏感，对于中英文的支持普遍好于市面上的同类产品。此外，该系统由于只需要音频文件，所以极大的简化了口型动画的制作流程，减少了相关的时间成本和人员开销。</p>
+
+<p><strong><em>参考文献</em></strong>:</p>
+<ul>
+  <li><a href="https://github.com/xudjx/webprogress">Android WebView独立进程解决方案 github</a></li>
+</ul>
+
+
+    </div>
+  </div>
+
+  <style>
+  .post-nav {
+    overflow: hidden;
+    /* margin-top: 60px; */
+    padding: 12px;
+    white-space: nowrap;
+    /* border-top: 1px solid #eee; */
+  }
+
+  .post-nav-item {
+    display: inline-block;
+    width: 50%;
+    white-space: normal;
+  }
+
+  .post-nav-item a {
+    position: relative;
+    display: inline-block;
+    line-height: 25px;
+    font-size: 14px;
+    color: #555;
+    border-bottom: none;
+  }
+
+  .post-nav-item a:hover {
+    color: #222;
+    font-weight: bold;
+    border-bottom: none;
+  }
+
+  .post-nav-item a:active {
+    top: 2px;
+  }
+
+  .post-nav-item a:before,
+  .post-nav-item a:after {
+    display: inline-block;
+    width: 16px;
+    height: 25px;
+    vertical-align: top;
+    opacity: 0.4;
+    background-size: 16px;
+  }
+
+  .post-nav-none a:none {
+    content: ' ';
+    background-size: 8px;
+  }
+
+  .post-nav-none a:hover:none {
+    opacity: 1;
+  }
+
+  .post-nav-prev a:before {
+    content: ' ';
+    background: url("data:image/svg+xml;base64,PD94bWwgdmVyc2lvbj0iMS4wIiA/PjxzdmcgaGVpZ2h0PSIxMnB4IiB2ZXJzaW9uPSIxLjEiIHZpZXdCb3g9IjAgMCA5IDEyIiB3aWR0aD0iOXB4IiB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHhtbG5zOnNrZXRjaD0iaHR0cDovL3d3dy5ib2hlbWlhbmNvZGluZy5jb20vc2tldGNoL25zIiB4bWxuczp4bGluaz0iaHR0cDovL3d3dy53My5vcmcvMTk5OS94bGluayI+PHRpdGxlLz48ZGVzYy8+PGRlZnMvPjxnIGZpbGw9Im5vbmUiIGZpbGwtcnVsZT0iZXZlbm9kZCIgaWQ9IlBhZ2UtMSIgc3Ryb2tlPSJub25lIiBzdHJva2Utd2lkdGg9IjEiPjxnIGZpbGw9IiMwMDAwMDAiIGlkPSJDb3JlIiB0cmFuc2Zvcm09InRyYW5zbGF0ZSgtMjE4LjAwMDAwMCwgLTkwLjAwMDAwMCkiPjxnIGlkPSJjaGV2cm9uLWxlZnQiIHRyYW5zZm9ybT0idHJhbnNsYXRlKDIxOC41MDAwMDAsIDkwLjAwMDAwMCkiPjxwYXRoIGQ9Ik03LjQsMS40IEw2LDAgTC04Ljg4MTc4NDJlLTE2LDYgTDYsMTIgTDcuNCwxMC42IEwyLjgsNiBMNy40LDEuNCBaIiBpZD0iU2hhcGUiLz48L2c+PC9nPjwvZz48L3N2Zz4=") no-repeat 0 50%;
+    background-size: 8px;
+  }
+
+  .post-nav-prev a:hover:before {
+    opacity: 1;
+  }
+
+  .post-nav-next {
+    text-align: right;
+  }
+
+  .post-nav-next a:after {
+    content: ' ';
+    background: url("data:image/svg+xml;base64,PD94bWwgdmVyc2lvbj0iMS4wIiA/PjxzdmcgaGVpZ2h0PSIxMnB4IiB2ZXJzaW9uPSIxLjEiIHZpZXdCb3g9IjAgMCA5IDEyIiB3aWR0aD0iOXB4IiB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHhtbG5zOnNrZXRjaD0iaHR0cDovL3d3dy5ib2hlbWlhbmNvZGluZy5jb20vc2tldGNoL25zIiB4bWxuczp4bGluaz0iaHR0cDovL3d3dy53My5vcmcvMTk5OS94bGluayI+PHRpdGxlLz48ZGVzYy8+PGRlZnMvPjxnIGZpbGw9Im5vbmUiIGZpbGwtcnVsZT0iZXZlbm9kZCIgaWQ9IlBhZ2UtMSIgc3Ryb2tlPSJub25lIiBzdHJva2Utd2lkdGg9IjEiPjxnIGZpbGw9IiMwMDAwMDAiIGlkPSJDb3JlIiB0cmFuc2Zvcm09InRyYW5zbGF0ZSgtMjYwLjAwMDAwMCwgLTkwLjAwMDAwMCkiPjxnIGlkPSJjaGV2cm9uLXJpZ2h0IiB0cmFuc2Zvcm09InRyYW5zbGF0ZSgyNjAuNTAwMDAwLCA5MC4wMDAwMDApIj48cGF0aCBkPSJNMSwwIEwtMC40LDEuNCBMNC4yLDYgTC0wLjQsMTAuNiBMMSwxMiBMNyw2IEwxLDAgWiIgaWQ9IlNoYXBlIi8+PC9nPjwvZz48L2c+PC9zdmc+") no-repeat 100% 50%;
+    background-size: 8px;
+  }
+
+  .post-nav-next a:hover:after {
+    opacity: 1;
+  }
+</style>
+
+
+
+<div class="post-nav">
+
+  
+  <div class="post-nav-none post-nav-item">
+    <a href=""> </a>
+  </div>
+  
+
+  
+  <div class="post-nav-next post-nav-item">
+    
+    <a href="/blog/2020/mouth/"> 游戏中口型动画合成系统</a>
+  </div>
+  
+
+</div>
+
+</article>
+    </div>
+
+    <footer class="site-footer">
+  <div class="container">
+    <ul class="social">
+  <li><a href="https://twitter.com/penghuailiang" target="_blank"><i class="icon icon-twitter"></i></a></li>
+  <li><a href="https://www.zhihu.com/people/huailiangpenguin" target="_blank"><i class="icon icon-zhihu"></i></a></li>
+  <li><a href="https://www.facebook.com/profile.php?id=100004290725320" target="_blank"><i class="icon icon-facebook"></i></a></li>
+  <li><a href="https://weibo.com/6212299692/profile?topnav=1&wvr=6" target="_blank"><i class="icon icon-sina"></i></a></li>
+  <li><a href="https://www.linkedin.com/in/penghuailiang/" target="_blank"><i class="icon icon-linkedin"></i></a></li>
+  <li><a href="https://github.com/huailiang" target="_blank"><i class="icon icon-github"></i></a></li>
+</ul>
+    <p class="txt-medium-gray">
+      <small>&copy;2020 All rights reserved. </small>
+    </p>
+  </div>
+</footer>
+    <a href="https://github.com/huailiang" target="_blank" class="github-corner"><svg width="80" height="80" viewBox="0 0 250 250" style="fill:#337ab7; color:#fff; position: absolute; top: 0; border: 0; right: 0;"><path d="M0,0 L115,115 L130,115 L142,142 L250,250 L250,0 Z"></path><path d="M128.3,109.0 C113.8,99.7 119.0,89.6 119.0,89.6 C122.0,82.7 120.5,78.6 120.5,78.6 C119.2,72.0 123.4,76.3 123.4,76.3 C127.3,80.9 125.5,87.3 125.5,87.3 C122.9,97.6 130.6,101.9 134.4,103.2" fill="currentColor" style="transform-origin: 130px 106px;" class="octo-arm"></path><path d="M115.0,115.0 C114.9,115.1 118.7,116.5 119.8,115.4 L133.7,101.6 C136.9,99.2 139.9,98.4 142.2,98.6 C133.8,88.0 127.5,74.4 143.8,58.0 C148.5,53.4 154.0,51.2 159.7,51.0 C160.3,49.4 163.2,43.6 171.4,40.1 C171.4,40.1 176.1,42.5 178.8,56.2 C183.1,58.6 187.2,61.8 190.9,65.4 C194.5,69.0 197.7,73.2 200.1,77.6 C213.8,80.2 216.3,84.9 216.3,84.9 C212.7,93.1 206.9,96.0 205.4,96.6 C205.1,102.4 203.0,107.8 198.3,112.5 C181.9,128.9 168.3,122.5 157.7,114.1 C157.9,116.9 156.7,120.9 152.7,124.9 L141.0,136.5 C139.8,137.7 141.6,141.9 141.8,141.8 Z" fill="currentColor" class="octo-body"></path></svg></a>
+
+
+    <script src="//code.jquery.com/jquery-1.11.3.min.js"></script>
+    <script>
+      $(document).ready(function () {
+        $('.sliding-panel-button,.sliding-panel-fade-screen,.sliding-panel-close').on('click touchstart', function (e) {
+          $('.sliding-panel-content,.sliding-panel-fade-screen').toggleClass('is-visible');
+          e.preventDefault();
+        });
+      });
+    </script>
+  </main>
+</body>
+
+</html>

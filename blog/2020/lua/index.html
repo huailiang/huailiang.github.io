@@ -1,0 +1,571 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <meta http-equiv="X-UA-Compatible" content="IE=edge">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+
+  <title>深入理解 Lua 虚拟机(转载)</title>
+  <meta name="description"
+    content="  本文从一个简单示例入手，详细讲解 Lua 字节码文件的存储结构及各字段含义，进而引出 Lua 虚拟机指令集和运行时的核心数据结构 Lua State，最后解释 Lua 虚拟机的 47 条指令如何在 Lua State 上运作的。">
+
+  <link rel="shortcut icon" href="/img/favicon.ico">
+  <link rel="stylesheet" href="/css/main.css">
+  <link rel="canonical" href="https://huailiang.github.io/blog/2020/lua/">
+
+</head>
+
+<body>
+  <main>
+    <header class="site-header">
+  <div class="container">
+    <h1><a href="/">Hom<span>e</span></a></h1>
+
+    <button type="button" class="sliding-panel-button">
+      <span></span>
+      <span></span>
+      <span></span>
+    </button>
+
+    <nav class="navbar sliding-panel-content">
+      <ul>
+        
+        <li><a href="/about" title="About">About</a>
+        </li>
+        
+        <li><a href="/blog" title="Blog">Blog</a>
+        </li>
+        
+       <li><a href="/category/" target="_blank"><i class="icon icon-feed"></i></a></li>
+      </ul>
+    </nav>
+  </div>
+</header>
+
+<div class="sliding-panel-fade-screen"></div>
+    <script type="text/javascript" src="/js/MathJax.js?config=TeX-AMS-MML_HTMLorMML"></script>
+
+<script type="text/x-mathjax-config">
+MathJax.Hub.Config({
+  tex2jax: {
+    inlineMath: [['$','$'], ['\\(','\\)']],
+    processEscapes: true
+  }
+});
+</script>
+
+<script type="text/x-mathjax-config">
+  MathJax.Hub.Config({
+    tex2jax: {
+      skipTags: ['script', 'noscript', 'style', 'textarea', 'pre', 'code']
+    }
+  });
+
+</script>
+    <div class="container">
+      <article role="article" class="post">
+
+  <div class="card">
+    <header class="post-header">
+      <h1 class="post-title">深入理解 Lua 虚拟机(转载)</h1>
+      <p class="post-meta">Jun 25, 2020 •
+        huailiang</p>
+    </header>
+
+    <div class="post-content">
+      <blockquote>
+  <p>本文从一个简单示例入手，详细讲解 Lua 字节码文件的存储结构及各字段含义，进而引出 Lua 虚拟机指令集和运行时的核心数据结构 Lua State，最后解释 Lua 虚拟机的 47 条指令如何在 Lua State 上运作的。</p>
+</blockquote>
+
+<p>为了达到较高的执行效率，lua 代码并不是直接被 Lua 解释器解释执行，而是会先编译为字节码，然后再交给 lua 虚拟机去执行。lua 代码称为 chunk，编译成的字节码则称为二进制 chunk（Binary chunk）。lua.exe、wlua.exe 解释器可直接执行 lua 代码（解释器内部会先将其编译成字节码），也可执行使用 luac.exe 将 lua 代码预编译（Precompiled）为字节码。使用预编译的字节码并不会加快脚本执行的速度，但可以加快脚本加载的速度，并在一定程度上保护源代码。luac.exe 可作为编译器，把 lua 代码编译成字节码，同时可作为反编译器，分析字节码的内容。</p>
+
+<div class="language-c highlighter-rouge"><pre class="highlight"><code> <span class="c1">// 显示luac的版本号
+</span><span class="n">luac</span><span class="p">.</span><span class="n">exe</span> <span class="o">-</span><span class="n">v</span> 
+
+<span class="c1">//在当前目录下，编译得到Hello.lua的二进制chunk文件luac.out（默认含调试符号）
+</span><span class="n">luac</span><span class="p">.</span><span class="n">exe</span> <span class="n">Hello</span><span class="p">.</span><span class="n">lua</span>  
+
+<span class="c1">//在当前目录下，编译得到Hello1.lua和Hello2.lua的二进制chunk文件Hello.out（默认含调试符号）
+</span><span class="n">luac</span><span class="p">.</span><span class="n">exe</span> <span class="o">-</span><span class="n">o</span> <span class="n">Hello</span><span class="p">.</span><span class="n">out</span> <span class="n">Hello1</span><span class="p">.</span><span class="n">lua</span> <span class="n">Hello2</span><span class="p">.</span><span class="n">lua</span> 
+
+<span class="c1">//编译得到Hello.lua的二进制chunk文件Hello.out（去掉调试符号）
+</span><span class="n">luac</span><span class="p">.</span><span class="n">exe</span> <span class="o">-</span><span class="n">s</span> <span class="o">-</span><span class="n">o</span> <span class="n">Hello</span><span class="p">.</span><span class="n">out</span> <span class="n">Hello</span><span class="p">.</span><span class="n">lua</span>  
+
+<span class="c1">//对Hello1.lua和Hello2.lua只进行语法检测
+//（注：只会检查语法规则，不会检查变量、函数等是否定义和实现，函数参数返回值是否合法）
+</span><span class="n">luac</span><span class="p">.</span><span class="n">exe</span> <span class="o">-</span><span class="n">p</span> <span class="n">Hello1</span><span class="p">.</span><span class="n">lua</span> <span class="n">Hello2</span><span class="p">.</span><span class="n">lua</span>  
+</code></pre>
+</div>
+
+<p>lua 编译器以函数为单位对源代码进行编译，每个函数会被编译成一个称之为原型（Prototype）的结构，原型主要包含 6 部分内容：函数基本信息（basic info，含参数数量、局部变量数量等信息）、字节码（bytecodes）、常量（constants）表、upvalue（闭包捕获的非局部变量）表、调试信息（debug info）、子函数原型列表（sub functions）。</p>
+
+<p>原型结构使用这种嵌套递归结构，来描述函数中定义的子函数：</p>
+
+<p><img src="/img/post-lua/luac1.jpeg" alt="" /></p>
+
+<p>注：lua 允许开发者可将语句写到文件的全局范围中，这是因为 lua 在编译时会将整个文件放到一个称之为 main 函数中，并以它为起点进行编译。</p>
+
+<p>Hello.lua 源代码如下：</p>
+
+<div class="language-lua highlighter-rouge"><pre class="highlight"><code><span class="nb">print</span> <span class="p">(</span><span class="s2">"hello"</span><span class="p">)</span>
+<span class="k">function</span> <span class="nf">add</span><span class="p">(</span><span class="n">a</span><span class="p">,</span> <span class="n">b</span><span class="p">)</span>
+    <span class="k">return</span> <span class="n">a</span><span class="o">+</span><span class="n">b</span>
+<span class="k">end</span>
+</code></pre>
+</div>
+
+<p>编译得到的 Hello.out 的二进制为：</p>
+
+<p><img src="/img/post-lua/luac2.jpeg" alt="" /></p>
+
+<p>二进制 chunk（Binary chunk）的格式并没有标准化，也没有任何官方文档对其进行说明，一切以 lua 官方实现的源代码为准。其设计并没有考虑跨平台，对于需要超过一个字节表示的数据，必须要考虑大小端（Endianness）问题。</p>
+
+<p>lua 官方实现的做法比较简单：编译 lua 脚本时，直接按照本机的大小端方式生成二进制 chunk 文件，当加载二进制 chunk 文件时，会探测被加载文件的大小端方式，如果和本机不匹配，就拒绝加载。二进制 chunk 格式设计也没有考虑不同 lua 版本之间的兼容问题，当加载二进制 chunk 文件时，会检测其版本号，如果和当前 lua 版本不匹配，就拒绝加载。另外，二进制 chunk 格式设计也没有被刻意设计得很紧凑。在某些情况下，一段 lua 代码编译成二进制 chunk 后，甚至会被文本形式的源代码还要大。预编译成二进制 chunk 主要是为了提升加载速度，因此这也不是很大的问题。</p>
+
+<h5 id="头部字段">头部字段：</h5>
+
+<p><img src="/img/post-lua/luac3.jpeg" alt="" /></p>
+
+<h4 id="嵌套的函数原型">嵌套的函数原型：</h4>
+
+<p><img src="/img/post-lua/luac4.jpeg" alt="" /></p>
+
+<blockquote>
+  <p>注 1：二进制 chunk 中的字符串分为三种情况：<br />
+①NULL 字符串用 0x00 表示；<br />
+② 长度小于等于 253（0xFD）的字符串，先用 1 个 byte 存储字符串长度+1 的数值，然后是字节数组；<br />
+③ 长度大于等于 254（0xFE）的字符串，第一个字节是 0xFF，后面跟一个 8 字节 size_t 类型存储字符串长度+1 的数值，然后是字节数组。<br />
+注 2：常量 tag 对应表</p>
+</blockquote>
+
+<p><img src="/img/post-lua/luac5.jpeg" alt="" /></p>
+
+<p>查看二进制 chunk 中的所有函数（精简模式）：</p>
+
+<div class="language-lua highlighter-rouge"><pre class="highlight"><code><span class="n">luac</span><span class="p">.</span><span class="n">exe</span> <span class="o">-</span><span class="n">l</span> <span class="n">Hello</span><span class="p">.</span><span class="n">lua</span>
+<span class="n">luac</span><span class="p">.</span><span class="n">exe</span> <span class="o">-</span><span class="n">l</span> <span class="n">Hello</span><span class="p">.</span><span class="n">out</span>
+</code></pre>
+</div>
+
+<p><img src="/img/post-lua/luac6.jpeg" alt="" /></p>
+
+<blockquote>
+  <p>注 1：每个函数信息包括两个部分：前面两行是函数的基本信息，后面是函数的指令列表。<br />
+注 2：函数的基本信息包括：函数名称、函数的起始行列号、函数包含的指令数量、函数地址。函数的参数 params 个数（0+表示函数为不固定参数）、寄存器 slots 数量、upvalue 数量、局部变量 locals 数量、常量 constants 数量、子函数 functions 数量。<br />
+注 3：指令列表里的每一条指令包含指令序号、对应代码行号、操作码和操作数。分号后为 luac 生成的注释，以便于我们理解指令。<br />
+注 4：整个文件内容被放置到了 main 函数中，并以它作为嵌套起点。</p>
+</blockquote>
+
+<p>查看二进制 chunk 中的所有函数（详细模式）：</p>
+
+<div class="highlighter-rouge"><pre class="highlight"><code>luac.exe -l -l Hello.lua 注：参数为 2 个-l
+luac.exe -l -l Hello.out 注：详细模式下，luac 会把常量表、局部变量表和 upvalue 表的信息也打印出来
+</code></pre>
+</div>
+
+<div class="highlighter-rouge"><pre class="highlight"><code>main &lt;Test2.lua:0,0&gt; (6 instructions at 0046e528)
+0+ params, 2 slots, 1 upvalue, 0 locals, 3 constants, 1 function
+       序号    代码行    指令
+        1       [1]     GETTABUP        0 0 -1  ; _ENV "print"   //GETTABUP A B C  //将upvalues表索引为B:0的upvalue(即：_ENV)中key为常量表索引为C:-1的(即print)，放到寄存器索引为A:0的地方
+        2       [1]     LOADK           1 -2    ; "hello"  //LOADK A Bx  //将常量表索引为Bx:-2的hello加载到寄存器索引为A:1的地方
+        3       [1]     CALL            0 2 1    ; //CALL A B C  //调用寄存器索引为A:0的函数，参数个数为B:2减1(即1个)，C:1表示无返回值
+        4       [5]     CLOSURE         0 0     ; 0046e728      //CLOSURE A Bx  //将子函数原型列表索引为Bx:0的函数地址，放到寄存器索引为A:0的地方
+        5       [3]     SETTABUP        0 -3 0  ; _ENV "add"   //SETTABUP A B C  //将upvalues表索引为A:0的upvalue(即：_ENV)中key为常量表索引为B:-3(即add)，设置为寄存器索引为C:0指向的值
+        6       [5]     RETURN          0 1        ; //RETURN A B   //B:1表示无返回值
+constants (3) for 0046e528:
+        序号    常量名
+        1       "print"
+        2       "hello"
+        3       "add"
+locals (0) for 0046e528:
+upvalues (1) for 0046e528:
+        序号    upvalue名    是否为直接外围函数的局部变量    在外围函数调用帧的索引
+        0       _ENV        1                               0
+
+function &lt;Test2.lua:3,5&gt; (3 instructions at 0046e728)
+2 params, 3 slots, 0 upvalues, 2 locals, 0 constants, 0 functions
+        序号    代码行    指令
+        1       [4]     ADD             2 0 1    ; //ADD A B C  //将寄存器索引为0、1的两个数相加得到的结果放到寄存器索引为2的地方
+        2       [4]     RETURN          2 2        ; //RETURN A B //B:2表示有一个返回值  A:2表示返回值在寄存器索引为2的地方
+        3       [5]     RETURN          0 1        ; //RETURN A B //B:1表示无返回值
+constants (0) for 0046e728:
+locals (2) for 0046e728:
+    寄存器索引    起始指令序号  终止指令序号  -1得到实际指令序号
+        0       a       1       4        ; a变量的指令范围为[0, 3]，起始为0表示为传入的参数变量
+        1       b       1       4        ; b变量的指令范围为[0, 3]
+upvalues (0) for 0046e728:
+</code></pre>
+</div>
+
+<div class="highlighter-rouge"><pre class="highlight"><code>luac.exe -l - // 从标准设备读入脚本，输完后按回车，然后按 Ctrl+Z 并回车，会打印出输入内容对应的二进制 chunk 内容 注：进入输入模式后可按 Ctrl+C 强制退出
+luac.exe -l -- // 使用上次输入，打印出二进制 chunk 内容
+luac.exe -l -l -- // 使用上次输入，详细模式下打印出二进制 chunk 内容（参数为 2 个-l）
+</code></pre>
+</div>
+
+<h3 id="stack-based-vm-vs-rigister-based-vm">Stack Based VM vs Rigister Based VM</h3>
+
+<p>高级编程语言的虚拟机是利用软件技术对硬件进行的模拟和抽象。按照实现方式，可分为两类：基于栈（Stack Based）和基于寄存器（Rigister Based）。Java、.NET CLR、Python、Ruby、Lua5.0 之前的版本的虚拟机都是基于栈的虚拟机；从 5.0 版本开始，Lua 的虚拟机改成了基于寄存器的虚拟机。</p>
+
+<p>一个简单的加法赋值运算：a=b+c</p>
+
+<p>基于栈的虚拟机，会转化成如下指令:</p>
+
+<div class="language-c highlighter-rouge"><pre class="highlight"><code><span class="n">push</span> <span class="n">b</span><span class="p">;</span> <span class="c1">// 将变量b的值压入stack
+</span>
+<span class="n">push</span> <span class="n">c</span><span class="p">;</span> <span class="c1">// 将变量c的值压入stack
+</span>
+<span class="n">add</span><span class="p">;</span> <span class="c1">// 将stack顶部的两个值弹出后相加，然后将结果压入stack顶
+</span>
+<span class="n">mov</span> <span class="n">a</span><span class="p">;</span> <span class="c1">// 将stack顶部结果放到a中
+</span></code></pre>
+</div>
+
+<p>所有的指令执行，都是基于一个操作数栈的。你想要执行任何指令时，对不起，得先入栈，然后算完了再给我出栈。总的来说，就是抽象出了一个高度可移植的操作数栈，所有代码都会被编译成字节码，然后字节码就是在玩这个栈。好处是实现简单，移植性强。坏处是指令条数比较多，数据转移次数比较多，因为每一次入栈出栈都牵涉数据的转移。</p>
+
+<p>基于寄存器的虚拟机，会转化成如下指令：</p>
+
+<div class="language-c highlighter-rouge"><pre class="highlight"><code><span class="n">add</span> <span class="n">a</span> <span class="n">b</span> <span class="n">c</span><span class="p">;</span> <span class="c1">// 将b与c对应的寄存器的值相加，将结果保存在a对应的寄存器中
+</span></code></pre>
+</div>
+
+<p>没有操作数栈这一概念，但是会有许多的虚拟寄存器。这类虚拟寄存器有别于 CPU 的寄存器，因为 CPU 寄存器往往是定址的(比如 DX 本身就是能存东西)，而寄存器式的虚拟机中的寄存器通常有两层含义：</p>
+
+<p>(1)寄存器别名(比如 lua 里的 RA、RB、RC、RBx 等)，它们往往只是起到一个地址映射的功能，它会根据指令中跟操作数相关的字段计算出操作数实际的内存地址，从而取出操作数进行计算；</p>
+
+<p>(2)实际寄存器，有点类似操作数栈，也是一个全局的运行时栈，只不过这个栈是跟函数走的，一个函数对应一个栈帧，栈帧里每个 slot 就是一个寄存器，第 1 步中通过别名映射后的地址就是每个 slot 的地址。</p>
+
+<p>好处是指令条数少，数据转移次数少。坏处是单挑指令长度较长。具体来看，lua 里的实际寄存器数组是用 TValue 结构的栈来模拟的，这个栈也是 lua 和 C 进行交互的虚拟栈。</p>
+
+<h3 id="lua-指令集">lua 指令集</h3>
+
+<p>Lua 虚拟机的指令集为定长（Fixed-width）指令集，每条指令占 4 个字节（32bits），其中操作码（OpCode）占 6bits，操作数（Operand）使用剩余的 26bits。Lua5.3 版本共有 47 条指令，按功能可分为 6 大类：常量加载指令、运算符相关指令、循环和跳转指令、函数调用相关指令、表操作指令和 Upvalue 操作指令。</p>
+
+<p>按编码模式分为 4 类：iABC（39）、iABx（3）、iAsBx（4）、iAx（1）</p>
+
+<p><img src="/img/post-lua/luac7.jpeg" alt="" /></p>
+
+<p>4 种模式中，只有 iAsBx 下的 sBx 操作数会被解释成有符号整数，其他情况下操作数均被解释为无符号整数。操作数 A 主要用来表示目标寄存器索引，其他操作数按表示信息可分为 4 种类型：OpArgN、OpArgU、OpArgR、OpArgK：</p>
+
+<p><img src="/img/post-lua/luac8.jpeg" alt="" /></p>
+
+<h4 id="lua-栈索引">Lua 栈索引</h4>
+
+<p><img src="/img/post-lua/luac11.jpeg" alt="" /></p>
+
+<p>注 1：绝对索引是从 1 开始由栈底到栈顶依次增长的；</p>
+
+<p>注 2：相对索引是从-1 开始由栈顶到栈底依次递减的（在 lua API 函数内部会将相对索引转换为绝对索引）；</p>
+
+<p>注 3：上图栈的容量为 7，栈顶绝对索引为 5，有效索引范围为：[1,5]，可接受索引范围为：[1, 7]；</p>
+
+<p>注 4：Lua 虚拟机指令里寄存器索引是从 0 开始的，而 Lua API 里的栈索引是从 1 开始的，因此当需要把寄存器索引当成栈索引使用时，要进行+1。</p>
+
+<h3 id="lua-state">Lua State</h3>
+
+<p><img src="/img/post-lua/lua10.jpeg" alt="" /></p>
+
+<h3 id="指令表">指令表</h3>
+
+<p>下面是 Lua 的 47 条指令详细说明：</p>
+
+<p><img src="/img/post-lua/luac9.jpeg" alt="" /></p>
+
+<p>B:1 C A:3 MOVE</p>
+
+<p>把源寄存器（索引由 B 指定）里的值移动到目标寄存器（索引有 A 指定），常用于局部变量赋值和参数传递。</p>
+
+<p><img src="/img/post-lua/luac10.jpeg" alt="" /></p>
+
+<p>公式：R(A) := R(B)</p>
+
+<p><img src="/img/post-lua/luac12.jpeg" alt="" /></p>
+
+<p>Bx:2 A:4 LOADK</p>
+
+<p>给单个寄存器（索引由 A 指定）设置成常量（其在常量表的索引由 Bx 指定），将常量表里的某个常量加载到指定寄存器。</p>
+
+<p>在 lua 中，数值型、字符串型等局部变量赋初始值 （数字和字符串会放到常量表中）：</p>
+
+<p><img src="/img/post-lua/luac13.jpeg" alt="" /></p>
+
+<p>公式：R(A) := Kst(Bx)</p>
+
+<p><img src="/img/post-lua/luac14.jpeg" alt="" /></p>
+
+<p>Bx A:4 LOADKX</p>
+
+<p>Ax:585028 EXTRAARG</p>
+
+<p>LOADK 使用 Bx（18bits，最大无符号整数为 262143）表示常量表索引。当将 lua 作数据描述语言使用时，常量表可能会超过这个限制，为了应对这种情况，lua 提供了 LOADKX 指令。LOADKX 指令需要和 EXTRAAG 指令搭配使用，用后者的 Ax（26bits）操作数来指定常量索引。</p>
+
+<p>公式：R(A) := Kst(Ax)</p>
+
+<h3 id="指令名称类型操作码bca">指令名称类型操作码BCA</h3>
+
+<p>LOADBOOLiABC0x03OpArgUOpArgU目标寄存器 idx</p>
+
+<p>B:0 C:1 A:2 LOADBOOL</p>
+
+<p>给单个寄存器（索引由 A 指定）设置布尔值（布尔值由 B 指定），如果寄存器 C 为非 0 则跳过下一条指令</p>
+
+<p><img src="/img/post-lua/luac15.jpeg" alt="" /></p>
+
+<p>公式：</p>
+
+<p>R(A) := (bool)B</p>
+
+<p>if(C) pc++</p>
+
+<h3 id="指令名称类型操作码bca-1">指令名称类型操作码BCA</h3>
+
+<p>LOADNILiABC0x04OpArgUOpArgN目标寄存器 idx</p>
+
+<p>B:4 C A:0 LOADNIL</p>
+
+<p>将序号[A,A+B]连续 B+1 个寄存器设置成 nil 值，用于给连续 n 个寄存器放置 nil 值。在 lua 中，局部变量的默认初始值为 nil，LOADNIL 指令常用于给连续 n 个局部变量设置初始值。</p>
+
+<p><img src="/img/post-lua/luac16.jpeg" alt="" /></p>
+
+<p><strong>指令名称类型操作码BCA</strong> SUBiABC0x0EOpArgKOpArgK目标寄存器 idx</p>
+
+<p>B:0x001 C:0x100 A:4 SUB</p>
+
+<p>对两个寄存器或常量值（索引由 B 和 C 指定）进行相减，并将结果放入另一个寄存器中（索引由 A 指定）</p>
+
+<p>公式：</p>
+
+<p>R(A) := RK(B) - RK(C)</p>
+
+<p><strong>指令名称类型操作码BCA</strong> MULiABC0x0FOpArgKOpArgK目标寄存器 idx</p>
+
+<p>B:0x001 C:0x100 A:4 MUL</p>
+
+<p>对两个寄存器或常量值（索引由 B 和 C 指定）进行相乘，并将结果放入另一个寄存器中（索引由 A 指定）。</p>
+
+<p>公式：R(A) := RK(B) * RK(C)</p>
+
+<p><strong>指令名称类型操作码BCA</strong> MODiABC0x10OpArgKOpArgK目标寄存器 idx</p>
+
+<p>B:0x001 C:0x100 A:4 MOD</p>
+
+<p>对两个寄存器或常量值（索引由 B 和 C 指定）进行求摸运算，并将结果放入另一个寄存器中（索引由 A 指定）。</p>
+
+<p>公式：R(A) := RK(B) % RK(C)</p>
+
+<p><strong>指令名称类型操作码BCA</strong> POWiABC0x11OpArgKOpArgK目标寄存器 idx</p>
+
+<p>B:0x001 C:0x100 A:4 POW</p>
+
+<p>对两个寄存器或常量值（索引由 B 和 C 指定）进行求幂运算，并将结果放入另一个寄存器中（索引由 A 指定）。</p>
+
+<p>公式：R(A) := RK(B) ^ RK(C)</p>
+
+<p><strong>指令名称类型操作码BCA</strong> DIViABC0x12OpArgKOpArgK目标寄存器 idx</p>
+
+<p>B:0x001 C:0x100 A:4 DIV</p>
+
+<p>对两个寄存器或常量值（索引由 B 和 C 指定）进行相除，并将结果放入另一个寄存器中（索引由 A 指定）。</p>
+
+<p>公式：R(A) := RK(B) / RK(C)</p>
+
+<p><strong>指令名称类型操作码BCA</strong> IDIViABC0x13OpArgKOpArgK目标寄存器 idx</p>
+
+<p>B:0x001 C:0x100 A:4 IDIV</p>
+
+<p>对两个寄存器或常量值（索引由 B 和 C 指定）进行相整除，并将结果放入另一个寄存器中（索引由 A 指定）。</p>
+
+<p>公式：R(A) := RK(B) // RK(C)</p>
+
+<p><strong>指令名称类型操作码BCA</strong> BANDiABC0x14OpArgKOpArgK目标寄存器 idx</p>
+
+<p>B:0x001 C:0x100 A:4 BAND</p>
+
+<p>对两个寄存器或常量值（索引由 B 和 C 指定）进行求与操作，并将结果放入另一个寄存器中（索引由 A 指定）。</p>
+
+<p>公式：R(A) := RK(B) &amp; RK(C)</p>
+
+<p><strong>指令名称类型操作码BCA</strong> BORiABC0x15OpArgKOpArgK目标寄存器 idx</p>
+
+<p>B:0x001 C:0x100 A:4 BOR</p>
+
+<p>对两个寄存器或常量值（索引由 B 和 C 指定）进行求或操作，并将结果放入另一个寄存器中（索引由 A 指定）。</p>
+
+<table>
+  <tbody>
+    <tr>
+      <td>公式：R(A) := RK(B)</td>
+      <td>RK(C)</td>
+    </tr>
+  </tbody>
+</table>
+
+<p><strong>指令名称类型操作码BCA</strong> BXORiABC0x16OpArgKOpArgK目标寄存器 idx</p>
+
+<p>B:0x001 C:0x100 A:4 BXOR</p>
+
+<p>对两个寄存器或常量值（索引由 B 和 C 指定）进行求异或操作，并将结果放入另一个寄存器中（索引由 A 指定）</p>
+
+<p>公式：R(A) := RK(B) ~ RK(C)</p>
+
+<p><strong>指令名称类型操作码BCA</strong> SHLiABC0x17OpArgKOpArgK目标寄存器 idx</p>
+
+<p>B:0x001 C:0x100 A:4 SHL</p>
+
+<p>索引由 B 指定的寄存器或常量值进行左移位操作（移动位数的索引由 C 指定的寄存器或常量值），并将结果放入另一个寄存器中（索引由 A 指定）。</p>
+
+<p>公式：R(A) := RK(B) « RK(C)</p>
+
+<p><strong>指令名称类型操作码BCA</strong> SHRiABC0x18OpArgKOpArgK目标寄存器 idx</p>
+
+<p>B:0x001 C:0x100 A:4 SHR</p>
+
+<p>索引由 B 指定的寄存器或常量值进行右移位操作（移动位数的索引由 C 指定的寄存器或常量值），并将结果放入另一个寄存器中（索引由 A 指定）。</p>
+
+<p>公式：R(A) := RK(B) » RK(C)</p>
+
+<p><strong>指令名称类型操作码BCA</strong> UNMiABC0x19OpArgROpArgN目标寄存器 idx</p>
+
+<p>B:1 C A:3 UNM</p>
+
+<p>对寄存器（索引由 B 指定）进行取负数操作，并将结果放入另一个寄存器中（索引由 A 指定）。</p>
+
+<p>公式：R(A) := - R(B)</p>
+
+<p>指令太多了，不枚举了。。。</p>
+
+
+    </div>
+  </div>
+
+  <style>
+  .post-nav {
+    overflow: hidden;
+    /* margin-top: 60px; */
+    padding: 12px;
+    white-space: nowrap;
+    /* border-top: 1px solid #eee; */
+  }
+
+  .post-nav-item {
+    display: inline-block;
+    width: 50%;
+    white-space: normal;
+  }
+
+  .post-nav-item a {
+    position: relative;
+    display: inline-block;
+    line-height: 25px;
+    font-size: 14px;
+    color: #555;
+    border-bottom: none;
+  }
+
+  .post-nav-item a:hover {
+    color: #222;
+    font-weight: bold;
+    border-bottom: none;
+  }
+
+  .post-nav-item a:active {
+    top: 2px;
+  }
+
+  .post-nav-item a:before,
+  .post-nav-item a:after {
+    display: inline-block;
+    width: 16px;
+    height: 25px;
+    vertical-align: top;
+    opacity: 0.4;
+    background-size: 16px;
+  }
+
+  .post-nav-none a:none {
+    content: ' ';
+    background-size: 8px;
+  }
+
+  .post-nav-none a:hover:none {
+    opacity: 1;
+  }
+
+  .post-nav-prev a:before {
+    content: ' ';
+    background: url("data:image/svg+xml;base64,PD94bWwgdmVyc2lvbj0iMS4wIiA/PjxzdmcgaGVpZ2h0PSIxMnB4IiB2ZXJzaW9uPSIxLjEiIHZpZXdCb3g9IjAgMCA5IDEyIiB3aWR0aD0iOXB4IiB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHhtbG5zOnNrZXRjaD0iaHR0cDovL3d3dy5ib2hlbWlhbmNvZGluZy5jb20vc2tldGNoL25zIiB4bWxuczp4bGluaz0iaHR0cDovL3d3dy53My5vcmcvMTk5OS94bGluayI+PHRpdGxlLz48ZGVzYy8+PGRlZnMvPjxnIGZpbGw9Im5vbmUiIGZpbGwtcnVsZT0iZXZlbm9kZCIgaWQ9IlBhZ2UtMSIgc3Ryb2tlPSJub25lIiBzdHJva2Utd2lkdGg9IjEiPjxnIGZpbGw9IiMwMDAwMDAiIGlkPSJDb3JlIiB0cmFuc2Zvcm09InRyYW5zbGF0ZSgtMjE4LjAwMDAwMCwgLTkwLjAwMDAwMCkiPjxnIGlkPSJjaGV2cm9uLWxlZnQiIHRyYW5zZm9ybT0idHJhbnNsYXRlKDIxOC41MDAwMDAsIDkwLjAwMDAwMCkiPjxwYXRoIGQ9Ik03LjQsMS40IEw2LDAgTC04Ljg4MTc4NDJlLTE2LDYgTDYsMTIgTDcuNCwxMC42IEwyLjgsNiBMNy40LDEuNCBaIiBpZD0iU2hhcGUiLz48L2c+PC9nPjwvZz48L3N2Zz4=") no-repeat 0 50%;
+    background-size: 8px;
+  }
+
+  .post-nav-prev a:hover:before {
+    opacity: 1;
+  }
+
+  .post-nav-next {
+    text-align: right;
+  }
+
+  .post-nav-next a:after {
+    content: ' ';
+    background: url("data:image/svg+xml;base64,PD94bWwgdmVyc2lvbj0iMS4wIiA/PjxzdmcgaGVpZ2h0PSIxMnB4IiB2ZXJzaW9uPSIxLjEiIHZpZXdCb3g9IjAgMCA5IDEyIiB3aWR0aD0iOXB4IiB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHhtbG5zOnNrZXRjaD0iaHR0cDovL3d3dy5ib2hlbWlhbmNvZGluZy5jb20vc2tldGNoL25zIiB4bWxuczp4bGluaz0iaHR0cDovL3d3dy53My5vcmcvMTk5OS94bGluayI+PHRpdGxlLz48ZGVzYy8+PGRlZnMvPjxnIGZpbGw9Im5vbmUiIGZpbGwtcnVsZT0iZXZlbm9kZCIgaWQ9IlBhZ2UtMSIgc3Ryb2tlPSJub25lIiBzdHJva2Utd2lkdGg9IjEiPjxnIGZpbGw9IiMwMDAwMDAiIGlkPSJDb3JlIiB0cmFuc2Zvcm09InRyYW5zbGF0ZSgtMjYwLjAwMDAwMCwgLTkwLjAwMDAwMCkiPjxnIGlkPSJjaGV2cm9uLXJpZ2h0IiB0cmFuc2Zvcm09InRyYW5zbGF0ZSgyNjAuNTAwMDAwLCA5MC4wMDAwMDApIj48cGF0aCBkPSJNMSwwIEwtMC40LDEuNCBMNC4yLDYgTC0wLjQsMTAuNiBMMSwxMiBMNyw2IEwxLDAgWiIgaWQ9IlNoYXBlIi8+PC9nPjwvZz48L2c+PC9zdmc+") no-repeat 100% 50%;
+    background-size: 8px;
+  }
+
+  .post-nav-next a:hover:after {
+    opacity: 1;
+  }
+</style>
+
+
+
+<div class="post-nav">
+
+  
+  <div class="post-nav-none post-nav-item">
+    <a href=""> </a>
+  </div>
+  
+
+  
+  <div class="post-nav-next post-nav-item">
+    
+    <a href="/blog/2020/mouth/"> 游戏中口型动画合成系统</a>
+  </div>
+  
+
+</div>
+
+</article>
+    </div>
+
+    <footer class="site-footer">
+  <div class="container">
+    <ul class="social">
+  <li><a href="https://twitter.com/penghuailiang" target="_blank"><i class="icon icon-twitter"></i></a></li>
+  <li><a href="https://www.zhihu.com/people/huailiangpenguin" target="_blank"><i class="icon icon-zhihu"></i></a></li>
+  <li><a href="https://www.facebook.com/profile.php?id=100004290725320" target="_blank"><i class="icon icon-facebook"></i></a></li>
+  <li><a href="https://weibo.com/6212299692/profile?topnav=1&wvr=6" target="_blank"><i class="icon icon-sina"></i></a></li>
+  <li><a href="https://www.linkedin.com/in/penghuailiang/" target="_blank"><i class="icon icon-linkedin"></i></a></li>
+  <li><a href="https://github.com/huailiang" target="_blank"><i class="icon icon-github"></i></a></li>
+</ul>
+    <p class="txt-medium-gray">
+      <small>&copy;2020 All rights reserved. </small>
+    </p>
+  </div>
+</footer>
+    <a href="https://github.com/huailiang" target="_blank" class="github-corner"><svg width="80" height="80" viewBox="0 0 250 250" style="fill:#337ab7; color:#fff; position: absolute; top: 0; border: 0; right: 0;"><path d="M0,0 L115,115 L130,115 L142,142 L250,250 L250,0 Z"></path><path d="M128.3,109.0 C113.8,99.7 119.0,89.6 119.0,89.6 C122.0,82.7 120.5,78.6 120.5,78.6 C119.2,72.0 123.4,76.3 123.4,76.3 C127.3,80.9 125.5,87.3 125.5,87.3 C122.9,97.6 130.6,101.9 134.4,103.2" fill="currentColor" style="transform-origin: 130px 106px;" class="octo-arm"></path><path d="M115.0,115.0 C114.9,115.1 118.7,116.5 119.8,115.4 L133.7,101.6 C136.9,99.2 139.9,98.4 142.2,98.6 C133.8,88.0 127.5,74.4 143.8,58.0 C148.5,53.4 154.0,51.2 159.7,51.0 C160.3,49.4 163.2,43.6 171.4,40.1 C171.4,40.1 176.1,42.5 178.8,56.2 C183.1,58.6 187.2,61.8 190.9,65.4 C194.5,69.0 197.7,73.2 200.1,77.6 C213.8,80.2 216.3,84.9 216.3,84.9 C212.7,93.1 206.9,96.0 205.4,96.6 C205.1,102.4 203.0,107.8 198.3,112.5 C181.9,128.9 168.3,122.5 157.7,114.1 C157.9,116.9 156.7,120.9 152.7,124.9 L141.0,136.5 C139.8,137.7 141.6,141.9 141.8,141.8 Z" fill="currentColor" class="octo-body"></path></svg></a>
+
+
+    <script src="//code.jquery.com/jquery-1.11.3.min.js"></script>
+    <script>
+      $(document).ready(function () {
+        $('.sliding-panel-button,.sliding-panel-fade-screen,.sliding-panel-close').on('click touchstart', function (e) {
+          $('.sliding-panel-content,.sliding-panel-fade-screen').toggleClass('is-visible');
+          e.preventDefault();
+        });
+      });
+    </script>
+  </main>
+</body>
+
+</html>
