@@ -21,6 +21,85 @@ tags:
 
 游戏收到通知之后，可以做出相应的响应，比如关闭webview。 又时候webview是放在子进程里了（Android平台），游戏进程就在后台如果长时间不发送心跳，游戏服务器会自动断开连接，这时候用处就显而易见了。
 
+Android中截获url事件， 并重载调默认逻辑, 如下代码:
+
+```java
+WebView webView = new WebView(gameActivity);
+webView.setWebViewClient(new WebViewClient()
+{
+    public boolean shouldOverrideUrlLoading(WebView view, String url)
+    {
+        gameActivity.Call(_gameObjectName, "OnLoadingUrl", url);
+        if (url.startsWith("litewebview://")) {
+            //返回true表示不需要的再做处理了
+            onJsCall(url);
+            return true;
+        }
+        else if (url.startsWith("file://") || url.startsWith("http://") || url.startsWith("https://")) {
+            //加载网页
+            return super.shouldOverrideUrlLoading(view, url);
+        }
+        else {
+            try {
+                // 以下固定写法
+                final Intent intent = new Intent();
+                intent.setAction(Intent.ACTION_VIEW);
+                intent.setData(Uri.parse(url));
+                gameActivity.startActivity(intent);
+                return true;
+            }
+            catch (Exception e) {
+                MLog.e(TAG, e.getMessage());
+            }
+        }
+        return super.shouldOverrideUrlLoading(view, url);
+    }
+});
+```
+上述代码中， Webview是android.webkit包体里的一个类， 这里通过shouldOverrideUrlLoading来截获url, 如果url以litewebview开头， 那就直接把消息返回给Unity， c#代码区中了。 webview就不需要在渲染网页内容了， Unity收到消息，可以在后台处理，比如发同步消息给Server, 来避免断开连接。
+
+这个url的链接往往是以渲染web页面上的按钮， 对应的html代码可能类似于：
+
+```html
+<a href="litewebview://test?arg1=1&arg2=hello">按钮</a>
+```
+
+或者是以js的方式存在：
+
+```js
+<a id="c_btn">按钮</a>
+<script type="text/javascript">
+ $("#c_btn").click(function(){
+      $("#c_btn").location.href="litewebview://test?arg1=123";
+ }
+</script>
+```
+
+想要解析正确的url或者post过来的表单， 必须使用明文网络流量，因此AndroidManifest.xml必须做如下声明：
+
+```xml
+<application android:usesCleartextTraffic="true">
+...
+</application>
+```
+
+ios处理url获取完毕的回调可以实现NSObject<UIWebViewDelegate>接口， 在shouldStartLoadWithRequest里去实现：
+
+
+```c++
+- (BOOL)webView:(UIWebView *)webView shouldStartLoadWithRequest:(NSURLRequest *)request navigationType:(UIWebViewNavigationType)navigationType
+{
+    NSString *url = [[request URL] absoluteString];
+    NSRange range = [url rangeOfString:@"LiteWebView://"];
+    if(range.location != NSNotFound){
+        NSString *msg = [url substringFromIndex:range.length];
+        // 同步消息给 JS
+        UnitySendMessage([_gameObjectName UTF8String], "OnJsCall", [msg UTF8String]);
+        return YES;
+    }
+    return YES;
+}
+```
 ### IOS KitView
 
 
@@ -50,9 +129,24 @@ UIWebview会在iOS12之后弃用，全面普及WKWebview。所以还在使用UIW
 建议在ios8以上都使用wkwebview，并通过宏的方式兼容ios7之下的webview.
 
 ```c
-#if __IPHONE_OS_VERSION_MAX_ALLOWED >= __IPHONE_8_0
-#import <WebKit/WebKit.h>
+#define GREATER_IOS8 (__IPHONE_OS_VERSION_MAX_ALLOWED >= __IPHONE_8_0)
+
+@interface LiteWebView :
+#if GREATER_IOS8
+NSObject<WKNavigationDelegate>
+#else
+NSObject<UIWebViewDelegate>
 #endif
+{
+#if GREATER_IOS8
+    WKWebView* _webView;
+#else
+    UIWebView* _webView;
+#endif
+    
+    NSString* _gameObjectName;
+}
+@end
 ```
 
 
