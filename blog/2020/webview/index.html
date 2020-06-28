@@ -85,7 +85,91 @@ MathJax.Hub.Config({
 
 <p>游戏收到通知之后，可以做出相应的响应，比如关闭webview。 又时候webview是放在子进程里了（Android平台），游戏进程就在后台如果长时间不发送心跳，游戏服务器会自动断开连接，这时候用处就显而易见了。</p>
 
-<h3 id="ios-kitview">IOS KitView</h3>
+<p>Android中截获url事件， 并重载调默认逻辑, 如下代码:</p>
+
+<div class="language-java highlighter-rouge"><pre class="highlight"><code><span class="n">WebView</span> <span class="n">webView</span> <span class="o">=</span> <span class="k">new</span> <span class="n">WebView</span><span class="o">(</span><span class="n">gameActivity</span><span class="o">);</span>
+<span class="n">webView</span><span class="o">.</span><span class="na">setWebViewClient</span><span class="o">(</span><span class="k">new</span> <span class="n">WebViewClient</span><span class="o">()</span>
+<span class="o">{</span>
+    <span class="kd">public</span> <span class="kt">boolean</span> <span class="nf">shouldOverrideUrlLoading</span><span class="o">(</span><span class="n">WebView</span> <span class="n">view</span><span class="o">,</span> <span class="n">String</span> <span class="n">url</span><span class="o">)</span>
+    <span class="o">{</span>
+        <span class="n">gameActivity</span><span class="o">.</span><span class="na">Call</span><span class="o">(</span><span class="n">_gameObjectName</span><span class="o">,</span> <span class="s">"OnLoadingUrl"</span><span class="o">,</span> <span class="n">url</span><span class="o">);</span>
+        <span class="k">if</span> <span class="o">(</span><span class="n">url</span><span class="o">.</span><span class="na">startsWith</span><span class="o">(</span><span class="s">"litewebview://"</span><span class="o">))</span> <span class="o">{</span>
+            <span class="c1">//返回true表示不需要的再做处理了</span>
+            <span class="n">onJsCall</span><span class="o">(</span><span class="n">url</span><span class="o">);</span>
+            <span class="k">return</span> <span class="kc">true</span><span class="o">;</span>
+        <span class="o">}</span>
+        <span class="k">else</span> <span class="nf">if</span> <span class="o">(</span><span class="n">url</span><span class="o">.</span><span class="na">startsWith</span><span class="o">(</span><span class="s">"file://"</span><span class="o">)</span> <span class="o">||</span> <span class="n">url</span><span class="o">.</span><span class="na">startsWith</span><span class="o">(</span><span class="s">"http://"</span><span class="o">)</span> <span class="o">||</span> <span class="n">url</span><span class="o">.</span><span class="na">startsWith</span><span class="o">(</span><span class="s">"https://"</span><span class="o">))</span> <span class="o">{</span>
+            <span class="c1">//加载网页</span>
+            <span class="k">return</span> <span class="kd">super</span><span class="o">.</span><span class="na">shouldOverrideUrlLoading</span><span class="o">(</span><span class="n">view</span><span class="o">,</span> <span class="n">url</span><span class="o">);</span>
+        <span class="o">}</span>
+        <span class="k">else</span> <span class="o">{</span>
+            <span class="k">try</span> <span class="o">{</span>
+                <span class="c1">// 以下固定写法</span>
+                <span class="kd">final</span> <span class="n">Intent</span> <span class="n">intent</span> <span class="o">=</span> <span class="k">new</span> <span class="n">Intent</span><span class="o">();</span>
+                <span class="n">intent</span><span class="o">.</span><span class="na">setAction</span><span class="o">(</span><span class="n">Intent</span><span class="o">.</span><span class="na">ACTION_VIEW</span><span class="o">);</span>
+                <span class="n">intent</span><span class="o">.</span><span class="na">setData</span><span class="o">(</span><span class="n">Uri</span><span class="o">.</span><span class="na">parse</span><span class="o">(</span><span class="n">url</span><span class="o">));</span>
+                <span class="n">gameActivity</span><span class="o">.</span><span class="na">startActivity</span><span class="o">(</span><span class="n">intent</span><span class="o">);</span>
+                <span class="k">return</span> <span class="kc">true</span><span class="o">;</span>
+            <span class="o">}</span>
+            <span class="k">catch</span> <span class="o">(</span><span class="n">Exception</span> <span class="n">e</span><span class="o">)</span> <span class="o">{</span>
+                <span class="n">MLog</span><span class="o">.</span><span class="na">e</span><span class="o">(</span><span class="n">TAG</span><span class="o">,</span> <span class="n">e</span><span class="o">.</span><span class="na">getMessage</span><span class="o">());</span>
+            <span class="o">}</span>
+        <span class="o">}</span>
+        <span class="k">return</span> <span class="kd">super</span><span class="o">.</span><span class="na">shouldOverrideUrlLoading</span><span class="o">(</span><span class="n">view</span><span class="o">,</span> <span class="n">url</span><span class="o">);</span>
+    <span class="o">}</span>
+<span class="o">});</span>
+</code></pre>
+</div>
+<p>上述代码中， Webview是android.webkit包体里的一个类， 这里通过shouldOverrideUrlLoading来截获url, 如果url以litewebview开头， 那就直接把消息返回给Unity， c#代码区中了。 webview就不需要在渲染网页内容了， Unity收到消息，可以在后台处理，比如发同步消息给Server, 来避免断开连接。</p>
+
+<p>这个url的链接往往是以渲染web页面上的按钮， 对应的html代码可能类似于：</p>
+
+<div class="language-html highlighter-rouge"><pre class="highlight"><code><span class="nt">&lt;a</span> <span class="na">href=</span><span class="s">"litewebview://test?arg1=1&amp;arg2=hello"</span><span class="nt">&gt;</span>按钮<span class="nt">&lt;/a&gt;</span>
+</code></pre>
+</div>
+
+<p>或者是以js的方式存在：</p>
+
+<div class="language-html highlighter-rouge"><pre class="highlight"><code><span class="nt">&lt;a</span> <span class="na">id=</span><span class="s">"c_btn"</span><span class="nt">&gt;</span>按钮<span class="nt">&lt;/a&gt;</span>
+<span class="nt">&lt;script </span><span class="na">type=</span><span class="s">"text/javascript"</span><span class="nt">&gt;</span>
+ <span class="nx">$</span><span class="p">(</span><span class="s2">"#c_btn"</span><span class="p">).</span><span class="nx">click</span><span class="p">(</span><span class="kd">function</span><span class="p">(){</span>
+      <span class="nx">$</span><span class="p">(</span><span class="s2">"#c_btn"</span><span class="p">).</span><span class="nx">location</span><span class="p">.</span><span class="nx">href</span><span class="o">=</span><span class="s2">"litewebview://test?arg1=123"</span><span class="p">;</span>
+ <span class="p">}</span>
+<span class="nt">&lt;/script&gt;</span>
+</code></pre>
+</div>
+
+<p>想要解析正确的url或者post过来的表单， 必须使用明文网络流量，因此AndroidManifest.xml必须做如下声明：</p>
+
+<div class="language-xml highlighter-rouge"><pre class="highlight"><code><span class="nt">&lt;application</span> <span class="na">android:usesCleartextTraffic=</span><span class="s">"true"</span><span class="nt">&gt;</span>
+...
+<span class="nt">&lt;/application&gt;</span>
+</code></pre>
+</div>
+
+<p>ios处理url获取完毕的回调可以实现NSObject <UIWebViewDelegate> 接口， 在shouldStartLoadWithRequest里去实现：</UIWebViewDelegate></p>
+
+<pre><code class="language-oc">- (BOOL)webView:(UIWebView *)webView shouldStartLoadWithRequest:(NSURLRequest *)request navigationType:(UIWebViewNavigationType)navigationType
+{
+    NSString *url = [[request URL] absoluteString];
+    NSRange range = [url rangeOfString:@"LiteWebView://"];
+    if(range.location != NSNotFound){
+        NSString *msg = [url substringFromIndex:range.length];
+        // 同步消息给 JS
+        UnitySendMessage([_gameObjectName UTF8String], "OnJsCall", [msg UTF8String]);
+        return YES;
+    }
+    return YES;
+}
+</code></pre>
+
+<p>如果项目中使用的是WKWebView， 可以实现接口WKNavigationDelegate里的方法就好。</p>
+
+<p>最后需要在设置Link Binary With Libraries中加入：</p>
+
+<p><img src="/img/post-unity/web3.jpg" alt="" /></p>
+
+<h3 id="ios-wkwebview">IOS WKWebView</h3>
 
 <p>UIWebview会在iOS12之后弃用，全面普及WKWebview。所以还在使用UIWebview的话需要考虑一下迁移到WKWebview了。下面是把项目WKWebview脱敏之后的一些基础功能的封装。</p>
 
@@ -112,10 +196,25 @@ MathJax.Hub.Config({
 
 <p>建议在ios8以上都使用wkwebview，并通过宏的方式兼容ios7之下的webview.</p>
 
-<div class="language-c highlighter-rouge"><pre class="highlight"><code><span class="cp">#if __IPHONE_OS_VERSION_MAX_ALLOWED &gt;= __IPHONE_8_0
-#import &lt;WebKit/WebKit.h&gt;
-#endif
-</span></code></pre>
+<div class="language-c highlighter-rouge"><pre class="highlight"><code><span class="cp">#define GREATER_IOS8 (__IPHONE_OS_VERSION_MAX_ALLOWED &gt;= __IPHONE_8_0)
+</span>
+<span class="err">@</span><span class="n">interface</span> <span class="n">LiteWebView</span> <span class="o">:</span>
+<span class="cp">#if GREATER_IOS8
+</span><span class="n">NSObject</span><span class="o">&lt;</span><span class="n">WKNavigationDelegate</span><span class="o">&gt;</span>
+<span class="cp">#else
+</span><span class="n">NSObject</span><span class="o">&lt;</span><span class="n">UIWebViewDelegate</span><span class="o">&gt;</span>
+<span class="cp">#endif
+</span><span class="p">{</span>
+<span class="cp">#if GREATER_IOS8
+</span>    <span class="n">WKWebView</span><span class="o">*</span> <span class="n">_webView</span><span class="p">;</span>
+<span class="cp">#else
+</span>    <span class="n">UIWebView</span><span class="o">*</span> <span class="n">_webView</span><span class="p">;</span>
+<span class="cp">#endif
+</span>    
+    <span class="n">NSString</span><span class="o">*</span> <span class="n">_gameObjectName</span><span class="p">;</span>
+<span class="p">}</span>
+<span class="err">@</span><span class="n">end</span>
+</code></pre>
 </div>
 
 <h3 id="android-独立进程">Android 独立进程</h3>
@@ -411,8 +510,9 @@ IBinderPool： Webview进程和主进程的通讯可能涉及到多个AIDL Binde
 <div class="post-nav">
 
   
-  <div class="post-nav-none post-nav-item">
-    <a href=""> </a>
+  <div class="post-nav-prev post-nav-item">
+    
+    <a href="/blog/2020/lua/"> 深入理解 Lua 虚拟机(转载)</a>
   </div>
   
 
