@@ -1,7 +1,7 @@
 ---
 layout:     post
 title:      "Webview优化"
-date:       2020-07-21 02:00:00
+date:       2020-06-21 02:00:00
 author:     "huailiang"
 tags:
     - 人工智能
@@ -66,7 +66,7 @@ webView.setWebViewClient(new WebViewClient()
 
 或者是以js的方式存在：
 
-```js
+```html
 <a id="c_btn">按钮</a>
 <script type="text/javascript">
  $("#c_btn").click(function(){
@@ -83,10 +83,10 @@ webView.setWebViewClient(new WebViewClient()
 </application>
 ```
 
-ios处理url获取完毕的回调可以实现NSObject<UIWebViewDelegate>接口， 在shouldStartLoadWithRequest里去实现：
+ios处理url获取完毕的回调可以实现NSObject <UIWebViewDelegate> 接口， 在shouldStartLoadWithRequest里去实现：
 
 
-```c++
+```oc
 - (BOOL)webView:(UIWebView *)webView shouldStartLoadWithRequest:(NSURLRequest *)request navigationType:(UIWebViewNavigationType)navigationType
 {
     NSString *url = [[request URL] absoluteString];
@@ -100,11 +100,17 @@ ios处理url获取完毕的回调可以实现NSObject<UIWebViewDelegate>接口�
     return YES;
 }
 ```
-### IOS KitView
 
+如果项目中使用的是WKWebView， 可以实现接口WKNavigationDelegate里的方法就好。
+
+最后需要在设置Link Binary With Libraries中加入：
+
+![](/img/post-unity/web3.jpg)
+
+
+### IOS WKWebView
 
 UIWebview会在iOS12之后弃用，全面普及WKWebview。所以还在使用UIWebview的话需要考虑一下迁移到WKWebview了。下面是把项目WKWebview脱敏之后的一些基础功能的封装。
-
 
 
 ##### UIwebview特点：
