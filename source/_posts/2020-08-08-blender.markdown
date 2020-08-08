@@ -1,0 +1,119 @@
+---
+layout:     post
+title:      "Blender联调PyCharm"
+date:       2020-08-08 02:00:00
+author:     "huailiang"
+tags:
+    - 工具
+---
+
+
+>Blender内置的脚本语言是Python， 然鹅内置的编辑器对开发却对开发者并不友好，除了高亮显示，既不能智能提示，也不能断点调试。python的主流集成IDE，却很好的弥补上述缺点，本文介绍如何Blender如何关联Pycharm来开发工具的。
+
+## Blender安装插件
+
+Blender中安装插件Add-ons, 打开Prefences(设置)， 如下图， 下载[remote_debugger.py][i5], 点击Install， 选择下载的脚本进行安装， 最后如下图所示：
+
+![](/img/post-blender/3.png)
+
+
+你需要配置pycharm-debug-py3k.egg， 此文件一般放在Pycharm的安装目录，即上图中的Path of the Pycharm..的配置。
+
+## Pycharm设置远程调试
+
+打开Pycharm， 设置远程调试， 工具栏 Run → Edit Configurations… → + → Python Remote Debug. 如下图：
+
+![](/img/post-blender/2.png)
+
+
+设置Local Host Name为“localhost”，Port为“1090”. 或者自己编辑remote_debugger.py进行自定义。
+
+
+设置path mapping路径，local是你的脚本所在项目文件夹，remote是blender\2.8\scripts\addons， 调试选项选择刚刚的配置项，点击调试按钮（小虫子），进行监听。
+
+## PyDevd设置
+
+将如下代码插入至远程计算机的应用程序中。具体原因，参考后面介绍的工作原理。
+
+```py
+import pydevd
+pydevd.settrace('127.0.0.1', port=1090, stdoutToServer=True, stderrToServer=True)
+```
+
+其中，IP地址和端口号要与PyCharm中的监听配置保持一致。
+
+## 建立连接
+
+Blender中搜索pycharm, 选中Connect to remote Pycharm Debugger, 建立连接， 如下图所示：
+
+![](/img/post-blender/4.png)
+
+
+如果连接成功， Pycharm控制台Console可以看到Connected to pydev debuger的字样。
+
+![](/img/post-blender/5.png)
+
+Blender中点击RunScript, Blender就会卡住， 这是正常的现象， 这时切换到Pycharm, 可以看到数据已经传到pycharm这边， 如果出现下图的问题， 证明path mapping 配置的有偏差。
+
+![](/img/post-blender/7.png)
+
+
+
+这里可以直接点第二个选项， 直接找到对应的脚本，关联成功后，即可正常的断点调试了。
+
+![](/img/post-blender/8.png)
+
+
+## 效果
+
+最后断点的效果如下：
+
+![](/img/post-blender/1.png)
+
+通过上图可以清晰看到中间变量bpy.context的成员值。
+
+
+## 工作原理
+
+远程调试的功能在Eclipse、IntelliJ IDEA等大型IDE中均有支持，实现原理都基本相同。
+
+在远程调试的模式下，PyCharm（IDE）扮演服务端（Server）的角色，而运行在远程计算机上的应用程序扮演客户端（Client）的角色。正因如此，进行远程调试时，需要先在本地开发环境中设定端口并启动IDE，IDE会对设定的端口开始监听，等待客户端的连接请求；那远程计算机中的应用程序又是怎样与IDE建立通讯连接的呢？
+
+针对远程调试功能，PyCharm提供了pydevd模块，该模块以pycharm-debug.egg的形式存在于PyCharm的安装路径中。远程计算机安装该库文件后，然后就可以调用pydevd.settrace方法，该方法会指定IDE所在机器的IP地址和监听的端口号，用于与IDE建立连接；建立连接后，便可在IDE中对远程在远程计算机中的程序进行单步调试。
+
+在远程计算机中启动应用程序，当执行到pydevd.settrace语句时，便会与本地开发环境中的PyCharm建立通讯连接，接下来便可以在本地IDE中进行单步调试了。需要注意的是，本地开发环境必须保证IP地址和端口号可从远程计算机访问得到，否则会无法建立连接。
+
+## Pip
+
+建议pycharm中使用的python，最好是Blender内置的python， 这样才能保证API的一致性。 blender内置的python。  一般再其安装目录下 version/python/bin/目录，如下图所示：
+
+![](/img/post-blender/6.png)
+
+当然你也可以给此版本的python安装pip, 从而更进一步进行python外来包进行安装和管理， 比如说安装Numpy, Tensorflow, 无缝在Blender环境中进行AI训练。
+
+
+## 自动补全
+
+fake-bpy-module是nutti维护的一套Blender API伪SDK库, 主要用以bpy代码的智能补全
+
+![](/img/post-blender/9.png)
+
+安装[fake-bpy-module][i3], 通过以下命令：
+
+```sh
+pip install fake-bpy-module-<version>
+```
+
+version 是Blender的版本， 假如你的Blender的版本是2.8.0，你可以使用命令:
+
+```sh 
+pip install fake-bpy-module-2.80
+```
+
+
+[i1]: https://github.com/sybrenstuvel/random-blender-addons
+[i2]: https://www.jianshu.com/p/faa27df976a2
+[i3]: https://github.com/xh542428798/fake-bpy-module
+[i4]: https://code.blender.org/2015/10/debugging-python-code-with-pycharm/
+[i5]: https://github.com/sybrenstuvel/random-blender-addons/blob/master/remote_debugger.py
+[i6]: https://www.cnblogs.com/jinjiangongzuoshi/p/5638706.html
