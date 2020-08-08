@@ -1,0 +1,305 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <meta http-equiv="X-UA-Compatible" content="IE=edge">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+
+  <title>Blender联调PyCharm</title>
+  <meta name="description"
+    content="  Blender内置的脚本语言是Python， 然鹅内置的编辑器对开发却对开发者并不友好，除了高亮显示，既不能智能提示，也不能断点调试。python的主流集成IDE，却很好的弥补上述缺点，本文介绍如何Blender如何关联Pycharm来开发工具的。">
+
+  <link rel="shortcut icon" href="/img/favicon.ico">
+  <link rel="stylesheet" href="/css/main.css">
+  <link rel="canonical" href="https://huailiang.github.io/blog/2020/blender/">
+
+</head>
+
+<body>
+  <main>
+    <header class="site-header">
+  <div class="container">
+    <h1><a href="/">Hom<span>e</span></a></h1>
+
+    <button type="button" class="sliding-panel-button">
+      <span></span>
+      <span></span>
+      <span></span>
+    </button>
+
+    <nav class="navbar sliding-panel-content">
+      <ul>
+        
+        <li><a href="/about" title="About">About</a>
+        </li>
+        
+        <li><a href="/blog" title="Blog">Blog</a>
+        </li>
+        
+       <li><a href="/category/" target="_blank"><i class="icon icon-feed"></i></a></li>
+      </ul>
+    </nav>
+  </div>
+</header>
+
+<div class="sliding-panel-fade-screen"></div>
+    <script type="text/javascript" src="/js/MathJax.js?config=TeX-AMS-MML_HTMLorMML"></script>
+
+<script type="text/x-mathjax-config">
+MathJax.Hub.Config({
+  tex2jax: {
+    inlineMath: [['$','$'], ['\\(','\\)']],
+    processEscapes: true
+  }
+});
+</script>
+
+<script type="text/x-mathjax-config">
+  MathJax.Hub.Config({
+    tex2jax: {
+      skipTags: ['script', 'noscript', 'style', 'textarea', 'pre', 'code']
+    }
+  });
+
+</script>
+    <div class="container">
+      <article role="article" class="post">
+
+  <div class="card">
+    <header class="post-header">
+      <h1 class="post-title">Blender联调PyCharm</h1>
+      <p class="post-meta">Aug 8, 2020 •
+        huailiang</p>
+    </header>
+
+    <div class="post-content">
+      <blockquote>
+  <p>Blender内置的脚本语言是Python， 然鹅内置的编辑器对开发却对开发者并不友好，除了高亮显示，既不能智能提示，也不能断点调试。python的主流集成IDE，却很好的弥补上述缺点，本文介绍如何Blender如何关联Pycharm来开发工具的。</p>
+</blockquote>
+
+<h2 id="blender安装插件">Blender安装插件</h2>
+
+<p>Blender中安装插件Add-ons, 打开Prefences(设置)， 如下图， 下载<a href="https://github.com/sybrenstuvel/random-blender-addons/blob/master/remote_debugger.py">remote_debugger.py</a>, 点击Install， 选择下载的脚本进行安装， 最后如下图所示：</p>
+
+<p><img src="/img/post-blender/3.png" alt="" /></p>
+
+<p>你需要配置pycharm-debug-py3k.egg， 此文件一般放在Pycharm的安装目录，即上图中的Path of the Pycharm..的配置。</p>
+
+<h2 id="pycharm设置远程调试">Pycharm设置远程调试</h2>
+
+<p>打开Pycharm， 设置远程调试， 工具栏 Run → Edit Configurations… → + → Python Remote Debug. 如下图：</p>
+
+<p><img src="/img/post-blender/2.png" alt="" /></p>
+
+<p>设置Local Host Name为“localhost”，Port为“1090”. 或者自己编辑remote_debugger.py进行自定义。</p>
+
+<p>设置path mapping路径，local是你的脚本所在项目文件夹，remote是blender\2.8\scripts\addons， 调试选项选择刚刚的配置项，点击调试按钮（小虫子），进行监听。</p>
+
+<h2 id="pydevd设置">PyDevd设置</h2>
+
+<p>将如下代码插入至远程计算机的应用程序中。具体原因，参考后面介绍的工作原理。</p>
+
+<div class="language-py highlighter-rouge"><pre class="highlight"><code><span class="kn">import</span> <span class="nn">pydevd</span>
+<span class="n">pydevd</span><span class="o">.</span><span class="n">settrace</span><span class="p">(</span><span class="s">'127.0.0.1'</span><span class="p">,</span> <span class="n">port</span><span class="o">=</span><span class="mi">1090</span><span class="p">,</span> <span class="n">stdoutToServer</span><span class="o">=</span><span class="bp">True</span><span class="p">,</span> <span class="n">stderrToServer</span><span class="o">=</span><span class="bp">True</span><span class="p">)</span>
+</code></pre>
+</div>
+
+<p>其中，IP地址和端口号要与PyCharm中的监听配置保持一致。</p>
+
+<h2 id="建立连接">建立连接</h2>
+
+<p>Blender中搜索pycharm, 选中Connect to remote Pycharm Debugger, 建立连接， 如下图所示：</p>
+
+<p><img src="/img/post-blender/4.png" alt="" /></p>
+
+<p>如果连接成功， Pycharm控制台Console可以看到Connected to pydev debuger的字样。</p>
+
+<p><img src="/img/post-blender/5.png" alt="" /></p>
+
+<p>Blender中点击RunScript, Blender就会卡住， 这是正常的现象， 这时切换到Pycharm, 可以看到数据已经传到pycharm这边， 如果出现下图的问题， 证明path mapping 配置的有偏差。</p>
+
+<p><img src="/img/post-blender/7.png" alt="" /></p>
+
+<p>这里可以直接点第二个选项， 直接找到对应的脚本，关联成功后，即可正常的断点调试了。</p>
+
+<p><img src="/img/post-blender/8.png" alt="" /></p>
+
+<h2 id="效果">效果</h2>
+
+<p>最后断点的效果如下：</p>
+
+<p><img src="/img/post-blender/1.png" alt="" /></p>
+
+<p>通过上图可以清晰看到中间变量bpy.context的成员值。</p>
+
+<h2 id="工作原理">工作原理</h2>
+
+<p>远程调试的功能在Eclipse、IntelliJ IDEA等大型IDE中均有支持，实现原理都基本相同。</p>
+
+<p>在远程调试的模式下，PyCharm（IDE）扮演服务端（Server）的角色，而运行在远程计算机上的应用程序扮演客户端（Client）的角色。正因如此，进行远程调试时，需要先在本地开发环境中设定端口并启动IDE，IDE会对设定的端口开始监听，等待客户端的连接请求；那远程计算机中的应用程序又是怎样与IDE建立通讯连接的呢？</p>
+
+<p>针对远程调试功能，PyCharm提供了pydevd模块，该模块以pycharm-debug.egg的形式存在于PyCharm的安装路径中。远程计算机安装该库文件后，然后就可以调用pydevd.settrace方法，该方法会指定IDE所在机器的IP地址和监听的端口号，用于与IDE建立连接；建立连接后，便可在IDE中对远程在远程计算机中的程序进行单步调试。</p>
+
+<p>在远程计算机中启动应用程序，当执行到pydevd.settrace语句时，便会与本地开发环境中的PyCharm建立通讯连接，接下来便可以在本地IDE中进行单步调试了。需要注意的是，本地开发环境必须保证IP地址和端口号可从远程计算机访问得到，否则会无法建立连接。</p>
+
+<h2 id="pip">Pip</h2>
+
+<p>建议pycharm中使用的python，最好是Blender内置的python， 这样才能保证API的一致性。 blender内置的python。  一般再其安装目录下 version/python/bin/目录，如下图所示：</p>
+
+<p><img src="/img/post-blender/6.png" alt="" /></p>
+
+<p>当然你也可以给此版本的python安装pip, 从而更进一步进行python外来包进行安装和管理， 比如说安装Numpy, Tensorflow, 无缝在Blender环境中进行AI训练。</p>
+
+<h2 id="自动补全">自动补全</h2>
+
+<p>fake-bpy-module是nutti维护的一套Blender API伪SDK库, 主要用以bpy代码的智能补全</p>
+
+<p><img src="/img/post-blender/9.png" alt="" /></p>
+
+<p>安装<a href="https://github.com/xh542428798/fake-bpy-module">fake-bpy-module</a>, 通过以下命令：</p>
+
+<div class="language-sh highlighter-rouge"><pre class="highlight"><code>pip install fake-bpy-module-&lt;version&gt;
+</code></pre>
+</div>
+
+<p>version 是Blender的版本， 假如你的Blender的版本是2.8.0，你可以使用命令:</p>
+
+<div class="language-sh highlighter-rouge"><pre class="highlight"><code>pip install fake-bpy-module-2.80
+</code></pre>
+</div>
+
+
+    </div>
+  </div>
+
+  <style>
+  .post-nav {
+    overflow: hidden;
+    /* margin-top: 60px; */
+    padding: 12px;
+    white-space: nowrap;
+    /* border-top: 1px solid #eee; */
+  }
+
+  .post-nav-item {
+    display: inline-block;
+    width: 50%;
+    white-space: normal;
+  }
+
+  .post-nav-item a {
+    position: relative;
+    display: inline-block;
+    line-height: 25px;
+    font-size: 14px;
+    color: #555;
+    border-bottom: none;
+  }
+
+  .post-nav-item a:hover {
+    color: #222;
+    font-weight: bold;
+    border-bottom: none;
+  }
+
+  .post-nav-item a:active {
+    top: 2px;
+  }
+
+  .post-nav-item a:before,
+  .post-nav-item a:after {
+    display: inline-block;
+    width: 16px;
+    height: 25px;
+    vertical-align: top;
+    opacity: 0.4;
+    background-size: 16px;
+  }
+
+  .post-nav-none a:none {
+    content: ' ';
+    background-size: 8px;
+  }
+
+  .post-nav-none a:hover:none {
+    opacity: 1;
+  }
+
+  .post-nav-prev a:before {
+    content: ' ';
+    background: url("data:image/svg+xml;base64,PD94bWwgdmVyc2lvbj0iMS4wIiA/PjxzdmcgaGVpZ2h0PSIxMnB4IiB2ZXJzaW9uPSIxLjEiIHZpZXdCb3g9IjAgMCA5IDEyIiB3aWR0aD0iOXB4IiB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHhtbG5zOnNrZXRjaD0iaHR0cDovL3d3dy5ib2hlbWlhbmNvZGluZy5jb20vc2tldGNoL25zIiB4bWxuczp4bGluaz0iaHR0cDovL3d3dy53My5vcmcvMTk5OS94bGluayI+PHRpdGxlLz48ZGVzYy8+PGRlZnMvPjxnIGZpbGw9Im5vbmUiIGZpbGwtcnVsZT0iZXZlbm9kZCIgaWQ9IlBhZ2UtMSIgc3Ryb2tlPSJub25lIiBzdHJva2Utd2lkdGg9IjEiPjxnIGZpbGw9IiMwMDAwMDAiIGlkPSJDb3JlIiB0cmFuc2Zvcm09InRyYW5zbGF0ZSgtMjE4LjAwMDAwMCwgLTkwLjAwMDAwMCkiPjxnIGlkPSJjaGV2cm9uLWxlZnQiIHRyYW5zZm9ybT0idHJhbnNsYXRlKDIxOC41MDAwMDAsIDkwLjAwMDAwMCkiPjxwYXRoIGQ9Ik03LjQsMS40IEw2LDAgTC04Ljg4MTc4NDJlLTE2LDYgTDYsMTIgTDcuNCwxMC42IEwyLjgsNiBMNy40LDEuNCBaIiBpZD0iU2hhcGUiLz48L2c+PC9nPjwvZz48L3N2Zz4=") no-repeat 0 50%;
+    background-size: 8px;
+  }
+
+  .post-nav-prev a:hover:before {
+    opacity: 1;
+  }
+
+  .post-nav-next {
+    text-align: right;
+  }
+
+  .post-nav-next a:after {
+    content: ' ';
+    background: url("data:image/svg+xml;base64,PD94bWwgdmVyc2lvbj0iMS4wIiA/PjxzdmcgaGVpZ2h0PSIxMnB4IiB2ZXJzaW9uPSIxLjEiIHZpZXdCb3g9IjAgMCA5IDEyIiB3aWR0aD0iOXB4IiB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHhtbG5zOnNrZXRjaD0iaHR0cDovL3d3dy5ib2hlbWlhbmNvZGluZy5jb20vc2tldGNoL25zIiB4bWxuczp4bGluaz0iaHR0cDovL3d3dy53My5vcmcvMTk5OS94bGluayI+PHRpdGxlLz48ZGVzYy8+PGRlZnMvPjxnIGZpbGw9Im5vbmUiIGZpbGwtcnVsZT0iZXZlbm9kZCIgaWQ9IlBhZ2UtMSIgc3Ryb2tlPSJub25lIiBzdHJva2Utd2lkdGg9IjEiPjxnIGZpbGw9IiMwMDAwMDAiIGlkPSJDb3JlIiB0cmFuc2Zvcm09InRyYW5zbGF0ZSgtMjYwLjAwMDAwMCwgLTkwLjAwMDAwMCkiPjxnIGlkPSJjaGV2cm9uLXJpZ2h0IiB0cmFuc2Zvcm09InRyYW5zbGF0ZSgyNjAuNTAwMDAwLCA5MC4wMDAwMDApIj48cGF0aCBkPSJNMSwwIEwtMC40LDEuNCBMNC4yLDYgTC0wLjQsMTAuNiBMMSwxMiBMNyw2IEwxLDAgWiIgaWQ9IlNoYXBlIi8+PC9nPjwvZz48L2c+PC9zdmc+") no-repeat 100% 50%;
+    background-size: 8px;
+  }
+
+  .post-nav-next a:hover:after {
+    opacity: 1;
+  }
+</style>
+
+
+
+<div class="post-nav">
+
+  
+  <div class="post-nav-none post-nav-item">
+    <a href=""> </a>
+  </div>
+  
+
+  
+  <div class="post-nav-next post-nav-item">
+    
+    <a href="/blog/2020/lua/"> 深入理解 Lua 虚拟机(转载)</a>
+  </div>
+  
+
+</div>
+
+</article>
+    </div>
+
+    <footer class="site-footer">
+  <div class="container">
+    <ul class="social">
+  <li><a href="https://twitter.com/penghuailiang" target="_blank"><i class="icon icon-twitter"></i></a></li>
+  <li><a href="https://www.zhihu.com/people/huailiangpenguin" target="_blank"><i class="icon icon-zhihu"></i></a></li>
+  <li><a href="https://www.facebook.com/profile.php?id=100004290725320" target="_blank"><i class="icon icon-facebook"></i></a></li>
+  <li><a href="https://weibo.com/6212299692/profile?topnav=1&wvr=6" target="_blank"><i class="icon icon-sina"></i></a></li>
+  <li><a href="https://www.linkedin.com/in/penghuailiang/" target="_blank"><i class="icon icon-linkedin"></i></a></li>
+  <li><a href="https://github.com/huailiang" target="_blank"><i class="icon icon-github"></i></a></li>
+</ul>
+    <p class="txt-medium-gray">
+      <small>&copy;2020 All rights reserved. </small>
+    </p>
+  </div>
+</footer>
+    <a href="https://github.com/huailiang" target="_blank" class="github-corner"><svg width="80" height="80" viewBox="0 0 250 250" style="fill:#337ab7; color:#fff; position: absolute; top: 0; border: 0; right: 0;"><path d="M0,0 L115,115 L130,115 L142,142 L250,250 L250,0 Z"></path><path d="M128.3,109.0 C113.8,99.7 119.0,89.6 119.0,89.6 C122.0,82.7 120.5,78.6 120.5,78.6 C119.2,72.0 123.4,76.3 123.4,76.3 C127.3,80.9 125.5,87.3 125.5,87.3 C122.9,97.6 130.6,101.9 134.4,103.2" fill="currentColor" style="transform-origin: 130px 106px;" class="octo-arm"></path><path d="M115.0,115.0 C114.9,115.1 118.7,116.5 119.8,115.4 L133.7,101.6 C136.9,99.2 139.9,98.4 142.2,98.6 C133.8,88.0 127.5,74.4 143.8,58.0 C148.5,53.4 154.0,51.2 159.7,51.0 C160.3,49.4 163.2,43.6 171.4,40.1 C171.4,40.1 176.1,42.5 178.8,56.2 C183.1,58.6 187.2,61.8 190.9,65.4 C194.5,69.0 197.7,73.2 200.1,77.6 C213.8,80.2 216.3,84.9 216.3,84.9 C212.7,93.1 206.9,96.0 205.4,96.6 C205.1,102.4 203.0,107.8 198.3,112.5 C181.9,128.9 168.3,122.5 157.7,114.1 C157.9,116.9 156.7,120.9 152.7,124.9 L141.0,136.5 C139.8,137.7 141.6,141.9 141.8,141.8 Z" fill="currentColor" class="octo-body"></path></svg></a>
+
+
+    <script src="//code.jquery.com/jquery-1.11.3.min.js"></script>
+    <script>
+      $(document).ready(function () {
+        $('.sliding-panel-button,.sliding-panel-fade-screen,.sliding-panel-close').on('click touchstart', function (e) {
+          $('.sliding-panel-content,.sliding-panel-fade-screen').toggleClass('is-visible');
+          e.preventDefault();
+        });
+      });
+    </script>
+  </main>
+</body>
+
+</html>
