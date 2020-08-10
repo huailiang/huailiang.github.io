@@ -91,6 +91,12 @@ Blender中点击RunScript, Blender就会卡住， 这是正常的现象， 这�
 
 当然你也可以给此版本的python安装pip, 从而更进一步进行python外来包进行安装和管理， 比如说安装Numpy, Tensorflow, 无缝在Blender环境中进行AI训练。
 
+## VSCode
+
+除了Pycharm， 喜欢使用vscode 开发的同学可以使用一款插件Blender Development， 相关的介绍参考readme和b站上的[视频][i7]。
+
+
+![](/img/post-blender/10.jpg)
 
 ## 自动补全
 
@@ -117,3 +123,4 @@ pip install fake-bpy-module-2.80
 [i4]: https://code.blender.org/2015/10/debugging-python-code-with-pycharm/
 [i5]: https://github.com/sybrenstuvel/random-blender-addons/blob/master/remote_debugger.py
 [i6]: https://www.cnblogs.com/jinjiangongzuoshi/p/5638706.html
+[i7]: https://www.bilibili.com/video/BV1EJ41187hT?from=search&seid=15575246445719372188
