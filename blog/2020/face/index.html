@@ -1,0 +1,376 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <meta http-equiv="X-UA-Compatible" content="IE=edge">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+
+  <title>3D人脸重建</title>
+  <meta name="description"
+    content="  人脸重建是计算机视觉比较热门的一个方向，3d人脸相关应用也是近年来短视频领域的新玩法。不管是Facebook收购的MSQRD，还是Apple研发的Animoji，底层技术都与三维人脸重建有关。最近看到微软亚研院一篇关于重建人脸的paper: Accurate 3D Face Reconstruction wi...">
+
+  <link rel="shortcut icon" href="/img/favicon.ico">
+  <link rel="stylesheet" href="/css/main.css">
+  <link rel="canonical" href="https://huailiang.github.io/blog/2020/face/">
+
+</head>
+
+<body>
+  <main>
+    <header class="site-header">
+  <div class="container">
+    <h1><a href="/">Hom<span>e</span></a></h1>
+
+    <button type="button" class="sliding-panel-button">
+      <span></span>
+      <span></span>
+      <span></span>
+    </button>
+
+    <nav class="navbar sliding-panel-content">
+      <ul>
+        
+        <li><a href="/about" title="About">About</a>
+        </li>
+        
+        <li><a href="/blog" title="Blog">Blog</a>
+        </li>
+        
+       <li><a href="/category/" target="_blank"><i class="icon icon-feed"></i></a></li>
+      </ul>
+    </nav>
+  </div>
+</header>
+
+<div class="sliding-panel-fade-screen"></div>
+    <script type="text/javascript" src="/js/MathJax.js?config=TeX-AMS-MML_HTMLorMML"></script>
+
+<script type="text/x-mathjax-config">
+MathJax.Hub.Config({
+  tex2jax: {
+    inlineMath: [['$','$'], ['\\(','\\)']],
+    processEscapes: true
+  }
+});
+</script>
+
+<script type="text/x-mathjax-config">
+  MathJax.Hub.Config({
+    tex2jax: {
+      skipTags: ['script', 'noscript', 'style', 'textarea', 'pre', 'code']
+    }
+  });
+
+</script>
+    <div class="container">
+      <article role="article" class="post">
+
+  <div class="card">
+    <header class="post-header">
+      <h1 class="post-title">3D人脸重建</h1>
+      <p class="post-meta">Oct 4, 2020 •
+        huailiang</p>
+    </header>
+
+    <div class="post-content">
+      <blockquote>
+  <p>人脸重建是计算机视觉比较热门的一个方向，3d人脸相关应用也是近年来短视频领域的新玩法。不管是Facebook收购的MSQRD，还是Apple研发的Animoji，底层技术都与三维人脸重建有关。最近看到微软亚研院一篇关于重建人脸的paper: <a href="https://github.com/microsoft/Deep3DFaceReconstruction/issues">Accurate 3D Face Reconstruction with Weakly-Supervised Learning: From Single</a>（CVPR 2019 最佳论文奖）, 不仅支持面部网格的重建， 还能支持对表情、纹理贴图、Env光照的的重建， 还第一次感到AI的创作能力。</p>
+</blockquote>
+
+<p><img src="/img/post-ml/bf2.jpg" alt="" /></p>
+
+<h2 id="3dmm">3DMM</h2>
+
+<p>1999 年，瑞士巴塞尔大学的科学家Blanz 和Vetter 提出了一种十分具有创新性的方法：三维形变模型(3DMM) 。三维形变模型建立在三维人脸数据库的基础上，以人脸形状和人脸纹理统计为约束，同时考虑到了人脸的姿态和光照因素的影响，因而生成的三维人脸模型精度高。</p>
+
+<p>3DMM模型数据库人脸数据对象的线性组合，在上面3D人脸表示基础上，假设我们建立3D变形的人脸模型由m个人脸模型组成，其中每一个人脸模型都包含相应的 $S_i$, $ T_i $ 两种向量，这样在表示新的3D人脸模型时，我们就可以用以下的方式：<br />
+​</p>
+
+<script type="math/tex; mode=display">S_{model} = \overline{S} + \sum^{m-1}_{i=1} {\alpha_i s_i}</script>
+
+<script type="math/tex; mode=display">T_{model} = \overline{T} + \sum^{m-1}_{i=1} {\beta_i t_i}</script>
+
+<p>其中 $\overline{S}$ 表示平均脸部形状模型，$s_i$表示shape的PCA部分，$\alpha_i$ 表示对应系数；纹理模型同理. 像这样，一张新的人脸模型就可以由已有的脸部模型线性组合。也就是说，我们可以通过改变系数，在已有人脸基础上生成不同人脸。</p>
+
+<p><img src="/img/post-ml/bf1.jpg" alt="" /></p>
+
+<h2 id="pca">PCA</h2>
+
+<p><strong>PCA</strong>, 中文名字：主成分分析。 旨在利用降维的思想，把多指标转化为少数几个综合指标。<strong>PCA</strong> 经常用于减少数据集的维数，同时保持数据集的对方差贡献最大的特征。这是通过保留低阶主成分，忽略高阶主成分做到的。这样低阶成分往往能够保留住数据的最重要方面。3DMM中将采集的人脸数据通过PCA降维到199个特征， 微软的论文进一步保留到80个特征。</p>
+
+<p><strong>PCA 处理流程：</strong></p>
+
+<p>(1) 第一步计算矩阵 X 的样本的协方差矩阵 S（此为不标准PCA，标准PCA计算相关系数矩阵C）:<br />
+(2) 第二步计算协方差矩阵S（或C）的特征向量 e1,e2,…,eN和特征值 , t = 1,2,…,N ；<br />
+(3)第三步投影数据到特征向量张成的空间之中。利用公式$ newBV_{i,p} = \sum^{n}<em>{k=1} {e_i BV</em>{i,k}}$ ，其中BV值是原样本中对应维度的值。</p>
+
+<p><img src="/img/post-ml/bf4.jpg" alt="" /></p>
+
+<p>PCA 的目标是寻找r(r&lt;n)个新变量，使它们反映事物的主要特征，压缩原有数据矩阵的规模，将特征向量的维数降低，挑选出最少的维数来概括最重要特征。每个新变量是原有变量的线性组合，体现原有变量的综合效果，具有一定的实际含义。这 r 个新变量称为“主成分”，它们可以在很大程度上反映原来 n 个变量的影响，并且这些新变量是互不相关的，也是正交的。通过主成分分析，压缩数据空间，将多元数据的特征在低维空间里直观地表示出来。</p>
+
+<div class="language-py highlighter-rouge"><pre class="highlight"><code><span class="k">def</span> <span class="nf">PCA</span><span class="p">(</span><span class="n">datamat</span><span class="p">,</span> <span class="n">top</span><span class="p">):</span>
+    <span class="c"># 对所有样本进行中心化（所有样本属性减去属性的平均值）</span>
+    <span class="n">meanVals</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">mean</span><span class="p">(</span><span class="n">datamat</span><span class="p">,</span> <span class="n">axis</span><span class="o">=</span><span class="mi">0</span><span class="p">)</span>
+    <span class="n">meanRemoved</span> <span class="o">=</span> <span class="n">datamat</span> <span class="o">-</span> <span class="n">meanVals</span>
+    <span class="c"># 计算样本的协方差矩阵 XXT</span>
+    <span class="n">covmat</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">cov</span><span class="p">(</span><span class="n">meanRemoved</span><span class="p">,</span> <span class="n">rowvar</span><span class="o">=</span><span class="mi">0</span><span class="p">)</span>
+    <span class="c"># 对协方差矩阵做特征值分解，求得其特征值和特征向量，</span>
+    <span class="c"># 并将特征值从大到小排序，筛选出前top个</span>
+    <span class="n">eigVals</span><span class="p">,</span> <span class="n">eigVects</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">linalg</span><span class="o">.</span><span class="n">eig</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">mat</span><span class="p">(</span><span class="n">covmat</span><span class="p">))</span>
+    <span class="k">print</span><span class="p">(</span><span class="n">eigVals</span><span class="p">)</span>
+    <span class="n">eigValInd</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">argsort</span><span class="p">(</span><span class="n">eigVals</span><span class="p">)</span>
+    <span class="c"># 取前top大的特征值的索引</span>
+    <span class="n">eigValInd</span> <span class="o">=</span> <span class="n">eigValInd</span><span class="p">[:</span> <span class="o">-</span><span class="p">(</span><span class="n">top</span> <span class="o">+</span> <span class="mi">1</span><span class="p">)</span> <span class="p">:</span> <span class="o">-</span><span class="mi">1</span><span class="p">]</span>
+    <span class="c"># 取前top大的特征值所对应的特征向量</span>
+    <span class="n">redEigVects</span> <span class="o">=</span> <span class="n">eigVects</span><span class="p">[:,</span> <span class="n">eigValInd</span><span class="p">]</span>
+    <span class="c"># 将数据转换到新的低维空间中</span>
+    <span class="c"># 降维之后的数据</span>
+    <span class="n">lowDDataMat</span> <span class="o">=</span> <span class="n">meanRemoved</span> <span class="o">*</span> <span class="n">redEigVects</span>
+    <span class="c"># 重构数据，可在原数据维度下进行对比查看</span>
+    <span class="n">reconMat</span> <span class="o">=</span> <span class="p">(</span><span class="n">lowDDataMat</span> <span class="o">*</span> <span class="n">redEigVects</span><span class="o">.</span><span class="n">T</span><span class="p">)</span> <span class="o">+</span> <span class="n">meanVals</span>
+    <span class="k">return</span> <span class="n">reconMat</span><span class="p">,</span> <span class="n">lowDDataMat</span><span class="p">,</span> <span class="n">redEigVects</span>
+</code></pre>
+</div>
+
+<p>如果对PCA还是没有直观的了解，可以参见b站视频<a href="https://www.bilibili.com/video/BV1Zt41187bN">菊安酱的机器学习 降维算法之PCA&amp;SVD</a>， 视频中通过理论结合代码（python, sck-learn)讲解的很详细。</p>
+
+<h2 id="单帧人脸重建">单帧人脸重建</h2>
+
+<p>给定一张RGB图片$I$，作者使用R-Net回归参数向量$\chi$，根据得到的人脸模型可以渲染得到新的图片$I’$，训练时不需要任何真实标签，而是根据$I’$来计算损失。</p>
+
+<h4 id="image-level-losses">Image-Level Losses</h4>
+
+<p><strong>1. Robust Photometric Loss</strong></p>
+
+<p>原始图片 $I$ 和重建后的图片 $I’$ 之间的像素差异作为损失是直观明了的方法，本文基于此提出了一种鲁棒的、皮肤感知的图像损失：</p>
+
+<script type="math/tex; mode=display">L_{photo}(\chi) = \frac{\sum_{i\in M} A_i || I_i -I_i'(\chi) ||_2 }{\sum_{i\in M} A_i}</script>
+
+<p>其中 $I$ 表示像素索引，$M$ 是投影的人脸区域，$ \parallel \cdot \parallel $表示 $l_2$距离，$A$是一个基于皮肤颜色的attention mask。</p>
+
+<p><strong>Mask Attention</strong> 为了使网络对人脸遮挡和其他面部变化如胡须或浓妆等情况更加鲁棒，作者在皮肤颜色数据集上训练了一个简单的基于高斯混合模型的贝叶斯分类器，对每个像素$i$预测一个皮肤颜色概率$P_i$，这样</p>
+
+<script type="math/tex; mode=display">% <![CDATA[
+A_i=
+\begin{cases}
+1& {if P_i>0.5}\\
+P_i& {otherwise}
+\end{cases} %]]></script>
+
+<p>作者发现这个简单的皮肤感知的损失函数在实际中非常奏效，相比直接的图像损失效果提升显著，如下图所示。</p>
+
+<p><img src="/img/post-ml/bf6.jpg" alt="" /></p>
+
+<p><strong>2. Landmark Loss</strong></p>
+
+<p>作者在训练中还使用了人脸的2D关键点作为弱监督，使用SOTA的3D人脸对齐方法检测训练集中人脸的68个关键点${q_n}$，在训练过程中，将重建的人脸的3D关键点投影到图像空间得到${q_n’}$，并计算两者的距离作为损失函数</p>
+
+<script type="math/tex; mode=display">L_{lan}(\chi) = \frac{1}{N}\sum^N_{n=1}\omega_n || q_n-q_n'(\chi) ||^2</script>
+
+<p>这里$\omega_n$是特征点权重，作者经过试验发现当嘴内部和鼻子处的点权重设为20，其他权重设为1时效果较好。</p>
+
+<h4 id="perception-level-loss">Perception-Level Loss</h4>
+
+<p>虽然使用低层次的图像信息作为损失函数也能取得不错的结果，但作者发现只使用这类损失对于基于CNN的3D人脸重建容易陷入局部最优解，为了解决这个问题，作者提出了一种感知层次的损失来进一步指导训练过程，即借助来自一个预训练的人脸识别网络的信号作为弱监督，计算源图和重建图片之间的人脸特征距离：</p>
+
+<script type="math/tex; mode=display">% <![CDATA[
+L_{per}(\chi) = 1- \frac{< f(I), f(I'(\chi))>}{||f(I) || \cdot ||f(I'(\chi))||} %]]></script>
+
+<p>这里$f(\cdot)$表示深度特征编码，$&lt;\cdot,\cdot&gt;$表示内积。作者使用FaceNet网络作为人脸特征提取器，并在从网络爬取的包含5万个体的300万张图片的数据集中训练了该网络。下图展示了使用感知损失的效果提升。</p>
+
+<p><img src="/img/post-ml/bf5.jpg" alt="" /></p>
+
+<h4 id="regularization">Regularization</h4>
+
+<p>为了防止人脸形状和纹理退化，作者使用3DMM系数的正则项</p>
+
+<script type="math/tex; mode=display">L_{coef}(\chi) = \omega_\alpha \parallel  \alpha \parallel^2+\omega_\beta\parallel \beta \parallel^2+\omega_\sigma \parallel\sigma \parallel^2</script>
+
+<p>其中权重$\omega_\alpha=1.0$， $\omega_\beta=0.8$，$\omega_\sigma=1.7e-3$。</p>
+
+<p>由于2009 Basel Face Model的人脸纹理包含baked-in shading (e.g., ambient occlusion)，为了倾向常量的皮肤反射率，作者增加了一个惩罚纹理图方差的正则项：</p>
+
+<script type="math/tex; mode=display">L_{tex}(\chi) = \sum_{c\in{r,g,b}}var(T_{c,R}(\chi))</script>
+
+<p>其中$R$是预定义的包含脸颊、鼻子和前额的皮肤区域。</p>
+
+<h2 id="多帧人脸的重建">多帧人脸的重建</h2>
+
+<p>除了从单张人脸图片重建人脸，如何从一个人的多张脸部图片，去重建一个更加精确的人脸模型也是一个很有意义的问题。不同的图片可能采集自不同的姿态、光照等，能够互相提供补充信息，这样重建出来的人脸对于遮挡、不佳的光照等情况更加鲁棒。</p>
+
+<p>使用深度学习网络作用于任意张图片并不是一个简单的事情，在本文中，作者从单张图片人脸重建的结果学习一个置信度(反映重建质量)，并使用这个置信度收集人脸形状信息。具体来说，作者针对人脸形状参数$\alpha\in \Bbb{R}^{80}$生成一个反映置信度的向量 $c\in \Bbb{R}^{80}$ 。</p>
+
+<p>假设 $\zeta={ I_j | j=1,….,M }$ 表示一个人的照片集，$\chi_j=(\alpha^j, \beta^j, \sigma^j, p^j, \gamma^j)$表示R-Net从图片$j$得到的系数向量，$c^j$表示$\alpha^j$的置信度向量，则最终的人脸形状参数为</p>
+
+<script type="math/tex; mode=display">\alpha_{aggr}=(\sum_j {c^j \odot \alpha^j}) \oslash ( \sum_j{c_j})</script>
+
+<p>其中$\odot$和$\oslash$分别表示哈达玛积和商(Hadamard product and division)。</p>
+
+<h3 id="confidence-net-structure">Confidence-Net Structure</h3>
+
+<p>作者提出C-Net来预测置信度$c$，由于R-Net能够预测诸如人脸姿态、光照等高阶信息，很自然地想到将其特征图运用到C-Net中来，作者同时使用了R-Net的浅层和深层特征，如前图所示，具体网络细节参考文章.</p>
+
+<p><strong>损失函数</strong></p>
+
+<p>为了在图片集中训练C-Net，首先从图片 ${I^j}$ 得到人脸系数 <script type="math/tex">{\hat{\chi}_j}</script>, 其中<br />
+<script type="math/tex">\hat{\chi}_j=(\alpha_{aggr}, \beta^j, \sigma^j,\gamma^j, p^j)</script>，然后生成重建图片${I^{j’}}$，则损失函数定义为</p>
+
+<script type="math/tex; mode=display">\zeta(\{ \hat{\chi}_j\} ) = \frac{1}{M} \sum_{J=1}^{M} L(\hat{\chi} ^j)</script>
+
+<p>$L(\cdot{})$是前面单张图片人脸重建中定义的损失函数。</p>
+
+<h2 id="实现细节">实现细节</h2>
+
+<p><strong>R-Net</strong> 的训练集来自CelebA, 300W-LP, I-JBA, LFW和LS3D数据集，并对其做了删选以得到平衡的人脸姿态和种族分布，最终用于训练的有大约26万张图片。然后再对图片进行对齐。网络的输入大小为224x224，使用ImageNet预训练的权重作为初始，优化器为Adam，batch size是5，初始学习率为1e-4，一共进行了50万次迭代。</p>
+
+<p><strong>C-Net</strong> 的训练集来自300W-LP, Multi-PIE和部分人脸识别数据集，对于300W-LP和Multi-PIE数据集，作者为每个人挑选了5张人脸角度分布均匀的图片，对于人脸识别数据集，对每个人随机挑选了5张图片，总的训练集包含大约1万个个体的5万张图片。作者固定住R-Net的权重，随机初始化C-Net的权重(除了最后一个全连接层初始化为0)，优化器为Adam，batch size同样为5，初始学习率为2e-5，一共进行1万次迭代。</p>
+
+<p><img src="/img/post-ml/bf2.jpg" alt="" /></p>
+
+<h2 id="参考">参考</h2>
+
+<ul>
+  <li><a href="https://blog.csdn.net/u011681952/article/details/82623328?ops_request_misc=%257B%2522request%255Fid%2522%253A%2522160199095419195188302819%2522%252C%2522scm%2522%253A%252220140713.130102334.pc%255Fall.%2522%257D&amp;request_id=160199095419195188302819&amp;biz_id=0&amp;utm_medium=distribute.pc_search_result.none-task-blog-2~all~first_rank_ecpm_v3~pc_rank_v2-25-82623328.first_rank_ecpm_v3_pc_rank_v2&amp;utm_term=3DMM&amp;spm=1018.2118.3001.4187">3D人脸重建, csdn</a></li>
+  <li><a href="https://www.bilibili.com/video/BV1f7411T7y2">Accurate 3D Face Reconstruction with Weakly-Supervised Learning, bliliblilli</a></li>
+  <li><a href="https://www.bilibili.com/video/BV1f7411T7y2">Accurate 3D Face Reconstruction with Weakly-Supervised Learning, github</a></li>
+  <li><a href="https://gravis.dmi.unibas.ch/publications/Sigg99/morphmod2.pdf"> A Morphable Model For The Synthesis Of 3D Faces, 3DMM</a></li>
+  <li><a href="https://baike.baidu.com/item/pca技术/10408698?fr=aladdin">主成分分析技术, 百度百科</a></li>
+  <li><a href="https://www.bilibili.com/video/BV1Zt41187bN">降维算法之PCA&amp;SVD</a></li>
+  <li><a href="https://zhuanlan.zhihu.com/p/133495161">CVPR 2019 基于弱监督学习的精确3D人脸重建, 知乎</a></li>
+</ul>
+
+
+    </div>
+  </div>
+
+  <style>
+  .post-nav {
+    overflow: hidden;
+    /* margin-top: 60px; */
+    padding: 12px;
+    white-space: nowrap;
+    /* border-top: 1px solid #eee; */
+  }
+
+  .post-nav-item {
+    display: inline-block;
+    width: 50%;
+    white-space: normal;
+  }
+
+  .post-nav-item a {
+    position: relative;
+    display: inline-block;
+    line-height: 25px;
+    font-size: 14px;
+    color: #555;
+    border-bottom: none;
+  }
+
+  .post-nav-item a:hover {
+    color: #222;
+    font-weight: bold;
+    border-bottom: none;
+  }
+
+  .post-nav-item a:active {
+    top: 2px;
+  }
+
+  .post-nav-item a:before,
+  .post-nav-item a:after {
+    display: inline-block;
+    width: 16px;
+    height: 25px;
+    vertical-align: top;
+    opacity: 0.4;
+    background-size: 16px;
+  }
+
+  .post-nav-none a:none {
+    content: ' ';
+    background-size: 8px;
+  }
+
+  .post-nav-none a:hover:none {
+    opacity: 1;
+  }
+
+  .post-nav-prev a:before {
+    content: ' ';
+    background: url("data:image/svg+xml;base64,PD94bWwgdmVyc2lvbj0iMS4wIiA/PjxzdmcgaGVpZ2h0PSIxMnB4IiB2ZXJzaW9uPSIxLjEiIHZpZXdCb3g9IjAgMCA5IDEyIiB3aWR0aD0iOXB4IiB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHhtbG5zOnNrZXRjaD0iaHR0cDovL3d3dy5ib2hlbWlhbmNvZGluZy5jb20vc2tldGNoL25zIiB4bWxuczp4bGluaz0iaHR0cDovL3d3dy53My5vcmcvMTk5OS94bGluayI+PHRpdGxlLz48ZGVzYy8+PGRlZnMvPjxnIGZpbGw9Im5vbmUiIGZpbGwtcnVsZT0iZXZlbm9kZCIgaWQ9IlBhZ2UtMSIgc3Ryb2tlPSJub25lIiBzdHJva2Utd2lkdGg9IjEiPjxnIGZpbGw9IiMwMDAwMDAiIGlkPSJDb3JlIiB0cmFuc2Zvcm09InRyYW5zbGF0ZSgtMjE4LjAwMDAwMCwgLTkwLjAwMDAwMCkiPjxnIGlkPSJjaGV2cm9uLWxlZnQiIHRyYW5zZm9ybT0idHJhbnNsYXRlKDIxOC41MDAwMDAsIDkwLjAwMDAwMCkiPjxwYXRoIGQ9Ik03LjQsMS40IEw2LDAgTC04Ljg4MTc4NDJlLTE2LDYgTDYsMTIgTDcuNCwxMC42IEwyLjgsNiBMNy40LDEuNCBaIiBpZD0iU2hhcGUiLz48L2c+PC9nPjwvZz48L3N2Zz4=") no-repeat 0 50%;
+    background-size: 8px;
+  }
+
+  .post-nav-prev a:hover:before {
+    opacity: 1;
+  }
+
+  .post-nav-next {
+    text-align: right;
+  }
+
+  .post-nav-next a:after {
+    content: ' ';
+    background: url("data:image/svg+xml;base64,PD94bWwgdmVyc2lvbj0iMS4wIiA/PjxzdmcgaGVpZ2h0PSIxMnB4IiB2ZXJzaW9uPSIxLjEiIHZpZXdCb3g9IjAgMCA5IDEyIiB3aWR0aD0iOXB4IiB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHhtbG5zOnNrZXRjaD0iaHR0cDovL3d3dy5ib2hlbWlhbmNvZGluZy5jb20vc2tldGNoL25zIiB4bWxuczp4bGluaz0iaHR0cDovL3d3dy53My5vcmcvMTk5OS94bGluayI+PHRpdGxlLz48ZGVzYy8+PGRlZnMvPjxnIGZpbGw9Im5vbmUiIGZpbGwtcnVsZT0iZXZlbm9kZCIgaWQ9IlBhZ2UtMSIgc3Ryb2tlPSJub25lIiBzdHJva2Utd2lkdGg9IjEiPjxnIGZpbGw9IiMwMDAwMDAiIGlkPSJDb3JlIiB0cmFuc2Zvcm09InRyYW5zbGF0ZSgtMjYwLjAwMDAwMCwgLTkwLjAwMDAwMCkiPjxnIGlkPSJjaGV2cm9uLXJpZ2h0IiB0cmFuc2Zvcm09InRyYW5zbGF0ZSgyNjAuNTAwMDAwLCA5MC4wMDAwMDApIj48cGF0aCBkPSJNMSwwIEwtMC40LDEuNCBMNC4yLDYgTC0wLjQsMTAuNiBMMSwxMiBMNyw2IEwxLDAgWiIgaWQ9IlNoYXBlIi8+PC9nPjwvZz48L2c+PC9zdmc+") no-repeat 100% 50%;
+    background-size: 8px;
+  }
+
+  .post-nav-next a:hover:after {
+    opacity: 1;
+  }
+</style>
+
+
+
+<div class="post-nav">
+
+  
+  <div class="post-nav-none post-nav-item">
+    <a href=""> </a>
+  </div>
+  
+
+  
+  <div class="post-nav-next post-nav-item">
+    
+    <a href="/blog/2020/blender/"> Blender联调PyCharm</a>
+  </div>
+  
+
+</div>
+
+</article>
+    </div>
+
+    <footer class="site-footer">
+  <div class="container">
+    <ul class="social">
+  <li><a href="https://twitter.com/penghuailiang" target="_blank"><i class="icon icon-twitter"></i></a></li>
+  <li><a href="https://www.zhihu.com/people/huailiangpenguin" target="_blank"><i class="icon icon-zhihu"></i></a></li>
+  <li><a href="https://www.facebook.com/profile.php?id=100004290725320" target="_blank"><i class="icon icon-facebook"></i></a></li>
+  <li><a href="https://weibo.com/6212299692/profile?topnav=1&wvr=6" target="_blank"><i class="icon icon-sina"></i></a></li>
+  <li><a href="https://www.linkedin.com/in/penghuailiang/" target="_blank"><i class="icon icon-linkedin"></i></a></li>
+  <li><a href="https://github.com/huailiang" target="_blank"><i class="icon icon-github"></i></a></li>
+</ul>
+    <p class="txt-medium-gray">
+      <small>&copy;2020 All rights reserved. </small>
+    </p>
+  </div>
+</footer>
+    <a href="https://github.com/huailiang" target="_blank" class="github-corner"><svg width="80" height="80" viewBox="0 0 250 250" style="fill:#337ab7; color:#fff; position: absolute; top: 0; border: 0; right: 0;"><path d="M0,0 L115,115 L130,115 L142,142 L250,250 L250,0 Z"></path><path d="M128.3,109.0 C113.8,99.7 119.0,89.6 119.0,89.6 C122.0,82.7 120.5,78.6 120.5,78.6 C119.2,72.0 123.4,76.3 123.4,76.3 C127.3,80.9 125.5,87.3 125.5,87.3 C122.9,97.6 130.6,101.9 134.4,103.2" fill="currentColor" style="transform-origin: 130px 106px;" class="octo-arm"></path><path d="M115.0,115.0 C114.9,115.1 118.7,116.5 119.8,115.4 L133.7,101.6 C136.9,99.2 139.9,98.4 142.2,98.6 C133.8,88.0 127.5,74.4 143.8,58.0 C148.5,53.4 154.0,51.2 159.7,51.0 C160.3,49.4 163.2,43.6 171.4,40.1 C171.4,40.1 176.1,42.5 178.8,56.2 C183.1,58.6 187.2,61.8 190.9,65.4 C194.5,69.0 197.7,73.2 200.1,77.6 C213.8,80.2 216.3,84.9 216.3,84.9 C212.7,93.1 206.9,96.0 205.4,96.6 C205.1,102.4 203.0,107.8 198.3,112.5 C181.9,128.9 168.3,122.5 157.7,114.1 C157.9,116.9 156.7,120.9 152.7,124.9 L141.0,136.5 C139.8,137.7 141.6,141.9 141.8,141.8 Z" fill="currentColor" class="octo-body"></path></svg></a>
+
+
+    <script src="//code.jquery.com/jquery-1.11.3.min.js"></script>
+    <script>
+      $(document).ready(function () {
+        $('.sliding-panel-button,.sliding-panel-fade-screen,.sliding-panel-close').on('click touchstart', function (e) {
+          $('.sliding-panel-content,.sliding-panel-fade-screen').toggleClass('is-visible');
+          e.preventDefault();
+        });
+      });
+    </script>
+  </main>
+</body>
+
+</html>
