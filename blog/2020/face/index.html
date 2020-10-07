@@ -90,9 +90,47 @@ MathJax.Hub.Config({
 
 <script type="math/tex; mode=display">T_{model} = \overline{T} + \sum^{m-1}_{i=1} {\beta_i t_i}</script>
 
-<p>其中 $\overline{S}$ 表示平均脸部形状模型，$s_i$表示shape的PCA部分，$\alpha_i$ 表示对应系数；纹理模型同理. 像这样，一张新的人脸模型就可以由已有的脸部模型线性组合。也就是说，我们可以通过改变系数，在已有人脸基础上生成不同人脸。</p>
+<p>其中 $\overline{S}$ 表示平均脸部形状模型，$s_i$表示shape的PCA部分（特征向量），$\alpha_i$ 表示对应系数(特征值)；纹理模型同理，至于为什么这么处理， 参见下面的PCA部。 像这样，一张新的人脸模型就可以由已有的脸部模型线性组合。也就是说，我们可以通过改变系数，在已有人脸基础上生成不同人脸。</p>
 
 <p><img src="/img/post-ml/bf1.jpg" alt="" /></p>
+
+<p>BFM数据集中在matlab中显示的平均人脸 $\overline{S}$ 如下图显示:</p>
+
+<p><img src="/img/post-ml/bf7.jpg" alt="" /></p>
+
+<p><strong>3DMM求解过程</strong></p>
+
+<p>基于3DMM求解三维人脸需要解决的问题就是形状，纹理等系数的估计，具体就是如何将2D人脸拟合到3D模型上，被称为Model Fitting，这是一个病态问题。经典的方法是1999年的文章“A Morphable Model For The Synthesis Of 3D Faces”，其传统的求解思路被称为analysis-by-Synthesis；</p>
+
+<p>（a） 初始化一个3维的模型，需要初始化内部参数α，β，以及外部渲染参数，包括相机的位置，图像平面的旋转角度，直射光和环境光的各个分量，图像对比度等共20多维，有了这些参数之后就可以唯一确定一个3D模型到2D图像的投影。</p>
+
+<p>（b） 在初始参数的控制下，经过3D至2D的投影，即可由一个3D模型得到2维图像，然后计算与输入图像的误差。再以误差反向传播调整相关系数，调整3D模型，不断进行迭代。每次参与计算的是一个三角晶格，如果人脸被遮挡，则该部分不参与损失计算。</p>
+
+<p>（c） 具体迭代时采用由粗到精的方式，初始的时候使用低分辨率的图像，只优化第一个主成分的系数，后面再逐步增加主成分。在后续一些迭代步骤中固定外部参数，对人脸的各个部位分别优化。</p>
+
+<p>对于只需要获取人脸形状模型的应用来说，很多方法都会使用2D人脸关键点来估计出形状系数，具有更小的计算量，迭代也更加简单，另外还会增加一个正则项，所以一个典型的优化目标是如下：</p>
+
+<p>对于Model fitting问题来说，除了模型本身的有效性，还有很多难点。</p>
+
+<p>（1） 该问题是一个病态问题，本身并没有全局解，容易陷入不好的局部解。</p>
+
+<p>（2） 人脸的背景干扰以及遮挡会影响精度，而且误差函数本身不连续。</p>
+
+<p>（3） 对初始条件敏感，比如基于关键点进行优化时，如果关键点精度较差，重建的模型精度也会受到很大影响。</p>
+
+<p><strong>模型参数：</strong></p>
+
+<p>$\alpha_j$和$\beta_j$是确定人脸形状和纹理的系数，渲染参数包含相机位置（方向角，仰角），目标尺度，图像平面旋转和平移，环境光强度$i_r, i_{g, amb}, i_{b,amb}$，直射光强度 $i_{dir}, i_{g, dir}, i_{b, dir}$。其余参数，如相机距离，光照方向和表面反照率保持估计值不变。</p>
+
+<p>使用透视投影和Phong光照模型，从参数$(\overline{\alpha}, \overline{\beta}, \overline{\gamma})$渲染彩色图片，此时重建图片在欧氏距离上应该尽可能与输入图片接近，有如下公式</p>
+
+<script type="math/tex; mode=display">E_I = \sum_{x,y} \parallel I_{input}(x,y) - I_{model} (x,y) \parallel ^2</script>
+
+<p>为了避免出现不像人脸的重建结果，对参数设置了一定的约束，因此重建方法是质量和先验概率的折中。同时由于从2D图片重建三维是一个病态问题，为了避免出现不像人脸的重建结果，对参数设置了一定的约束，因此重建方法是质量和先验概率的折中。</p>
+
+<p>根据贝叶斯决策，问题变成找到拥有最大后验概率的参数$(\overline{\alpha}, \overline{\beta}, \overline{\gamma})$集合。考虑输入图片可能带有噪声，我们进一步假设观测图片满足如下概率，</p>
+
+<p>著作权归作者所有。商业转载请联系作者获得授权，非商业转载请注明出处。</p>
 
 <h2 id="pca">PCA</h2>
 
@@ -230,13 +268,18 @@ L_{per}(\chi) = 1- \frac{< f(I), f(I'(\chi))>}{||f(I) || \cdot ||f(I'(\chi))||} 
 <h2 id="参考">参考</h2>
 
 <ul>
-  <li><a href="https://blog.csdn.net/u011681952/article/details/82623328?ops_request_misc=%257B%2522request%255Fid%2522%253A%2522160199095419195188302819%2522%252C%2522scm%2522%253A%252220140713.130102334.pc%255Fall.%2522%257D&amp;request_id=160199095419195188302819&amp;biz_id=0&amp;utm_medium=distribute.pc_search_result.none-task-blog-2~all~first_rank_ecpm_v3~pc_rank_v2-25-82623328.first_rank_ecpm_v3_pc_rank_v2&amp;utm_term=3DMM&amp;spm=1018.2118.3001.4187">3D人脸重建, csdn</a></li>
-  <li><a href="https://www.bilibili.com/video/BV1f7411T7y2">Accurate 3D Face Reconstruction with Weakly-Supervised Learning, bliliblilli</a></li>
-  <li><a href="https://www.bilibili.com/video/BV1f7411T7y2">Accurate 3D Face Reconstruction with Weakly-Supervised Learning, github</a></li>
+  <li><a href="https://blog.csdn.net/u011681952/article/details/82623328">3D人脸重建, csdn</a></li>
+  <li><a href="https://www.bilibili.com/video/BV1f7411T7y2">Accurate 3D Face Reconstruction, bliliblilli</a></li>
+  <li><a href="https://www.bilibili.com/video/BV1f7411T7y2">Accurate 3D Face Reconstruction tf, github</a></li>
   <li><a href="https://gravis.dmi.unibas.ch/publications/Sigg99/morphmod2.pdf"> A Morphable Model For The Synthesis Of 3D Faces, 3DMM</a></li>
   <li><a href="https://baike.baidu.com/item/pca技术/10408698?fr=aladdin">主成分分析技术, 百度百科</a></li>
   <li><a href="https://www.bilibili.com/video/BV1Zt41187bN">降维算法之PCA&amp;SVD</a></li>
   <li><a href="https://zhuanlan.zhihu.com/p/133495161">CVPR 2019 基于弱监督学习的精确3D人脸重建, 知乎</a></li>
+  <li><a href="https://github.com/YadiraF/face3d">3D人脸处理工具Face3d, GitHub </a></li>
+  <li><a href="https://blog.csdn.net/qq_24497419/article/details/88913421">PCA（特征降维）的特征值，特征向量</a></li>
+  <li><a href="https://faces.dmi.unibas.ch/bfm/main.php?nav=1-0&amp;id=basel_face_model">3D Basel Face Model, BFM数据集</a></li>
+  <li><a href="https://www.cnblogs.com/bemfoo/p/11215643.html">BFM使用 - 获取平均脸模型的68个特征点坐标</a></li>
+  <li><a href="https://gitee.com/penghuailiang/DiscoFaceGAN">Disentangled and Controllable Face Image Generation via 3D Imitative-Contrastive Learning</a></li>
 </ul>
 
 
