@@ -226,7 +226,6 @@ public static void FindLocalLargestPeaks(float[] data, float[] peakValue, int[] 
 
 ![](/img/post-vr/mou8.jpg)
 
-
 [formant-analyzer][i17]项目中对元音(英语中包含长元音和短元音)和共振峰关系的可视化显示：
 
 
@@ -301,13 +300,14 @@ __口型特征__
 当然，该系统还存在一定的局限性，具体表现为两方面：
 
 1、该系统没有对人说话时的情绪和说话风格做特殊处理，这导致带情绪和不带情绪说话时合成的口型动画区别不明显，其主要原因是样本数据中带情绪的音频过少，难以提取出情绪特征。
-   
+
 2、该系统暂时无法根据音频内容生成相应的表情动画，这主要是由于相比于口型动画，表情动画的制作会简单得多，也就没有成为我们的研究重点。需要说明的是，我们的系统支持二次编辑，允许用户在口型动画的基础上添加表情。
 
 最后，该系统现已集成到Unity插件中，并被用于主机项目中。我们可以提供全套的口型动画生成支持或者根据现有的口型制作流程调整适配我们的口型动画生成系统，感兴趣的同学欢迎联系我们，一起交流，共同进步。
 
-
 ___参考文献___:
+
+* [SoX — 音频处理工具里的瑞士军刀][i18]
 * [Audio-Driven-Facial-Animation][i1]
 * [跟脸有关的最新玩法是你说什么，表情包就演什么][i2]
 * [一种基于共振峰分析的语音驱动人脸动画方法][i3]
@@ -322,6 +322,7 @@ ___参考文献___:
 * [海明窗 百度百科][i14]
 * [共振峰频率 ppt 百度文库][i15]
 * [unity-audio-spectrum 算法源码][i16]
+
 
 [i1]: https://research.nvidia.com/publication/2017-07_Audio-Driven-Facial-Animation
 [i2]: https://www.sohu.com/a/197252744_468636
@@ -340,3 +341,4 @@ ___参考文献___:
 [i15]: https://wenku.baidu.com/view/a290cf57996648d7c1c708a1284ac850ad020422.html
 [i16]: https://github.com/keijiro/unity-audio-spectrum
 [i17]: https://github.com/fulldecent/formant-analyzer/
+[i18]: https://www.jianshu.com/p/be8977de4a6b
