@@ -242,6 +242,7 @@ __C-Net__ 的训练集来自300W-LP, Multi-PIE和部分人脸识别数据集，�
 * [3D Basel Face Model, BFM数据集][i12]
 * [BFM使用 - 获取平均脸模型的68个特征点坐标][i13]
 * [Disentangled and Controllable Face Image Generation via 3D Imitative-Contrastive Learning][i11]
+* [Audio-Driven Facial Animation by Joint End-to-End Learning of Pose and Emotion][i14]
 
 
 [i1]: https://www.bilibili.com/video/BV1f7411T7y2
@@ -257,3 +258,4 @@ __C-Net__ 的训练集来自300W-LP, Multi-PIE和部分人脸识别数据集，�
 [i11]: https://gitee.com/penghuailiang/DiscoFaceGAN
 [i12]: https://faces.dmi.unibas.ch/bfm/main.php?nav=1-0&id=basel_face_model
 [i13]: https://www.cnblogs.com/bemfoo/p/11215643.html
+[i14]: https://research.nvidia.com/sites/default/files/publications/karras2017siggraph-paper_0.pdf
