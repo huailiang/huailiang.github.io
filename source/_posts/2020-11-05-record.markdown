@@ -1,0 +1,112 @@
+---
+layout:     post
+title:      "Unity多媒体转换"
+date:       2020-11-04 02:00:00
+author:     "huailiang"
+tags:
+    - Unity
+---
+
+
+>人脸重建是计算机视觉比较热门的一个方向，3d人脸相关应用也是近年来短视频领域的新玩法。不管是Facebook收购的MSQRD，还是Apple研发的Animoji，底层技术都与三维人脸重建有关。
+
+## MediaEncoder
+
+将图像和音频样本编码到音频或电影文件中。
+
+构造此类的实例会创建一个编码器，该编码器将创建一个具有指定轨道的音频、视频或音频/视频文件。
+
+对每个轨道交替调用 AddFrame() 和 AddSamples() 方法，以便帧和样本保持对每个轨道进行均等填充。
+
+将所有需要的帧和样本都添加到文件中后，调用 Dispose() 以正确结束每个轨道并关闭文件。
+
+```csharp
+using UnityEditor.Media;
+using UnityEngine;
+using Unity.Collections;
+using System.IO;
+
+public class Recorder
+{
+    static public void RecordMovie()
+    {
+        var videoAttr = new VideoTrackAttributes
+        {
+            frameRate = new MediaRational(50),
+            width = 320,
+            height = 200,
+            includeAlpha = false
+        };
+
+        var audioAttr = new AudioTrackAttributes
+        {
+            sampleRate = new MediaRational(48000),
+            channelCount = 2,
+            language = "fr"
+        };
+
+        int sampleFramesPerVideoFrame = audioAttr.channelCount *
+            audioAttr.sampleRate.numerator / videoAttr.frameRate.numerator;
+
+        var encodedFilePath = Path.Combine(Path.GetTempPath(), "my_movie.mp4");
+
+        Texture2D tex = new Texture2D((int)videoAttr.width, (int)videoAttr.height, TextureFormat.RGBA32, false);
+
+        using (var encoder = new MediaEncoder(encodedFilePath, videoAttr, audioAttr))
+        using (var audioBuffer = new NativeArray<float>(sampleFramesPerVideoFrame, Allocator.Temp))
+        {
+            for (int i = 0; i < 100; ++i)
+            {
+                // Fill 'tex' with the video content to be encoded into the file
+                encoder.AddFrame(tex);
+
+                // Fill 'audioBuffer' with the audio content to be encoded 
+                encoder.AddSamples(audioBuffer);
+            }
+        }
+    }
+}
+```
+
+ ## AsyncGPUReadback 接口
+
+```csharp
+IEnumerator Start()
+{
+    var rt = new RenderTexture(512, 512, 0);
+    //Graphics.xxx...
+    var req = AsyncGPUReadback.Request(rt);
+    yield return new WaitUntil(() => req.done);
+
+    var tex = new Texture2D(512, 512, TextureFormat.RGBA32, false);
+    var colorArray = req.GetData<Color32>().ToArray();
+    tex.SetPixels32(colorArray);
+    tex.Apply();
+}
+```
+
+## 转视频
+
+
+WebM由Google提出，是一个开放、免费的媒体文件格式。WebM 影片格式其实是以 Matroska（即 MKV）容器格式为基础开发的新容器格式，里面包括了VP8影片轨和 Ogg Vorbis 音轨，其中Google将其拥有的VP8视频编码技术以类似BSD授权开源，Ogg Vorbis 本来就是开放格式。 WebM标准的网络视频更加偏向于开源并且是基于HTML5标准的，WebM 项目旨在为对每个人都开放的网络开发高质量、开放的视频格式，其重点是解决视频服务这一核心的网络用户体验。Google 说 WebM 的格式相当有效率，应该可以在 netbook、tablet、手持式装置等上面顺畅地使用。
+
+
+
+## 转Gif
+
+为了防止人脸形状和纹理退化，作者使用3DMM系数的正则项
+
+
+## 参考
+
+* [WebM 影片格式, 百度百科][ii]
+* [WebM VP8 调试环境搭建][i2]
+* [h.264与ProRes视频编码在性能上面的区别][i3]
+* [Unity 自带的多媒体编码器][i4]
+* [FFmpegRecorder, github][i6]
+
+[i1]: https://baike.baidu.com/item/WebM/2455966?fr=aladdin
+[i2]: https://blog.csdn.net/yarina/article/details/6536317
+[i3]: http://bbs.ivideostar.com/forum.php?mod=viewthread&tid=2915
+[i4]: https://docs.unity3d.com/cn/2019.4/ScriptReference/Media.MediaEncoder.html
+[i6]: https://github.com/keijiro/FFmpegRecorder
