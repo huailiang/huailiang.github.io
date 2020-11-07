@@ -8,23 +8,18 @@ tags:
 ---
 
 
->人脸重建是计算机视觉比较热门的一个方向，3d人脸相关应用也是近年来短视频领域的新玩法。不管是Facebook收购的MSQRD，还是Apple研发的Animoji，底层技术都与三维人脸重建有关。
+>将GameView视图画面输出成视频或者Gif、序列帧， 在某些特定的场景中还有些作用。 比如使用Timeline制作的过场动画渲染成视频，游戏运行时流式加载， 而不必将相关的资源打包在包体中。Unity官方推出Preview版本的Encorder, 本文将系列探讨。
+
+
 
 ## MediaEncoder
 
-将图像和音频样本编码到音频或电影文件中。
-
-构造此类的实例会创建一个编码器，该编码器将创建一个具有指定轨道的音频、视频或音频/视频文件。
-
-对每个轨道交替调用 AddFrame() 和 AddSamples() 方法，以便帧和样本保持对每个轨道进行均等填充。
+[MediaEncoder][i4]是Unity内置的编码器，将图像和音频样本编码到音频或电影文件中。构造此类的实例会创建一个编码器，该编码器将创建一个具有指定轨道的音频、视频或音频/视频文件。对每个轨道交替调用 AddFrame() 和 AddSamples() 方法，以便帧和样本保持对每个轨道进行均等填充。
 
 将所有需要的帧和样本都添加到文件中后，调用 Dispose() 以正确结束每个轨道并关闭文件。
 
 ```csharp
 using UnityEditor.Media;
-using UnityEngine;
-using Unity.Collections;
-using System.IO;
 
 public class Recorder
 {
@@ -59,7 +54,6 @@ public class Recorder
             {
                 // Fill 'tex' with the video content to be encoded into the file
                 encoder.AddFrame(tex);
-
                 // Fill 'audioBuffer' with the audio content to be encoded 
                 encoder.AddSamples(audioBuffer);
             }
@@ -68,7 +62,17 @@ public class Recorder
 }
 ```
 
+上述脚本就是创建一个分辨率320x200, 画面采样率50Hz, 音频采样率48K的mp4编码视频。
+
+## 音频获取
+
+使用[AudioRenderer][i7] 截取引擎输出音频， 调用Start之后， 进入音频录制模式。在此之后，Unity 将输出静音，直到调用 AudioRenderer.Stop。 因此，如果桌面有其他声音也不会输出， 比如边听歌边录制，歌声也不会录入。 
+
+
  ## AsyncGPUReadback 接口
+
+
+为了更加快速的处理视频， 这部分运算在新版本中放在了GPU中计算， 当然需要Unity2018以及更高的版本， 并且设备需要[SystemInfo.supportsAsyncGPUReadback][i9]的支持。
 
 ```csharp
 IEnumerator Start()
@@ -85,28 +89,60 @@ IEnumerator Start()
 }
 ```
 
-## 转视频
+
+## 视频编码
+
+Unity Recorder中支持定义了三种视频编码格式， 如下面代码所示：
+
+```csharp
+public enum VideoRecorderOutputFormat
+{
+    /// <summary>
+    /// Output the recording with the H.264 codec in an MP4 container.
+    /// </summary>
+    MP4,
+    /// <summary>
+    /// Output the recording with the VP9 codec in a WebM container.
+    /// </summary>
+    WebM,
+    /// <summary>
+    /// Output the recording with the ProRes codec in a MOV container.
+    /// </summary>
+    MOV,
+}
+```
+
+H.264/MPEG-4第10部分，或称AVC（Advanced Video Coding，高级视频编码），是一种视频压缩标准，一种被广泛使用的高精度视频的录制、压缩和发布格式。是由ITU-T视频编码专家组（VCEG）和ISO/IEC动态图像专家组（MPEG）联合组成的联合视频组（JVT，Joint Video Team）提出的高度压缩数字视频编解码器标准。这个标准通常被称之为H.264/AVC（或者AVC/H.264或者H.264/MPEG-4 AVC或MPEG-4/H.264 AVC）而明确的说明它两方面的开发者。
+
+WebM由Google提出，是一个开放、免费的媒体文件格式。WebM 影片格式其实是以 Matroska（即 MKV）容器格式为基础开发的新容器格式，里面包括了VP8影片轨和 Ogg Vorbis 音轨，其中Google将其拥有的VP8视频编码技术以类似BSD授权开源，Ogg Vorbis 本来就是开放格式。 WebM标准的网络视频更加偏向于开源并且是基于HTML5标准的，WebM 项目旨在为对每个人都开放的网络开发高质量、开放的视频格式，其重点是解决视频服务这一核心的网络用户体验。Google 说 WebM 的格式相当有效率，应该可以在 netbook、tablet、手持式装置等上面顺畅地使用。VP9 是Google提供的开源的免费视频codec，是VP8的后续版本，初始开发时命名为下一代开源视频或者VP-NEXT. VP9的开发始于2011年Q3，试图降低VP8的50%的码率而保持相同的质量
 
 
-WebM由Google提出，是一个开放、免费的媒体文件格式。WebM 影片格式其实是以 Matroska（即 MKV）容器格式为基础开发的新容器格式，里面包括了VP8影片轨和 Ogg Vorbis 音轨，其中Google将其拥有的VP8视频编码技术以类似BSD授权开源，Ogg Vorbis 本来就是开放格式。 WebM标准的网络视频更加偏向于开源并且是基于HTML5标准的，WebM 项目旨在为对每个人都开放的网络开发高质量、开放的视频格式，其重点是解决视频服务这一核心的网络用户体验。Google 说 WebM 的格式相当有效率，应该可以在 netbook、tablet、手持式装置等上面顺畅地使用。
+ProRes是 Apple 开发的一种解码器，MOV 封装格式。MAC常用。普通PC安装Quick可以对其解码，要进行编码需要安装相关插件，文末会分享。ProRes 编解码器提供独一无二的多码流实时编辑性能、卓越图像质量和降低的存储率组合。Apple ProRes 编解码器充分利用多核处理，并具有快速、降低分辨率的解码模式。所有 Apple ProRes 编解码器都支持全分辨率的所有帧尺寸（包括 SD、HD、2K、4K 和 5K）。目前 ProRes 有6个版本（由低到高）：ProRes Proxy、ProRes 422 LT、ProRes 422、 ProRes 422 HQ、ProRes 4444 及 ProRes 4444 XQ 。
 
 
+更多的视频格式以及相关的特性， 请参考这篇[文章][i8].
 
-## 转Gif
 
-为了防止人脸形状和纹理退化，作者使用3DMM系数的正则项
 
 
 ## 参考
 
-* [WebM 影片格式, 百度百科][ii]
+* [WebM 影片格式, 百度百科][i1]
 * [WebM VP8 调试环境搭建][i2]
 * [h.264与ProRes视频编码在性能上面的区别][i3]
 * [Unity 自带的多媒体编码器][i4]
+* [在Unity中使用FFMPEG录制屏幕][i5]
 * [FFmpegRecorder, github][i6]
+* [Unity AudioRenderer录制游戏的主输出或 AudioMixer 中的特定组][i7]
+* [视频格式及编码][i8]
+* [Unity AsyncGPUReadback ][i9]
 
 [i1]: https://baike.baidu.com/item/WebM/2455966?fr=aladdin
 [i2]: https://blog.csdn.net/yarina/article/details/6536317
 [i3]: http://bbs.ivideostar.com/forum.php?mod=viewthread&tid=2915
 [i4]: https://docs.unity3d.com/cn/2019.4/ScriptReference/Media.MediaEncoder.html
+[i5]: https://blog.csdn.net/qq_21397217/article/details/80537263
 [i6]: https://github.com/keijiro/FFmpegRecorder
+[i7]: https://docs.unity3d.com/cn/2020.1/ScriptReference/AudioRenderer.html
+[i8]: https://www.bgteach.com/article/134
+[i9]: https://www.cnblogs.com/hont/p/11351273.html
