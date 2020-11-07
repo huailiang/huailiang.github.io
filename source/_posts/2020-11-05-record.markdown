@@ -72,7 +72,7 @@ public class Recorder
  ## AsyncGPUReadback 接口
 
 
-为了更加快速的处理视频， 这部分运算在新版本中放在了GPU中计算， 当然需要Unity2018以及更高的版本， 并且设备需要[SystemInfo.supportsAsyncGPUReadback][i9]的支持。
+为了更加快速的处理视频(比如Flip)， 这部分运算在新版本中放在了GPU中计算， 当然需要Unity2018以及更高的版本， 并且设备需要[SystemInfo.supportsAsyncGPUReadback][i9]的支持。
 
 ```csharp
 IEnumerator Start()
@@ -90,7 +90,10 @@ IEnumerator Start()
 ```
 
 
+
 ## 视频编码
+
+![](/img/post-unity/encoder.png)
 
 Unity Recorder中支持定义了三种视频编码格式， 如下面代码所示：
 
@@ -112,6 +115,8 @@ public enum VideoRecorderOutputFormat
 }
 ```
 
+
+
 H.264/MPEG-4第10部分，或称AVC（Advanced Video Coding，高级视频编码），是一种视频压缩标准，一种被广泛使用的高精度视频的录制、压缩和发布格式。是由ITU-T视频编码专家组（VCEG）和ISO/IEC动态图像专家组（MPEG）联合组成的联合视频组（JVT，Joint Video Team）提出的高度压缩数字视频编解码器标准。这个标准通常被称之为H.264/AVC（或者AVC/H.264或者H.264/MPEG-4 AVC或MPEG-4/H.264 AVC）而明确的说明它两方面的开发者。
 
 WebM由Google提出，是一个开放、免费的媒体文件格式。WebM 影片格式其实是以 Matroska（即 MKV）容器格式为基础开发的新容器格式，里面包括了VP8影片轨和 Ogg Vorbis 音轨，其中Google将其拥有的VP8视频编码技术以类似BSD授权开源，Ogg Vorbis 本来就是开放格式。 WebM标准的网络视频更加偏向于开源并且是基于HTML5标准的，WebM 项目旨在为对每个人都开放的网络开发高质量、开放的视频格式，其重点是解决视频服务这一核心的网络用户体验。Google 说 WebM 的格式相当有效率，应该可以在 netbook、tablet、手持式装置等上面顺畅地使用。VP9 是Google提供的开源的免费视频codec，是VP8的后续版本，初始开发时命名为下一代开源视频或者VP-NEXT. VP9的开发始于2011年Q3，试图降低VP8的50%的码率而保持相同的质量
@@ -123,6 +128,49 @@ ProRes是 Apple 开发的一种解码器，MOV 封装格式。MAC常用。普通
 更多的视频格式以及相关的特性， 请参考这篇[文章][i8].
 
 
+## 实现部分
+
+#### H.264
+
+这部分使用的编码器是MediaEncoder，其提供了如下方法来提供了视频录制方法：
+
+* AddFrame	将帧附加到文件的视频轨道。
+* AddSamples	将样本帧附加到指定的视频轨道。
+* Dispose	完成写入所有轨道，并关闭正在写入的文件。
+
+
+#### V9 WebM
+
+通过引用Native库（c++， 插件中库的名字fccore.dll/fccore.bundle）来实现编码，然后通过下面wrap接口完成解析：
+
+```csharp
+[DllImport("fccore")]  
+static extern fcStream fcCreateFileStream(string path);
+[DllImport("fccore")] 
+static extern void  fcReleaseStream(fcStream s);
+[DllImport("fccore")] 
+static extern void  fcGuardBegin();
+[DllImport("fccore")] 
+static extern void  fcGuardEnd();
+[DllImport("fccore")] 
+static extern void  fcReleaseDeferredCall(fcDeferredCall dc);
+```
+
+
+#### ProRes QuikTime
+
+
+与WebM类似， Unity没有直接的支持，也是使用外部的Native接口（c++， mac平台是AVFoundationWrapper.bundle）来实现编码，通过下面wrap接口实现：
+```csharp
+[DllImport(ProResWrapperInfo.LibraryPath)]
+static extern IntPtr Create(string sMetadata, string sFileName, int width, int height, float fps, bool hasAudio, float fAudioSamplingRate, int codecType, bool hasTransparency, int colorDesc);
+[DllImport(ProResWrapperInfo.LibraryPath)]
+static extern bool AddVideoFrame(IntPtr pEncoder, byte[] pixels);
+[DllImport(ProResWrapperInfo.LibraryPath)]
+static extern bool AddAudioSamples(IntPtr pEncoder, float[] samples, int numSamples);
+[DllImport(ProResWrapperInfo.LibraryPath)]
+static extern bool Close(IntPtr pEncoder);
+```
 
 
 ## 参考
