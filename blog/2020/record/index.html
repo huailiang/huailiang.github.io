@@ -1,0 +1,378 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <meta http-equiv="X-UA-Compatible" content="IE=edge">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+
+  <title>Unity多媒体转换</title>
+  <meta name="description"
+    content="  将GameView视图画面输出成视频或者Gif、序列帧， 在某些特定的场景中还有些作用。 比如使用Timeline制作的过场动画渲染成视频，游戏运行时流式加载， 而不必将相关的资源打包在包体中。Unity官方推出Preview版本的Encorder, 本文将系列探讨。">
+
+  <link rel="shortcut icon" href="/img/favicon.ico">
+  <link rel="stylesheet" href="/css/main.css">
+  <link rel="canonical" href="https://huailiang.github.io/blog/2020/record/">
+
+</head>
+
+<body>
+  <main>
+    <header class="site-header">
+  <div class="container">
+    <h1><a href="/">Hom<span>e</span></a></h1>
+
+    <button type="button" class="sliding-panel-button">
+      <span></span>
+      <span></span>
+      <span></span>
+    </button>
+
+    <nav class="navbar sliding-panel-content">
+      <ul>
+        
+        <li><a href="/about" title="About">About</a>
+        </li>
+        
+        <li><a href="/blog" title="Blog">Blog</a>
+        </li>
+        
+       <li><a href="/category/" target="_blank"><i class="icon icon-feed"></i></a></li>
+      </ul>
+    </nav>
+  </div>
+</header>
+
+<div class="sliding-panel-fade-screen"></div>
+    <script type="text/javascript" src="/js/MathJax.js?config=TeX-AMS-MML_HTMLorMML"></script>
+
+<script type="text/x-mathjax-config">
+MathJax.Hub.Config({
+  tex2jax: {
+    inlineMath: [['$','$'], ['\\(','\\)']],
+    processEscapes: true
+  }
+});
+</script>
+
+<script type="text/x-mathjax-config">
+  MathJax.Hub.Config({
+    tex2jax: {
+      skipTags: ['script', 'noscript', 'style', 'textarea', 'pre', 'code']
+    }
+  });
+
+</script>
+    <div class="container">
+      <article role="article" class="post">
+
+  <div class="card">
+    <header class="post-header">
+      <h1 class="post-title">Unity多媒体转换</h1>
+      <p class="post-meta">Nov 4, 2020 •
+        huailiang</p>
+    </header>
+
+    <div class="post-content">
+      <blockquote>
+  <p>将GameView视图画面输出成视频或者Gif、序列帧， 在某些特定的场景中还有些作用。 比如使用Timeline制作的过场动画渲染成视频，游戏运行时流式加载， 而不必将相关的资源打包在包体中。Unity官方推出Preview版本的Encorder, 本文将系列探讨。</p>
+</blockquote>
+
+<h2 id="mediaencoder">MediaEncoder</h2>
+
+<p><a href="https://docs.unity3d.com/cn/2019.4/ScriptReference/Media.MediaEncoder.html">MediaEncoder</a>是Unity内置的编码器，将图像和音频样本编码到音频或电影文件中。构造此类的实例会创建一个编码器，该编码器将创建一个具有指定轨道的音频、视频或音频/视频文件。对每个轨道交替调用 AddFrame() 和 AddSamples() 方法，以便帧和样本保持对每个轨道进行均等填充。</p>
+
+<p>将所有需要的帧和样本都添加到文件中后，调用 Dispose() 以正确结束每个轨道并关闭文件。</p>
+
+<div class="language-csharp highlighter-rouge"><pre class="highlight"><code><span class="k">using</span> <span class="nn">UnityEditor.Media</span><span class="p">;</span>
+
+<span class="k">public</span> <span class="k">class</span> <span class="nc">Recorder</span>
+<span class="p">{</span>
+    <span class="k">static</span> <span class="k">public</span> <span class="k">void</span> <span class="nf">RecordMovie</span><span class="p">()</span>
+    <span class="p">{</span>
+        <span class="kt">var</span> <span class="n">videoAttr</span> <span class="p">=</span> <span class="k">new</span> <span class="n">VideoTrackAttributes</span>
+        <span class="p">{</span>
+            <span class="n">frameRate</span> <span class="p">=</span> <span class="k">new</span> <span class="nf">MediaRational</span><span class="p">(</span><span class="m">50</span><span class="p">),</span>
+            <span class="n">width</span> <span class="p">=</span> <span class="m">320</span><span class="p">,</span>
+            <span class="n">height</span> <span class="p">=</span> <span class="m">200</span><span class="p">,</span>
+            <span class="n">includeAlpha</span> <span class="p">=</span> <span class="k">false</span>
+        <span class="p">};</span>
+
+        <span class="kt">var</span> <span class="n">audioAttr</span> <span class="p">=</span> <span class="k">new</span> <span class="n">AudioTrackAttributes</span>
+        <span class="p">{</span>
+            <span class="n">sampleRate</span> <span class="p">=</span> <span class="k">new</span> <span class="nf">MediaRational</span><span class="p">(</span><span class="m">48000</span><span class="p">),</span>
+            <span class="n">channelCount</span> <span class="p">=</span> <span class="m">2</span><span class="p">,</span>
+            <span class="n">language</span> <span class="p">=</span> <span class="s">"fr"</span>
+        <span class="p">};</span>
+
+        <span class="kt">int</span> <span class="n">sampleFramesPerVideoFrame</span> <span class="p">=</span> <span class="n">audioAttr</span><span class="p">.</span><span class="n">channelCount</span> <span class="p">*</span>
+            <span class="n">audioAttr</span><span class="p">.</span><span class="n">sampleRate</span><span class="p">.</span><span class="n">numerator</span> <span class="p">/</span> <span class="n">videoAttr</span><span class="p">.</span><span class="n">frameRate</span><span class="p">.</span><span class="n">numerator</span><span class="p">;</span>
+
+        <span class="kt">var</span> <span class="n">encodedFilePath</span> <span class="p">=</span> <span class="n">Path</span><span class="p">.</span><span class="nf">Combine</span><span class="p">(</span><span class="n">Path</span><span class="p">.</span><span class="nf">GetTempPath</span><span class="p">(),</span> <span class="s">"my_movie.mp4"</span><span class="p">);</span>
+
+        <span class="n">Texture2D</span> <span class="n">tex</span> <span class="p">=</span> <span class="k">new</span> <span class="nf">Texture2D</span><span class="p">((</span><span class="kt">int</span><span class="p">)</span><span class="n">videoAttr</span><span class="p">.</span><span class="n">width</span><span class="p">,</span> <span class="p">(</span><span class="kt">int</span><span class="p">)</span><span class="n">videoAttr</span><span class="p">.</span><span class="n">height</span><span class="p">,</span> <span class="n">TextureFormat</span><span class="p">.</span><span class="n">RGBA32</span><span class="p">,</span> <span class="k">false</span><span class="p">);</span>
+
+        <span class="k">using</span> <span class="p">(</span><span class="kt">var</span> <span class="n">encoder</span> <span class="p">=</span> <span class="k">new</span> <span class="nf">MediaEncoder</span><span class="p">(</span><span class="n">encodedFilePath</span><span class="p">,</span> <span class="n">videoAttr</span><span class="p">,</span> <span class="n">audioAttr</span><span class="p">))</span>
+        <span class="k">using</span> <span class="p">(</span><span class="kt">var</span> <span class="n">audioBuffer</span> <span class="p">=</span> <span class="k">new</span> <span class="n">NativeArray</span><span class="p">&lt;</span><span class="kt">float</span><span class="p">&gt;(</span><span class="n">sampleFramesPerVideoFrame</span><span class="p">,</span> <span class="n">Allocator</span><span class="p">.</span><span class="n">Temp</span><span class="p">))</span>
+        <span class="p">{</span>
+            <span class="k">for</span> <span class="p">(</span><span class="kt">int</span> <span class="n">i</span> <span class="p">=</span> <span class="m">0</span><span class="p">;</span> <span class="n">i</span> <span class="p">&lt;</span> <span class="m">100</span><span class="p">;</span> <span class="p">++</span><span class="n">i</span><span class="p">)</span>
+            <span class="p">{</span>
+                <span class="c1">// Fill 'tex' with the video content to be encoded into the file
+</span>                <span class="n">encoder</span><span class="p">.</span><span class="nf">AddFrame</span><span class="p">(</span><span class="n">tex</span><span class="p">);</span>
+                <span class="c1">// Fill 'audioBuffer' with the audio content to be encoded 
+</span>                <span class="n">encoder</span><span class="p">.</span><span class="nf">AddSamples</span><span class="p">(</span><span class="n">audioBuffer</span><span class="p">);</span>
+            <span class="p">}</span>
+        <span class="p">}</span>
+    <span class="p">}</span>
+<span class="p">}</span>
+</code></pre>
+</div>
+
+<p>上述脚本就是创建一个分辨率320x200, 画面采样率50Hz, 音频采样率48K的mp4编码视频。</p>
+
+<h2 id="音频获取">音频获取</h2>
+
+<p>使用<a href="https://docs.unity3d.com/cn/2020.1/ScriptReference/AudioRenderer.html">AudioRenderer</a> 截取引擎输出音频， 调用Start之后， 进入音频录制模式。在此之后，Unity 将输出静音，直到调用 AudioRenderer.Stop。 因此，如果桌面有其他声音也不会输出， 比如边听歌边录制，歌声也不会录入。</p>
+
+<p>## AsyncGPUReadback 接口</p>
+
+<p>为了更加快速的处理视频(比如Flip)， 这部分运算在新版本中放在了GPU中计算， 当然需要Unity2018以及更高的版本， 并且设备需要<a href="https://www.cnblogs.com/hont/p/11351273.html">SystemInfo.supportsAsyncGPUReadback</a>的支持。</p>
+
+<div class="language-csharp highlighter-rouge"><pre class="highlight"><code><span class="n">IEnumerator</span> <span class="nf">Start</span><span class="p">()</span>
+<span class="p">{</span>
+    <span class="kt">var</span> <span class="n">rt</span> <span class="p">=</span> <span class="k">new</span> <span class="nf">RenderTexture</span><span class="p">(</span><span class="m">512</span><span class="p">,</span> <span class="m">512</span><span class="p">,</span> <span class="m">0</span><span class="p">);</span>
+    <span class="c1">//Graphics.xxx...
+</span>    <span class="kt">var</span> <span class="n">req</span> <span class="p">=</span> <span class="n">AsyncGPUReadback</span><span class="p">.</span><span class="nf">Request</span><span class="p">(</span><span class="n">rt</span><span class="p">);</span>
+    <span class="k">yield</span> <span class="k">return</span> <span class="k">new</span> <span class="nf">WaitUntil</span><span class="p">(()</span> <span class="p">=&gt;</span> <span class="n">req</span><span class="p">.</span><span class="n">done</span><span class="p">);</span>
+
+    <span class="kt">var</span> <span class="n">tex</span> <span class="p">=</span> <span class="k">new</span> <span class="nf">Texture2D</span><span class="p">(</span><span class="m">512</span><span class="p">,</span> <span class="m">512</span><span class="p">,</span> <span class="n">TextureFormat</span><span class="p">.</span><span class="n">RGBA32</span><span class="p">,</span> <span class="k">false</span><span class="p">);</span>
+    <span class="kt">var</span> <span class="n">colorArray</span> <span class="p">=</span> <span class="n">req</span><span class="p">.</span><span class="n">GetData</span><span class="p">&lt;</span><span class="n">Color32</span><span class="p">&gt;().</span><span class="nf">ToArray</span><span class="p">();</span>
+    <span class="n">tex</span><span class="p">.</span><span class="nf">SetPixels32</span><span class="p">(</span><span class="n">colorArray</span><span class="p">);</span>
+    <span class="n">tex</span><span class="p">.</span><span class="nf">Apply</span><span class="p">();</span>
+<span class="p">}</span>
+</code></pre>
+</div>
+
+<h2 id="视频编码">视频编码</h2>
+
+<p><img src="/img/post-unity/encoder.png" alt="" /></p>
+
+<p>Unity Recorder中支持定义了三种视频编码格式， 如下面代码所示：</p>
+
+<div class="language-csharp highlighter-rouge"><pre class="highlight"><code><span class="k">public</span> <span class="k">enum</span> <span class="n">VideoRecorderOutputFormat</span>
+<span class="p">{</span>
+    <span class="c1">/// &lt;summary&gt;
+</span>    <span class="c1">/// Output the recording with the H.264 codec in an MP4 container.
+</span>    <span class="c1">/// &lt;/summary&gt;
+</span>    <span class="n">MP4</span><span class="p">,</span>
+    <span class="c1">/// &lt;summary&gt;
+</span>    <span class="c1">/// Output the recording with the VP9 codec in a WebM container.
+</span>    <span class="c1">/// &lt;/summary&gt;
+</span>    <span class="n">WebM</span><span class="p">,</span>
+    <span class="c1">/// &lt;summary&gt;
+</span>    <span class="c1">/// Output the recording with the ProRes codec in a MOV container.
+</span>    <span class="c1">/// &lt;/summary&gt;
+</span>    <span class="n">MOV</span><span class="p">,</span>
+<span class="p">}</span>
+</code></pre>
+</div>
+
+<p>H.264/MPEG-4第10部分，或称AVC（Advanced Video Coding，高级视频编码），是一种视频压缩标准，一种被广泛使用的高精度视频的录制、压缩和发布格式。是由ITU-T视频编码专家组（VCEG）和ISO/IEC动态图像专家组（MPEG）联合组成的联合视频组（JVT，Joint Video Team）提出的高度压缩数字视频编解码器标准。这个标准通常被称之为H.264/AVC（或者AVC/H.264或者H.264/MPEG-4 AVC或MPEG-4/H.264 AVC）而明确的说明它两方面的开发者。</p>
+
+<p>WebM由Google提出，是一个开放、免费的媒体文件格式。WebM 影片格式其实是以 Matroska（即 MKV）容器格式为基础开发的新容器格式，里面包括了VP8影片轨和 Ogg Vorbis 音轨，其中Google将其拥有的VP8视频编码技术以类似BSD授权开源，Ogg Vorbis 本来就是开放格式。 WebM标准的网络视频更加偏向于开源并且是基于HTML5标准的，WebM 项目旨在为对每个人都开放的网络开发高质量、开放的视频格式，其重点是解决视频服务这一核心的网络用户体验。Google 说 WebM 的格式相当有效率，应该可以在 netbook、tablet、手持式装置等上面顺畅地使用。VP9 是Google提供的开源的免费视频codec，是VP8的后续版本，初始开发时命名为下一代开源视频或者VP-NEXT. VP9的开发始于2011年Q3，试图降低VP8的50%的码率而保持相同的质量</p>
+
+<p>ProRes是 Apple 开发的一种解码器，MOV 封装格式。MAC常用。普通PC安装Quick可以对其解码，要进行编码需要安装相关插件，文末会分享。ProRes 编解码器提供独一无二的多码流实时编辑性能、卓越图像质量和降低的存储率组合。Apple ProRes 编解码器充分利用多核处理，并具有快速、降低分辨率的解码模式。所有 Apple ProRes 编解码器都支持全分辨率的所有帧尺寸（包括 SD、HD、2K、4K 和 5K）。目前 ProRes 有6个版本（由低到高）：ProRes Proxy、ProRes 422 LT、ProRes 422、 ProRes 422 HQ、ProRes 4444 及 ProRes 4444 XQ 。</p>
+
+<p>更多的视频格式以及相关的特性， 请参考这篇<a href="https://www.bgteach.com/article/134">文章</a>.</p>
+
+<h2 id="实现部分">实现部分</h2>
+
+<h4 id="h264">H.264</h4>
+
+<p>这部分使用的编码器是MediaEncoder，其提供了如下方法来提供了视频录制方法：</p>
+
+<ul>
+  <li>AddFrame	将帧附加到文件的视频轨道。</li>
+  <li>AddSamples	将样本帧附加到指定的视频轨道。</li>
+  <li>Dispose	完成写入所有轨道，并关闭正在写入的文件。</li>
+</ul>
+
+<h4 id="v9-webm">V9 WebM</h4>
+
+<p>通过引用Native库（c++， 插件中库的名字fccore.dll/fccore.bundle）来实现编码，然后通过下面wrap接口完成解析：</p>
+
+<div class="language-csharp highlighter-rouge"><pre class="highlight"><code><span class="na">[DllImport("fccore")]</span>  
+<span class="k">static</span> <span class="k">extern</span> <span class="n">fcStream</span> <span class="nf">fcCreateFileStream</span><span class="p">(</span><span class="kt">string</span> <span class="n">path</span><span class="p">);</span>
+<span class="na">[DllImport("fccore")]</span> 
+<span class="k">static</span> <span class="k">extern</span> <span class="k">void</span>  <span class="nf">fcReleaseStream</span><span class="p">(</span><span class="n">fcStream</span> <span class="n">s</span><span class="p">);</span>
+<span class="na">[DllImport("fccore")]</span> 
+<span class="k">static</span> <span class="k">extern</span> <span class="k">void</span>  <span class="nf">fcGuardBegin</span><span class="p">();</span>
+<span class="na">[DllImport("fccore")]</span> 
+<span class="k">static</span> <span class="k">extern</span> <span class="k">void</span>  <span class="nf">fcGuardEnd</span><span class="p">();</span>
+<span class="na">[DllImport("fccore")]</span> 
+<span class="k">static</span> <span class="k">extern</span> <span class="k">void</span>  <span class="nf">fcReleaseDeferredCall</span><span class="p">(</span><span class="n">fcDeferredCall</span> <span class="n">dc</span><span class="p">);</span>
+</code></pre>
+</div>
+
+<h4 id="prores-quiktime">ProRes QuikTime</h4>
+
+<p>与WebM类似， Unity没有直接的支持，也是使用外部的Native接口（c++， mac平台是AVFoundationWrapper.bundle）来实现编码，通过下面wrap接口实现：</p>
+<div class="language-csharp highlighter-rouge"><pre class="highlight"><code><span class="na">[DllImport(ProResWrapperInfo.LibraryPath)]</span>
+<span class="k">static</span> <span class="k">extern</span> <span class="n">IntPtr</span> <span class="nf">Create</span><span class="p">(</span><span class="kt">string</span> <span class="n">sMetadata</span><span class="p">,</span> <span class="kt">string</span> <span class="n">sFileName</span><span class="p">,</span> <span class="kt">int</span> <span class="n">width</span><span class="p">,</span> <span class="kt">int</span> <span class="n">height</span><span class="p">,</span> <span class="kt">float</span> <span class="n">fps</span><span class="p">,</span> <span class="kt">bool</span> <span class="n">hasAudio</span><span class="p">,</span> <span class="kt">float</span> <span class="n">fAudioSamplingRate</span><span class="p">,</span> <span class="kt">int</span> <span class="n">codecType</span><span class="p">,</span> <span class="kt">bool</span> <span class="n">hasTransparency</span><span class="p">,</span> <span class="kt">int</span> <span class="n">colorDesc</span><span class="p">);</span>
+<span class="na">[DllImport(ProResWrapperInfo.LibraryPath)]</span>
+<span class="k">static</span> <span class="k">extern</span> <span class="kt">bool</span> <span class="nf">AddVideoFrame</span><span class="p">(</span><span class="n">IntPtr</span> <span class="n">pEncoder</span><span class="p">,</span> <span class="kt">byte</span><span class="p">[]</span> <span class="n">pixels</span><span class="p">);</span>
+<span class="na">[DllImport(ProResWrapperInfo.LibraryPath)]</span>
+<span class="k">static</span> <span class="k">extern</span> <span class="kt">bool</span> <span class="nf">AddAudioSamples</span><span class="p">(</span><span class="n">IntPtr</span> <span class="n">pEncoder</span><span class="p">,</span> <span class="kt">float</span><span class="p">[]</span> <span class="n">samples</span><span class="p">,</span> <span class="kt">int</span> <span class="n">numSamples</span><span class="p">);</span>
+<span class="na">[DllImport(ProResWrapperInfo.LibraryPath)]</span>
+<span class="k">static</span> <span class="k">extern</span> <span class="kt">bool</span> <span class="nf">Close</span><span class="p">(</span><span class="n">IntPtr</span> <span class="n">pEncoder</span><span class="p">);</span>
+</code></pre>
+</div>
+
+<h2 id="参考">参考</h2>
+
+<ul>
+  <li><a href="https://baike.baidu.com/item/WebM/2455966?fr=aladdin">WebM 影片格式, 百度百科</a></li>
+  <li><a href="https://blog.csdn.net/yarina/article/details/6536317">WebM VP8 调试环境搭建</a></li>
+  <li><a href="http://bbs.ivideostar.com/forum.php?mod=viewthread&amp;tid=2915">h.264与ProRes视频编码在性能上面的区别</a></li>
+  <li><a href="https://docs.unity3d.com/cn/2019.4/ScriptReference/Media.MediaEncoder.html">Unity 自带的多媒体编码器</a></li>
+  <li><a href="https://blog.csdn.net/qq_21397217/article/details/80537263">在Unity中使用FFMPEG录制屏幕</a></li>
+  <li><a href="https://github.com/keijiro/FFmpegRecorder">FFmpegRecorder, github</a></li>
+  <li><a href="https://docs.unity3d.com/cn/2020.1/ScriptReference/AudioRenderer.html">Unity AudioRenderer录制游戏的主输出或 AudioMixer 中的特定组</a></li>
+  <li><a href="https://www.bgteach.com/article/134">视频格式及编码</a></li>
+  <li><a href="https://www.cnblogs.com/hont/p/11351273.html">Unity AsyncGPUReadback </a></li>
+</ul>
+
+
+    </div>
+  </div>
+
+  <style>
+  .post-nav {
+    overflow: hidden;
+    /* margin-top: 60px; */
+    padding: 12px;
+    white-space: nowrap;
+    /* border-top: 1px solid #eee; */
+  }
+
+  .post-nav-item {
+    display: inline-block;
+    width: 50%;
+    white-space: normal;
+  }
+
+  .post-nav-item a {
+    position: relative;
+    display: inline-block;
+    line-height: 25px;
+    font-size: 14px;
+    color: #555;
+    border-bottom: none;
+  }
+
+  .post-nav-item a:hover {
+    color: #222;
+    font-weight: bold;
+    border-bottom: none;
+  }
+
+  .post-nav-item a:active {
+    top: 2px;
+  }
+
+  .post-nav-item a:before,
+  .post-nav-item a:after {
+    display: inline-block;
+    width: 16px;
+    height: 25px;
+    vertical-align: top;
+    opacity: 0.4;
+    background-size: 16px;
+  }
+
+  .post-nav-none a:none {
+    content: ' ';
+    background-size: 8px;
+  }
+
+  .post-nav-none a:hover:none {
+    opacity: 1;
+  }
+
+  .post-nav-prev a:before {
+    content: ' ';
+    background: url("data:image/svg+xml;base64,PD94bWwgdmVyc2lvbj0iMS4wIiA/PjxzdmcgaGVpZ2h0PSIxMnB4IiB2ZXJzaW9uPSIxLjEiIHZpZXdCb3g9IjAgMCA5IDEyIiB3aWR0aD0iOXB4IiB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHhtbG5zOnNrZXRjaD0iaHR0cDovL3d3dy5ib2hlbWlhbmNvZGluZy5jb20vc2tldGNoL25zIiB4bWxuczp4bGluaz0iaHR0cDovL3d3dy53My5vcmcvMTk5OS94bGluayI+PHRpdGxlLz48ZGVzYy8+PGRlZnMvPjxnIGZpbGw9Im5vbmUiIGZpbGwtcnVsZT0iZXZlbm9kZCIgaWQ9IlBhZ2UtMSIgc3Ryb2tlPSJub25lIiBzdHJva2Utd2lkdGg9IjEiPjxnIGZpbGw9IiMwMDAwMDAiIGlkPSJDb3JlIiB0cmFuc2Zvcm09InRyYW5zbGF0ZSgtMjE4LjAwMDAwMCwgLTkwLjAwMDAwMCkiPjxnIGlkPSJjaGV2cm9uLWxlZnQiIHRyYW5zZm9ybT0idHJhbnNsYXRlKDIxOC41MDAwMDAsIDkwLjAwMDAwMCkiPjxwYXRoIGQ9Ik03LjQsMS40IEw2LDAgTC04Ljg4MTc4NDJlLTE2LDYgTDYsMTIgTDcuNCwxMC42IEwyLjgsNiBMNy40LDEuNCBaIiBpZD0iU2hhcGUiLz48L2c+PC9nPjwvZz48L3N2Zz4=") no-repeat 0 50%;
+    background-size: 8px;
+  }
+
+  .post-nav-prev a:hover:before {
+    opacity: 1;
+  }
+
+  .post-nav-next {
+    text-align: right;
+  }
+
+  .post-nav-next a:after {
+    content: ' ';
+    background: url("data:image/svg+xml;base64,PD94bWwgdmVyc2lvbj0iMS4wIiA/PjxzdmcgaGVpZ2h0PSIxMnB4IiB2ZXJzaW9uPSIxLjEiIHZpZXdCb3g9IjAgMCA5IDEyIiB3aWR0aD0iOXB4IiB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHhtbG5zOnNrZXRjaD0iaHR0cDovL3d3dy5ib2hlbWlhbmNvZGluZy5jb20vc2tldGNoL25zIiB4bWxuczp4bGluaz0iaHR0cDovL3d3dy53My5vcmcvMTk5OS94bGluayI+PHRpdGxlLz48ZGVzYy8+PGRlZnMvPjxnIGZpbGw9Im5vbmUiIGZpbGwtcnVsZT0iZXZlbm9kZCIgaWQ9IlBhZ2UtMSIgc3Ryb2tlPSJub25lIiBzdHJva2Utd2lkdGg9IjEiPjxnIGZpbGw9IiMwMDAwMDAiIGlkPSJDb3JlIiB0cmFuc2Zvcm09InRyYW5zbGF0ZSgtMjYwLjAwMDAwMCwgLTkwLjAwMDAwMCkiPjxnIGlkPSJjaGV2cm9uLXJpZ2h0IiB0cmFuc2Zvcm09InRyYW5zbGF0ZSgyNjAuNTAwMDAwLCA5MC4wMDAwMDApIj48cGF0aCBkPSJNMSwwIEwtMC40LDEuNCBMNC4yLDYgTC0wLjQsMTAuNiBMMSwxMiBMNyw2IEwxLDAgWiIgaWQ9IlNoYXBlIi8+PC9nPjwvZz48L2c+PC9zdmc+") no-repeat 100% 50%;
+    background-size: 8px;
+  }
+
+  .post-nav-next a:hover:after {
+    opacity: 1;
+  }
+</style>
+
+
+
+<div class="post-nav">
+
+  
+  <div class="post-nav-none post-nav-item">
+    <a href=""> </a>
+  </div>
+  
+
+  
+  <div class="post-nav-next post-nav-item">
+    
+    <a href="/blog/2020/face/"> 3D人脸重建</a>
+  </div>
+  
+
+</div>
+
+</article>
+    </div>
+
+    <footer class="site-footer">
+  <div class="container">
+    <ul class="social">
+  <li><a href="https://twitter.com/penghuailiang" target="_blank"><i class="icon icon-twitter"></i></a></li>
+  <li><a href="https://www.zhihu.com/people/huailiangpenguin" target="_blank"><i class="icon icon-zhihu"></i></a></li>
+  <li><a href="https://www.facebook.com/profile.php?id=100004290725320" target="_blank"><i class="icon icon-facebook"></i></a></li>
+  <li><a href="https://weibo.com/6212299692/profile?topnav=1&wvr=6" target="_blank"><i class="icon icon-sina"></i></a></li>
+  <li><a href="https://www.linkedin.com/in/penghuailiang/" target="_blank"><i class="icon icon-linkedin"></i></a></li>
+  <li><a href="https://github.com/huailiang" target="_blank"><i class="icon icon-github"></i></a></li>
+</ul>
+    <p class="txt-medium-gray">
+      <small>&copy;2020 All rights reserved. </small>
+    </p>
+  </div>
+</footer>
+    <a href="https://github.com/huailiang" target="_blank" class="github-corner"><svg width="80" height="80" viewBox="0 0 250 250" style="fill:#337ab7; color:#fff; position: absolute; top: 0; border: 0; right: 0;"><path d="M0,0 L115,115 L130,115 L142,142 L250,250 L250,0 Z"></path><path d="M128.3,109.0 C113.8,99.7 119.0,89.6 119.0,89.6 C122.0,82.7 120.5,78.6 120.5,78.6 C119.2,72.0 123.4,76.3 123.4,76.3 C127.3,80.9 125.5,87.3 125.5,87.3 C122.9,97.6 130.6,101.9 134.4,103.2" fill="currentColor" style="transform-origin: 130px 106px;" class="octo-arm"></path><path d="M115.0,115.0 C114.9,115.1 118.7,116.5 119.8,115.4 L133.7,101.6 C136.9,99.2 139.9,98.4 142.2,98.6 C133.8,88.0 127.5,74.4 143.8,58.0 C148.5,53.4 154.0,51.2 159.7,51.0 C160.3,49.4 163.2,43.6 171.4,40.1 C171.4,40.1 176.1,42.5 178.8,56.2 C183.1,58.6 187.2,61.8 190.9,65.4 C194.5,69.0 197.7,73.2 200.1,77.6 C213.8,80.2 216.3,84.9 216.3,84.9 C212.7,93.1 206.9,96.0 205.4,96.6 C205.1,102.4 203.0,107.8 198.3,112.5 C181.9,128.9 168.3,122.5 157.7,114.1 C157.9,116.9 156.7,120.9 152.7,124.9 L141.0,136.5 C139.8,137.7 141.6,141.9 141.8,141.8 Z" fill="currentColor" class="octo-body"></path></svg></a>
+
+
+    <script src="//code.jquery.com/jquery-1.11.3.min.js"></script>
+    <script>
+      $(document).ready(function () {
+        $('.sliding-panel-button,.sliding-panel-fade-screen,.sliding-panel-close').on('click touchstart', function (e) {
+          $('.sliding-panel-content,.sliding-panel-fade-screen').toggleClass('is-visible');
+          e.preventDefault();
+        });
+      });
+    </script>
+  </main>
+</body>
+
+</html>
