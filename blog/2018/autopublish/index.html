@@ -332,6 +332,10 @@ launchctl list | grep <span class="s1">'任务的部分名字'</span>
 
 <p><img src="/img/post-publish/re9.png" alt="" /></p>
 
+<p>制作job的时候， 指定对应node的agent, 通过下图：</p>
+
+<p><img src="/img/post-publish/re11.jpg" alt="" /></p>
+
 <h2 id="自制php站点满足更加复杂的流程">自制PHP站点,满足更加复杂的流程</h2>
 
 <p>由于 Jenkins 只有一次 Build对应一个 Job，很难满足其他复杂的任务环境，比如一次 Build不是连续的，在龙之谷手游打补丁流程中， 先要合线，计算本次变更的更新的文件列表，然后停下来等待相应的主管确认更新无误之后，继续执行第二步，生成相应的 ab文件，上传到测试服务器，job 再次停下来，先在测试服验证通过之后，在上传到正式服，提升版本号。可能我中间还需要回退操作，清理中间环境。</p>
