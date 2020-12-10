@@ -263,6 +263,13 @@ $$
 
 NL-Means和BM3D可以说是目前效果最好的去噪算法，其中BM3D甚至宣称它可以得到迄今为止最高的PSNR。从最终的结果也可以看出来，BM3D的效果确实要好于NL-Means，噪声更少，能够更好地恢复出图像的细节。
 
+
+## 光线追踪降噪
+
+目前光线跟踪要做到实时，每个像素的光线是比较有限的，一般一个像素一条光线（1spp），在1spp下显然渲染出来的阴影充满噪点，为了能够在很低样本下得到比较好的结果，学术界和工业界提出一系列除噪算法，像[SVGF][i21]、NVIDIA RTX Shadow Denoiser之类能够在1spp下完成除噪，这些算法的基本原理是复用样本，增大有效样本数目来降低噪声，首先空间上使用卷积的方法，比如用高斯核收集周边的样本，但是这样会把图像模糊化，所以需要像SVGF通过自适应核控制核的宽度或者RTX Shadow Denoiser代替图像空间使用世界空间核，对核的长宽方向进行优化，来避免模糊的现象，然后在时间上使用类似TAA的方法收集样本，对于静态场景时间样本是可靠的，所以一边收集一边调整空间核的大小，进一步提高除噪效果，但是运动场景TAA找不到正确的运动向量，会出现鬼影问题，就需要一系列类似neighbor clamping方法来除去鬼影。
+
+
+
 ## Noise2Noise
 
 深度学习方法进行图像去噪的时候，通常需要大量的训练图像样本对，即带有噪声的图片和去噪后的图片，可是去噪后的图片往往很难获得，比如在摄影中，需要长曝光才能获得无噪声图片。在MRI图像中，获取无噪声图片则更加难。
@@ -448,6 +455,7 @@ __Miss Shader__
 * [光线追踪的入门, 知乎][i18]
 * [RayTracingAccelerationStructure in Unity API][i19]
 * [CUDA-Path-Tracer-Denoising -github][i20]
+* [Spatiotemporal Variance-Guided Filter, 向实时光线追踪迈进][i21]
 
 [i1]: https://www.embree.org/
 [i2]: https://github.com/joeylitalien/noise2noise-pytorch
@@ -469,3 +477,4 @@ __Miss Shader__
 [i18]: https://zhuanlan.zhihu.com/p/41269520
 [i19]: https://docs.unity3d.com/2019.3/Documentation/ScriptReference/Experimental.Rendering.RayTracingAccelerationStructure.html
 [i20]: https://github.com/ZheyuanXie/CUDA-Path-Tracer-Denoising
+[i21]: https://zhuanlan.zhihu.com/p/28288053
