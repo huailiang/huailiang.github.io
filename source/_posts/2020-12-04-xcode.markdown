@@ -1,0 +1,46 @@
+---
+layout:     post
+title:      "Xcode Profile"
+date:       2020-12-04 02:00:00
+author:     "huailiang"
+tags:
+    - Unity
+---
+
+
+
+Unity升级到2019.3之后的版本，IL转换的c++代码， 单独输出到UnityFramework，不能直接断点调试了， 需要在Scheme的UnityFramework选项中做如下设置，才能断点成功。
+
+![](/img/post-vscode/prof4.jpg)
+
+在Scheme的Options选项中，设置截帧图形方式为Metal:
+
+![](/img/post-vscode/prof3.jpg)
+
+
+设置好之后， xcode中点击Debug->CaptureGPUFrame, 经过xcode处理一段时间之后，可以得到下图的结果。每个CommandBuffer输出的Attachment，包含深度、颜色、模板缓冲
+
+![](/img/post-vscode/prof2.jpg)
+
+
+Capture 获取到渲染的流程图：
+
+![](/img/post-vscode/prof1.jpg)
+
+查看显存中所有的贴图资源：
+
+![](/img/post-vscode/prof5.jpg)
+
+
+
+点击图中导航栏， 可以切换到Shader, 这里是引擎转换编译好的shader代码：
+
+![](/img/post-vscode/prof6.jpg)
+
+
+
+## 参考
+
+* [Profile in Xcode for Unity Engine][i1]
+
+[i1]: https://docs.unity3d.com/Manual/XcodeFrameDebuggerIntegration.html
