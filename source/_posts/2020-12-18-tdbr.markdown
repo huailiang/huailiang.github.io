@@ -144,6 +144,30 @@ DontCare,
 }
 ```
 
+通过unity生成xcode的工程，搜遍整个项目的storageMode引用，发现只对深度缓冲中的 storageMode 在ios和tvOS平台会根据c#中的RenderTextureDescriptor的memoryless来设置值。 在OSX平台默认还是MTLResourceStorageModePrivate|MTLResourceCPUCacheModeDefaultCache。
+
+```c
+MTLTextureDescriptor* depthTexDesc = [MTLTextureDescriptorClass texture2DDescriptorWithPixelFormat: pixelFormat width: surface->targetW height: surface->targetH mipmapped: NO];
+#if PLATFORM_OSX
+    depthTexDesc.resourceOptions = MTLResourceCPUCacheModeDefaultCache | MTLResourceStorageModePrivate;
+#endif
+
+#if PLATFORM_IOS || PLATFORM_TVOS
+    if (surface->memorylessDepth)
+        depthTexDesc.storageMode = MTLStorageModeMemoryless;
+#endif
+
+depthTexDesc.usage = MTLTextureUsageRenderTarget | MTLTextureUsageShaderRead;
+if (surface->msaaSamples > 1)
+{
+    depthTexDesc.textureType = MTLTextureType2DMultisample;
+    depthTexDesc.sampleCount = surface->msaaSamples;
+    if (![surface->device supportsTextureSampleCount: depthTexDesc.sampleCount])
+        depthTexDesc.sampleCount = 4;
+}
+surface->depthRB = [surface->device newTextureWithDescriptor: depthTexDesc];
+surface->stencilRB = surface->depthRB;
+```
 
 __注意：__
 
