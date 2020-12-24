@@ -1,0 +1,178 @@
+---
+layout:     post
+title:      "TDBR & Xcode Profile"
+date:       2020-12-18 02:00:00
+author:     "huailiang"
+tags:
+    - 引擎
+---
+
+> 为了体现显式的、高性能的、贴近硬件的设计哲学，现代图形 API 都提供了相对传统 API 更加强大的内存管理接口。传统 API 的内存管理基本是通过 Runtime/Driver 代为托管，开发者一般不需要过多关心内存分配实现和细节。现代 API 提供了明确的内存控制接口，因此 Runtime/Driver 几乎不再帮助开发者管理内存，需要开发者显式控制内存分配。显式内存管理的好处在于可以降低内存分配的次数开销，而不必每次创建/销毁资源时进行内存分配操作。
+
+### TDBR 渲染流程
+
+基于TBDR的GPU架构，可以实现将渲染出的G-buffer保存在tile memory中，不需要再写入到system memory中，就避免了将G-buffer从GPU写入到CPU然后第二个Pass GPU又从CPU读取G-buffer的步骤，降低了CPU和GPU之间的带宽消耗。
+
+Metal中我们控制GPU是否将tile memory中的贴图数据写入到CPU的system memory的方式是配置我们的renderCommandEncoder的storeAction和texture贴图的storageMode。
+
+* loadAction是用来配置渲染开始时是否清空我们的RT等动作。
+* storeAction是用来配置渲染结束是否将render pass的结果保存到attachment中等动作。
+
+
+##### 几种常用storgeMode的含义：
+
+* MTLStorageModeShared：表示资源保存在system memory，且CPU和GPU都可以访问；
+* MTLStorageModePrivate：表示资源只有GPU可以访问；
+* MTLStorageModeMemoryless：表示资源只有GPU可以访问，且生命周期只是临时存在于一个render pass期间；
+* MTLStorageModeManaged：表示CPU和GPU分别会维护一份资源的拷贝，并且资源具有“可见性”，即无论哪边对资源进行了更改，CPU和GPU都可见都会进行更新同步；
+
+<br>
+若将storeAction设置为MTLStoreActionStore, 表示RT的结果会从GPU的tile memory写入到CPU的system memory，即在system memory中保存RT的备份。如果渲染后期还需要用到system memory中备份的RT，就需要从system memory中读取备份的RT到GPU的贴图缓存中。所以传统的双Pass延迟渲染中需要在第一个Pass和第二个Pass期间将G-buffer保存到system memory中。
+
+```c
+descriptor.colorAttachments[0].storeAction = MTLStoreActionStore;
+GBufferTextureDesc.storageMode = MTLStorageModePrivate;
+```
+
+![](/img/post-vscode/prof8.jpg)
+
+
+若不希望GPU再把G-buffer保存到system memory，因此Metal中我们可以设置textures的storageMode为MTLStorageModeMemoryless即可，storeAction的值可以设为MTLStoreActionDontCare。
+
+```c
+descriptor.colorAttachments[0].storeAction = MTLStoreActionDontCare;
+GBufferTextureDesc.storageMode = MTLStorageModeMemoryless;
+```
+
+![](/img/post-vscode/prof9.jpg)
+
+在unity的URP渲染管线中或者通过CommandBuffer接口，可以通过如下接口设置：
+
+```csharp
+RenderTextureDescriptor descriptor = new RenderTextureDescriptor(width, height);
+descriptor.graphicsFormat = s_RenderTextureFormatToUse;
+descriptor.depthBufferBits = 0;
+descriptor.msaaSamples = 1;
+descriptor.dimension = TextureDimension.Tex2D;
+descriptor.memoryless = RenderTextureMemoryless.MSAA;
+// RenderTargetIdentifier buffer
+cmd.SetRenderTarget(buffer, loadAction, storeAction);
+```
+
+通过定义storeAction 可以设置回写到RAM
+
+```csharp
+public enum RenderBufferStoreAction
+{
+/// <summary>
+/// The RenderBuffer contents need to be stored to RAM. If the surface has MSAA enabled, this stores the non-resolved surface
+/// </summary>
+Store,
+/// <summary>
+///Resolve the (MSAA'd) surface. Currently only used with the RenderPass API.
+/// </summary>
+Resolve,
+/// <summary>
+/// Resolve the (MSAA'd) surface, but also store the multisampled version. Currently only used with the RenderPass API
+/// </summary>
+StoreAndResolve,
+/// <summary>
+/// The contents of the RenderBuffer are not needed and can be discarded. Tile-based GPUs will skip writing out the surface contents altogether, providing performance boost
+/// </summary>
+DontCare,
+}
+```
+
+
+__注意：__
+
+1. 这里基于TBDR架构允许GPU的FS片段着色器访问render targets（color[id]）进行混合计算的特性就是programmable blending，当然基于TBDR下FS也可以通过ImageBlocks特性访问同样的数据实现同样的功能。programmable blending和Metal2的新特性ImageBlocks都可以实现一些类似的功能，但原理不同，可以重点学习比较各自的特点。
+
+2. 在Tile based shading中，G-buffer是被分成tile-size大小来保存的，因此可以将所有物体一次性渲染到tile-sized G-buffer中留在On-Chip memory。要注意并不是仅仅G-buffer不保存到system memory那么简单，实现的前提是Tile based，否则On-Chip memory是无法装得下完整的屏幕大小的G-buffer的。Tile based是由于移动平台计算性能有限应运而生的GPU架构。
+
+```swift
+MTLTileRenderPipelineDescriptor *descriptor = [MTLTileRenderPipelineDescriptor new];
+descriptor.label = @"Light Culling";
+descriptor.rasterSampleCount = AAPLNumSamples;
+descriptor.colorAttachments[0].pixelFormat = MTLPixelFormatBGRA8Unorm;
+descriptor.colorAttachments[1].pixelFormat = MTLPixelFormatR32Float;
+descriptor.threadgroupSizeMatchesTileSize = YES;
+descriptor.tileFunction = lightCullingKernel;
+```
+
+
+### UWA 优化建议
+
+__Q：请问谁能比较系统地讲解下RenderBufferLoadAction和RenderBufferStoreAction的几种属性及使用方式吗？我看了下官方文档的解释仍然不是完全明白，也不太清楚在什么情况下使用。__
+
+A: 举一些例子来说明。
+
+例子1：比如，你先在RenderTexture A绘制了一个三角形，然后在RenderTexture B绘制任意一个东西，再然后想继续往RenderTexture A绘制东西，但是要求是A上的那个三角形还要在，那么就需要RenderBufferLoadAction.Load。这个操作会导致RenderTexture A需要从local memory复制到tile memory，这样就多了一倍的带宽。带宽是移动游戏发热的根本原因。
+
+例子2：比如，你在一个刚申请出来的RenderTexture A绘制一个三角形，那么就需要RenderBufferLoadAction.Clear。否则，谁都不知道刚申请出来的这个RenderTexture是什么样子，所以需要Clear一下。Clear操作只是给这个RenderTexture打个标记，虽然有代价，但是比较小。
+
+例子3：比如，在一个刚申请出来的RenderTexture A绘制一个三角形，但是你自己知道，你绘制的这个三角形是全屏的，会覆盖满整个屏幕，这个时候就不需要Clear了，直接RenderBufferLoadAction.DontCare。这样毫无代价，效果也完全没问题。
+
+例子4：比如，你将RenderTexture A作为Color RenderTexture，RenderTexture D作为Depth RenderTexture，绘制两个有前后顺序的三角形。然后，你将RenderTexture A blit到RenderTexture B上，这个时候，要对RenderTexture A设置为RenderBufferStoreAction.Store，对RenderTexture D设置为RenderBufferStoreAction.DontCare。这个操作，RenderTexture A会从tile memory复制到local memory，而RenderTexture D则会直接被抛弃，不会产生额外的带宽。
+
+当然这个操作还有个前提，RenderTexture D被通过的RenderTextureMemoryless.Depth设置为memoryless。
+
+
+
+### Xcode设置
+
+Unity升级到2019.3之后的版本，IL转换的c++代码， 单独输出到UnityFramework，不能直接断点调试了， 需要在Scheme的UnityFramework选项中做如下设置，才能断点成功。
+
+![](/img/post-vscode/prof4.jpg)
+
+在xcode中：Product -> Scheme -> Edit Scheme -> Run -> Options 下，设置Metal API Validation为Enabled获取详细的调试数据：
+
+![](/img/post-vscode/prof3.jpg)
+
+
+设置好之后， xcode中点击Debug->CaptureGPUFrame, 经过xcode处理一段时间之后，可以得到下图的结果。或者点击Capture Frame按钮截取一帧进行数据分析：
+
+
+每个CommandBuffer输出的Attachment，包含深度、颜色、模板缓冲
+
+![](/img/post-vscode/prof2.jpg)
+
+
+### Capture 获取到渲染的流程图
+
+![](/img/post-vscode/prof1.jpg)
+
+从这里看一看出， 渲染到最后GBuffer的图像，除了UnityDebuger那样一个个Pass自上而下渲染过程， 还可以看到一些并行的过程，比如说对开启MSAA之后ReolveAA的过程。
+
+#### 查看显存中所有的贴图资源
+
+![](/img/post-vscode/prof5.jpg)
+
+和Unity的FrameDebug窗口相比较，可以看到xcode除了URP的定义的pass, 还能看到流程绘制的并行情况， 以及pass输出之后Attachment(也包含颜色、深度、模板缓冲)的LoadAction、StoreAction、Format 以及Texture在显存里的开销。
+
+
+![](/img/post-vscode/prof7.jpg)
+
+
+然而Unity的Debuger中也可以更方便的切换Batcher绘制流程，以及Shader输入的参数（包含前面pass的输出RT以及CPU端计算得来矩阵），二者结合起来使用才会使调试变得得心顺手。
+
+
+### 查看编译Shader
+
+点击图中导航栏， 可以切换到Shader, 这里是引擎转换编译好的shader代码：
+
+![](/img/post-vscode/prof6.jpg)
+
+
+
+## 参考
+
+* [Profile in Xcode for Unity Engine][i1]
+* [Metal2研发笔录：传统延迟渲染和TBDR][i2]
+* [现代图形 API 的内存管理][i3]
+* [RenderBufferLoadAction的使用方式， UWA][i4]
+
+[i1]: https://docs.unity3d.com/Manual/XcodeFrameDebuggerIntegration.html
+[i2]: https://zhuanlan.zhihu.com/p/92840602
+[i3]: https://zhuanlan.zhihu.com/p/87595524 
+[i4]: https://blog.csdn.net/UWA4D/article/details/105492459
