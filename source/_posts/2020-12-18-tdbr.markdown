@@ -9,6 +9,32 @@ tags:
 
 > 为了体现显式的、高性能的、贴近硬件的设计哲学，现代图形 API 都提供了相对传统 API 更加强大的内存管理接口。传统 API 的内存管理基本是通过 Runtime/Driver 代为托管，开发者一般不需要过多关心内存分配实现和细节。现代 API 提供了明确的内存控制接口，因此 Runtime/Driver 几乎不再帮助开发者管理内存，需要开发者显式控制内存分配。显式内存管理的好处在于可以降低内存分配的次数开销，而不必每次创建/销毁资源时进行内存分配操作。
 
+### GPU架构
+
+GPU也是有多级缓存结构的：寄存器、L1缓存、L2缓存、GPU显存、系统内存。它们的访问周期对应下表，我们可以看到，直接访问寄存器其实是最快的，接下来就依次是L1, L2缓存，系统内存之类的。
+
+![](/img/post-vscode/prof0.jpg)
+
+可以看出来GPU也是有多级缓存结构的：寄存器、L1缓存、L2缓存、GPU显存、系统内存。它们的访问周期对应下表，我们可以看到，直接访问寄存器其实是最快的，接下来就依次是L1, L2缓存，系统内存之类的。
+
+| 储存类型 | 寄存器 | 共享内存    | L1缓存   |  L2缓存   | 纹理/常量缓存 | 全局内存
+| ---- | -------------- | --------- | -------- | -------- | ------------ | -------- |
+| 访问周期    | 1              | 1~32      | 1~32   | 32~64   | 400~600   |400~600   |
+
+
+这里涉及到一个概念，那就是On-Chip Memory，也有人叫TiledMemory。 可以理解为之前提到的L1和L2缓存，也就是上图中间的灰色部分，我们知道，L1和L2缓存都是很昂贵的设备，所以基本上都很小，所以TBR就利用了这个特点来做了渲染。
+
+对于TBR来讲，整个光栅化和像素处理会被分为一个个Tile进行处理，通常为16×16大小的Tile。TBR的结构通过On-Chip Buffers来储存Tiling后的Depth Buffer和Color buffer。
+
+也就是原先IMR架构中对主存中Color/Depth Buffer进行的读写操作变成直接在GPU中的高速内存操作，减少了最影响性能的系统内存传输的开销。通过下面这张图能够更好的来理解，下图的DRAM在手机上就是物理内存那一块。
+
+![](/img/post-vscode/prof10.jpg)
+
+在TBR的架构里，并不是来一个绘制就执行一个的，因为任何一个绘制都可能影响到到整个FrameBuffer，如果来一个画一个，那么GPU可能会在每一个绘制上都来回运输所有的Tile，这太慢了。
+
+所以TBR一般的实现策略是对于Cpu过来的绘制，只对他们做顶点处理，也就是上图中的Geometry Processor部分，产生的结果（Frame Data）暂时写回到物理内存，等到非得刷新整个FrameBuffer的时候，比如说在代码里显示的执行GLFlush，GLFinish，Bind和Unbind FrameBuffer这类操作的时候，总之就是我告诉GPU现在我就需要用到FrameBuffer上数据的时候，GPU才知道拖不了了，就会将这批绘制做光栅化，做tile-based-rendering。
+
+
 ### TDBR 渲染流程
 
 基于TBDR的GPU架构，可以实现将渲染出的G-buffer保存在tile memory中，不需要再写入到system memory中，就避免了将G-buffer从GPU写入到CPU然后第二个Pass GPU又从CPU读取G-buffer的步骤，降低了CPU和GPU之间的带宽消耗。
@@ -25,6 +51,41 @@ Metal中我们控制GPU是否将tile memory中的贴图数据写入到CPU的syst
 * MTLStorageModePrivate：表示资源只有GPU可以访问；
 * MTLStorageModeMemoryless：表示资源只有GPU可以访问，且生命周期只是临时存在于一个render pass期间；
 * MTLStorageModeManaged：表示CPU和GPU分别会维护一份资源的拷贝，并且资源具有“可见性”，即无论哪边对资源进行了更改，CPU和GPU都可见都会进行更新同步；
+
+```c
+/*!
+ @enum MTLStorageMode
+ @abstract Describes location and CPU mapping of MTLTexture.
+ @constant MTLStorageModeShared
+ In this mode, CPU and device will nominally both use the same underlying memory when accessing the contents of the texture resource.
+ However, coherency is only guaranteed at command buffer boundaries to minimize the required flushing of CPU and GPU caches.
+ This is the default storage mode for iOS Textures.
+
+ @constant MTLStorageModeManaged
+ This mode relaxes the coherency requirements and requires that the developer make explicit requests to maintain
+ coherency between a CPU and GPU version of the texture resource.  In order for CPU to access up to date GPU results,
+ first, a blit synchronizations must be completed (see synchronize methods of MTLBlitCommandEncoder).
+ Blit overhead is only incurred if GPU has modified the resource.
+ This is the default storage mode for OS X Textures.
+
+ @constant MTLStorageModePrivate
+ This mode allows the texture resource data to be kept entirely to GPU (or driver) private memory that will never be accessed by the CPU directly, so no
+ conherency of any kind must be maintained.
+ 
+ @constant MTLStorageModeMemoryless
+ This mode allows creation of resources that do not have a GPU or CPU memory backing, but do have on-chip storage for TBDR
+ devices. The contents of the on-chip storage is undefined and does not persist, but its configuration is controlled by the
+ MTLTexture descriptor. Textures created with MTLStorageModeMemoryless dont have an IOAccelResource at any point in their
+ lifetime. The only way to populate such resource is to perform rendering operations on it. Blit operations are disallowed.
+*/
+typedef NS_ENUM(NSUInteger, MTLStorageMode)
+{
+    MTLStorageModeShared  = 0,
+    MTLStorageModeManaged API_AVAILABLE(macos(10.11), macCatalyst(13.0)) API_UNAVAILABLE(ios) = 1,
+    MTLStorageModePrivate = 2,
+    MTLStorageModeMemoryless API_AVAILABLE(macos(11.0), macCatalyst(14.0), ios(10.0)) = 3,
+} API_AVAILABLE(macos(10.11), ios(9.0));
+```
 
 <br>
 若将storeAction设置为MTLStoreActionStore, 表示RT的结果会从GPU的tile memory写入到CPU的system memory，即在system memory中保存RT的备份。如果渲染后期还需要用到system memory中备份的RT，就需要从system memory中读取备份的RT到GPU的贴图缓存中。所以传统的双Pass延迟渲染中需要在第一个Pass和第二个Pass期间将G-buffer保存到system memory中。
@@ -171,8 +232,10 @@ Unity升级到2019.3之后的版本，IL转换的c++代码， 单独输出到Uni
 * [Metal2研发笔录：传统延迟渲染和TBDR][i2]
 * [现代图形 API 的内存管理][i3]
 * [RenderBufferLoadAction的使用方式， UWA][i4]
+* [Metal TDBR Demo, github][i5]
 
 [i1]: https://docs.unity3d.com/Manual/XcodeFrameDebuggerIntegration.html
 [i2]: https://zhuanlan.zhihu.com/p/92840602
 [i3]: https://zhuanlan.zhihu.com/p/87595524 
 [i4]: https://blog.csdn.net/UWA4D/article/details/105492459
+[i5]: https://github.com/jiangxh1992/MetalTutorialDemos
