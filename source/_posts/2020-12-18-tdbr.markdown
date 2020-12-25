@@ -219,7 +219,19 @@ Unity升级到2019.3之后的版本，IL转换的c++代码， 单独输出到Uni
 设置好之后， xcode中点击Debug->CaptureGPUFrame, 经过xcode处理一段时间之后，可以得到下图的结果。或者点击Capture Frame按钮截取一帧进行数据分析：
 
 
-每个CommandBuffer输出的Attachment，包含深度、颜色、模板缓冲
+点击左上角Summary, 可以进程上下文引用的以及生成的贴图信息（大小、格式、Mipmap、采样数）
+
+![](/img/post-vscode/prof11.jpg)
+
+然后点击左上角第二个页签Counters, 可以下图展示区域：
+
+![](/img/post-vscode/prof12.jpg)
+
+可以看到右下角区域Encoders, 列出了和Unity Debuger的对应的URP渲染管线，通过对比发现，xcode里可以看到更多对应的API和过程。
+
+同时可以看到右上角的时间线，横向表示渲染管线每个PASS绘制顺序， 纵向代表每个PASS 内部渲染流程（顶点变换/片元着色） 每个块显示着对应的执行时间，Attachment预览，三角数量
+
+点击CommandBuffer选项， 可以查看每个PASS输出的Attachment，包含深度、颜色、模板缓冲
 
 ![](/img/post-vscode/prof2.jpg)
 
@@ -245,10 +257,11 @@ Unity升级到2019.3之后的版本，IL转换的c++代码， 单独输出到Uni
 
 ### 查看编译Shader
 
-点击图中导航栏， 可以切换到Shader, 这里是引擎转换编译好的shader代码：
+点击图中导航栏， 可以切换到Shader, 这里是引擎转换好的shader代码：
 
 ![](/img/post-vscode/prof6.jpg)
 
+遗憾的是, xcode不支持像Nvidia Nsight那样对shader每行进行断点调试。
 
 
 ## 参考
