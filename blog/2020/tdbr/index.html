@@ -233,14 +233,8 @@ MathJax.Hub.Config({
 </code></pre>
 </div>
 
-<table>
-  <tbody>
-    <tr>
-      <td>通过unity生成xcode的工程，搜遍整个项目的storageMode引用，发现只对深度缓冲中的 storageMode 在ios和tvOS平台会根据c#中的RenderTextureDescriptor的memoryless来设置值。 在OSX平台默认还是MTLResourceStorageModePrivate</td>
-      <td>MTLResourceCPUCacheModeDefaultCache。</td>
-    </tr>
-  </tbody>
-</table>
+<p><br /><br />
+通过unity生成xcode的工程，搜遍整个项目的storageMode引用，发现只对深度缓冲中的 storageMode 在ios和tvOS平台会根据c#中的RenderTextureDescriptor的memoryless来设置值。 在OSX平台默认还是MTLResourceStorageModePrivate|MTLResourceCPUCacheModeDefaultCache。</p>
 
 <div class="language-c highlighter-rouge"><pre class="highlight"><code><span class="n">MTLTextureDescriptor</span><span class="o">*</span> <span class="n">depthTexDesc</span> <span class="o">=</span> <span class="p">[</span><span class="n">MTLTextureDescriptorClass</span> <span class="n">texture2DDescriptorWithPixelFormat</span><span class="o">:</span> <span class="n">pixelFormat</span> <span class="n">width</span><span class="o">:</span> <span class="n">surface</span><span class="o">-&gt;</span><span class="n">targetW</span> <span class="n">height</span><span class="o">:</span> <span class="n">surface</span><span class="o">-&gt;</span><span class="n">targetH</span> <span class="n">mipmapped</span><span class="o">:</span> <span class="n">NO</span><span class="p">];</span>
 <span class="cp">#if PLATFORM_OSX
