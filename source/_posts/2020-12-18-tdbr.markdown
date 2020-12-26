@@ -18,8 +18,8 @@ GPU也是有多级缓存结构的：寄存器、L1缓存、L2缓存、GPU显存�
 可以看出来GPU也是有多级缓存结构的：寄存器、L1缓存、L2缓存、GPU显存、系统内存。它们的访问周期对应下表，我们可以看到，直接访问寄存器其实是最快的，接下来就依次是L1, L2缓存，系统内存之类的。
 
 | 储存类型 | 寄存器 | 共享内存  | L1缓存 |  L2缓存 | 纹理/常量缓存 | 全局内存
-| ------- | ---- | --------- | ----- |  ----- | ----------  | ------ |
-| 访问周期 | 1     | 1~32      | 1~32  |  32~64 |  400~600   | 400~600|
+| :-----: | :--: | :------: | :----: |  :---: | :--------: | :----: |
+| 访问周期 | 1     | 1~32    | 1~32  |  32~64 |  400~600   | 400~600|
 
 
 这里涉及到一个概念，那就是On-Chip Memory，也有人叫TiledMemory。 可以理解为之前提到的L1和L2缓存，也就是上图中间的灰色部分，我们知道，L1和L2缓存都是很昂贵的设备，所以基本上都很小，所以TBR就利用了这个特点来做了渲染。
@@ -48,24 +48,6 @@ Metal中我们控制GPU是否将tile memory中的贴图数据写入到CPU的syst
 
 
 ```c
-// MTLRenderPassAttachmentDescriptor 
-
-
-/*!
- @property loadAction
- @abstract The action to be performed with this attachment at the beginning of a render pass.  Default is
- MTLLoadActionDontCare unless specified by a creation or init method.
- */
-@property (nonatomic) MTLLoadAction loadAction;
-
-/*!
- @property storeAction
- @abstract The action to be performed with this attachment at the end of a render pass.  Default is
- MTLStoreActionDontCare unless specified by a creation or init method.
- */
-@property (nonatomic) MTLStoreAction storeAction;
-
-
 typedef NS_ENUM(NSUInteger, MTLLoadAction) {
     MTLLoadActionDontCare = 0,
     MTLLoadActionLoad = 1,
