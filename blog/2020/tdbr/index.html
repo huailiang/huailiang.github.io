@@ -88,24 +88,24 @@ MathJax.Hub.Config({
 <table>
   <thead>
     <tr>
-      <th>储存类型</th>
-      <th>寄存器</th>
-      <th>共享内存</th>
-      <th>L1缓存</th>
-      <th>L2缓存</th>
-      <th>纹理/常量缓存</th>
-      <th>全局内存</th>
+      <th style="text-align: center">储存类型</th>
+      <th style="text-align: center">寄存器</th>
+      <th style="text-align: center">共享内存</th>
+      <th style="text-align: center">L1缓存</th>
+      <th style="text-align: center">L2缓存</th>
+      <th style="text-align: center">纹理/常量缓存</th>
+      <th style="text-align: center">全局内存</th>
     </tr>
   </thead>
   <tbody>
     <tr>
-      <td>访问周期</td>
-      <td>1</td>
-      <td>1~32</td>
-      <td>1~32</td>
-      <td>32~64</td>
-      <td>400~600</td>
-      <td>400~600</td>
+      <td style="text-align: center">访问周期</td>
+      <td style="text-align: center">1</td>
+      <td style="text-align: center">1~32</td>
+      <td style="text-align: center">1~32</td>
+      <td style="text-align: center">32~64</td>
+      <td style="text-align: center">400~600</td>
+      <td style="text-align: center">400~600</td>
     </tr>
   </tbody>
 </table>
@@ -135,25 +135,7 @@ MathJax.Hub.Config({
   <li>storeAction是用来配置渲染结束是否将render pass的结果保存到attachment中等动作。</li>
 </ul>
 
-<div class="language-c highlighter-rouge"><pre class="highlight"><code><span class="c1">// MTLRenderPassAttachmentDescriptor 
-</span>
-
-<span class="cm">/*!
- @property loadAction
- @abstract The action to be performed with this attachment at the beginning of a render pass.  Default is
- MTLLoadActionDontCare unless specified by a creation or init method.
- */</span>
-<span class="err">@</span><span class="n">property</span> <span class="p">(</span><span class="n">nonatomic</span><span class="p">)</span> <span class="n">MTLLoadAction</span> <span class="n">loadAction</span><span class="p">;</span>
-
-<span class="cm">/*!
- @property storeAction
- @abstract The action to be performed with this attachment at the end of a render pass.  Default is
- MTLStoreActionDontCare unless specified by a creation or init method.
- */</span>
-<span class="err">@</span><span class="n">property</span> <span class="p">(</span><span class="n">nonatomic</span><span class="p">)</span> <span class="n">MTLStoreAction</span> <span class="n">storeAction</span><span class="p">;</span>
-
-
-<span class="k">typedef</span> <span class="nf">NS_ENUM</span><span class="p">(</span><span class="n">NSUInteger</span><span class="p">,</span> <span class="n">MTLLoadAction</span><span class="p">)</span> <span class="p">{</span>
+<div class="language-c highlighter-rouge"><pre class="highlight"><code><span class="k">typedef</span> <span class="nf">NS_ENUM</span><span class="p">(</span><span class="n">NSUInteger</span><span class="p">,</span> <span class="n">MTLLoadAction</span><span class="p">)</span> <span class="p">{</span>
     <span class="n">MTLLoadActionDontCare</span> <span class="o">=</span> <span class="mi">0</span><span class="p">,</span>
     <span class="n">MTLLoadActionLoad</span> <span class="o">=</span> <span class="mi">1</span><span class="p">,</span>
     <span class="n">MTLLoadActionClear</span> <span class="o">=</span> <span class="mi">2</span><span class="p">,</span>
