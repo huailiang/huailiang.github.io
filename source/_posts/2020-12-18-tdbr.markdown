@@ -17,9 +17,9 @@ GPU也是有多级缓存结构的：寄存器、L1缓存、L2缓存、GPU显存�
 
 可以看出来GPU也是有多级缓存结构的：寄存器、L1缓存、L2缓存、GPU显存、系统内存。它们的访问周期对应下表，我们可以看到，直接访问寄存器其实是最快的，接下来就依次是L1, L2缓存，系统内存之类的。
 
-| 储存类型 | 寄存器 | 共享内存    | L1缓存   |  L2缓存   | 纹理/常量缓存 | 全局内存
-| ---- | -------------- | --------- | -------- | -------- | ------------ | -------- |
-| 访问周期    | 1              | 1~32      | 1~32   | 32~64   | 400~600   |400~600   |
+| 储存类型 | 寄存器 | 共享内存  | L1缓存 |  L2缓存 | 纹理/常量缓存 | 全局内存
+| ------- | ---- | --------- | ----- |  ----- | ----------  | ------ |
+| 访问周期 | 1     | 1~32      | 1~32  |  32~64 |  400~600   | 400~600|
 
 
 这里涉及到一个概念，那就是On-Chip Memory，也有人叫TiledMemory。 可以理解为之前提到的L1和L2缓存，也就是上图中间的灰色部分，我们知道，L1和L2缓存都是很昂贵的设备，所以基本上都很小，所以TBR就利用了这个特点来做了渲染。
@@ -37,7 +37,9 @@ GPU也是有多级缓存结构的：寄存器、L1缓存、L2缓存、GPU显存�
 
 ### TDBR 渲染流程
 
-基于TBDR的GPU架构，可以实现将渲染出的G-buffer保存在tile memory中，不需要再写入到system memory中，就避免了将G-buffer从GPU写入到CPU然后第二个Pass GPU又从CPU读取G-buffer的步骤，降低了CPU和GPU之间的带宽消耗。
+基于TBDR的GPU架构，延时渲染可以实现将渲染出的G-buffer保存在tile memory中，不需要再写入到system memory中，就避免了将G-buffer从GPU写入到CPU然后第二个Pass GPU又从CPU读取G-buffer的步骤，降低了CPU和GPU之间的带宽消耗。
+
+iOS和tvOS GPU具有基于图块的延迟渲染（TBDR）架构，允许它们将数据渲染到GPU内的tile内存。通过渲染到tile内存，该设备避免了GPU和系统存储器之间潜在的昂贵的往返（通过带宽受限的存储器总线)。
 
 Metal中我们控制GPU是否将tile memory中的贴图数据写入到CPU的system memory的方式是配置我们的renderCommandEncoder的storeAction和texture贴图的storageMode。
 
@@ -45,11 +47,46 @@ Metal中我们控制GPU是否将tile memory中的贴图数据写入到CPU的syst
 * storeAction是用来配置渲染结束是否将render pass的结果保存到attachment中等动作。
 
 
+```c
+// MTLRenderPassAttachmentDescriptor 
+
+
+/*!
+ @property loadAction
+ @abstract The action to be performed with this attachment at the beginning of a render pass.  Default is
+ MTLLoadActionDontCare unless specified by a creation or init method.
+ */
+@property (nonatomic) MTLLoadAction loadAction;
+
+/*!
+ @property storeAction
+ @abstract The action to be performed with this attachment at the end of a render pass.  Default is
+ MTLStoreActionDontCare unless specified by a creation or init method.
+ */
+@property (nonatomic) MTLStoreAction storeAction;
+
+
+typedef NS_ENUM(NSUInteger, MTLLoadAction) {
+    MTLLoadActionDontCare = 0,
+    MTLLoadActionLoad = 1,
+    MTLLoadActionClear = 2,
+} API_AVAILABLE(macos(10.11), ios(8.0));
+
+typedef NS_ENUM(NSUInteger, MTLStoreAction) {
+    MTLStoreActionDontCare = 0,
+    MTLStoreActionStore = 1,
+    MTLStoreActionMultisampleResolve = 2,
+    MTLStoreActionStoreAndMultisampleResolve API_AVAILABLE(macos(10.12), ios(10.0)) = 3,
+    MTLStoreActionUnknown API_AVAILABLE(macos(10.12), ios(10.0)) = 4,
+    MTLStoreActionCustomSampleDepthStore API_AVAILABLE(macos(10.13), ios(11.0)) = 5,
+} API_AVAILABLE(macos(10.11), ios(8.0));
+```
+
 ##### 几种常用storgeMode的含义：
 
 * MTLStorageModeShared：表示资源保存在system memory，且CPU和GPU都可以访问；
 * MTLStorageModePrivate：表示资源只有GPU可以访问；
-* MTLStorageModeMemoryless：表示资源只有GPU可以访问，且生命周期只是临时存在于一个render pass期间；
+* MTLStorageModeMemoryless：表示资源只有GPU可以访问，且生命周期只是临时存在于一个Pass期间；
 * MTLStorageModeManaged：表示CPU和GPU分别会维护一份资源的拷贝，并且资源具有“可见性”，即无论哪边对资源进行了更改，CPU和GPU都可见都会进行更新同步；
 
 ```c
@@ -143,7 +180,6 @@ StoreAndResolve,
 DontCare,
 }
 ```
-
 <br>
 通过unity生成xcode的工程，搜遍整个项目的storageMode引用，发现只对深度缓冲中的 storageMode 在ios和tvOS平台会根据c#中的RenderTextureDescriptor的memoryless来设置值。 在OSX平台默认还是MTLResourceStorageModePrivate|MTLResourceCPUCacheModeDefaultCache。
 
@@ -166,9 +202,9 @@ if (surface->msaaSamples > 1)
     if (![surface->device supportsTextureSampleCount: depthTexDesc.sampleCount])
         depthTexDesc.sampleCount = 4;
 }
-surface->depthRB = [surface->device newTextureWithDescriptor: depthTexDesc];
-surface->stencilRB = surface->depthRB;
 ```
+
+上述代码来自unity生成的xcode项目MetalHelper.mm
 
 __注意：__
 
@@ -189,19 +225,13 @@ descriptor.tileFunction = lightCullingKernel;
 
 ### UWA 优化建议
 
-__Q：请问谁能比较系统地讲解下RenderBufferLoadAction和RenderBufferStoreAction的几种属性及使用方式吗？我看了下官方文档的解释仍然不是完全明白，也不太清楚在什么情况下使用。__
+1. 若先在RenderTexture A绘制了一个三角形，然后在RenderTexture B绘制任意一个东西，再然后想继续往RenderTexture A绘制东西，但是要求是A上的那个三角形还要在，那么就需要RenderBufferLoadAction.Load。这个操作会导致RenderTexture A需要从local memory复制到tile memory，这样就多了一倍的带宽。带宽是移动游戏发热的根本原因。
 
-A: 举一些例子来说明。
+2. 在一个刚申请出来的RenderTexture A绘制一个三角形，那么就需要RenderBufferLoadAction.Clear。否则，谁都不知道刚申请出来的这个RenderTexture是什么样子，所以需要Clear一下。Clear操作只是给这个RenderTexture打个标记，虽然有代价，但是比较小。
 
-例子1：比如，你先在RenderTexture A绘制了一个三角形，然后在RenderTexture B绘制任意一个东西，再然后想继续往RenderTexture A绘制东西，但是要求是A上的那个三角形还要在，那么就需要RenderBufferLoadAction.Load。这个操作会导致RenderTexture A需要从local memory复制到tile memory，这样就多了一倍的带宽。带宽是移动游戏发热的根本原因。
+3. 在一个刚申请出来的RenderTexture A绘制一个三角形，但是你自己知道，你绘制的这个三角形是全屏的，会覆盖满整个屏幕，这个时候就不需要Clear了，直接RenderBufferLoadAction.DontCare。这样毫无代价，效果也完全没问题。
 
-例子2：比如，你在一个刚申请出来的RenderTexture A绘制一个三角形，那么就需要RenderBufferLoadAction.Clear。否则，谁都不知道刚申请出来的这个RenderTexture是什么样子，所以需要Clear一下。Clear操作只是给这个RenderTexture打个标记，虽然有代价，但是比较小。
-
-例子3：比如，在一个刚申请出来的RenderTexture A绘制一个三角形，但是你自己知道，你绘制的这个三角形是全屏的，会覆盖满整个屏幕，这个时候就不需要Clear了，直接RenderBufferLoadAction.DontCare。这样毫无代价，效果也完全没问题。
-
-例子4：比如，你将RenderTexture A作为Color RenderTexture，RenderTexture D作为Depth RenderTexture，绘制两个有前后顺序的三角形。然后，你将RenderTexture A blit到RenderTexture B上，这个时候，要对RenderTexture A设置为RenderBufferStoreAction.Store，对RenderTexture D设置为RenderBufferStoreAction.DontCare。这个操作，RenderTexture A会从tile memory复制到local memory，而RenderTexture D则会直接被抛弃，不会产生额外的带宽。
-
-当然这个操作还有个前提，RenderTexture D被通过的RenderTextureMemoryless.Depth设置为memoryless。
+4. 若RenderTexture A作为Color RenderTexture，RenderTexture D作为Depth RenderTexture，绘制两个有前后顺序的三角形。然后，你将RenderTexture A blit到RenderTexture B上，这个时候，要对RenderTexture A设置为RenderBufferStoreAction.Store，对RenderTexture D设置为RenderBufferStoreAction.DontCare。这个操作，RenderTexture A会从tile memory复制到local memory，而RenderTexture D则会直接被抛弃，不会产生额外的带宽。当然这个操作还有个前提，RenderTexture D被通过的RenderTextureMemoryless.Depth设置为memoryless。
 
 
 
@@ -219,6 +249,9 @@ Unity升级到2019.3之后的版本，IL转换的c++代码， 单独输出到Uni
 设置好之后， xcode中点击Debug->CaptureGPUFrame, 经过xcode处理一段时间之后，可以得到下图的结果。或者点击Capture Frame按钮截取一帧进行数据分析：
 
 
+![](/img/post-vscode/prof13.jpg)
+
+
 点击左上角Summary, 可以进程上下文引用的以及生成的贴图信息（大小、格式、Mipmap、采样数）
 
 ![](/img/post-vscode/prof11.jpg)
@@ -227,9 +260,9 @@ Unity升级到2019.3之后的版本，IL转换的c++代码， 单独输出到Uni
 
 ![](/img/post-vscode/prof12.jpg)
 
-可以看到右下角区域Encoders, 列出了和Unity Debuger的对应的URP渲染管线，通过对比发现，xcode里可以看到更多对应的API和过程。
+可以看到右下角区域[Encoders][i6], 列出了和Unity Debuger的对应的URP渲染管线，通过对比发现，xcode里可以看到更多对应的API和过程。
 
-同时可以看到右上角的时间线，横向表示渲染管线每个PASS绘制顺序， 纵向代表每个PASS 内部渲染流程（顶点变换/片元着色） 每个块显示着对应的执行时间，Attachment预览，三角数量
+同时可以看到右上角的时间线，横向表示渲染管线每个PASS绘制顺序， 纵向代表每个PASS 内部渲染流程（顶点变换/片元着色） 每个块显示着对应的执行时间，Attachment预览，三角数量。
 
 点击CommandBuffer选项， 可以查看每个PASS输出的Attachment，包含深度、颜色、模板缓冲
 
@@ -271,9 +304,11 @@ Unity升级到2019.3之后的版本，IL转换的c++代码， 单独输出到Uni
 * [现代图形 API 的内存管理][i3]
 * [RenderBufferLoadAction的使用方式， UWA][i4]
 * [Metal TDBR Demo, github][i5]
+* [MTLRenderCommandEncoder, Apple Metal][i6]
 
 [i1]: https://docs.unity3d.com/Manual/XcodeFrameDebuggerIntegration.html
 [i2]: https://zhuanlan.zhihu.com/p/92840602
 [i3]: https://zhuanlan.zhihu.com/p/87595524 
 [i4]: https://blog.csdn.net/UWA4D/article/details/105492459
 [i5]: https://github.com/jiangxh1992/MetalTutorialDemos
+[i6]: https://developer.apple.com/documentation/metal/mtlrendercommandencoder
