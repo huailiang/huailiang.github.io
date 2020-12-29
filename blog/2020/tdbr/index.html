@@ -254,23 +254,23 @@ MathJax.Hub.Config({
 <p><br /><br />
 通过unity生成xcode的工程，搜遍整个项目的storageMode引用，发现只对深度缓冲中的 storageMode 在ios和tvOS平台会根据c#中的RenderTextureDescriptor的memoryless来设置值。 在OSX平台默认还是MTLResourceStorageModePrivate|MTLResourceCPUCacheModeDefaultCache。</p>
 
-<div class="language-c highlighter-rouge"><pre class="highlight"><code><span class="n">MTLTextureDescriptor</span><span class="o">*</span> <span class="n">depthTexDesc</span> <span class="o">=</span> <span class="p">[</span><span class="n">MTLTextureDescriptorClass</span> <span class="n">texture2DDescriptorWithPixelFormat</span><span class="o">:</span> <span class="n">pixelFormat</span> <span class="n">width</span><span class="o">:</span> <span class="n">surface</span><span class="o">-&gt;</span><span class="n">targetW</span> <span class="n">height</span><span class="o">:</span> <span class="n">surface</span><span class="o">-&gt;</span><span class="n">targetH</span> <span class="n">mipmapped</span><span class="o">:</span> <span class="n">NO</span><span class="p">];</span>
-<span class="cp">#if PLATFORM_OSX
-</span>    <span class="n">depthTexDesc</span><span class="p">.</span><span class="n">resourceOptions</span> <span class="o">=</span> <span class="n">MTLResourceCPUCacheModeDefaultCache</span> <span class="o">|</span> <span class="n">MTLResourceStorageModePrivate</span><span class="p">;</span>
-<span class="cp">#endif
-</span>
-<span class="cp">#if PLATFORM_IOS || PLATFORM_TVOS
-</span>    <span class="k">if</span> <span class="p">(</span><span class="n">surface</span><span class="o">-&gt;</span><span class="n">memorylessDepth</span><span class="p">)</span>
-        <span class="n">depthTexDesc</span><span class="p">.</span><span class="n">storageMode</span> <span class="o">=</span> <span class="n">MTLStorageModeMemoryless</span><span class="p">;</span>
-<span class="cp">#endif
-</span>
-<span class="n">depthTexDesc</span><span class="p">.</span><span class="n">usage</span> <span class="o">=</span> <span class="n">MTLTextureUsageRenderTarget</span> <span class="o">|</span> <span class="n">MTLTextureUsageShaderRead</span><span class="p">;</span>
+<div class="language-swift highlighter-rouge"><pre class="highlight"><code><span class="kt">MTLTextureDescriptor</span><span class="o">*</span> <span class="n">depthTexDesc</span> <span class="o">=</span> <span class="p">[</span><span class="kt">MTLTextureDescriptorClass</span> <span class="nv">texture2DDescriptorWithPixelFormat</span><span class="p">:</span> <span class="n">pixelFormat</span> <span class="nv">width</span><span class="p">:</span> <span class="n">surface</span><span class="o">-&gt;</span><span class="n">targetW</span> <span class="nv">height</span><span class="p">:</span> <span class="n">surface</span><span class="o">-&gt;</span><span class="n">targetH</span> <span class="nv">mipmapped</span><span class="p">:</span> <span class="kt">NO</span><span class="p">];</span>
+<span class="cp">#if PLATFORM_OSX</span>
+    <span class="n">depthTexDesc</span><span class="o">.</span><span class="n">resourceOptions</span> <span class="o">=</span> <span class="kt">MTLResourceCPUCacheModeDefaultCache</span> <span class="o">|</span> <span class="kt">MTLResourceStorageModePrivate</span><span class="p">;</span>
+<span class="cp">#endif</span>
+
+<span class="cp">#if PLATFORM_IOS || PLATFORM_TVOS</span>
+    <span class="k">if</span> <span class="p">(</span><span class="n">surface</span><span class="o">-&gt;</span><span class="n">memorylessDepth</span><span class="p">)</span>
+        <span class="n">depthTexDesc</span><span class="o">.</span><span class="n">storageMode</span> <span class="o">=</span> <span class="kt">MTLStorageModeMemoryless</span><span class="p">;</span>
+<span class="cp">#endif</span>
+
+<span class="n">depthTexDesc</span><span class="o">.</span><span class="n">usage</span> <span class="o">=</span> <span class="kt">MTLTextureUsageRenderTarget</span> <span class="o">|</span> <span class="kt">MTLTextureUsageShaderRead</span><span class="p">;</span>
 <span class="k">if</span> <span class="p">(</span><span class="n">surface</span><span class="o">-&gt;</span><span class="n">msaaSamples</span> <span class="o">&gt;</span> <span class="mi">1</span><span class="p">)</span>
 <span class="p">{</span>
-    <span class="n">depthTexDesc</span><span class="p">.</span><span class="n">textureType</span> <span class="o">=</span> <span class="n">MTLTextureType2DMultisample</span><span class="p">;</span>
-    <span class="n">depthTexDesc</span><span class="p">.</span><span class="n">sampleCount</span> <span class="o">=</span> <span class="n">surface</span><span class="o">-&gt;</span><span class="n">msaaSamples</span><span class="p">;</span>
-    <span class="k">if</span> <span class="p">(</span><span class="o">!</span><span class="p">[</span><span class="n">surface</span><span class="o">-&gt;</span><span class="n">device</span> <span class="n">supportsTextureSampleCount</span><span class="o">:</span> <span class="n">depthTexDesc</span><span class="p">.</span><span class="n">sampleCount</span><span class="p">])</span>
-        <span class="n">depthTexDesc</span><span class="p">.</span><span class="n">sampleCount</span> <span class="o">=</span> <span class="mi">4</span><span class="p">;</span>
+    <span class="n">depthTexDesc</span><span class="o">.</span><span class="n">textureType</span> <span class="o">=</span> <span class="kt">MTLTextureType2DMultisample</span><span class="p">;</span>
+    <span class="n">depthTexDesc</span><span class="o">.</span><span class="n">sampleCount</span> <span class="o">=</span> <span class="n">surface</span><span class="o">-&gt;</span><span class="n">msaaSamples</span><span class="p">;</span>
+    <span class="k">if</span> <span class="p">(</span><span class="o">!</span><span class="p">[</span><span class="n">surface</span><span class="o">-&gt;</span><span class="n">device</span> <span class="nv">supportsTextureSampleCount</span><span class="p">:</span> <span class="n">depthTexDesc</span><span class="o">.</span><span class="n">sampleCount</span><span class="p">])</span>
+        <span class="n">depthTexDesc</span><span class="o">.</span><span class="n">sampleCount</span> <span class="o">=</span> <span class="mi">4</span><span class="p">;</span>
 <span class="p">}</span>
 </code></pre>
 </div>
@@ -279,22 +279,68 @@ MathJax.Hub.Config({
 
 <p><strong>注意：</strong></p>
 
+<p>在Tile based shading中，G-buffer是被分成tile-size大小来保存的，因此可以将所有物体一次性渲染到tile-sized G-buffer中留在On-Chip memory。要注意并不是仅仅G-buffer不保存到system memory那么简单，实现的前提是Tile based，否则On-Chip memory是无法装得下完整的屏幕大小的G-buffer的。Tile based是由于移动平台计算性能有限应运而生的GPU架构。</p>
+
+<p>事实上Metal并没有提供显式的方法去启用Tile Based，而是根据某些场景的代码实现和设置提示GPU启用tile memory的。例如有两种启用的情况如下：</p>
+
 <ol>
   <li>
-    <p>这里基于TBDR架构允许GPU的FS片段着色器访问render targets（color[id]）进行混合计算的特性就是programmable blending，当然基于TBDR下FS也可以通过ImageBlocks特性访问同样的数据实现同样的功能。programmable blending和Metal2的新特性ImageBlocks都可以实现一些类似的功能，但原理不同，可以重点学习比较各自的特点。</p>
+    <p>一个是上面我们提到的Load and Store Action和storgeMode的设置，当我们设置RT不保存到system memory并且只给GPU访问的时候，不需要我们手动dispatch线程组，GPU就会启用Tile Based将RT切成tile size大小保存在tile memory进行快速处理。这就是单pass延迟渲染启用Tile base的方法；</p>
   </li>
   <li>
-    <p>在Tile based shading中，G-buffer是被分成tile-size大小来保存的，因此可以将所有物体一次性渲染到tile-sized G-buffer中留在On-Chip memory。要注意并不是仅仅G-buffer不保存到system memory那么简单，实现的前提是Tile based，否则On-Chip memory是无法装得下完整的屏幕大小的G-buffer的。Tile based是由于移动平台计算性能有限应运而生的GPU架构。</p>
+    <p>另外一种情况就是Tile Based Shading，这种情况其实是有显式的启用方法的，会有一个专门的描述RenderPipelineState的MTLTileRenderPipelineDescriptor，可以指定采样规模和tileFunction等</p>
   </li>
 </ol>
 
-<div class="language-swift highlighter-rouge"><pre class="highlight"><code><span class="kt">MTLTileRenderPipelineDescriptor</span> <span class="o">*</span><span class="n">descriptor</span> <span class="o">=</span> <span class="p">[</span><span class="kt">MTLTileRenderPipelineDescriptor</span> <span class="k">new</span><span class="p">];</span>
-<span class="n">descriptor</span><span class="o">.</span><span class="n">label</span> <span class="o">=</span> <span class="s">@"Light Culling"</span><span class="p">;</span>
-<span class="n">descriptor</span><span class="o">.</span><span class="n">rasterSampleCount</span> <span class="o">=</span> <span class="kt">AAPLNumSamples</span><span class="p">;</span>
-<span class="n">descriptor</span><span class="o">.</span><span class="n">colorAttachments</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="o">.</span><span class="n">pixelFormat</span> <span class="o">=</span> <span class="kt">MTLPixelFormatBGRA8Unorm</span><span class="p">;</span>
-<span class="n">descriptor</span><span class="o">.</span><span class="n">colorAttachments</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span><span class="o">.</span><span class="n">pixelFormat</span> <span class="o">=</span> <span class="kt">MTLPixelFormatR32Float</span><span class="p">;</span>
-<span class="n">descriptor</span><span class="o">.</span><span class="n">threadgroupSizeMatchesTileSize</span> <span class="o">=</span> <span class="kt">YES</span><span class="p">;</span>
-<span class="n">descriptor</span><span class="o">.</span><span class="n">tileFunction</span> <span class="o">=</span> <span class="n">lightCullingKernel</span><span class="p">;</span>
+<div class="language-swift highlighter-rouge"><pre class="highlight"><code><span class="kt">MTLTileRenderPipelineDescriptor</span> <span class="o">*</span><span class="n">tileRenderPipelineDescriptor</span> <span class="o">=</span> <span class="p">[</span><span class="kt">MTLTileRenderPipelineDescriptor</span> <span class="k">new</span><span class="p">];</span>
+<span class="n">id</span> <span class="o">&lt;</span><span class="kt">MTLFunction</span><span class="o">&gt;</span> <span class="n">lightCullingKernel</span> <span class="o">=</span> <span class="p">[</span><span class="n">defaultLibrary</span> <span class="nv">newFunctionWithName</span><span class="p">:</span><span class="s">@"cull_lights"</span><span class="p">];</span>
+<span class="n">tileRenderPipelineDescriptor</span><span class="o">.</span><span class="n">tileFunction</span> <span class="o">=</span> <span class="n">lightCullingKernel</span><span class="p">;</span>
+<span class="n">tileRenderPipelineDescriptor</span><span class="o">.</span><span class="n">label</span> <span class="o">=</span> <span class="s">@"Light Culling"</span><span class="p">;</span>
+<span class="n">tileRenderPipelineDescriptor</span><span class="o">.</span><span class="n">rasterSampleCount</span> <span class="o">=</span> <span class="kt">AAPLNumSamples</span><span class="p">;</span>
+
+<span class="n">tileRenderPipelineDescriptor</span><span class="o">.</span><span class="n">colorAttachments</span><span class="p">[</span><span class="kt">AAPLRenderTargetLighting</span><span class="p">]</span><span class="o">.</span><span class="n">pixelFormat</span> <span class="o">=</span> <span class="n">view</span><span class="o">.</span><span class="n">colorPixelFormat</span><span class="p">;</span>
+<span class="n">tileRenderPipelineDescriptor</span><span class="o">.</span><span class="n">colorAttachments</span><span class="p">[</span><span class="kt">AAPLRenderTargetDepth</span><span class="p">]</span><span class="o">.</span><span class="n">pixelFormat</span> <span class="o">=</span> <span class="kt">AAPLDepthDataPixelFormat</span><span class="p">;</span>
+
+<span class="n">tileRenderPipelineDescriptor</span><span class="o">.</span><span class="n">threadgroupSizeMatchesTileSize</span> <span class="o">=</span> <span class="kt">YES</span><span class="p">;</span>
+<span class="n">_lightCullingPipelineState</span> <span class="o">=</span> <span class="p">[</span><span class="n">_device</span> <span class="nv">newRenderPipelineStateWithTileDescriptor</span><span class="p">:</span><span class="n">tileRenderPipelineDescriptor</span>
+                                                                        <span class="nv">options</span><span class="p">:</span><span class="mi">0</span> <span class="nv">reflection</span><span class="p">:</span><span class="kc">nil</span> <span class="nv">error</span><span class="p">:</span><span class="o">&amp;</span><span class="n">error</span><span class="p">];</span>
+
+<span class="kt">NSAssert</span><span class="p">(</span><span class="n">_lightCullingPipelineState</span><span class="p">,</span> <span class="s">@"Failed to create pipeline state: %@"</span><span class="p">,</span> <span class="n">error</span><span class="p">);</span>
+
+</code></pre>
+</div>
+
+<p>显式启用tile shader的方式是dispatch线程组，指定每个tile上的线程组规模，进行计算。同时可以在tile memory上设置buffer数据或者threadgroup memory数据等：</p>
+
+<div class="language-swift highlighter-rouge"><pre class="highlight"><code><span class="p">[</span><span class="n">renderEncoder</span> <span class="nv">setRenderPipelineState</span><span class="p">:</span><span class="n">_lightCullingPipelineState</span><span class="p">];</span>
+<span class="p">[</span><span class="n">renderEncoder</span> <span class="nv">setThreadgroupMemoryLength</span><span class="p">:</span><span class="kt">AAPLThreadgroupBufferSize</span> <span class="nv">offset</span><span class="p">:</span><span class="mi">0</span> <span class="nv">atIndex</span><span class="p">:</span><span class="kt">AAPLThreadgroupBufferIndexLightList</span><span class="p">];</span>
+<span class="p">[</span><span class="n">renderEncoder</span> <span class="nv">setThreadgroupMemoryLength</span><span class="p">:</span><span class="kt">AAPLTileDataSize</span> <span class="nv">offset</span><span class="p">:</span><span class="kt">AAPLThreadgroupBufferSize</span> <span class="nv">atIndex</span><span class="p">:</span><span class="kt">AAPLThreadgroupBufferIndexTileData</span><span class="p">];</span>
+<span class="p">[</span><span class="n">renderEncoder</span> <span class="nv">setTileBuffer</span><span class="p">:</span><span class="n">_uniformBuffers</span><span class="p">[</span><span class="n">_currentBufferIndex</span><span class="p">]</span> <span class="nv">offset</span><span class="p">:</span><span class="mi">0</span> <span class="nv">atIndex</span><span class="p">:</span><span class="kt">AAPLBufferIndexUniforms</span><span class="p">];</span>
+<span class="p">[</span><span class="n">renderEncoder</span> <span class="nv">setTileBuffer</span><span class="p">:</span><span class="n">_lightEyePositions</span><span class="p">[</span><span class="n">_currentBufferIndex</span><span class="p">]</span> <span class="nv">offset</span><span class="p">:</span><span class="mi">0</span> <span class="nv">atIndex</span><span class="p">:</span><span class="kt">AAPLBufferIndexLightsPosition</span><span class="p">];</span>
+<span class="p">[</span><span class="n">renderEncoder</span> <span class="nv">dispatchThreadsPerTile</span><span class="p">:</span><span class="kt">MTLSizeMake</span><span class="p">(</span><span class="kt">AAPLTileWidth</span><span class="p">,</span><span class="kt">AAPLTileHeight</span><span class="p">,</span><span class="mi">1</span><span class="p">)];</span>
+</code></pre>
+</div>
+
+<p>上述代码中， cull_lights是shader中定义的核函数， 形式如下：</p>
+
+<div class="language-glsl highlighter-rouge"><pre class="highlight"><code><span class="c1">/// Culls each light's volume against the top, bottom, left, right, near and far planes of the tile.
+</span><span class="n">kernel</span> <span class="kt">void</span> <span class="nf">cull_lights</span><span class="p">(</span><span class="n">imageblock</span><span class="o">&lt;</span><span class="n">ColorData</span><span class="p">,</span><span class="n">imageblock_layout_implicit</span><span class="o">&gt;</span> <span class="n">imageBlock</span><span class="p">,</span>
+                        <span class="n">constant</span> <span class="n">AAPLUniforms</span> <span class="o">&amp;</span><span class="n">uniforms</span>       <span class="p">[[</span> <span class="n">buffer</span><span class="p">(</span><span class="n">AAPLBufferIndexUniforms</span><span class="p">)</span> <span class="p">]],</span>
+                        <span class="n">device</span> <span class="n">vector_float4</span> <span class="o">*</span><span class="n">light_positions</span> <span class="p">[[</span> <span class="n">buffer</span><span class="p">(</span><span class="n">AAPLBufferIndexLightsPosition</span><span class="p">)]],</span>
+                        <span class="n">threadgroup</span> <span class="kt">int</span> <span class="o">*</span><span class="n">visible_lights</span>       <span class="p">[[</span> <span class="n">threadgroup</span><span class="p">(</span><span class="n">AAPLThreadgroupBufferIndexLightList</span><span class="p">)]],</span>
+                        <span class="n">threadgroup</span> <span class="n">TileData</span> <span class="o">*</span><span class="n">tile_data</span>       <span class="p">[[</span> <span class="n">threadgroup</span><span class="p">(</span><span class="n">AAPLThreadgroupBufferIndexTileData</span><span class="p">)]],</span>
+                        <span class="n">ushort2</span> <span class="n">threadgroup_size</span>              <span class="p">[[</span> <span class="n">threads_per_threadgroup</span> <span class="p">]],</span>
+                        <span class="n">ushort2</span> <span class="n">threadgroup_id</span>                <span class="p">[[</span> <span class="n">threadgroup_position_in_grid</span> <span class="p">]],</span>
+                        <span class="kt">uint</span> <span class="n">thread_linear_id</span>                 <span class="p">[[</span> <span class="n">thread_index_in_threadgroup</span><span class="p">]])</span>
+<span class="p">{</span>
+    <span class="kt">uint</span> <span class="n">threadgroup_linear_size</span> <span class="o">=</span> <span class="n">threadgroup_size</span><span class="p">.</span><span class="n">x</span><span class="o">*</span><span class="n">threadgroup_size</span><span class="p">.</span><span class="n">y</span><span class="p">;</span>
+    
+    <span class="c1">// Initialize the tile light count to zero.
+</span>    <span class="k">if</span> <span class="p">(</span><span class="n">thread_linear_id</span> <span class="o">==</span> <span class="mi">0</span><span class="p">)</span>
+    <span class="p">{</span>
+        <span class="n">atomic_store_explicit</span><span class="p">(</span><span class="o">&amp;</span><span class="n">tile_data</span><span class="o">-&gt;</span><span class="n">numLights</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="n">memory_order_relaxed</span><span class="p">);</span>
+    <span class="p">}</span>
+<span class="p">}</span>
 </code></pre>
 </div>
 
@@ -378,6 +424,8 @@ MathJax.Hub.Config({
   <li><a href="https://blog.csdn.net/UWA4D/article/details/105492459">RenderBufferLoadAction的使用方式， UWA</a></li>
   <li><a href="https://github.com/jiangxh1992/MetalTutorialDemos">Metal TDBR Demo, github</a></li>
   <li><a href="https://developer.apple.com/documentation/metal/mtlrendercommandencoder">MTLRenderCommandEncoder, Apple Metal</a></li>
+  <li><a href="https://developer.apple.com/documentation/metal/rendering_a_scene_with_deferred_lighting_in_objective-c?preferredLanguage=occ">Rendering a Scene with Deferred Lighting in Objective-C</a></li>
+  <li><a href="https://developer.apple.com/documentation/metal/gpu_features/understanding_gpu_family_4/about_tile_shading?language=objc">Metal Tile Shading, Apple</a></li>
 </ul>
 
 
