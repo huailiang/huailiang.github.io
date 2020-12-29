@@ -165,7 +165,7 @@ DontCare,
 <br>
 通过unity生成xcode的工程，搜遍整个项目的storageMode引用，发现只对深度缓冲中的 storageMode 在ios和tvOS平台会根据c#中的RenderTextureDescriptor的memoryless来设置值。 在OSX平台默认还是MTLResourceStorageModePrivate|MTLResourceCPUCacheModeDefaultCache。
 
-```c
+```swift
 MTLTextureDescriptor* depthTexDesc = [MTLTextureDescriptorClass texture2DDescriptorWithPixelFormat: pixelFormat width: surface->targetW height: surface->targetH mipmapped: NO];
 #if PLATFORM_OSX
     depthTexDesc.resourceOptions = MTLResourceCPUCacheModeDefaultCache | MTLResourceStorageModePrivate;
@@ -190,20 +190,65 @@ if (surface->msaaSamples > 1)
 
 __注意：__
 
-1. 这里基于TBDR架构允许GPU的FS片段着色器访问render targets（color[id]）进行混合计算的特性就是programmable blending，当然基于TBDR下FS也可以通过ImageBlocks特性访问同样的数据实现同样的功能。programmable blending和Metal2的新特性ImageBlocks都可以实现一些类似的功能，但原理不同，可以重点学习比较各自的特点。
+ 在Tile based shading中，G-buffer是被分成tile-size大小来保存的，因此可以将所有物体一次性渲染到tile-sized G-buffer中留在On-Chip memory。要注意并不是仅仅G-buffer不保存到system memory那么简单，实现的前提是Tile based，否则On-Chip memory是无法装得下完整的屏幕大小的G-buffer的。Tile based是由于移动平台计算性能有限应运而生的GPU架构。
 
-2. 在Tile based shading中，G-buffer是被分成tile-size大小来保存的，因此可以将所有物体一次性渲染到tile-sized G-buffer中留在On-Chip memory。要注意并不是仅仅G-buffer不保存到system memory那么简单，实现的前提是Tile based，否则On-Chip memory是无法装得下完整的屏幕大小的G-buffer的。Tile based是由于移动平台计算性能有限应运而生的GPU架构。
+事实上Metal并没有提供显式的方法去启用Tile Based，而是根据某些场景的代码实现和设置提示GPU启用tile memory的。例如有两种启用的情况如下：
+
+1. 一个是上面我们提到的Load and Store Action和storgeMode的设置，当我们设置RT不保存到system memory并且只给GPU访问的时候，不需要我们手动dispatch线程组，GPU就会启用Tile Based将RT切成tile size大小保存在tile memory进行快速处理。这就是单pass延迟渲染启用Tile base的方法；
+
+2. 另外一种情况就是Tile Based Shading，这种情况其实是有显式的启用方法的，会有一个专门的描述RenderPipelineState的MTLTileRenderPipelineDescriptor，可以指定采样规模和tileFunction等
 
 ```swift
-MTLTileRenderPipelineDescriptor *descriptor = [MTLTileRenderPipelineDescriptor new];
-descriptor.label = @"Light Culling";
-descriptor.rasterSampleCount = AAPLNumSamples;
-descriptor.colorAttachments[0].pixelFormat = MTLPixelFormatBGRA8Unorm;
-descriptor.colorAttachments[1].pixelFormat = MTLPixelFormatR32Float;
-descriptor.threadgroupSizeMatchesTileSize = YES;
-descriptor.tileFunction = lightCullingKernel;
+MTLTileRenderPipelineDescriptor *tileRenderPipelineDescriptor = [MTLTileRenderPipelineDescriptor new];
+id <MTLFunction> lightCullingKernel = [defaultLibrary newFunctionWithName:@"cull_lights"];
+tileRenderPipelineDescriptor.tileFunction = lightCullingKernel;
+tileRenderPipelineDescriptor.label = @"Light Culling";
+tileRenderPipelineDescriptor.rasterSampleCount = AAPLNumSamples;
+
+tileRenderPipelineDescriptor.colorAttachments[AAPLRenderTargetLighting].pixelFormat = view.colorPixelFormat;
+tileRenderPipelineDescriptor.colorAttachments[AAPLRenderTargetDepth].pixelFormat = AAPLDepthDataPixelFormat;
+
+tileRenderPipelineDescriptor.threadgroupSizeMatchesTileSize = YES;
+_lightCullingPipelineState = [_device newRenderPipelineStateWithTileDescriptor:tileRenderPipelineDescriptor
+                                                                        options:0 reflection:nil error:&error];
+
+NSAssert(_lightCullingPipelineState, @"Failed to create pipeline state: %@", error);
+
 ```
 
+显式启用tile shader的方式是dispatch线程组，指定每个tile上的线程组规模，进行计算。同时可以在tile memory上设置buffer数据或者threadgroup memory数据等：
+
+```swift
+[renderEncoder setRenderPipelineState:_lightCullingPipelineState];
+[renderEncoder setThreadgroupMemoryLength:AAPLThreadgroupBufferSize offset:0 atIndex:AAPLThreadgroupBufferIndexLightList];
+[renderEncoder setThreadgroupMemoryLength:AAPLTileDataSize offset:AAPLThreadgroupBufferSize atIndex:AAPLThreadgroupBufferIndexTileData];
+[renderEncoder setTileBuffer:_uniformBuffers[_currentBufferIndex] offset:0 atIndex:AAPLBufferIndexUniforms];
+[renderEncoder setTileBuffer:_lightEyePositions[_currentBufferIndex] offset:0 atIndex:AAPLBufferIndexLightsPosition];
+[renderEncoder dispatchThreadsPerTile:MTLSizeMake(AAPLTileWidth,AAPLTileHeight,1)];
+```
+
+上述代码中， cull_lights是shader中定义的核函数， 形式如下：
+
+```glsl
+/// Culls each light's volume against the top, bottom, left, right, near and far planes of the tile.
+kernel void cull_lights(imageblock<ColorData,imageblock_layout_implicit> imageBlock,
+                        constant AAPLUniforms &uniforms       [[ buffer(AAPLBufferIndexUniforms) ]],
+                        device vector_float4 *light_positions [[ buffer(AAPLBufferIndexLightsPosition)]],
+                        threadgroup int *visible_lights       [[ threadgroup(AAPLThreadgroupBufferIndexLightList)]],
+                        threadgroup TileData *tile_data       [[ threadgroup(AAPLThreadgroupBufferIndexTileData)]],
+                        ushort2 threadgroup_size              [[ threads_per_threadgroup ]],
+                        ushort2 threadgroup_id                [[ threadgroup_position_in_grid ]],
+                        uint thread_linear_id                 [[ thread_index_in_threadgroup]])
+{
+    uint threadgroup_linear_size = threadgroup_size.x*threadgroup_size.y;
+    
+    // Initialize the tile light count to zero.
+    if (thread_linear_id == 0)
+    {
+        atomic_store_explicit(&tile_data->numLights, 0, memory_order_relaxed);
+    }
+}
+```
 
 ### UWA 优化建议
 
@@ -287,6 +332,8 @@ Unity升级到2019.3之后的版本，IL转换的c++代码， 单独输出到Uni
 * [RenderBufferLoadAction的使用方式， UWA][i4]
 * [Metal TDBR Demo, github][i5]
 * [MTLRenderCommandEncoder, Apple Metal][i6]
+* [Rendering a Scene with Deferred Lighting in Objective-C][i7]
+* [Metal Tile Shading, Apple][i8]
 
 [i1]: https://docs.unity3d.com/Manual/XcodeFrameDebuggerIntegration.html
 [i2]: https://zhuanlan.zhihu.com/p/92840602
@@ -294,3 +341,5 @@ Unity升级到2019.3之后的版本，IL转换的c++代码， 单独输出到Uni
 [i4]: https://blog.csdn.net/UWA4D/article/details/105492459
 [i5]: https://github.com/jiangxh1992/MetalTutorialDemos
 [i6]: https://developer.apple.com/documentation/metal/mtlrendercommandencoder
+[i7]: https://developer.apple.com/documentation/metal/rendering_a_scene_with_deferred_lighting_in_objective-c?preferredLanguage=occ
+[i8]: https://developer.apple.com/documentation/metal/gpu_features/understanding_gpu_family_4/about_tile_shading?language=objc
