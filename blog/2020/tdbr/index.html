@@ -292,32 +292,29 @@ MathJax.Hub.Config({
   </li>
 </ol>
 
-<div class="language-swift highlighter-rouge"><pre class="highlight"><code><span class="kt">MTLTileRenderPipelineDescriptor</span> <span class="o">*</span><span class="n">tileRenderPipelineDescriptor</span> <span class="o">=</span> <span class="p">[</span><span class="kt">MTLTileRenderPipelineDescriptor</span> <span class="k">new</span><span class="p">];</span>
+<div class="language-swift highlighter-rouge"><pre class="highlight"><code><span class="kt">MTLTileRenderPipelineDescriptor</span> <span class="o">*</span><span class="n">tileDescriptor</span> <span class="o">=</span> <span class="p">[</span><span class="kt">MTLTileRenderPipelineDescriptor</span> <span class="k">new</span><span class="p">];</span>
 <span class="n">id</span> <span class="o">&lt;</span><span class="kt">MTLFunction</span><span class="o">&gt;</span> <span class="n">lightCullingKernel</span> <span class="o">=</span> <span class="p">[</span><span class="n">defaultLibrary</span> <span class="nv">newFunctionWithName</span><span class="p">:</span><span class="s">@"cull_lights"</span><span class="p">];</span>
-<span class="n">tileRenderPipelineDescriptor</span><span class="o">.</span><span class="n">tileFunction</span> <span class="o">=</span> <span class="n">lightCullingKernel</span><span class="p">;</span>
-<span class="n">tileRenderPipelineDescriptor</span><span class="o">.</span><span class="n">label</span> <span class="o">=</span> <span class="s">@"Light Culling"</span><span class="p">;</span>
-<span class="n">tileRenderPipelineDescriptor</span><span class="o">.</span><span class="n">rasterSampleCount</span> <span class="o">=</span> <span class="kt">AAPLNumSamples</span><span class="p">;</span>
-
-<span class="n">tileRenderPipelineDescriptor</span><span class="o">.</span><span class="n">colorAttachments</span><span class="p">[</span><span class="kt">AAPLRenderTargetLighting</span><span class="p">]</span><span class="o">.</span><span class="n">pixelFormat</span> <span class="o">=</span> <span class="n">view</span><span class="o">.</span><span class="n">colorPixelFormat</span><span class="p">;</span>
-<span class="n">tileRenderPipelineDescriptor</span><span class="o">.</span><span class="n">colorAttachments</span><span class="p">[</span><span class="kt">AAPLRenderTargetDepth</span><span class="p">]</span><span class="o">.</span><span class="n">pixelFormat</span> <span class="o">=</span> <span class="kt">AAPLDepthDataPixelFormat</span><span class="p">;</span>
-
-<span class="n">tileRenderPipelineDescriptor</span><span class="o">.</span><span class="n">threadgroupSizeMatchesTileSize</span> <span class="o">=</span> <span class="kt">YES</span><span class="p">;</span>
-<span class="n">_lightCullingPipelineState</span> <span class="o">=</span> <span class="p">[</span><span class="n">_device</span> <span class="nv">newRenderPipelineStateWithTileDescriptor</span><span class="p">:</span><span class="n">tileRenderPipelineDescriptor</span>
+<span class="n">tileDescriptor</span><span class="o">.</span><span class="n">tileFunction</span> <span class="o">=</span> <span class="n">lightCullingKernel</span><span class="p">;</span>
+<span class="n">tileDescriptor</span><span class="o">.</span><span class="n">label</span> <span class="o">=</span> <span class="s">@"Light Culling"</span><span class="p">;</span>
+<span class="n">tileDescriptor</span><span class="o">.</span><span class="n">rasterSampleCount</span> <span class="o">=</span> <span class="kt">AAPLNumSamples</span><span class="p">;</span>
+<span class="n">tileDescriptor</span><span class="o">.</span><span class="n">colorAttachments</span><span class="p">[</span><span class="kt">AAPLRenderTargetLighting</span><span class="p">]</span><span class="o">.</span><span class="n">pixelFormat</span> <span class="o">=</span> <span class="n">view</span><span class="o">.</span><span class="n">colorPixelFormat</span><span class="p">;</span>
+<span class="n">tileDescriptor</span><span class="o">.</span><span class="n">colorAttachments</span><span class="p">[</span><span class="kt">AAPLRenderTargetDepth</span><span class="p">]</span><span class="o">.</span><span class="n">pixelFormat</span> <span class="o">=</span> <span class="kt">AAPLDepthDataPixelFormat</span><span class="p">;</span>
+<span class="n">tileDescriptor</span><span class="o">.</span><span class="n">threadgroupSizeMatchesTileSize</span> <span class="o">=</span> <span class="kt">YES</span><span class="p">;</span>
+<span class="n">_lightCullingPipelineState</span> <span class="o">=</span> <span class="p">[</span><span class="n">_device</span> <span class="nv">newRenderPipelineStateWithTileDescriptor</span><span class="p">:</span><span class="n">tileDescriptor</span>
                                                                         <span class="nv">options</span><span class="p">:</span><span class="mi">0</span> <span class="nv">reflection</span><span class="p">:</span><span class="kc">nil</span> <span class="nv">error</span><span class="p">:</span><span class="o">&amp;</span><span class="n">error</span><span class="p">];</span>
 
 <span class="kt">NSAssert</span><span class="p">(</span><span class="n">_lightCullingPipelineState</span><span class="p">,</span> <span class="s">@"Failed to create pipeline state: %@"</span><span class="p">,</span> <span class="n">error</span><span class="p">);</span>
-
 </code></pre>
 </div>
 
 <p>显式启用tile shader的方式是dispatch线程组，指定每个tile上的线程组规模，进行计算。同时可以在tile memory上设置buffer数据或者threadgroup memory数据等：</p>
 
-<div class="language-swift highlighter-rouge"><pre class="highlight"><code><span class="p">[</span><span class="n">renderEncoder</span> <span class="nv">setRenderPipelineState</span><span class="p">:</span><span class="n">_lightCullingPipelineState</span><span class="p">];</span>
-<span class="p">[</span><span class="n">renderEncoder</span> <span class="nv">setThreadgroupMemoryLength</span><span class="p">:</span><span class="kt">AAPLThreadgroupBufferSize</span> <span class="nv">offset</span><span class="p">:</span><span class="mi">0</span> <span class="nv">atIndex</span><span class="p">:</span><span class="kt">AAPLThreadgroupBufferIndexLightList</span><span class="p">];</span>
-<span class="p">[</span><span class="n">renderEncoder</span> <span class="nv">setThreadgroupMemoryLength</span><span class="p">:</span><span class="kt">AAPLTileDataSize</span> <span class="nv">offset</span><span class="p">:</span><span class="kt">AAPLThreadgroupBufferSize</span> <span class="nv">atIndex</span><span class="p">:</span><span class="kt">AAPLThreadgroupBufferIndexTileData</span><span class="p">];</span>
-<span class="p">[</span><span class="n">renderEncoder</span> <span class="nv">setTileBuffer</span><span class="p">:</span><span class="n">_uniformBuffers</span><span class="p">[</span><span class="n">_currentBufferIndex</span><span class="p">]</span> <span class="nv">offset</span><span class="p">:</span><span class="mi">0</span> <span class="nv">atIndex</span><span class="p">:</span><span class="kt">AAPLBufferIndexUniforms</span><span class="p">];</span>
-<span class="p">[</span><span class="n">renderEncoder</span> <span class="nv">setTileBuffer</span><span class="p">:</span><span class="n">_lightEyePositions</span><span class="p">[</span><span class="n">_currentBufferIndex</span><span class="p">]</span> <span class="nv">offset</span><span class="p">:</span><span class="mi">0</span> <span class="nv">atIndex</span><span class="p">:</span><span class="kt">AAPLBufferIndexLightsPosition</span><span class="p">];</span>
-<span class="p">[</span><span class="n">renderEncoder</span> <span class="nv">dispatchThreadsPerTile</span><span class="p">:</span><span class="kt">MTLSizeMake</span><span class="p">(</span><span class="kt">AAPLTileWidth</span><span class="p">,</span><span class="kt">AAPLTileHeight</span><span class="p">,</span><span class="mi">1</span><span class="p">)];</span>
+<div class="language-swift highlighter-rouge"><pre class="highlight"><code><span class="p">[</span><span class="n">encoder</span> <span class="nv">setRenderPipelineState</span><span class="p">:</span><span class="n">_lightCullingPipelineState</span><span class="p">];</span>
+<span class="p">[</span><span class="n">encoder</span> <span class="nv">setThreadgroupMemoryLength</span><span class="p">:</span><span class="kt">AAPLThreadgroupBufferSize</span> <span class="nv">offset</span><span class="p">:</span><span class="mi">0</span> <span class="nv">atIndex</span><span class="p">:</span><span class="kt">AAPLThreadgroupBufferIndexLightList</span><span class="p">];</span>
+<span class="p">[</span><span class="n">encoder</span> <span class="nv">setThreadgroupMemoryLength</span><span class="p">:</span><span class="kt">AAPLTileDataSize</span> <span class="nv">offset</span><span class="p">:</span><span class="kt">AAPLThreadgroupBufferSize</span> <span class="nv">atIndex</span><span class="p">:</span><span class="kt">AAPLThreadgroupBufferIndexTileData</span><span class="p">];</span>
+<span class="p">[</span><span class="n">encoder</span> <span class="nv">setTileBuffer</span><span class="p">:</span><span class="n">_uniformBuffers</span><span class="p">[</span><span class="n">_currentBufferIndex</span><span class="p">]</span> <span class="nv">offset</span><span class="p">:</span><span class="mi">0</span> <span class="nv">atIndex</span><span class="p">:</span><span class="kt">AAPLBufferIndexUniforms</span><span class="p">];</span>
+<span class="p">[</span><span class="n">encoder</span> <span class="nv">setTileBuffer</span><span class="p">:</span><span class="n">_lightEyePositions</span><span class="p">[</span><span class="n">_currentBufferIndex</span><span class="p">]</span> <span class="nv">offset</span><span class="p">:</span><span class="mi">0</span> <span class="nv">atIndex</span><span class="p">:</span><span class="kt">AAPLBufferIndexLightsPosition</span><span class="p">];</span>
+<span class="p">[</span><span class="n">encoder</span> <span class="nv">dispatchThreadsPerTile</span><span class="p">:</span><span class="kt">MTLSizeMake</span><span class="p">(</span><span class="kt">AAPLTileWidth</span><span class="p">,</span><span class="kt">AAPLTileHeight</span><span class="p">,</span><span class="mi">1</span><span class="p">)];</span>
 </code></pre>
 </div>
 
@@ -415,6 +412,122 @@ MathJax.Hub.Config({
 
 <p>遗憾的是, xcode不支持像Nvidia Nsight那样对shader每行进行断点调试。</p>
 
+<h2 id="以编程方式执行gpu捕获">以编程方式执行GPU捕获</h2>
+
+<p>命令缓冲区和命令编码器提供以下方法，使您可以轻松识别应用程序中特定的Metal命令组：</p>
+
+<ul>
+  <li>MTLCommandBuffer <a href="apple-reference-documentation://hccHO83eL9">pushDebugGroup</a>, <a href="apple-reference-documentation://hcSdBH6zeg">popDebugGroup</a></li>
+  <li>MTLCommandEncoder <a href="apple-reference-documentation://hcSFx3xv_I">pushDebugGroup</a>, <a href="apple-reference-documentation://hc3or-hf1t">popDebugGroup</a>, <a href="apple-reference-documentation://hcqMH5ua-2">insertDebugSignpost</a></li>
+</ul>
+
+<p>使用这些方法可以简化应用程序开发过程，尤其是对于每个缓冲区或编码器使用许多Metal命令的任务。</p>
+
+<p>Debug组被推送并弹出到仅在其关联的MTLCommandBuffer或MTLCommandEncoder的生命周期内存在的唯一堆栈上。 您可以通过将多个组推入堆栈来嵌套调试组，然后从堆栈中弹出以前的组。</p>
+
+<div class="language-swift highlighter-rouge"><pre class="highlight"><code><span class="n">id</span><span class="o">&lt;</span><span class="kt">MTLRenderCommandEncoder</span><span class="o">&gt;</span> <span class="n">encoder</span> <span class="o">=</span> <span class="p">[</span><span class="n">commandBuffer</span> <span class="nv">renderCommandEncoderWithDescriptor</span><span class="p">:</span><span class="n">renderPassDescriptor</span><span class="p">];</span>
+<span class="n">encoder</span><span class="o">.</span><span class="n">label</span> <span class="o">=</span> <span class="s">@"My Render Encoder"</span><span class="p">;</span>
+<span class="p">[</span><span class="n">encoder</span> <span class="nv">pushDebugGroup</span><span class="p">:</span><span class="s">@"My Render Pass"</span><span class="p">];</span>
+
+    <span class="p">[</span><span class="n">encoder</span> <span class="nv">pushDebugGroup</span><span class="p">:</span><span class="s">@"Pipeline Setup"</span><span class="p">];</span>
+    <span class="c1">// Render pipeline commands</span>
+    <span class="p">[</span><span class="n">encoder</span> <span class="n">popDebugGroup</span><span class="p">];</span> <span class="c1">// Pops "Pipeline Setup"</span>
+
+    <span class="p">[</span><span class="n">encoder</span> <span class="nv">pushDebugGroup</span><span class="p">:</span><span class="s">@"Vertex Setup"</span><span class="p">];</span>
+    <span class="c1">// Vertex function commands</span>
+    <span class="p">[</span><span class="n">encoder</span> <span class="n">popDebugGroup</span><span class="p">];</span> <span class="c1">// Pops "Vertex Setup"</span>
+
+    <span class="p">[</span><span class="n">encoder</span> <span class="nv">pushDebugGroup</span><span class="p">:</span><span class="s">@"Fragment Setup"</span><span class="p">];</span>
+    <span class="c1">// Fragment function commands</span>
+    <span class="p">[</span><span class="n">encoder</span> <span class="n">popDebugGroup</span><span class="p">];</span> <span class="c1">// Pops "Fragment Setup"</span>
+
+    <span class="p">[</span><span class="n">encoder</span> <span class="nv">pushDebugGroup</span><span class="p">:</span><span class="s">@"Draw Calls"</span><span class="p">];</span>
+    <span class="c1">// Drawing commands</span>
+    <span class="p">[</span><span class="n">encoder</span> <span class="n">popDebugGroup</span><span class="p">];</span> <span class="c1">// Pops "Draw Calls"</span>
+
+<span class="p">[</span><span class="n">encoder</span> <span class="n">popDebugGroup</span><span class="p">];</span> <span class="c1">// Pops "My Render Pass"</span>
+<span class="p">[</span><span class="n">encoder</span> <span class="n">endEncoding</span><span class="p">];</span>
+</code></pre>
+</div>
+
+<p>执行GPU捕获后调试组在Xcode的调试导航器中的显示方式, 得到下面实例：</p>
+
+<p><img src="/img/post-vscode/prof14.jpg" alt="" /></p>
+
+<h4 id="capture-a-device-or-command-queue---捕获设备或命令队列">Capture a Device or Command Queue - 捕获设备或命令队列</h4>
+
+<p>开始捕获特定MTLDevice或MTLCommandQueue的命令，请调用startCaptureWithDevice:或startCaptureWithCommandQueue:方法。 要停止捕获命令，请调用stopCapture方法。</p>
+
+<div class="language-swift highlighter-rouge"><pre class="highlight"><code><span class="o">-</span> <span class="p">(</span><span class="n">void</span><span class="p">)</span><span class="n">triggerProgrammaticCapture</span>
+<span class="p">{</span>
+    <span class="p">[[</span><span class="kt">MTLCaptureManager</span> <span class="n">sharedCaptureManager</span><span class="p">]</span> <span class="nv">startCaptureWithDevice</span><span class="p">:</span><span class="n">_device</span><span class="p">];</span>
+<span class="p">}</span>
+
+<span class="o">-</span> <span class="p">(</span><span class="n">void</span><span class="p">)</span><span class="n">runMetalCommands</span>
+<span class="p">{</span>
+    <span class="n">id</span><span class="o">&lt;</span><span class="kt">MTLCommandBuffer</span><span class="o">&gt;</span> <span class="n">commandBuffer</span> <span class="o">=</span> <span class="p">[</span><span class="n">_commandQueue</span> <span class="n">commandBuffer</span><span class="p">];</span>
+    <span class="c1">// Do Metal work</span>
+    <span class="p">[</span><span class="n">commandBuffer</span> <span class="n">commit</span><span class="p">];</span>
+    <span class="p">[[</span><span class="kt">MTLCaptureManager</span> <span class="n">sharedCaptureManager</span><span class="p">]</span> <span class="n">stopCapture</span><span class="p">];</span>
+<span class="p">}</span>
+</code></pre>
+</div>
+
+<p>捕获管理器仅捕获捕获开始后创建的MTLCommandBuffer对象中的命令，并在捕获停止之前提交。</p>
+
+<h4 id="capture-a-custom-scope---捕获自定义范围">Capture a Custom Scope - 捕获自定义范围</h4>
+
+<p>要定义MTLCaptureScope的边界，请在要捕获的命令之前和之后调用beginScope和endScope方法。 要开始捕获特定捕获范围的命令，请调用startCaptureWithScope：方法。 当您的应用程序到达给定捕获范围的相应endScope方法时，捕获将停止。</p>
+
+<div class="language-swift highlighter-rouge"><pre class="highlight"><code><span class="o">-</span> <span class="p">(</span><span class="n">void</span><span class="p">)</span><span class="n">setupProgrammaticCaptureScope</span>
+<span class="p">{</span>
+    <span class="n">myCapture</span> <span class="o">=</span> <span class="p">[[</span><span class="kt">MTLCaptureManager</span> <span class="n">sharedCaptureManager</span><span class="p">]</span> <span class="nv">newCaptureScopeWithDevice</span><span class="p">:</span><span class="n">device</span><span class="p">];</span>
+    <span class="n">myCapture</span><span class="o">.</span><span class="n">label</span> <span class="o">=</span> <span class="s">@"My Capture Scope"</span><span class="p">;</span>
+<span class="p">}</span>
+
+<span class="o">-</span> <span class="p">(</span><span class="n">void</span><span class="p">)</span><span class="n">triggerProgrammaticCaptureScope</span>
+<span class="p">{</span>
+    <span class="p">[[</span><span class="kt">MTLCaptureManager</span> <span class="n">sharedCaptureManager</span><span class="p">]</span> <span class="nv">startCaptureWithScope</span><span class="p">:</span><span class="n">myCapture</span><span class="p">];</span>
+<span class="p">}</span>
+
+<span class="o">-</span> <span class="p">(</span><span class="n">void</span><span class="p">)</span><span class="n">runMetalCommands</span>
+<span class="p">{</span>
+    <span class="p">[</span><span class="n">myCapture</span> <span class="n">beginScope</span><span class="p">];</span>
+    <span class="n">id</span><span class="o">&lt;</span><span class="kt">MTLCommandBuffer</span><span class="o">&gt;</span> <span class="n">commandBuffer</span> <span class="o">=</span> <span class="p">[</span><span class="n">_commandQueue</span> <span class="n">commandBuffer</span><span class="p">];</span>
+    <span class="c1">// Do Metal work</span>
+    <span class="p">[</span><span class="n">commandBuffer</span> <span class="n">commit</span><span class="p">];</span>
+    <span class="p">[</span><span class="n">myCapture</span> <span class="n">endScope</span><span class="p">];</span>
+<span class="p">}</span>
+</code></pre>
+</div>
+
+<p>捕获范围仅捕获在范围开始之后创建的MTLCommandBuffer对象中的命令，并在范围结束之前提交。</p>
+
+<p>要从调试栏捕获自定义范围：</p>
+<ol>
+  <li>在Metal代码中，使用MTLCaptureManager和MTLCaptureScope实现自定义捕获范围。</li>
+  <li>在Xcode中，在物理设备上运行Metal应用程序。</li>
+  <li>在调试栏中，单击并按住Capture GPU Frame按钮。</li>
+  <li>从Capture Scope上下文菜单中，选择自定义捕获范围。</li>
+</ol>
+
+<p><img src="/img/post-vscode/prof15.jpg" alt="" /></p>
+
+<h4 id="performing-a-gpu-capture-from-a-breakpoint---从断点执行gpu捕获">Performing a GPU Capture from a Breakpoint - 从断点执行GPU捕获</h4>
+
+<p>使用Xcode的断点操作在应用程序的断点处执行自动GPU捕获。当您的应用程序到达代码中的特定行时，Xcode可以自动执行GPU捕获，这允许您在断点处捕获应用程序GPU状态的快照。</p>
+
+<p>要为断点设置GPU捕获：</p>
+
+<ol>
+  <li>在代码中添加断点。</li>
+  <li>按住Control键并单击断点，然后选择Edit Breakpoint以打开GPU Capture对话框。</li>
+  <li>单击“添加”按钮（+），然后从Action菜单中选择Capture GPU Frame。<br />
+现在，当调试器到达断点时，Xcode会自动执行GPU捕获。</li>
+</ol>
+
+<p><img src="/img/post-vscode/prof16.jpg" alt="" /></p>
+
 <h2 id="参考">参考</h2>
 
 <ul>
@@ -426,6 +539,7 @@ MathJax.Hub.Config({
   <li><a href="https://developer.apple.com/documentation/metal/mtlrendercommandencoder">MTLRenderCommandEncoder, Apple Metal</a></li>
   <li><a href="https://developer.apple.com/documentation/metal/rendering_a_scene_with_deferred_lighting_in_objective-c?preferredLanguage=occ">Rendering a Scene with Deferred Lighting in Objective-C</a></li>
   <li><a href="https://developer.apple.com/documentation/metal/gpu_features/understanding_gpu_family_4/about_tile_shading?language=objc">Metal Tile Shading, Apple</a></li>
+  <li><a href="https://www.jianshu.com/p/d6347f8aedd8">工具、分析和调试之Metal GPU Capture</a></li>
 </ul>
 
 
@@ -543,7 +657,7 @@ MathJax.Hub.Config({
   <li><a href="https://github.com/huailiang" target="_blank"><i class="icon icon-github"></i></a></li>
 </ul>
     <p class="txt-medium-gray">
-      <small>&copy;2020 All rights reserved. </small>
+      <small>&copy;2021 All rights reserved. </small>
     </p>
   </div>
 </footer>
