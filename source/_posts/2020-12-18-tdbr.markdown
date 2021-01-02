@@ -199,32 +199,29 @@ __注意：__
 2. 另外一种情况就是Tile Based Shading，这种情况其实是有显式的启用方法的，会有一个专门的描述RenderPipelineState的MTLTileRenderPipelineDescriptor，可以指定采样规模和tileFunction等
 
 ```swift
-MTLTileRenderPipelineDescriptor *tileRenderPipelineDescriptor = [MTLTileRenderPipelineDescriptor new];
+MTLTileRenderPipelineDescriptor *tileDescriptor = [MTLTileRenderPipelineDescriptor new];
 id <MTLFunction> lightCullingKernel = [defaultLibrary newFunctionWithName:@"cull_lights"];
-tileRenderPipelineDescriptor.tileFunction = lightCullingKernel;
-tileRenderPipelineDescriptor.label = @"Light Culling";
-tileRenderPipelineDescriptor.rasterSampleCount = AAPLNumSamples;
-
-tileRenderPipelineDescriptor.colorAttachments[AAPLRenderTargetLighting].pixelFormat = view.colorPixelFormat;
-tileRenderPipelineDescriptor.colorAttachments[AAPLRenderTargetDepth].pixelFormat = AAPLDepthDataPixelFormat;
-
-tileRenderPipelineDescriptor.threadgroupSizeMatchesTileSize = YES;
-_lightCullingPipelineState = [_device newRenderPipelineStateWithTileDescriptor:tileRenderPipelineDescriptor
+tileDescriptor.tileFunction = lightCullingKernel;
+tileDescriptor.label = @"Light Culling";
+tileDescriptor.rasterSampleCount = AAPLNumSamples;
+tileDescriptor.colorAttachments[AAPLRenderTargetLighting].pixelFormat = view.colorPixelFormat;
+tileDescriptor.colorAttachments[AAPLRenderTargetDepth].pixelFormat = AAPLDepthDataPixelFormat;
+tileDescriptor.threadgroupSizeMatchesTileSize = YES;
+_lightCullingPipelineState = [_device newRenderPipelineStateWithTileDescriptor:tileDescriptor
                                                                         options:0 reflection:nil error:&error];
 
 NSAssert(_lightCullingPipelineState, @"Failed to create pipeline state: %@", error);
-
 ```
 
 显式启用tile shader的方式是dispatch线程组，指定每个tile上的线程组规模，进行计算。同时可以在tile memory上设置buffer数据或者threadgroup memory数据等：
 
 ```swift
-[renderEncoder setRenderPipelineState:_lightCullingPipelineState];
-[renderEncoder setThreadgroupMemoryLength:AAPLThreadgroupBufferSize offset:0 atIndex:AAPLThreadgroupBufferIndexLightList];
-[renderEncoder setThreadgroupMemoryLength:AAPLTileDataSize offset:AAPLThreadgroupBufferSize atIndex:AAPLThreadgroupBufferIndexTileData];
-[renderEncoder setTileBuffer:_uniformBuffers[_currentBufferIndex] offset:0 atIndex:AAPLBufferIndexUniforms];
-[renderEncoder setTileBuffer:_lightEyePositions[_currentBufferIndex] offset:0 atIndex:AAPLBufferIndexLightsPosition];
-[renderEncoder dispatchThreadsPerTile:MTLSizeMake(AAPLTileWidth,AAPLTileHeight,1)];
+[encoder setRenderPipelineState:_lightCullingPipelineState];
+[encoder setThreadgroupMemoryLength:AAPLThreadgroupBufferSize offset:0 atIndex:AAPLThreadgroupBufferIndexLightList];
+[encoder setThreadgroupMemoryLength:AAPLTileDataSize offset:AAPLThreadgroupBufferSize atIndex:AAPLThreadgroupBufferIndexTileData];
+[encoder setTileBuffer:_uniformBuffers[_currentBufferIndex] offset:0 atIndex:AAPLBufferIndexUniforms];
+[encoder setTileBuffer:_lightEyePositions[_currentBufferIndex] offset:0 atIndex:AAPLBufferIndexLightsPosition];
+[encoder dispatchThreadsPerTile:MTLSizeMake(AAPLTileWidth,AAPLTileHeight,1)];
 ```
 
 上述代码中， cull_lights是shader中定义的核函数， 形式如下：
@@ -289,6 +286,7 @@ Unity升级到2019.3之后的版本，IL转换的c++代码， 单独输出到Uni
 
 可以看到右下角区域[Encoders][i6], 列出了和Unity Debuger的对应的URP渲染管线，通过对比发现，xcode里可以看到更多对应的API和过程。
 
+
 同时可以看到右上角的时间线，横向表示渲染管线每个PASS绘制顺序， 纵向代表每个PASS 内部渲染流程（顶点变换/片元着色） 每个块显示着对应的执行时间，Attachment预览，三角数量。
 
 点击CommandBuffer选项， 可以查看每个PASS输出的Attachment，包含深度、颜色、模板缓冲
@@ -315,6 +313,7 @@ Unity升级到2019.3之后的版本，IL转换的c++代码， 单独输出到Uni
 然而Unity的Debuger中也可以更方便的切换Batcher绘制流程，以及Shader输入的参数（包含前面pass的输出RT以及CPU端计算得来矩阵），二者结合起来使用才会使调试变得得心顺手。
 
 
+
 ### 查看编译Shader
 
 点击图中导航栏， 可以切换到Shader, 这里是引擎转换好的shader代码：
@@ -323,6 +322,117 @@ Unity升级到2019.3之后的版本，IL转换的c++代码， 单独输出到Uni
 
 遗憾的是, xcode不支持像Nvidia Nsight那样对shader每行进行断点调试。
 
+## 以编程方式执行GPU捕获
+
+命令缓冲区和命令编码器提供以下方法，使您可以轻松识别应用程序中特定的Metal命令组：
+
+* MTLCommandBuffer [pushDebugGroup][i9], [popDebugGroup][i10]
+* MTLCommandEncoder [pushDebugGroup][i11], [popDebugGroup][i12], [insertDebugSignpost][i13]
+
+使用这些方法可以简化应用程序开发过程，尤其是对于每个缓冲区或编码器使用许多Metal命令的任务。
+
+Debug组被推送并弹出到仅在其关联的MTLCommandBuffer或MTLCommandEncoder的生命周期内存在的唯一堆栈上。 您可以通过将多个组推入堆栈来嵌套调试组，然后从堆栈中弹出以前的组。
+
+```swift
+id<MTLRenderCommandEncoder> encoder = [commandBuffer renderCommandEncoderWithDescriptor:renderPassDescriptor];
+encoder.label = @"My Render Encoder";
+[encoder pushDebugGroup:@"My Render Pass"];
+
+    [encoder pushDebugGroup:@"Pipeline Setup"];
+    // Render pipeline commands
+    [encoder popDebugGroup]; // Pops "Pipeline Setup"
+
+    [encoder pushDebugGroup:@"Vertex Setup"];
+    // Vertex function commands
+    [encoder popDebugGroup]; // Pops "Vertex Setup"
+
+    [encoder pushDebugGroup:@"Fragment Setup"];
+    // Fragment function commands
+    [encoder popDebugGroup]; // Pops "Fragment Setup"
+
+    [encoder pushDebugGroup:@"Draw Calls"];
+    // Drawing commands
+    [encoder popDebugGroup]; // Pops "Draw Calls"
+
+[encoder popDebugGroup]; // Pops "My Render Pass"
+[encoder endEncoding];
+```
+
+执行GPU捕获后调试组在Xcode的调试导航器中的显示方式, 得到下面实例：
+
+![](/img/post-vscode/prof14.jpg)
+
+
+#### Capture a Device or Command Queue - 捕获设备或命令队列
+
+开始捕获特定MTLDevice或MTLCommandQueue的命令，请调用startCaptureWithDevice:或startCaptureWithCommandQueue:方法。 要停止捕获命令，请调用stopCapture方法。
+
+```swift
+- (void)triggerProgrammaticCapture
+{
+    [[MTLCaptureManager sharedCaptureManager] startCaptureWithDevice:_device];
+}
+
+- (void)runMetalCommands
+{
+    id<MTLCommandBuffer> commandBuffer = [_commandQueue commandBuffer];
+    // Do Metal work
+    [commandBuffer commit];
+    [[MTLCaptureManager sharedCaptureManager] stopCapture];
+}
+```
+
+捕获管理器仅捕获捕获开始后创建的MTLCommandBuffer对象中的命令，并在捕获停止之前提交。
+
+#### Capture a Custom Scope - 捕获自定义范围
+
+要定义MTLCaptureScope的边界，请在要捕获的命令之前和之后调用beginScope和endScope方法。 要开始捕获特定捕获范围的命令，请调用startCaptureWithScope：方法。 当您的应用程序到达给定捕获范围的相应endScope方法时，捕获将停止。
+
+```swift
+- (void)setupProgrammaticCaptureScope
+{
+    myCapture = [[MTLCaptureManager sharedCaptureManager] newCaptureScopeWithDevice:device];
+    myCapture.label = @"My Capture Scope";
+}
+
+- (void)triggerProgrammaticCaptureScope
+{
+    [[MTLCaptureManager sharedCaptureManager] startCaptureWithScope:myCapture];
+}
+
+- (void)runMetalCommands
+{
+    [myCapture beginScope];
+    id<MTLCommandBuffer> commandBuffer = [_commandQueue commandBuffer];
+    // Do Metal work
+    [commandBuffer commit];
+    [myCapture endScope];
+}
+```
+
+捕获范围仅捕获在范围开始之后创建的MTLCommandBuffer对象中的命令，并在范围结束之前提交。
+
+要从调试栏捕获自定义范围：
+1. 在Metal代码中，使用MTLCaptureManager和MTLCaptureScope实现自定义捕获范围。
+2. 在Xcode中，在物理设备上运行Metal应用程序。
+3. 在调试栏中，单击并按住Capture GPU Frame按钮。 
+4. 从Capture Scope上下文菜单中，选择自定义捕获范围。 
+
+![](/img/post-vscode/prof15.jpg)
+
+
+#### Performing a GPU Capture from a Breakpoint - 从断点执行GPU捕获
+
+使用Xcode的断点操作在应用程序的断点处执行自动GPU捕获。当您的应用程序到达代码中的特定行时，Xcode可以自动执行GPU捕获，这允许您在断点处捕获应用程序GPU状态的快照。
+
+要为断点设置GPU捕获：
+
+1. 在代码中添加断点。
+2. 按住Control键并单击断点，然后选择Edit Breakpoint以打开GPU Capture对话框。
+3. 单击“添加”按钮（+），然后从Action菜单中选择Capture GPU Frame。
+现在，当调试器到达断点时，Xcode会自动执行GPU捕获。
+
+![](/img/post-vscode/prof16.jpg)
 
 ## 参考
 
@@ -334,6 +444,7 @@ Unity升级到2019.3之后的版本，IL转换的c++代码， 单独输出到Uni
 * [MTLRenderCommandEncoder, Apple Metal][i6]
 * [Rendering a Scene with Deferred Lighting in Objective-C][i7]
 * [Metal Tile Shading, Apple][i8]
+* [工具、分析和调试之Metal GPU Capture][i14]
 
 [i1]: https://docs.unity3d.com/Manual/XcodeFrameDebuggerIntegration.html
 [i2]: https://zhuanlan.zhihu.com/p/92840602
@@ -343,3 +454,9 @@ Unity升级到2019.3之后的版本，IL转换的c++代码， 单独输出到Uni
 [i6]: https://developer.apple.com/documentation/metal/mtlrendercommandencoder
 [i7]: https://developer.apple.com/documentation/metal/rendering_a_scene_with_deferred_lighting_in_objective-c?preferredLanguage=occ
 [i8]: https://developer.apple.com/documentation/metal/gpu_features/understanding_gpu_family_4/about_tile_shading?language=objc
+[i9]: apple-reference-documentation://hccHO83eL9
+[i10]: apple-reference-documentation://hcSdBH6zeg
+[i11]: apple-reference-documentation://hcSFx3xv_I
+[i12]: apple-reference-documentation://hc3or-hf1t
+[i13]: apple-reference-documentation://hcqMH5ua-2
+[i14]: https://www.jianshu.com/p/d6347f8aedd8
