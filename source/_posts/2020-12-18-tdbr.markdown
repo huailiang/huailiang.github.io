@@ -207,8 +207,8 @@ tileDescriptor.rasterSampleCount = AAPLNumSamples;
 tileDescriptor.colorAttachments[AAPLRenderTargetLighting].pixelFormat = view.colorPixelFormat;
 tileDescriptor.colorAttachments[AAPLRenderTargetDepth].pixelFormat = AAPLDepthDataPixelFormat;
 tileDescriptor.threadgroupSizeMatchesTileSize = YES;
-_lightCullingPipelineState = [_device newRenderPipelineStateWithTileDescriptor:tileDescriptor
-                                                                        options:0 reflection:nil error:&error];
+lightCullingPipelineState = [_device newRenderPipelineStateWithTileDescriptor:tileDescriptor
+                                options:0 reflection:nil error:&error];
 
 NSAssert(_lightCullingPipelineState, @"Failed to create pipeline state: %@", error);
 ```
@@ -216,11 +216,11 @@ NSAssert(_lightCullingPipelineState, @"Failed to create pipeline state: %@", err
 显式启用tile shader的方式是dispatch线程组，指定每个tile上的线程组规模，进行计算。同时可以在tile memory上设置buffer数据或者threadgroup memory数据等：
 
 ```swift
-[encoder setRenderPipelineState:_lightCullingPipelineState];
+[encoder setRenderPipelineState:lightCullingPipelineState];
 [encoder setThreadgroupMemoryLength:AAPLThreadgroupBufferSize offset:0 atIndex:AAPLThreadgroupBufferIndexLightList];
 [encoder setThreadgroupMemoryLength:AAPLTileDataSize offset:AAPLThreadgroupBufferSize atIndex:AAPLThreadgroupBufferIndexTileData];
-[encoder setTileBuffer:_uniformBuffers[_currentBufferIndex] offset:0 atIndex:AAPLBufferIndexUniforms];
-[encoder setTileBuffer:_lightEyePositions[_currentBufferIndex] offset:0 atIndex:AAPLBufferIndexLightsPosition];
+[encoder setTileBuffer:_uniformBuffers[currentBufferIndex] offset:0 atIndex:AAPLBufferIndexUniforms];
+[encoder setTileBuffer:_lightEyePositions[currentBufferIndex] offset:0 atIndex:AAPLBufferIndexLightsPosition];
 [encoder dispatchThreadsPerTile:MTLSizeMake(AAPLTileWidth,AAPLTileHeight,1)];
 ```
 
@@ -375,7 +375,7 @@ encoder.label = @"My Render Encoder";
 
 - (void)runMetalCommands
 {
-    id<MTLCommandBuffer> commandBuffer = [_commandQueue commandBuffer];
+    id<MTLCommandBuffer> commandBuffer = [commandQueue commandBuffer];
     // Do Metal work
     [commandBuffer commit];
     [[MTLCaptureManager sharedCaptureManager] stopCapture];

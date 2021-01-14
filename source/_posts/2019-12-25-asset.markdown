@@ -112,6 +112,29 @@ GameObject go;
 
 ![](/img/post-unity/im9.jpg)
 
+## 关于卸载bunlde中加载出的原生Prefab
+
+如下面代码， obj是Instance之前的从Bundle中加载出来的GameObject:
+
+```cs
+ var pa = Application.streamingAssetsPath;
+var bundle = AssetBundle.LoadFromFile(pa + "/cube");
+obj = bundle.LoadAsset<GameObject>("cube");
+```
+
+若想卸载此obj， 编辑器下不能直接通过UnityEngine.Object.Destroy(obj) 接口来卸载，否则会报下图的错误：
+
+![](/img/post-unity/im13.jpg)
+
+但是此方法可以在手机上正常卸载， 所以代码里只用写一个宏区分一下平台就可以了。
+
+```cs
+#if !UNITY_EDITOR
+UnityEngine.Object.Destroy(obj);
+AssetBundle.UnloadAllAssetBundles(false);
+#endif
+```
+
 ### 关于material和sharematerial的区别
 
 官方对materail的解释
