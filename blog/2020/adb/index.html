@@ -1,0 +1,420 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <meta http-equiv="X-UA-Compatible" content="IE=edge">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+
+  <title>Android下的特殊文件夹</title>
+  <meta name="description"
+    content="">
+
+  <link rel="shortcut icon" href="/img/favicon.ico">
+  <link rel="stylesheet" href="/css/main.css">
+  <link rel="canonical" href="https://huailiang.github.io/blog/2020/adb/">
+
+</head>
+
+<body>
+  <main>
+    <header class="site-header">
+  <div class="container">
+    <h1><a href="/">Hom<span>e</span></a></h1>
+
+    <button type="button" class="sliding-panel-button">
+      <span></span>
+      <span></span>
+      <span></span>
+    </button>
+
+    <nav class="navbar sliding-panel-content">
+      <ul>
+        
+        <li><a href="/about" title="About">About</a>
+        </li>
+        
+        <li><a href="/blog" title="Blog">Blog</a>
+        </li>
+        
+       <li><a href="/category/" target="_blank"><i class="icon icon-feed"></i></a></li>
+      </ul>
+    </nav>
+  </div>
+</header>
+
+<div class="sliding-panel-fade-screen"></div>
+    <script type="text/javascript" src="/js/MathJax.js?config=TeX-AMS-MML_HTMLorMML"></script>
+
+<script type="text/x-mathjax-config">
+MathJax.Hub.Config({
+  tex2jax: {
+    inlineMath: [['$','$'], ['\\(','\\)']],
+    processEscapes: true
+  }
+});
+</script>
+
+<script type="text/x-mathjax-config">
+  MathJax.Hub.Config({
+    tex2jax: {
+      skipTags: ['script', 'noscript', 'style', 'textarea', 'pre', 'code']
+    }
+  });
+
+</script>
+    <div class="container">
+      <article role="article" class="post">
+
+  <div class="card">
+    <header class="post-header">
+      <h1 class="post-title">Android下的特殊文件夹</h1>
+      <p class="post-meta">Jan 18, 2020 •
+        huailiang</p>
+    </header>
+
+    <div class="post-content">
+      <blockquote>
+
+</blockquote>
+
+<h3 id="文件架构">文件架构</h3>
+
+<p>Android目录下有很多固定名字的文件夹， 类似Unity中的Resources, Editor这些文件夹， 用来标记相关特殊的功能。具体如下列表：</p>
+
+<ul>
+  <li>assets资产目录，这里面的文件会被打包到应用成的apk（安装包）里面，不会被本地化（不会被转成二进制文件）</li>
+  <li>bin 编译后的文件目录</li>
+  <li>gen 自动生成的文件目录 用于统一管理资源，通过id使用资源</li>
+  <li>project.properties 代表编译的版本，对应android.jar的版本eg： target= android-19</li>
+  <li>libs支持jar包，会被添加到android depend</li>
+  <li>res资源目录（会把某些文件存为二进制文件）
+    <ul>
+      <li>drawable存放应用的图片资源，android系统会根据你的手机分辨率加载不同的图片</li>
+      <li>layout布局文件（设置界面显示样式）</li>
+      <li>menu设置菜单文件</li>
+      <li>values包含一些字符串等等</li>
+    </ul>
+  </li>
+  <li>AndroidManifest.xml本应用的配置信息
+    <ul>
+      <li>package：唯一标示一个应用的包名</li>
+      <li>versionCode：版本代码</li>
+      <li>versionName：版本名</li>
+      <li>minSdkVersion：支持的最小版本</li>
+      <li>targetSdkVersion：目标版本（一般高版本手机支持低版本应用）</li>
+      <li>application：icon应用图标，label应用名，activity声明活动</li>
+    </ul>
+  </li>
+</ul>
+
+<h3 id="streamingassets">StreamingAssets</h3>
+
+<p>unity中的StreamingAssets目录通常用来放一些Bundle，或者诸如Fmod的Bank文件， 但此文件夹在Windows平台和IOS平台下可以通过IO接口直接访问, 这就意味着我们可以使用多线程或者线程池来高效率的读取资源。 但遗憾的是这接口不支持Android。 那具体Android如何存储StreamingAssets下的文件呢？</p>
+
+<p>一般的话， 我们可以通过Assetbundle或者WWW的接口来获取StreamingAssets下的资源， 但需要转换下路径， 不能使用物理路径， 而是相应的需要是映射的虚拟路径。官方推荐使用Application.streamingAssetsPath来获得该文件夹的实际位置，其可以规避平台差异。</p>
+<ul>
+  <li>对于ios平台，其等价于:Application.dataPath + “/Raw”;</li>
+  <li>对于android平台，其等价于:”jar:file://” + Application.dataPath + “!/assets/”;</li>
+</ul>
+
+<div class="language-csharp highlighter-rouge"><pre class="highlight"><code><span class="k">private</span> <span class="k">void</span> <span class="nf">SetupPath</span><span class="p">()</span>
+<span class="p">{</span>
+    <span class="k">switch</span> <span class="p">(</span><span class="n">Application</span><span class="p">.</span><span class="n">platform</span><span class="p">)</span>
+    <span class="p">{</span>
+        <span class="k">case</span> <span class="n">RuntimePlatform</span><span class="p">.</span><span class="n">Android</span><span class="p">:</span>
+            <span class="n">BundleRootDefault</span> <span class="p">=</span> <span class="kt">string</span><span class="p">.</span><span class="nf">Format</span><span class="p">(</span><span class="s">"{0}!assets/{1}/"</span><span class="p">,</span> <span class="n">Application</span><span class="p">.</span><span class="n">dataPath</span><span class="p">,</span> <span class="n">BundleFolder</span><span class="p">);</span>
+            <span class="k">break</span><span class="p">;</span>
+        <span class="k">case</span> <span class="n">RuntimePlatform</span><span class="p">.</span><span class="n">IPhonePlayer</span><span class="p">:</span>
+            <span class="n">BundleRootDefault</span> <span class="p">=</span> <span class="kt">string</span><span class="p">.</span><span class="nf">Format</span><span class="p">(</span><span class="s">"{0}/Raw/{1}/"</span><span class="p">,</span> <span class="n">Application</span><span class="p">.</span><span class="n">dataPath</span><span class="p">,</span> <span class="n">BundleFolder</span><span class="p">);</span>
+            <span class="k">break</span><span class="p">;</span>
+        <span class="k">default</span><span class="p">:</span>
+            <span class="n">BundleRootDefault</span> <span class="p">=</span> <span class="kt">string</span><span class="p">.</span><span class="nf">Format</span><span class="p">(</span><span class="s">"{0}/StreamingAssets/{1}/"</span><span class="p">,</span> <span class="n">Application</span><span class="p">.</span><span class="n">dataPath</span><span class="p">,</span> <span class="n">BundleFolder</span><span class="p">);</span>
+            <span class="k">break</span><span class="p">;</span>
+    <span class="p">}</span>
+<span class="p">}</span>
+</code></pre>
+</div>
+
+<p>但底层Unity生成的Android包安装之后， 究竟是如何存储的， 这里通过实验的方法一探究竟：</p>
+
+<p>第一步， 我们先在StreamingAssets目录下， 放几个文件， 如下图所示：</p>
+
+<p><img src="/img/post-android/jar1.jpg" alt="" /></p>
+
+<p>第二步，生成Gradle工程(工程放在跟Asset目录同级的Temp文件夹下)， 这里我们发现StreamingAssets目录下的文件其实对应assets文件夹， 并且我们发现gradle生成的apk的过程中，build文件夹下的目录：</p>
+
+<p><img src="/img/post-android/jar2.jpg" alt="" /></p>
+
+<p>第三步， 安装生成的apk， 这里需要一台root的手机或者模拟器， 这里选择网易的mumu模拟器， 直接在设置里勾一下重启就Root掉了， 真是方便。</p>
+
+<p><img src="/img/post-android/jar3.jpg" alt="" /></p>
+
+<p>StreamingAssets安装之后，默认解压到/data/app/包名 文件夹下， 我们通过abd shell命令进入手机（需要电脑配置好Android开发环境。</p>
+
+<p><img src="/img/post-android/jar4.jpg" alt="" /></p>
+
+<p>可以看到里面有个base.apk, 通过命令查看其占用磁盘大小， 基本可以定位这个就是我们放置StreamingAssets文件的</p>
+
+<div class="language-sh highlighter-rouge"><pre class="highlight"><code>du -h base.apk
+</code></pre>
+</div>
+
+<p>我们知道.apk本质就是zip压缩， 这里我们改其后缀， 然后使用unzip命令解压， 就可以看到一开始Unity放入StreamingAssets里的文件啦。</p>
+
+<p><img src="/img/post-android/jar5.jpg" alt="" /></p>
+
+<p>访问assets文件夹下的资源， 可以通过java或者JNI的接口：</p>
+
+<div class="language-java highlighter-rouge"><pre class="highlight"><code><span class="kd">public</span> <span class="n">String</span> <span class="nf">readFromAssets</span><span class="o">(</span><span class="n">String</span> <span class="n">name</span><span class="o">){</span>
+<span class="n">String</span> <span class="n">resultStr</span> <span class="o">=</span> <span class="s">""</span><span class="o">;</span>
+<span class="k">try</span> <span class="o">{</span>
+    <span class="n">InputStream</span> <span class="n">inStream</span> <span class="o">=</span> <span class="k">this</span><span class="o">.</span><span class="na">getResources</span><span class="o">().</span><span class="na">getAssets</span><span class="o">().</span><span class="na">open</span><span class="o">(</span><span class="n">name</span><span class="o">);</span>
+    <span class="n">resultStr</span> <span class="o">=</span> <span class="n">convertStream2String</span><span class="o">(</span><span class="n">inStream</span><span class="o">);</span>
+
+    <span class="c1">//convertStreamToString(inStream);</span>
+<span class="o">}</span> <span class="k">catch</span> <span class="o">(</span><span class="n">IOException</span> <span class="n">e</span><span class="o">)</span> <span class="o">{</span>
+    <span class="c1">// TODO Auto-generated catch block</span>
+    <span class="n">e</span><span class="o">.</span><span class="na">printStackTrace</span><span class="o">();</span>
+<span class="o">}</span>
+<span class="k">return</span> <span class="n">resultStr</span><span class="o">;</span>
+</code></pre>
+</div>
+
+<p>JNI的c++接口:</p>
+<div class="language-c++ highlighter-rouge"><pre class="highlight"><code><span class="cp">#include "mylog.h"
+#include &lt;jni.h&gt;
+#include &lt;sys/types.h&gt;
+#include &lt;stdlib.h&gt;
+#include &lt;android/asset_manager_jni.h&gt;
+#include &lt;android/asset_manager.h&gt;
+</span> 
+<span class="c1">//jclass clazz,
+</span><span class="k">extern</span> <span class="s">"C"</span><span class="p">{</span>
+<span class="n">JNIEXPORT</span>  <span class="n">jstring</span>  <span class="n">JNICALL</span> <span class="n">Java_org_yanzi_lib_MyLib_readFromAssets</span><span class="p">(</span><span class="n">JNIEnv</span><span class="o">*</span> <span class="n">env</span><span class="p">,</span><span class="n">jclass</span> <span class="n">clazz</span><span class="p">,</span> <span class="n">jobject</span> <span class="n">assetManager</span><span class="p">,</span><span class="n">jstring</span> <span class="n">name</span><span class="p">);</span>
+<span class="n">JNIEXPORT</span>  <span class="n">jstring</span> <span class="n">JNICALL</span> <span class="n">Java_org_yanzi_lib_MyLib_readFromAssets</span><span class="p">(</span><span class="n">JNIEnv</span><span class="o">*</span> <span class="n">env</span><span class="p">,</span> <span class="n">jclass</span> <span class="n">clazz</span><span class="p">,</span> <span class="n">jobject</span> <span class="n">assetManager</span><span class="p">,</span><span class="n">jstring</span> <span class="n">name</span><span class="p">){</span>
+	<span class="n">LOGI</span><span class="p">(</span><span class="s">"readFromAssets enter..."</span><span class="p">);</span> <span class="c1">//jclass this,
+</span>	<span class="n">jstring</span> <span class="n">resultStr</span><span class="p">;</span>
+	<span class="n">LOGI</span><span class="p">(</span><span class="s">"readFromAssets enter111..."</span><span class="p">);</span>
+	<span class="n">AAssetManager</span><span class="o">*</span> <span class="n">mgr</span> <span class="o">=</span> <span class="n">AAssetManager_fromJava</span><span class="p">(</span><span class="n">env</span><span class="p">,</span> <span class="n">assetManager</span><span class="p">);</span>
+	<span class="n">LOGI</span><span class="p">(</span><span class="s">"readFromAssets enter000..."</span><span class="p">);</span>
+	<span class="k">if</span><span class="p">(</span><span class="n">mgr</span><span class="o">==</span><span class="nb">NULL</span><span class="p">)</span>
+	<span class="p">{</span>
+		<span class="n">LOGI</span><span class="p">(</span><span class="s">" %s"</span><span class="p">,</span><span class="s">"AAssetManager==NULL"</span><span class="p">);</span>
+		<span class="k">return</span> <span class="mi">0</span><span class="p">;</span>
+	<span class="p">}</span>
+ 
+	<span class="cm">/*获取文件名并打开*/</span>
+	<span class="n">jboolean</span> <span class="n">iscopy</span><span class="p">;</span>
+	<span class="k">const</span> <span class="kt">char</span> <span class="o">*</span><span class="n">mfile</span> <span class="o">=</span> <span class="n">env</span><span class="o">-&gt;</span><span class="n">GetStringUTFChars</span><span class="p">(</span><span class="n">name</span><span class="p">,</span> <span class="o">&amp;</span><span class="n">iscopy</span><span class="p">);</span> <span class="c1">//(*env)-&gt;GetStringUTFChars(name, &amp;iscopy); env,
+</span>	<span class="n">AAsset</span><span class="o">*</span> <span class="n">asset</span> <span class="o">=</span> <span class="n">AAssetManager_open</span><span class="p">(</span><span class="n">mgr</span><span class="p">,</span> <span class="n">mfile</span><span class="p">,</span><span class="n">AASSET_MODE_UNKNOWN</span><span class="p">);</span>
+	<span class="n">env</span><span class="o">-&gt;</span><span class="n">ReleaseStringUTFChars</span><span class="p">(</span><span class="n">name</span><span class="p">,</span> <span class="n">mfile</span><span class="p">);</span> <span class="c1">//env,
+</span>	<span class="k">if</span><span class="p">(</span><span class="n">asset</span><span class="o">==</span><span class="nb">NULL</span><span class="p">)</span>
+	<span class="p">{</span>
+		<span class="n">LOGI</span><span class="p">(</span><span class="s">" %s"</span><span class="p">,</span><span class="s">"asset==NULL"</span><span class="p">);</span>
+		<span class="k">return</span> <span class="mi">0</span><span class="p">;</span>
+	<span class="p">}</span>
+	<span class="cm">/*获取文件大小*/</span>
+	<span class="kt">off_t</span> <span class="n">bufferSize</span> <span class="o">=</span> <span class="n">AAsset_getLength</span><span class="p">(</span><span class="n">asset</span><span class="p">);</span>
+	<span class="n">LOGI</span><span class="p">(</span><span class="s">"file size : %d</span><span class="se">\n</span><span class="s">"</span><span class="p">,</span><span class="n">bufferSize</span><span class="p">);</span>
+	<span class="kt">char</span> <span class="o">*</span><span class="n">buffer</span><span class="o">=</span><span class="p">(</span><span class="kt">char</span> <span class="o">*</span><span class="p">)</span><span class="n">malloc</span><span class="p">(</span><span class="n">bufferSize</span><span class="o">+</span><span class="mi">1</span><span class="p">);</span>
+	<span class="n">buffer</span><span class="p">[</span><span class="n">bufferSize</span><span class="p">]</span><span class="o">=</span><span class="mi">0</span><span class="p">;</span>
+	<span class="kt">int</span> <span class="n">numBytesRead</span> <span class="o">=</span> <span class="n">AAsset_read</span><span class="p">(</span><span class="n">asset</span><span class="p">,</span> <span class="n">buffer</span><span class="p">,</span> <span class="n">bufferSize</span><span class="p">);</span>
+	<span class="n">LOGI</span><span class="p">(</span><span class="s">"readFromAssets: %s"</span><span class="p">,</span><span class="n">buffer</span><span class="p">);</span>
+	<span class="n">resultStr</span> <span class="o">=</span> <span class="n">env</span><span class="o">-&gt;</span><span class="n">NewStringUTF</span><span class="p">(</span><span class="n">buffer</span><span class="p">);</span>
+	<span class="n">free</span><span class="p">(</span><span class="n">buffer</span><span class="p">);</span>
+	<span class="cm">/*关闭文件*/</span>
+	<span class="n">AAsset_close</span><span class="p">(</span><span class="n">asset</span><span class="p">);</span>
+	<span class="n">LOGI</span><span class="p">(</span><span class="s">"readFromAssets exit..."</span><span class="p">);</span>
+	<span class="k">return</span> <span class="n">resultStr</span><span class="p">;</span>
+<span class="p">}</span>
+<span class="p">}</span>
+</code></pre>
+</div>
+
+<p>需要注意的是， 使用JNI的接口，Application.mk文件需要做如下设置：</p>
+
+<p>APP_STL:=gnustl_static<br />
+APP_CPPFLAGS:=-frtti -fexceptions <br />
+APP_ABI:= armeabi-v7a</p>
+
+<h2 id="playerprefs存储路径">PlayerPrefs存储路径</h2>
+
+<p>我们知道PlayerPrefs在windows下， 储存在注册表中， Android平台Unity又是怎么处理的？</p>
+
+<p><img src="/img/post-android/jar6.jpg" alt="" /></p>
+
+<p>通过上图，可以发现PlayerPrefs的值是以xml的形式存储在 /data/data/youPackageName/shared_prefs的目录下。由于不是直接储存在压缩包内， 这个xml应该可以通过io接口访问（需要获取相应的权限， 并在Androidmenifest.xml中声明）， 但是由于非root手机一般都进入不到此文件夹， 我们平时也无法直接在资源管理器里访问或者编辑此xml。</p>
+
+<p>/data/data/youPackageName/即内部存储路径下。所有内部存储中保存的文件在用户卸载应用的时候会被删除。Java访问的接口：</p>
+
+<ul>
+  <li><strong>files</strong>
+    <ul>
+      <li>Context.getFilesDir()，该方法返回/data/data/youPackageName/files的File对象。</li>
+      <li>Context.openFileInput()与Context.openFileOutput()，只能读取和写入files下的文件，返回的是FileInputStream和FileOutputStream对象。</li>
+      <li>Context.fileList()，返回files下所有的文件名，返回的是String[]对象。</li>
+      <li>Context.deleteFile(String)，删除files下指定名称的文件。</li>
+    </ul>
+  </li>
+  <li><strong>cache</strong>
+    <ul>
+      <li>Context.getCacheDir()，该方法返回/data/data/youPackageName/cache的File对象。</li>
+    </ul>
+  </li>
+  <li>
+    <p><strong>custom dir</strong></p>
+
+    <ul>
+      <li>getDir(String name, int mode)，返回/data/data/youPackageName/下的指定名称的文件夹File对象，如果该文件夹不存在则用指定名称创建一个新的文件夹。</li>
+    </ul>
+  </li>
+</ul>
+
+<h2 id="persistentdatapath-temporarycachepath">persistentDataPath, temporaryCachePath</h2>
+
+<p>这两个目录路径在storage/Android/data/youPackageName目录下， 一般</p>
+
+<h2 id="参考">参考</h2>
+
+<ul>
+  <li><a href="https://blog.csdn.net/zy394383693/article/details/40627467">android工程目录结构</a></li>
+  <li><a href="https://www.cnblogs.com/daishuguang/p/3854472.html">Android获取文件夹路径 /data/data/</a></li>
+  <li><a href="https://zhuanlan.zhihu.com/p/87595524">现代图形 API 的内存管理</a></li>
+</ul>
+
+
+    </div>
+  </div>
+
+  <style>
+  .post-nav {
+    overflow: hidden;
+    /* margin-top: 60px; */
+    padding: 12px;
+    white-space: nowrap;
+    /* border-top: 1px solid #eee; */
+  }
+
+  .post-nav-item {
+    display: inline-block;
+    width: 50%;
+    white-space: normal;
+  }
+
+  .post-nav-item a {
+    position: relative;
+    display: inline-block;
+    line-height: 25px;
+    font-size: 14px;
+    color: #555;
+    border-bottom: none;
+  }
+
+  .post-nav-item a:hover {
+    color: #222;
+    font-weight: bold;
+    border-bottom: none;
+  }
+
+  .post-nav-item a:active {
+    top: 2px;
+  }
+
+  .post-nav-item a:before,
+  .post-nav-item a:after {
+    display: inline-block;
+    width: 16px;
+    height: 25px;
+    vertical-align: top;
+    opacity: 0.4;
+    background-size: 16px;
+  }
+
+  .post-nav-none a:none {
+    content: ' ';
+    background-size: 8px;
+  }
+
+  .post-nav-none a:hover:none {
+    opacity: 1;
+  }
+
+  .post-nav-prev a:before {
+    content: ' ';
+    background: url("data:image/svg+xml;base64,PD94bWwgdmVyc2lvbj0iMS4wIiA/PjxzdmcgaGVpZ2h0PSIxMnB4IiB2ZXJzaW9uPSIxLjEiIHZpZXdCb3g9IjAgMCA5IDEyIiB3aWR0aD0iOXB4IiB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHhtbG5zOnNrZXRjaD0iaHR0cDovL3d3dy5ib2hlbWlhbmNvZGluZy5jb20vc2tldGNoL25zIiB4bWxuczp4bGluaz0iaHR0cDovL3d3dy53My5vcmcvMTk5OS94bGluayI+PHRpdGxlLz48ZGVzYy8+PGRlZnMvPjxnIGZpbGw9Im5vbmUiIGZpbGwtcnVsZT0iZXZlbm9kZCIgaWQ9IlBhZ2UtMSIgc3Ryb2tlPSJub25lIiBzdHJva2Utd2lkdGg9IjEiPjxnIGZpbGw9IiMwMDAwMDAiIGlkPSJDb3JlIiB0cmFuc2Zvcm09InRyYW5zbGF0ZSgtMjE4LjAwMDAwMCwgLTkwLjAwMDAwMCkiPjxnIGlkPSJjaGV2cm9uLWxlZnQiIHRyYW5zZm9ybT0idHJhbnNsYXRlKDIxOC41MDAwMDAsIDkwLjAwMDAwMCkiPjxwYXRoIGQ9Ik03LjQsMS40IEw2LDAgTC04Ljg4MTc4NDJlLTE2LDYgTDYsMTIgTDcuNCwxMC42IEwyLjgsNiBMNy40LDEuNCBaIiBpZD0iU2hhcGUiLz48L2c+PC9nPjwvZz48L3N2Zz4=") no-repeat 0 50%;
+    background-size: 8px;
+  }
+
+  .post-nav-prev a:hover:before {
+    opacity: 1;
+  }
+
+  .post-nav-next {
+    text-align: right;
+  }
+
+  .post-nav-next a:after {
+    content: ' ';
+    background: url("data:image/svg+xml;base64,PD94bWwgdmVyc2lvbj0iMS4wIiA/PjxzdmcgaGVpZ2h0PSIxMnB4IiB2ZXJzaW9uPSIxLjEiIHZpZXdCb3g9IjAgMCA5IDEyIiB3aWR0aD0iOXB4IiB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHhtbG5zOnNrZXRjaD0iaHR0cDovL3d3dy5ib2hlbWlhbmNvZGluZy5jb20vc2tldGNoL25zIiB4bWxuczp4bGluaz0iaHR0cDovL3d3dy53My5vcmcvMTk5OS94bGluayI+PHRpdGxlLz48ZGVzYy8+PGRlZnMvPjxnIGZpbGw9Im5vbmUiIGZpbGwtcnVsZT0iZXZlbm9kZCIgaWQ9IlBhZ2UtMSIgc3Ryb2tlPSJub25lIiBzdHJva2Utd2lkdGg9IjEiPjxnIGZpbGw9IiMwMDAwMDAiIGlkPSJDb3JlIiB0cmFuc2Zvcm09InRyYW5zbGF0ZSgtMjYwLjAwMDAwMCwgLTkwLjAwMDAwMCkiPjxnIGlkPSJjaGV2cm9uLXJpZ2h0IiB0cmFuc2Zvcm09InRyYW5zbGF0ZSgyNjAuNTAwMDAwLCA5MC4wMDAwMDApIj48cGF0aCBkPSJNMSwwIEwtMC40LDEuNCBMNC4yLDYgTC0wLjQsMTAuNiBMMSwxMiBMNyw2IEwxLDAgWiIgaWQ9IlNoYXBlIi8+PC9nPjwvZz48L2c+PC9zdmc+") no-repeat 100% 50%;
+    background-size: 8px;
+  }
+
+  .post-nav-next a:hover:after {
+    opacity: 1;
+  }
+</style>
+
+
+
+<div class="post-nav">
+
+  
+  <div class="post-nav-prev post-nav-item">
+    
+    <a href="/blog/2020/job/"> Unity DOTS</a>
+  </div>
+  
+
+  
+  <div class="post-nav-next post-nav-item">
+    
+    <a href="/blog/2020/ray2/"> 光线追踪-降噪与硬件加速</a>
+  </div>
+  
+
+</div>
+
+</article>
+    </div>
+
+    <footer class="site-footer">
+  <div class="container">
+    <ul class="social">
+  <li><a href="https://twitter.com/penghuailiang" target="_blank"><i class="icon icon-twitter"></i></a></li>
+  <li><a href="https://www.zhihu.com/people/huailiangpenguin" target="_blank"><i class="icon icon-zhihu"></i></a></li>
+  <li><a href="https://www.facebook.com/profile.php?id=100004290725320" target="_blank"><i class="icon icon-facebook"></i></a></li>
+  <li><a href="https://weibo.com/6212299692/profile?topnav=1&wvr=6" target="_blank"><i class="icon icon-sina"></i></a></li>
+  <li><a href="https://www.linkedin.com/in/penghuailiang/" target="_blank"><i class="icon icon-linkedin"></i></a></li>
+  <li><a href="https://github.com/huailiang" target="_blank"><i class="icon icon-github"></i></a></li>
+</ul>
+    <p class="txt-medium-gray">
+      <small>&copy;2021 All rights reserved. </small>
+    </p>
+  </div>
+</footer>
+    <a href="https://github.com/huailiang" target="_blank" class="github-corner"><svg width="80" height="80" viewBox="0 0 250 250" style="fill:#337ab7; color:#fff; position: absolute; top: 0; border: 0; right: 0;"><path d="M0,0 L115,115 L130,115 L142,142 L250,250 L250,0 Z"></path><path d="M128.3,109.0 C113.8,99.7 119.0,89.6 119.0,89.6 C122.0,82.7 120.5,78.6 120.5,78.6 C119.2,72.0 123.4,76.3 123.4,76.3 C127.3,80.9 125.5,87.3 125.5,87.3 C122.9,97.6 130.6,101.9 134.4,103.2" fill="currentColor" style="transform-origin: 130px 106px;" class="octo-arm"></path><path d="M115.0,115.0 C114.9,115.1 118.7,116.5 119.8,115.4 L133.7,101.6 C136.9,99.2 139.9,98.4 142.2,98.6 C133.8,88.0 127.5,74.4 143.8,58.0 C148.5,53.4 154.0,51.2 159.7,51.0 C160.3,49.4 163.2,43.6 171.4,40.1 C171.4,40.1 176.1,42.5 178.8,56.2 C183.1,58.6 187.2,61.8 190.9,65.4 C194.5,69.0 197.7,73.2 200.1,77.6 C213.8,80.2 216.3,84.9 216.3,84.9 C212.7,93.1 206.9,96.0 205.4,96.6 C205.1,102.4 203.0,107.8 198.3,112.5 C181.9,128.9 168.3,122.5 157.7,114.1 C157.9,116.9 156.7,120.9 152.7,124.9 L141.0,136.5 C139.8,137.7 141.6,141.9 141.8,141.8 Z" fill="currentColor" class="octo-body"></path></svg></a>
+
+
+    <script src="//code.jquery.com/jquery-1.11.3.min.js"></script>
+    <script>
+      $(document).ready(function () {
+        $('.sliding-panel-button,.sliding-panel-fade-screen,.sliding-panel-close').on('click touchstart', function (e) {
+          $('.sliding-panel-content,.sliding-panel-fade-screen').toggleClass('is-visible');
+          e.preventDefault();
+        });
+      });
+    </script>
+  </main>
+</body>
+
+</html>
