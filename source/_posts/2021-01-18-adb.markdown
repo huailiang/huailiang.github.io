@@ -1,0 +1,212 @@
+---
+layout:     post
+title:      "Android下的特殊文件夹"
+date:       2020-01-18 02:00:00
+author:     "huailiang"
+tags:
+    - 引擎
+---
+
+> 
+
+### 文件架构
+
+Android目录下有很多固定名字的文件夹， 类似Unity中的Resources, Editor这些文件夹， 用来标记相关特殊的功能。具体如下列表：
+
+* assets资产目录，这里面的文件会被打包到应用成的apk（安装包）里面，不会被本地化（不会被转成二进制文件）
+* bin 编译后的文件目录
+* gen 自动生成的文件目录 用于统一管理资源，通过id使用资源
+* project.properties 代表编译的版本，对应android.jar的版本eg： target= android-19
+* libs支持jar包，会被添加到android depend
+* res资源目录（会把某些文件存为二进制文件）
+    - drawable存放应用的图片资源，android系统会根据你的手机分辨率加载不同的图片
+    - layout布局文件（设置界面显示样式）
+    - menu设置菜单文件
+    - values包含一些字符串等等
+* AndroidManifest.xml本应用的配置信息
+    - package：唯一标示一个应用的包名
+    - versionCode：版本代码
+    - versionName：版本名
+    - minSdkVersion：支持的最小版本
+    - targetSdkVersion：目标版本（一般高版本手机支持低版本应用）
+    - application：icon应用图标，label应用名，activity声明活动
+
+
+### StreamingAssets
+
+
+unity中的StreamingAssets目录通常用来放一些Bundle，或者诸如Fmod的Bank文件， 但此文件夹在Windows平台和IOS平台下可以通过IO接口直接访问, 这就意味着我们可以使用多线程或者线程池来高效率的读取资源。 但遗憾的是这接口不支持Android。 那具体Android如何存储StreamingAssets下的文件呢？
+
+一般的话， 我们可以通过Assetbundle或者WWW的接口来获取StreamingAssets下的资源， 但需要转换下路径， 不能使用物理路径， 而是相应的需要是映射的虚拟路径。官方推荐使用Application.streamingAssetsPath来获得该文件夹的实际位置，其可以规避平台差异。
+* 对于ios平台，其等价于:Application.dataPath + "/Raw";
+* 对于android平台，其等价于:"jar:file://" + Application.dataPath + "!/assets/";
+
+```csharp
+private void SetupPath()
+{
+    switch (Application.platform)
+    {
+        case RuntimePlatform.Android:
+            BundleRootDefault = string.Format("{0}!assets/{1}/", Application.dataPath, BundleFolder);
+            break;
+        case RuntimePlatform.IPhonePlayer:
+            BundleRootDefault = string.Format("{0}/Raw/{1}/", Application.dataPath, BundleFolder);
+            break;
+        default:
+            BundleRootDefault = string.Format("{0}/StreamingAssets/{1}/", Application.dataPath, BundleFolder);
+            break;
+    }
+}
+```
+
+但底层Unity生成的Android包安装之后， 究竟是如何存储的， 这里通过实验的方法一探究竟：
+
+
+第一步， 我们先在StreamingAssets目录下， 放几个文件， 如下图所示：
+
+
+![](/img/post-android/jar1.jpg)
+
+
+第二步，生成Gradle工程(工程放在跟Asset目录同级的Temp文件夹下)， 这里我们发现StreamingAssets目录下的文件其实对应assets文件夹， 并且我们发现gradle生成的apk的过程中，build文件夹下的目录：
+
+![](/img/post-android/jar2.jpg)
+
+第三步， 安装生成的apk， 这里需要一台root的手机或者模拟器， 这里选择网易的mumu模拟器， 直接在设置里勾一下重启就Root掉了， 真是方便。
+
+![](/img/post-android/jar3.jpg)
+
+
+StreamingAssets安装之后，默认解压到/data/app/包名 文件夹下， 我们通过abd shell命令进入手机（需要电脑配置好Android开发环境。
+
+
+![](/img/post-android/jar4.jpg)
+
+
+可以看到里面有个base.apk, 通过命令查看其占用磁盘大小， 基本可以定位这个就是我们放置StreamingAssets文件的
+
+```sh
+du -h base.apk
+```
+
+我们知道.apk本质就是zip压缩， 这里我们改其后缀， 然后使用unzip命令解压， 就可以看到一开始Unity放入StreamingAssets里的文件啦。
+
+
+![](/img/post-android/jar5.jpg)
+
+访问assets文件夹下的资源， 可以通过java或者JNI的接口：
+
+```java
+public String readFromAssets(String name){
+String resultStr = "";
+try {
+    InputStream inStream = this.getResources().getAssets().open(name);
+    resultStr = convertStream2String(inStream);
+
+    //convertStreamToString(inStream);
+} catch (IOException e) {
+    // TODO Auto-generated catch block
+    e.printStackTrace();
+}
+return resultStr;
+```
+
+
+JNI的c++接口:
+```c++
+#include "mylog.h"
+#include <jni.h>
+#include <sys/types.h>
+#include <stdlib.h>
+#include <android/asset_manager_jni.h>
+#include <android/asset_manager.h>
+ 
+//jclass clazz,
+extern "C"{
+JNIEXPORT  jstring  JNICALL Java_org_yanzi_lib_MyLib_readFromAssets(JNIEnv* env,jclass clazz, jobject assetManager,jstring name);
+JNIEXPORT  jstring JNICALL Java_org_yanzi_lib_MyLib_readFromAssets(JNIEnv* env, jclass clazz, jobject assetManager,jstring name){
+	LOGI("readFromAssets enter..."); //jclass this,
+	jstring resultStr;
+	LOGI("readFromAssets enter111...");
+	AAssetManager* mgr = AAssetManager_fromJava(env, assetManager);
+	LOGI("readFromAssets enter000...");
+	if(mgr==NULL)
+	{
+		LOGI(" %s","AAssetManager==NULL");
+		return 0;
+	}
+ 
+	/*获取文件名并打开*/
+	jboolean iscopy;
+	const char *mfile = env->GetStringUTFChars(name, &iscopy); //(*env)->GetStringUTFChars(name, &iscopy); env,
+	AAsset* asset = AAssetManager_open(mgr, mfile,AASSET_MODE_UNKNOWN);
+	env->ReleaseStringUTFChars(name, mfile); //env,
+	if(asset==NULL)
+	{
+		LOGI(" %s","asset==NULL");
+		return 0;
+	}
+	/*获取文件大小*/
+	off_t bufferSize = AAsset_getLength(asset);
+	LOGI("file size : %d\n",bufferSize);
+	char *buffer=(char *)malloc(bufferSize+1);
+	buffer[bufferSize]=0;
+	int numBytesRead = AAsset_read(asset, buffer, bufferSize);
+	LOGI("readFromAssets: %s",buffer);
+	resultStr = env->NewStringUTF(buffer);
+	free(buffer);
+	/*关闭文件*/
+	AAsset_close(asset);
+	LOGI("readFromAssets exit...");
+	return resultStr;
+}
+}
+```
+
+需要注意的是， 使用JNI的接口，Application.mk文件需要做如下设置：
+
+APP_STL:=gnustl_static
+APP_CPPFLAGS:=-frtti -fexceptions 
+APP_ABI:= armeabi-v7a 
+
+## PlayerPrefs存储路径
+
+
+我们知道PlayerPrefs在windows下， 储存在注册表中， Android平台Unity又是怎么处理的？
+
+
+![](/img/post-android/jar6.jpg)
+
+
+通过上图，可以发现PlayerPrefs的值是以xml的形式存储在 /data/data/youPackageName/shared_prefs的目录下。由于不是直接储存在压缩包内， 这个xml应该可以通过io接口访问（需要获取相应的权限， 并在Androidmenifest.xml中声明）， 但是由于非root手机一般都进入不到此文件夹， 我们平时也无法直接在资源管理器里访问或者编辑此xml。
+
+
+/data/data/youPackageName/即内部存储路径下。所有内部存储中保存的文件在用户卸载应用的时候会被删除。Java访问的接口：
+
+* __files__
+    - Context.getFilesDir()，该方法返回/data/data/youPackageName/files的File对象。
+    - Context.openFileInput()与Context.openFileOutput()，只能读取和写入files下的文件，返回的是FileInputStream和FileOutputStream对象。
+    - Context.fileList()，返回files下所有的文件名，返回的是String[]对象。
+    - Context.deleteFile(String)，删除files下指定名称的文件。
+
+* __cache__
+  - Context.getCacheDir()，该方法返回/data/data/youPackageName/cache的File对象。
+
+* __custom dir__
+
+    - getDir(String name, int mode)，返回/data/data/youPackageName/下的指定名称的文件夹File对象，如果该文件夹不存在则用指定名称创建一个新的文件夹。
+
+
+## persistentDataPath, temporaryCachePath
+
+这两个目录路径在storage/Android/data/youPackageName目录下， 一般
+
+## 参考
+
+* [android工程目录结构][i1]
+* [Android获取文件夹路径 /data/data/][i2]
+* [现代图形 API 的内存管理][i3]
+
+[i1]: https://blog.csdn.net/zy394383693/article/details/40627467
+[i2]: https://www.cnblogs.com/daishuguang/p/3854472.html
+[i3]: https://zhuanlan.zhihu.com/p/87595524 
