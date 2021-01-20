@@ -96,26 +96,26 @@ exec_git_push
 
 echo "job done, bye"
 
-echo "start sync Gitee"
+# echo "start sync Gitee"
 
-workdir=`pwd`
+# workdir=`pwd`
 
-function sync_tree_dir(){
-	rm -rf ${gitee}/${1}
-	cp -rf ${workdir}/${1} ${gitee}/${1}
-}
+# function sync_tree_dir(){
+# 	rm -rf ${gitee}/${1}
+# 	cp -rf ${workdir}/${1} ${gitee}/${1}
+# }
 
-cd ${gitee}
+# cd ${gitee}
 
-exec_git_pull
+# exec_git_pull
 
-# apply modify
-sync_tree_dir blog/
-sync_tree_dir img/
-sync_tree_dir js/
-sync_tree_dir category/
+# # apply modify
+# sync_tree_dir blog/
+# sync_tree_dir img/
+# sync_tree_dir js/
+# sync_tree_dir category/
 
-exec_git_push
+# exec_git_push
 
 
 
