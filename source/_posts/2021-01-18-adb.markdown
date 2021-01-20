@@ -1,7 +1,7 @@
 ---
 layout:     post
 title:      "Android下的特殊文件夹"
-date:       2020-01-18 02:00:00
+date:       2021-01-18 02:00:00
 author:     "huailiang"
 tags:
     - 引擎
@@ -199,7 +199,12 @@ APP_ABI:= armeabi-v7a
 
 ## persistentDataPath, temporaryCachePath
 
-这两个目录路径在storage/Android/data/youPackageName目录下， 一般
+这两个目录路径在storage/Android/data/youPackageName目录下， 一般情况下可以通过手机自带的文件浏览器可以直接 编辑/删除 这些文件， 权限给的比较高，卸载程序此两个文件夹也会一起删除。temporaryCachePath是一个临时目录， 在操作系统磁盘不足的情况下， 会自动被系统清除， 适合存一些临时的文件， 而persistentDataPath适合存一些持久化的文件， 比如说游戏的bundle。
+
+persistentDataPath: storage/Android/data/yourpackageName/files
+temporaryCachePath: storage/Android/data/yourpackageName/cache
+
+
 
 ## 参考
 
