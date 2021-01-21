@@ -277,12 +277,26 @@ APP_ABI:= armeabi-v7a</p>
 <p>persistentDataPath: storage/Android/data/yourpackageName/files<br />
 temporaryCachePath: storage/Android/data/yourpackageName/cache</p>
 
+<p>使用原生的方式获取路径：</p>
+
+<div class="language-java highlighter-rouge"><pre class="highlight"><code><span class="n">MLog</span><span class="o">.</span><span class="na">d</span><span class="o">(</span><span class="n">TAG</span><span class="o">,</span> <span class="s">"output: "</span> <span class="o">+</span> <span class="n">output</span><span class="o">);</span>
+<span class="n">MLog</span><span class="o">.</span><span class="na">d</span><span class="o">(</span><span class="n">TAG</span><span class="o">,</span> <span class="s">"package: "</span> <span class="o">+</span> <span class="n">gameContext</span><span class="o">.</span><span class="na">getPackageResourcePath</span><span class="o">());</span>
+<span class="n">MLog</span><span class="o">.</span><span class="na">d</span><span class="o">(</span><span class="n">TAG</span><span class="o">,</span> <span class="s">"cache: "</span> <span class="o">+</span> <span class="n">gameContext</span><span class="o">.</span><span class="na">getCacheDir</span><span class="o">().</span><span class="na">getPath</span><span class="o">());</span>
+<span class="n">MLog</span><span class="o">.</span><span class="na">d</span><span class="o">(</span><span class="n">TAG</span><span class="o">,</span> <span class="s">"exCache: "</span> <span class="o">+</span> <span class="n">gameContext</span><span class="o">.</span><span class="na">getExternalCacheDir</span><span class="o">().</span><span class="na">getPath</span><span class="o">());</span>
+<span class="n">MLog</span><span class="o">.</span><span class="na">d</span><span class="o">(</span><span class="n">TAG</span><span class="o">,</span> <span class="s">"file: "</span> <span class="o">+</span> <span class="n">gameContext</span><span class="o">.</span><span class="na">getFilesDir</span><span class="o">().</span><span class="na">getPath</span><span class="o">());</span>
+<span class="n">MLog</span><span class="o">.</span><span class="na">d</span><span class="o">(</span><span class="n">TAG</span><span class="o">,</span> <span class="s">"code: "</span> <span class="o">+</span> <span class="n">gameContext</span><span class="o">.</span><span class="na">getPackageCodePath</span><span class="o">());</span>
+</code></pre>
+</div>
+
+<p>对应的输出是：</p>
+
+<p><img src="/img/post-android/jar7.jpg" alt="" /></p>
+
 <h2 id="参考">参考</h2>
 
 <ul>
   <li><a href="https://blog.csdn.net/zy394383693/article/details/40627467">android工程目录结构</a></li>
   <li><a href="https://www.cnblogs.com/daishuguang/p/3854472.html">Android获取文件夹路径 /data/data/</a></li>
-  <li><a href="https://zhuanlan.zhihu.com/p/87595524">现代图形 API 的内存管理</a></li>
 </ul>
 
 
