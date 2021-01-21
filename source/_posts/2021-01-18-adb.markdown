@@ -113,6 +113,7 @@ return resultStr;
 
 
 JNI的c++接口:
+
 ```c++
 #include "mylog.h"
 #include <jni.h>
@@ -120,16 +121,13 @@ JNI的c++接口:
 #include <stdlib.h>
 #include <android/asset_manager_jni.h>
 #include <android/asset_manager.h>
- 
-//jclass clazz,
+
 extern "C"{
-JNIEXPORT  jstring  JNICALL Java_org_yanzi_lib_MyLib_readFromAssets(JNIEnv* env,jclass clazz, jobject assetManager,jstring name);
+JNIEXPORT  jstring JNICALL Java_org_yanzi_lib_MyLib_readFromAssets(JNIEnv* env,jclass clazz, jobject assetManager,jstring name);
 JNIEXPORT  jstring JNICALL Java_org_yanzi_lib_MyLib_readFromAssets(JNIEnv* env, jclass clazz, jobject assetManager,jstring name){
 	LOGI("readFromAssets enter..."); //jclass this,
 	jstring resultStr;
-	LOGI("readFromAssets enter111...");
 	AAssetManager* mgr = AAssetManager_fromJava(env, assetManager);
-	LOGI("readFromAssets enter000...");
 	if(mgr==NULL)
 	{
 		LOGI(" %s","AAssetManager==NULL");
@@ -159,7 +157,7 @@ JNIEXPORT  jstring JNICALL Java_org_yanzi_lib_MyLib_readFromAssets(JNIEnv* env, 
 	AAsset_close(asset);
 	LOGI("readFromAssets exit...");
 	return resultStr;
-}
+  }
 }
 ```
 
@@ -192,8 +190,7 @@ APP_ABI:= armeabi-v7a
 * __cache__
   - Context.getCacheDir()，该方法返回/data/data/youPackageName/cache的File对象。
 
-* __custom dir__
-
+* __customDir__
     - getDir(String name, int mode)，返回/data/data/youPackageName/下的指定名称的文件夹File对象，如果该文件夹不存在则用指定名称创建一个新的文件夹。
 
 
