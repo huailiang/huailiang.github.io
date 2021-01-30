@@ -1,0 +1,559 @@
+---
+layout:     post
+title:      "C++ 中类的内存布局(转载)"
+date:       2021-01-30 02:00:00
+author:     "huailiang"
+tags:
+    - 引擎
+---
+
+> 
+
+### struct 的内存布局：
+
+struct 的内存对齐和填充概念学过C 的都应该知道一点。其实只要记住一个概念和三个原则就可以了：
+
+##### 一个概念：
+
+[自然对齐][i1]：如果一个变量的内存地址正好位于它长度的整数倍，就被称做自然对齐。
+
+如果不自然对齐，会带来CPU存取数据时的性能损失。（PS：具体应该与CPU通过总线读写内存数据的细节相关，具体没有细究）
+
+#### 三个原则：
+
+struct 的起始地址需要能够被其成员中最宽的基本数据类型整除；
+struct 的size 也必须能够被其成员中最宽的基本数据类型整除；
+struct 中每个成员地址相对于struct 的起始地址的offset，必须是自然对齐的。
+
+
+### Class 的内存布局：
+在学习C++ 的class 的内存布局前，先介绍下文会被用到的Visual studio 中的编译选项"/d1reportAllClassLayout" 和 "/d1reportSingleClassLayout[ClassName]"。
+
+![](/img/post-cpp/cpp60.png)
+
+这两个编译选项分别会输出当前编译单元中所以class 的内存布局和指定class 的内存布局。对于学习class 的内存布局很方便。
+
+ 
+
+关于一个class 的定义，在定义过程中涉及到的有：
+
+　　成员数据（静态，非静态）和成员函数（静态，非静态，virtual）。
+
+所有的成员函数都不会占用对象的存储空间，无论是静态，非静态还是虚函数。
+
+而对于成员数据来说，只有非静态的数据才会占用对象的存储空间。
+
+这个很好理解，静态成员数据和成员函数是属于class 的，而非属于具体的对象，所以只要维护一份内存就可以了，无需每个对象都拷贝一份。
+
+ 
+
+但是影响对象的大小的因素并不仅仅与看到的成员变量有关：
+
+非静态成员变量，虚函数表指针(_vftprt)，虚基类表指针(_vbtptr)，上文的内存对齐
+
+##### 空类
+
+```c++
+class CEmpty{};
+```
+
+　　对于空类，许多人想当然的认为大小应该是0。这是错误的，如果是正确的话，这个类可以被实例化成一个对象，且这个对象不占任何存储空间，且可以有很多不占任何空间的对象，而且这个不占空间的对象还可以有指针，这样就很奇怪了。
+
+　　所以正常编译器会给空类分配1个byte 的空间用于标示。
+```c++
+sizeof(CEmpty) = 1
+```
+
+普通类
+
+```c++
+class CBase {
+public:
+    int m_ia;
+    static int s_ib;
+private:
+    void f();
+    void g();
+};
+```
+　
+其类的布局如下：
+
+```
+class CBase size(4):
+    +---
+ 0  | m_ia
+    +---
+```
+
+只有m_ia 成员，size 为4个byte。因为静态数据成员和成员函数不占有对象空间。
+
+有虚函数的类
+
+```c++
+class CBase {
+public:
+    int m_ia;
+private:
+    void f();
+    void g();
+    virtual void h();
+};
+```
+
+其类的布局如下：
+
+```
+class CBase size(8):
+    +---
+ 0  | {vfptr}
+ 4  | m_ia
+    +---
+ 
+CBase::$vftable@:
+    | &CBase_meta
+    |  0
+ 0  | &CBase::h
+ ```
+
+可以看到该类的起始地址是放了一个"vfptr"，这个指针用来指向该类的虚函数表。
+
+单一继承的类(无虚函数)
+
+```c++
+class CBase {
+public:
+    int m_ia;
+private:
+    void f();
+    void g();
+};
+ 
+class CChild :public CBase {
+public:
+    int m_iChild;
+};
+```
+
+类的布局如下：
+
+```
+class CChild    size(8):
+    +---
+    | +--- (base class CBase)
+ 0  | | m_ia
+    | +---
+ 4  | m_iChild
+    +---
+```
+　　
+即派生类中拷贝了一份基类中的成员数据，所以size 为8个byte。
+
+单一继承的类（含有虚函数）
+
+```c++
+class CBase {
+public:
+    int m_ia;
+public:
+    virtual ~CBase();
+    virtual void f();
+    virtual void g();
+};
+ 
+class CChild :public CBase {
+public:
+    int m_iChild;
+public:
+    virtual ~CChild();
+    virtual void g();
+};
+```
+
+其类的布局如下：
+
+```
+class CChild    size(12):
+    +---
+    | +--- (base class CBase)
+ 0  | | {vfptr}
+ 4  | | m_ia
+    | +---
+ 8  | m_iChild
+    +---
+ 
+CChild::$vftable@:
+    | &CChild_meta
+    |  0
+ 0  | &CChild::{dtor}
+ 1  | &CBase::f
+ 2  | &CChild::g
+```
+
+可以看到派生类中只有一个vfptr，但是虚函数表中的函数却不同于基类中的函数，没有重写的虚函数沿用基类中的虚函数，而被重写的虚函数则更新为派生类中的虚函数。
+
+多重继承的类（基类都含有虚函数）
+
+```c++
+class CBase1 {
+public:
+    int m_i1;
+public:
+    virtual ~CBase1();
+    virtual void f1();
+    virtual void g1();
+};
+ 
+class CBase2 {
+public:
+    int m_i2;
+public:
+    virtual ~CBase2();
+    virtual void f2();
+    virtual void g2();
+};
+ 
+class CChild :public CBase1, public CBase2 {
+public:
+    int m_iChild;
+public:
+    virtual ~CChild();
+    virtual void f1();
+    virtual void g2();
+};
+```
+
+其类的布局如下：
+
+```
+class CChild    size(20):
+    +---
+    | +--- (base class CBase1)
+ 0  | | {vfptr}
+ 4  | | m_i1
+    | +---
+    | +--- (base class CBase2)
+ 8  | | {vfptr}
+12  | | m_i2
+    | +---
+16  | m_iChild
+    +---
+ 
+CChild::$vftable@CBase1@:
+    | &CChild_meta
+    |  0
+ 0  | &CChild::{dtor}
+ 1  | &CChild::f1
+ 2  | &CBase1::g1
+ 
+CChild::$vftable@CBase2@:
+    | -8
+ 0  | &thunk: this-=8; goto CChild::{dtor}
+ 1  | &CBase2::f2
+ 2  | &CChild::g2
+
+```
+
+CChild 分别从CBase1 和 CBase 中继承一个vfptr.
+
+菱形结构继承的类（非虚继承）
+
+```c++
+class CBase {
+public:
+    int m_iBase;
+public:
+    virtual ~CBase();
+    virtual void f0();
+    virtual void g0();
+    virtual void h0();
+};
+ 
+class CChild1:public CBase {
+public:
+    int m_iChild1;
+public:
+    virtual ~CChild1();
+    virtual void f0();
+    virtual void h1();
+};
+ 
+class CChild2:public CBase {
+public:
+    int m_iChild2;
+public:
+    ~CChild2();
+    void g0();
+    void h1();
+};
+ 
+class CGrandChild :public CChild1, public CChild2 {
+public:
+    int m_iGrandChild;
+public:
+    virtual ~CGrandChild();
+    virtual void h0();
+    virtual void h1();
+    virtual void h2();
+    virtual void f0();
+};
+```
+
+其类的布局如下：
+
+```
+class CGrandChild   size(28):
+    +---
+    | +--- (base class CChild1)
+    | | +--- (base class CBase)
+ 0  | | | {vfptr}
+ 4  | | | m_iBase
+    | | +---
+ 8  | | m_iChild1
+    | +---
+    | +--- (base class CChild2)
+    | | +--- (base class CBase)
+12  | | | {vfptr}
+16  | | | m_iBase
+    | | +---
+20  | | m_iChild2
+    | +---
+24  | m_iGrandChild
+    +---
+ 
+CGrandChild::$vftable@CChild1@:
+    | &CGrandChild_meta
+    |  0
+ 0  | &CGrandChild::{dtor}
+ 1  | &CGrandChild::f0
+ 2  | &CBase::g0
+ 3  | &CGrandChild::h0
+ 4  | &CGrandChild::h1
+ 5  | &CGrandChild::h2
+ 
+CGrandChild::$vftable@CChild2@:
+    | -12
+ 0  | &thunk: this-=12; goto CGrandChild::{dtor}
+ 1  | &thunk: this-=12; goto CGrandChild::f0
+ 2  | &CChild2::g0
+ 3  | &thunk: this-=12; goto CGrandChild::h0
+ ```
+
+　　这种继承是有风险的，即通过CGrandChild 去访问m_iBase 时，容易造成二义性，需要使用"pGrandChild->CChild::m_iBase" 这种方法去访问。
+
+为了避免这种问题，C++ 中有一种机制是虚继承。
+
+单一虚继承
+
+```c++
+class CBase {
+public:
+    int m_iBase;
+public:
+    virtual ~CBase();
+    virtual void f0();
+    virtual void g0();
+    virtual void h0();
+};
+ 
+class CChild1: virtual public CBase {
+public:
+    int m_iChild1;
+public:
+    virtual ~CChild1();
+    virtual void f0();
+    virtual void h1();
+};
+```
+
+其类的布局如下：
+
+```
+class CChild1   size(24):
+    +---
+ 0  | {vfptr}
+ 4  | {vbptr}
+ 8  | m_iChild1
+    +---
+12  | (vtordisp for vbase CBase)
+    +--- (virtual base CBase)
+16  | {vfptr}
+20  | m_iBase
+    +---
+ 
+CChild1::$vftable@CChild1@:
+    | &CChild1_meta
+    |  0
+ 0  | &CChild1::h1
+ 
+CChild1::$vbtable@:
+ 0  | -4
+ 1  | 12 (CChild1d(CChild1+4)CBase)
+ 
+CChild1::$vftable@CBase@:
+    | -16
+ 0  | &(vtordisp) CChild1::{dtor}
+ 1  | &(vtordisp) CChild1::f0
+ 2  | &CBase::g0
+ 3  | &CBase::h0
+```
+
+　从布局中看，发现多了一个vbptr 指针，则是一个指向基类的虚基类指针；在派生类和虚基类之间又多了“vtordisp for vbase CBase”，vtordisp 并不是每个虚继承的派生类都会生成的，关于这部分可以参考MSDN 中 vtordisp；在vtordisp 后面则是虚基类的一个拷贝。
+
+多重继承的类（虚继承）
+
+```c++
+class CChild1 {
+public:
+    int m_iChild1;
+public:
+    virtual ~CChild1();
+    virtual void f0();
+    virtual void h1();
+};
+ 
+class CChild2 {
+public:
+    int m_iChild2;
+public:
+    ~CChild2();
+    void g0();
+    void h1();
+};
+ 
+class CGrandChild :public CChild1, public CChild2 {
+public:
+    int m_iGrandChild;
+public:
+    virtual ~CGrandChild();
+    virtual void h0();
+    virtual void h1();
+    virtual void h2();
+    virtual void f0();
+};
+```
+Child1, CChild2 其类的布局如下：
+
+```
+class CGrandChild   size(28):
+    +---
+ 0  | {vfptr}
+    | +--- (base class CChild2)
+ 4  | | m_iChild2
+    | +---
+ 8  | {vbptr}
+12  | m_iGrandChild
+    +---
+16  | (vtordisp for vbase CChild1)
+    +--- (virtual base CChild1)
+20  | {vfptr}
+24  | m_iChild1
+    +---
+```
+
+public Child1, virtual public CChild2
+其类的布局如下：
+
+```
+class CGrandChild   size(20):
+    +---
+    | +--- (base class CChild1)
+ 0  | | {vfptr}
+ 4  | | m_iChild1
+    | +---
+ 8  | {vbptr}
+12  | m_iGrandChild
+    +---
+    +--- (virtual base CChild2)
+16  | m_iChild2
+    +---
+　　virtual public Child1, virtual public CChild2
+
+
+class CGrandChild   size(28):
+    +---
+ 0  | {vfptr}
+ 4  | {vbptr}
+ 8  | m_iGrandChild
+    +---
+12  | (vtordisp for vbase CChild1)
+    +--- (virtual base CChild1)
+16  | {vfptr}
+20  | m_iChild1
+    +---
+    +--- (virtual base CChild2)
+24  | m_iChild2
+    +---
+```
+　　通过上述虚继承的情况来看，可以看出有虚继承的派生类中，派生类和虚基类的数据是完全隔开的，先存放派生类自己的虚函数指针，虚基类指针和数据；然后有vtordisp 作为间隔；在存放虚基类的内容。
+
+菱形结构继承的类（虚继承）
+
+```c++
+
+class CBase {
+public:
+    int m_iBase;
+public:
+    virtual ~CBase();
+    virtual void f0();
+    virtual void g0();
+    virtual void h0();
+};
+ 
+class CChild1 : virtual public CBase {
+public:
+    int m_iChild1;
+public:
+    virtual ~CChild1();
+    virtual void f0();
+    virtual void h1();
+};
+ 
+class CChild2 : virtual public CBase{
+public:
+    int m_iChild2;
+public:
+    virtual ~CChild2();
+    virtual void g0();
+    virtual void h1();
+};
+ 
+class CGrandChild : public CChild1, public CChild2 {
+public:
+    int m_iGrandChild;
+public:
+    virtual ~CGrandChild();
+    virtual void h0();
+    virtual void h1();
+    virtual void h2();
+    virtual void f0();
+};
+```
+
+其类的布局如下：
+
+```
+class CGrandChild   size(40):
+    +---
+    | +--- (base class CChild1)
+ 0  | | {vfptr}
+ 4  | | {vbptr}
+ 8  | | m_iChild1
+    | +---
+    | +--- (base class CChild2)
+12  | | {vfptr}
+16  | | {vbptr}
+20  | | m_iChild2
+    | +---
+24  | m_iGrandChild
+    +---
+28  | (vtordisp for vbase CBase)
+    +--- (virtual base CBase)
+32  | {vfptr}
+36  | m_iBase
+    +---
+```
+
+
+[i1]: https://zhuanlan.zhihu.com/p/99690747
