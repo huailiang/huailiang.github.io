@@ -1,0 +1,768 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <meta http-equiv="X-UA-Compatible" content="IE=edge">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+
+  <title>C++ 中struct/class的内存布局</title>
+  <meta name="description"
+    content="struct 的内存布局：">
+
+  <link rel="shortcut icon" href="/img/favicon.ico">
+  <link rel="stylesheet" href="/css/main.css">
+  <link rel="canonical" href="https://huailiang.github.io/blog/2021/cpp/">
+
+</head>
+
+<body>
+  <main>
+    <header class="site-header">
+  <div class="container">
+    <h1><a href="/">Hom<span>e</span></a></h1>
+
+    <button type="button" class="sliding-panel-button">
+      <span></span>
+      <span></span>
+      <span></span>
+    </button>
+
+    <nav class="navbar sliding-panel-content">
+      <ul>
+        
+        <li><a href="/about" title="About">About</a>
+        </li>
+        
+        <li><a href="/blog" title="Blog">Blog</a>
+        </li>
+        
+       <li><a href="/category/" target="_blank"><i class="icon icon-feed"></i></a></li>
+      </ul>
+    </nav>
+  </div>
+</header>
+
+<div class="sliding-panel-fade-screen"></div>
+    <script type="text/javascript" src="/js/MathJax.js?config=TeX-AMS-MML_HTMLorMML"></script>
+
+<script type="text/x-mathjax-config">
+MathJax.Hub.Config({
+  tex2jax: {
+    inlineMath: [['$','$'], ['\\(','\\)']],
+    processEscapes: true
+  }
+});
+</script>
+
+<script type="text/x-mathjax-config">
+  MathJax.Hub.Config({
+    tex2jax: {
+      skipTags: ['script', 'noscript', 'style', 'textarea', 'pre', 'code']
+    }
+  });
+
+</script>
+    <div class="container">
+      <article role="article" class="post">
+
+  <div class="card">
+    <header class="post-header">
+      <h1 class="post-title">C++ 中struct/class的内存布局</h1>
+      <p class="post-meta">Jan 30, 2021 •
+        huailiang</p>
+    </header>
+
+    <div class="post-content">
+      <h3 id="struct-的内存布局">struct 的内存布局：</h3>
+
+<p>struct 的内存对齐和填充概念学过C 的都应该知道一点。其实只要记住一个概念和三个原则就可以了：</p>
+
+<h5 id="一个概念">一个概念：</h5>
+
+<p><a href="https://zhuanlan.zhihu.com/p/99690747">自然对齐</a>：如果一个变量的内存地址正好位于它长度的整数倍，就被称做自然对齐。</p>
+
+<p>如果不自然对齐，会带来CPU存取数据时的性能损失。（PS：具体应该与CPU通过总线读写内存数据的细节相关，具体没有细究）</p>
+
+<h4 id="三个原则">三个原则：</h4>
+
+<p>struct 的起始地址需要能够被其成员中最宽的基本数据类型整除；<br />
+struct 的size 也必须能够被其成员中最宽的基本数据类型整除；<br />
+struct 中每个成员地址相对于struct 的起始地址的offset，必须是自然对齐的。</p>
+
+<p>如下面的例子：</p>
+
+<div class="language-c highlighter-rouge"><pre class="highlight"><code><span class="k">struct</span> <span class="n">MyStruct</span>
+<span class="p">{</span>
+    <span class="kt">char</span> <span class="n">dda</span><span class="p">;</span>   <span class="c1">//偏移量为0，满足对齐方式，dda占用1个字节；
+</span>    <span class="kt">double</span> <span class="n">dda1</span><span class="p">;</span><span class="c1">//下一个可用的地址的偏移量为1，不是sizeof(double)=8的倍数，需要补足7个字节才能使偏移量变为8（满足对齐方式），
+</span>                <span class="c1">//因此VC自动填充7个字节，dda1存放在偏移量为8
+</span>                <span class="c1">//的地址上，它占用8个字节。
+</span>    <span class="kt">int</span> <span class="n">type</span><span class="p">;</span>   <span class="c1">//下一个可用的地址的偏移量为16，是sizeof(int)=4的倍数，满足int的对齐方式，
+</span>                <span class="c1">//所以不需要VC自动填充，type存
+</span>                <span class="c1">//放在偏移量为16的地址上，它占用4个字节。
+</span><span class="p">};</span>
+<span class="c1">//所有成员变量都分配了空间，空间总的大小为1+7+8+4=20，不是结构的节边界数（即结构中占用最大空间的类型所占用的字节数sizeof(double)=8）的倍数，
+// 所以需要填充4个字节，以满足结构的大小为sizeof(double)=8的倍数。
+</span></code></pre>
+</div>
+
+<h3 id="class-的内存布局">Class 的内存布局：</h3>
+<p>在学习C++ 的class 的内存布局前，先介绍下文会被用到的Visual studio 中的编译选项”/d1reportAllClassLayout” 和 “/d1reportSingleClassLayout[ClassName]”。</p>
+
+<p><img src="/img/post-cpp/cpp60.png" alt="" /></p>
+
+<p>这两个编译选项分别会输出当前编译单元中所以class 的内存布局和指定class 的内存布局。对于学习class 的内存布局很方便。</p>
+
+<p>关于一个class 的定义，在定义过程中涉及到的有：</p>
+
+<p>　　成员数据（静态，非静态）和成员函数（静态，非静态，virtual）。</p>
+
+<p>所有的成员函数都不会占用对象的存储空间，无论是静态，非静态还是虚函数。</p>
+
+<p>而对于成员数据来说，只有非静态的数据才会占用对象的存储空间。</p>
+
+<p>这个很好理解，静态成员数据和成员函数是属于class 的，而非属于具体的对象，所以只要维护一份内存就可以了，无需每个对象都拷贝一份。</p>
+
+<p>但是影响对象的大小的因素并不仅仅与看到的成员变量有关：</p>
+
+<p>非静态成员变量，虚函数表指针(_vftprt)，虚基类表指针(_vbtptr)，上文的内存对齐</p>
+
+<h5 id="空类">空类</h5>
+
+<div class="language-c++ highlighter-rouge"><pre class="highlight"><code><span class="k">class</span> <span class="nc">CEmpty</span><span class="p">{};</span>
+</code></pre>
+</div>
+
+<p>　　对于空类，许多人想当然的认为大小应该是0。这是错误的，如果是正确的话，这个类可以被实例化成一个对象，且这个对象不占任何存储空间，且可以有很多不占任何空间的对象，而且这个不占空间的对象还可以有指针，这样就很奇怪了。</p>
+
+<p>　　所以正常编译器会给空类分配1个byte 的空间用于标示。</p>
+<div class="language-c++ highlighter-rouge"><pre class="highlight"><code><span class="k">sizeof</span><span class="p">(</span><span class="n">CEmpty</span><span class="p">)</span> <span class="o">=</span> <span class="mi">1</span>
+</code></pre>
+</div>
+
+<p>普通类</p>
+
+<div class="language-c++ highlighter-rouge"><pre class="highlight"><code><span class="k">class</span> <span class="nc">CBase</span> <span class="p">{</span>
+<span class="k">public</span><span class="o">:</span>
+    <span class="kt">int</span> <span class="n">m_ia</span><span class="p">;</span>
+    <span class="k">static</span> <span class="kt">int</span> <span class="n">s_ib</span><span class="p">;</span>
+<span class="k">private</span><span class="o">:</span>
+    <span class="kt">void</span> <span class="n">f</span><span class="p">();</span>
+    <span class="kt">void</span> <span class="n">g</span><span class="p">();</span>
+<span class="p">};</span>
+</code></pre>
+</div>
+<p>　<br />
+其类的布局如下：</p>
+
+<div class="highlighter-rouge"><pre class="highlight"><code>class CBase size(4):
+    +---
+ 0  | m_ia
+    +---
+</code></pre>
+</div>
+
+<p>只有m_ia 成员，size 为4个byte。因为静态数据成员和成员函数不占有对象空间。</p>
+
+<p>有虚函数的类</p>
+
+<div class="language-c++ highlighter-rouge"><pre class="highlight"><code><span class="k">class</span> <span class="nc">CBase</span> <span class="p">{</span>
+<span class="k">public</span><span class="o">:</span>
+    <span class="kt">int</span> <span class="n">m_ia</span><span class="p">;</span>
+<span class="k">private</span><span class="o">:</span>
+    <span class="kt">void</span> <span class="n">f</span><span class="p">();</span>
+    <span class="kt">void</span> <span class="n">g</span><span class="p">();</span>
+    <span class="k">virtual</span> <span class="kt">void</span> <span class="n">h</span><span class="p">();</span>
+<span class="p">};</span>
+</code></pre>
+</div>
+
+<p>其类的布局如下：</p>
+
+<div class="highlighter-rouge"><pre class="highlight"><code>class CBase size(8):
+    +---
+ 0  | {vfptr}
+ 4  | m_ia
+    +---
+ 
+CBase::$vftable@:
+    | &amp;CBase_meta
+    |  0
+ 0  | &amp;CBase::h
+</code></pre>
+</div>
+
+<p>可以看到该类的起始地址是放了一个vfptr，这个指针用来指向该类的虚函数表。</p>
+
+<p>单一继承的类(无虚函数)</p>
+
+<div class="language-c++ highlighter-rouge"><pre class="highlight"><code><span class="k">class</span> <span class="nc">CBase</span> <span class="p">{</span>
+<span class="k">public</span><span class="o">:</span>
+    <span class="kt">int</span> <span class="n">m_ia</span><span class="p">;</span>
+<span class="k">private</span><span class="o">:</span>
+    <span class="kt">void</span> <span class="n">f</span><span class="p">();</span>
+    <span class="kt">void</span> <span class="n">g</span><span class="p">();</span>
+<span class="p">};</span>
+ 
+<span class="k">class</span> <span class="nc">CChild</span> <span class="o">:</span><span class="k">public</span> <span class="n">CBase</span> <span class="p">{</span>
+<span class="k">public</span><span class="o">:</span>
+    <span class="kt">int</span> <span class="n">m_iChild</span><span class="p">;</span>
+<span class="p">};</span>
+</code></pre>
+</div>
+
+<p>类的布局如下：</p>
+
+<div class="highlighter-rouge"><pre class="highlight"><code>class CChild    size(8):
+    +---
+    | +--- (base class CBase)
+ 0  | | m_ia
+    | +---
+ 4  | m_iChild
+    +---
+</code></pre>
+</div>
+<p>　　<br />
+即派生类中拷贝了一份基类中的成员数据，所以size 为8个byte。</p>
+
+<p>单一继承的类（含有虚函数）</p>
+
+<div class="language-c++ highlighter-rouge"><pre class="highlight"><code><span class="k">class</span> <span class="nc">CBase</span> <span class="p">{</span>
+<span class="k">public</span><span class="o">:</span>
+    <span class="kt">int</span> <span class="n">m_ia</span><span class="p">;</span>
+<span class="k">public</span><span class="o">:</span>
+    <span class="k">virtual</span> <span class="o">~</span><span class="n">CBase</span><span class="p">();</span>
+    <span class="k">virtual</span> <span class="kt">void</span> <span class="n">f</span><span class="p">();</span>
+    <span class="k">virtual</span> <span class="kt">void</span> <span class="n">g</span><span class="p">();</span>
+<span class="p">};</span>
+ 
+<span class="k">class</span> <span class="nc">CChild</span> <span class="o">:</span><span class="k">public</span> <span class="n">CBase</span> <span class="p">{</span>
+<span class="k">public</span><span class="o">:</span>
+    <span class="kt">int</span> <span class="n">m_iChild</span><span class="p">;</span>
+<span class="k">public</span><span class="o">:</span>
+    <span class="k">virtual</span> <span class="o">~</span><span class="n">CChild</span><span class="p">();</span>
+    <span class="k">virtual</span> <span class="kt">void</span> <span class="n">g</span><span class="p">();</span>
+<span class="p">};</span>
+</code></pre>
+</div>
+
+<p>其类的布局如下：</p>
+
+<div class="highlighter-rouge"><pre class="highlight"><code>class CChild    size(12):
+    +---
+    | +--- (base class CBase)
+ 0  | | {vfptr}
+ 4  | | m_ia
+    | +---
+ 8  | m_iChild
+    +---
+ 
+CChild::$vftable@:
+    | &amp;CChild_meta
+    |  0
+ 0  | &amp;CChild::{dtor}
+ 1  | &amp;CBase::f
+ 2  | &amp;CChild::g
+</code></pre>
+</div>
+
+<p>可以看到派生类中只有一个vfptr，但是虚函数表中的函数却不同于基类中的函数，没有重写的虚函数沿用基类中的虚函数，而被重写的虚函数则更新为派生类中的虚函数。</p>
+
+<p>多重继承的类（基类都含有虚函数）</p>
+
+<div class="language-c++ highlighter-rouge"><pre class="highlight"><code><span class="k">class</span> <span class="nc">CBase1</span> <span class="p">{</span>
+<span class="k">public</span><span class="o">:</span>
+    <span class="kt">int</span> <span class="n">m_i1</span><span class="p">;</span>
+<span class="k">public</span><span class="o">:</span>
+    <span class="k">virtual</span> <span class="o">~</span><span class="n">CBase1</span><span class="p">();</span>
+    <span class="k">virtual</span> <span class="kt">void</span> <span class="n">f1</span><span class="p">();</span>
+    <span class="k">virtual</span> <span class="kt">void</span> <span class="n">g1</span><span class="p">();</span>
+<span class="p">};</span>
+ 
+<span class="k">class</span> <span class="nc">CBase2</span> <span class="p">{</span>
+<span class="k">public</span><span class="o">:</span>
+    <span class="kt">int</span> <span class="n">m_i2</span><span class="p">;</span>
+<span class="k">public</span><span class="o">:</span>
+    <span class="k">virtual</span> <span class="o">~</span><span class="n">CBase2</span><span class="p">();</span>
+    <span class="k">virtual</span> <span class="kt">void</span> <span class="n">f2</span><span class="p">();</span>
+    <span class="k">virtual</span> <span class="kt">void</span> <span class="n">g2</span><span class="p">();</span>
+<span class="p">};</span>
+ 
+<span class="k">class</span> <span class="nc">CChild</span> <span class="o">:</span><span class="k">public</span> <span class="n">CBase1</span><span class="p">,</span> <span class="k">public</span> <span class="n">CBase2</span> <span class="p">{</span>
+<span class="k">public</span><span class="o">:</span>
+    <span class="kt">int</span> <span class="n">m_iChild</span><span class="p">;</span>
+<span class="k">public</span><span class="o">:</span>
+    <span class="k">virtual</span> <span class="o">~</span><span class="n">CChild</span><span class="p">();</span>
+    <span class="k">virtual</span> <span class="kt">void</span> <span class="n">f1</span><span class="p">();</span>
+    <span class="k">virtual</span> <span class="kt">void</span> <span class="n">g2</span><span class="p">();</span>
+<span class="p">};</span>
+</code></pre>
+</div>
+
+<p>其类的布局如下：</p>
+
+<div class="highlighter-rouge"><pre class="highlight"><code>class CChild    size(20):
+    +---
+    | +--- (base class CBase1)
+ 0  | | {vfptr}
+ 4  | | m_i1
+    | +---
+    | +--- (base class CBase2)
+ 8  | | {vfptr}
+12  | | m_i2
+    | +---
+16  | m_iChild
+    +---
+ 
+CChild::$vftable@CBase1@:
+    | &amp;CChild_meta
+    |  0
+ 0  | &amp;CChild::{dtor}
+ 1  | &amp;CChild::f1
+ 2  | &amp;CBase1::g1
+ 
+CChild::$vftable@CBase2@:
+    | -8
+ 0  | &amp;thunk: this-=8; goto CChild::{dtor}
+ 1  | &amp;CBase2::f2
+ 2  | &amp;CChild::g2
+
+</code></pre>
+</div>
+
+<p>CChild 分别从CBase1 和 CBase 中继承一个vfptr.</p>
+
+<p>菱形结构继承的类（非虚继承）</p>
+
+<div class="language-c++ highlighter-rouge"><pre class="highlight"><code><span class="k">class</span> <span class="nc">CBase</span> <span class="p">{</span>
+<span class="k">public</span><span class="o">:</span>
+    <span class="kt">int</span> <span class="n">m_iBase</span><span class="p">;</span>
+<span class="k">public</span><span class="o">:</span>
+    <span class="k">virtual</span> <span class="o">~</span><span class="n">CBase</span><span class="p">();</span>
+    <span class="k">virtual</span> <span class="kt">void</span> <span class="n">f0</span><span class="p">();</span>
+    <span class="k">virtual</span> <span class="kt">void</span> <span class="n">g0</span><span class="p">();</span>
+    <span class="k">virtual</span> <span class="kt">void</span> <span class="n">h0</span><span class="p">();</span>
+<span class="p">};</span>
+ 
+<span class="k">class</span> <span class="nc">CChild1</span><span class="o">:</span><span class="k">public</span> <span class="n">CBase</span> <span class="p">{</span>
+<span class="k">public</span><span class="o">:</span>
+    <span class="kt">int</span> <span class="n">m_iChild1</span><span class="p">;</span>
+<span class="k">public</span><span class="o">:</span>
+    <span class="k">virtual</span> <span class="o">~</span><span class="n">CChild1</span><span class="p">();</span>
+    <span class="k">virtual</span> <span class="kt">void</span> <span class="n">f0</span><span class="p">();</span>
+    <span class="k">virtual</span> <span class="kt">void</span> <span class="n">h1</span><span class="p">();</span>
+<span class="p">};</span>
+ 
+<span class="k">class</span> <span class="nc">CChild2</span><span class="o">:</span><span class="k">public</span> <span class="n">CBase</span> <span class="p">{</span>
+<span class="k">public</span><span class="o">:</span>
+    <span class="kt">int</span> <span class="n">m_iChild2</span><span class="p">;</span>
+<span class="k">public</span><span class="o">:</span>
+    <span class="o">~</span><span class="n">CChild2</span><span class="p">();</span>
+    <span class="kt">void</span> <span class="n">g0</span><span class="p">();</span>
+    <span class="kt">void</span> <span class="n">h1</span><span class="p">();</span>
+<span class="p">};</span>
+ 
+<span class="k">class</span> <span class="nc">CGrandChild</span> <span class="o">:</span><span class="k">public</span> <span class="n">CChild1</span><span class="p">,</span> <span class="k">public</span> <span class="n">CChild2</span> <span class="p">{</span>
+<span class="k">public</span><span class="o">:</span>
+    <span class="kt">int</span> <span class="n">m_iGrandChild</span><span class="p">;</span>
+<span class="k">public</span><span class="o">:</span>
+    <span class="k">virtual</span> <span class="o">~</span><span class="n">CGrandChild</span><span class="p">();</span>
+    <span class="k">virtual</span> <span class="kt">void</span> <span class="n">h0</span><span class="p">();</span>
+    <span class="k">virtual</span> <span class="kt">void</span> <span class="n">h1</span><span class="p">();</span>
+    <span class="k">virtual</span> <span class="kt">void</span> <span class="n">h2</span><span class="p">();</span>
+    <span class="k">virtual</span> <span class="kt">void</span> <span class="n">f0</span><span class="p">();</span>
+<span class="p">};</span>
+</code></pre>
+</div>
+
+<p>其类的布局如下：</p>
+
+<div class="highlighter-rouge"><pre class="highlight"><code>class CGrandChild   size(28):
+    +---
+    | +--- (base class CChild1)
+    | | +--- (base class CBase)
+ 0  | | | {vfptr}
+ 4  | | | m_iBase
+    | | +---
+ 8  | | m_iChild1
+    | +---
+    | +--- (base class CChild2)
+    | | +--- (base class CBase)
+12  | | | {vfptr}
+16  | | | m_iBase
+    | | +---
+20  | | m_iChild2
+    | +---
+24  | m_iGrandChild
+    +---
+ 
+CGrandChild::$vftable@CChild1@:
+    | &amp;CGrandChild_meta
+    |  0
+ 0  | &amp;CGrandChild::{dtor}
+ 1  | &amp;CGrandChild::f0
+ 2  | &amp;CBase::g0
+ 3  | &amp;CGrandChild::h0
+ 4  | &amp;CGrandChild::h1
+ 5  | &amp;CGrandChild::h2
+ 
+CGrandChild::$vftable@CChild2@:
+    | -12
+ 0  | &amp;thunk: this-=12; goto CGrandChild::{dtor}
+ 1  | &amp;thunk: this-=12; goto CGrandChild::f0
+ 2  | &amp;CChild2::g0
+ 3  | &amp;thunk: this-=12; goto CGrandChild::h0
+</code></pre>
+</div>
+
+<p>　　这种继承是有风险的，即通过CGrandChild 去访问m_iBase 时，容易造成二义性，需要使用”pGrandChild-&gt;CChild::m_iBase” 这种方法去访问。</p>
+
+<p>为了避免这种问题，C++ 中有一种机制是虚继承。</p>
+
+<p>单一虚继承</p>
+
+<div class="language-c++ highlighter-rouge"><pre class="highlight"><code><span class="k">class</span> <span class="nc">CBase</span> <span class="p">{</span>
+<span class="k">public</span><span class="o">:</span>
+    <span class="kt">int</span> <span class="n">m_iBase</span><span class="p">;</span>
+<span class="k">public</span><span class="o">:</span>
+    <span class="k">virtual</span> <span class="o">~</span><span class="n">CBase</span><span class="p">();</span>
+    <span class="k">virtual</span> <span class="kt">void</span> <span class="n">f0</span><span class="p">();</span>
+    <span class="k">virtual</span> <span class="kt">void</span> <span class="n">g0</span><span class="p">();</span>
+    <span class="k">virtual</span> <span class="kt">void</span> <span class="n">h0</span><span class="p">();</span>
+<span class="p">};</span>
+ 
+<span class="k">class</span> <span class="nc">CChild1</span><span class="o">:</span> <span class="k">virtual</span> <span class="k">public</span> <span class="n">CBase</span> <span class="p">{</span>
+<span class="k">public</span><span class="o">:</span>
+    <span class="kt">int</span> <span class="n">m_iChild1</span><span class="p">;</span>
+<span class="k">public</span><span class="o">:</span>
+    <span class="k">virtual</span> <span class="o">~</span><span class="n">CChild1</span><span class="p">();</span>
+    <span class="k">virtual</span> <span class="kt">void</span> <span class="n">f0</span><span class="p">();</span>
+    <span class="k">virtual</span> <span class="kt">void</span> <span class="n">h1</span><span class="p">();</span>
+<span class="p">};</span>
+</code></pre>
+</div>
+
+<p>其类的布局如下：</p>
+
+<div class="highlighter-rouge"><pre class="highlight"><code>class CChild1   size(24):
+    +---
+ 0  | {vfptr}
+ 4  | {vbptr}
+ 8  | m_iChild1
+    +---
+12  | (vtordisp for vbase CBase)
+    +--- (virtual base CBase)
+16  | {vfptr}
+20  | m_iBase
+    +---
+ 
+CChild1::$vftable@CChild1@:
+    | &amp;CChild1_meta
+    |  0
+ 0  | &amp;CChild1::h1
+ 
+CChild1::$vbtable@:
+ 0  | -4
+ 1  | 12 (CChild1d(CChild1+4)CBase)
+ 
+CChild1::$vftable@CBase@:
+    | -16
+ 0  | &amp;(vtordisp) CChild1::{dtor}
+ 1  | &amp;(vtordisp) CChild1::f0
+ 2  | &amp;CBase::g0
+ 3  | &amp;CBase::h0
+</code></pre>
+</div>
+
+<p>　从布局中看，发现多了一个vbptr 指针，则是一个指向基类的虚基类指针；在派生类和虚基类之间又多了“vtordisp for vbase CBase”，vtordisp 并不是每个虚继承的派生类都会生成的，关于这部分可以参考MSDN 中 vtordisp；在vtordisp 后面则是虚基类的一个拷贝。</p>
+
+<p>多重继承的类（虚继承）</p>
+
+<div class="language-c++ highlighter-rouge"><pre class="highlight"><code><span class="k">class</span> <span class="nc">CChild1</span> <span class="p">{</span>
+<span class="k">public</span><span class="o">:</span>
+    <span class="kt">int</span> <span class="n">m_iChild1</span><span class="p">;</span>
+<span class="k">public</span><span class="o">:</span>
+    <span class="k">virtual</span> <span class="o">~</span><span class="n">CChild1</span><span class="p">();</span>
+    <span class="k">virtual</span> <span class="kt">void</span> <span class="n">f0</span><span class="p">();</span>
+    <span class="k">virtual</span> <span class="kt">void</span> <span class="n">h1</span><span class="p">();</span>
+<span class="p">};</span>
+ 
+<span class="k">class</span> <span class="nc">CChild2</span> <span class="p">{</span>
+<span class="k">public</span><span class="o">:</span>
+    <span class="kt">int</span> <span class="n">m_iChild2</span><span class="p">;</span>
+<span class="k">public</span><span class="o">:</span>
+    <span class="o">~</span><span class="n">CChild2</span><span class="p">();</span>
+    <span class="kt">void</span> <span class="n">g0</span><span class="p">();</span>
+    <span class="kt">void</span> <span class="n">h1</span><span class="p">();</span>
+<span class="p">};</span>
+ 
+<span class="k">class</span> <span class="nc">CGrandChild</span> <span class="o">:</span><span class="k">public</span> <span class="n">CChild1</span><span class="p">,</span> <span class="k">public</span> <span class="n">CChild2</span> <span class="p">{</span>
+<span class="k">public</span><span class="o">:</span>
+    <span class="kt">int</span> <span class="n">m_iGrandChild</span><span class="p">;</span>
+<span class="k">public</span><span class="o">:</span>
+    <span class="k">virtual</span> <span class="o">~</span><span class="n">CGrandChild</span><span class="p">();</span>
+    <span class="k">virtual</span> <span class="kt">void</span> <span class="n">h0</span><span class="p">();</span>
+    <span class="k">virtual</span> <span class="kt">void</span> <span class="n">h1</span><span class="p">();</span>
+    <span class="k">virtual</span> <span class="kt">void</span> <span class="n">h2</span><span class="p">();</span>
+    <span class="k">virtual</span> <span class="kt">void</span> <span class="n">f0</span><span class="p">();</span>
+<span class="p">};</span>
+</code></pre>
+</div>
+<p>Child1, CChild2 其类的布局如下：</p>
+
+<div class="highlighter-rouge"><pre class="highlight"><code>class CGrandChild   size(28):
+    +---
+ 0  | {vfptr}
+    | +--- (base class CChild2)
+ 4  | | m_iChild2
+    | +---
+ 8  | {vbptr}
+12  | m_iGrandChild
+    +---
+16  | (vtordisp for vbase CChild1)
+    +--- (virtual base CChild1)
+20  | {vfptr}
+24  | m_iChild1
+    +---
+</code></pre>
+</div>
+
+<p>public Child1, virtual public CChild2<br />
+其类的布局如下：</p>
+
+<div class="highlighter-rouge"><pre class="highlight"><code>class CGrandChild   size(20):
+    +---
+    | +--- (base class CChild1)
+ 0  | | {vfptr}
+ 4  | | m_iChild1
+    | +---
+ 8  | {vbptr}
+12  | m_iGrandChild
+    +---
+    +--- (virtual base CChild2)
+16  | m_iChild2
+    +---
+　　virtual public Child1, virtual public CChild2
+
+
+class CGrandChild   size(28):
+    +---
+ 0  | {vfptr}
+ 4  | {vbptr}
+ 8  | m_iGrandChild
+    +---
+12  | (vtordisp for vbase CChild1)
+    +--- (virtual base CChild1)
+16  | {vfptr}
+20  | m_iChild1
+    +---
+    +--- (virtual base CChild2)
+24  | m_iChild2
+    +---
+</code></pre>
+</div>
+<p>　　通过上述虚继承的情况来看，可以看出有虚继承的派生类中，派生类和虚基类的数据是完全隔开的，先存放派生类自己的虚函数指针，虚基类指针和数据；然后有vtordisp 作为间隔；在存放虚基类的内容。</p>
+
+<p>菱形结构继承的类（虚继承）</p>
+
+<div class="language-c++ highlighter-rouge"><pre class="highlight"><code>
+<span class="k">class</span> <span class="nc">CBase</span> <span class="p">{</span>
+<span class="k">public</span><span class="o">:</span>
+    <span class="kt">int</span> <span class="n">m_iBase</span><span class="p">;</span>
+<span class="k">public</span><span class="o">:</span>
+    <span class="k">virtual</span> <span class="o">~</span><span class="n">CBase</span><span class="p">();</span>
+    <span class="k">virtual</span> <span class="kt">void</span> <span class="n">f0</span><span class="p">();</span>
+    <span class="k">virtual</span> <span class="kt">void</span> <span class="n">g0</span><span class="p">();</span>
+    <span class="k">virtual</span> <span class="kt">void</span> <span class="n">h0</span><span class="p">();</span>
+<span class="p">};</span>
+ 
+<span class="k">class</span> <span class="nc">CChild1</span> <span class="o">:</span> <span class="k">virtual</span> <span class="k">public</span> <span class="n">CBase</span> <span class="p">{</span>
+<span class="k">public</span><span class="o">:</span>
+    <span class="kt">int</span> <span class="n">m_iChild1</span><span class="p">;</span>
+<span class="k">public</span><span class="o">:</span>
+    <span class="k">virtual</span> <span class="o">~</span><span class="n">CChild1</span><span class="p">();</span>
+    <span class="k">virtual</span> <span class="kt">void</span> <span class="n">f0</span><span class="p">();</span>
+    <span class="k">virtual</span> <span class="kt">void</span> <span class="n">h1</span><span class="p">();</span>
+<span class="p">};</span>
+ 
+<span class="k">class</span> <span class="nc">CChild2</span> <span class="o">:</span> <span class="k">virtual</span> <span class="k">public</span> <span class="n">CBase</span><span class="p">{</span>
+<span class="k">public</span><span class="o">:</span>
+    <span class="kt">int</span> <span class="n">m_iChild2</span><span class="p">;</span>
+<span class="k">public</span><span class="o">:</span>
+    <span class="k">virtual</span> <span class="o">~</span><span class="n">CChild2</span><span class="p">();</span>
+    <span class="k">virtual</span> <span class="kt">void</span> <span class="n">g0</span><span class="p">();</span>
+    <span class="k">virtual</span> <span class="kt">void</span> <span class="n">h1</span><span class="p">();</span>
+<span class="p">};</span>
+ 
+<span class="k">class</span> <span class="nc">CGrandChild</span> <span class="o">:</span> <span class="k">public</span> <span class="n">CChild1</span><span class="p">,</span> <span class="k">public</span> <span class="n">CChild2</span> <span class="p">{</span>
+<span class="k">public</span><span class="o">:</span>
+    <span class="kt">int</span> <span class="n">m_iGrandChild</span><span class="p">;</span>
+<span class="k">public</span><span class="o">:</span>
+    <span class="k">virtual</span> <span class="o">~</span><span class="n">CGrandChild</span><span class="p">();</span>
+    <span class="k">virtual</span> <span class="kt">void</span> <span class="n">h0</span><span class="p">();</span>
+    <span class="k">virtual</span> <span class="kt">void</span> <span class="n">h1</span><span class="p">();</span>
+    <span class="k">virtual</span> <span class="kt">void</span> <span class="n">h2</span><span class="p">();</span>
+    <span class="k">virtual</span> <span class="kt">void</span> <span class="n">f0</span><span class="p">();</span>
+<span class="p">};</span>
+</code></pre>
+</div>
+
+<p>其类的布局如下：</p>
+
+<div class="highlighter-rouge"><pre class="highlight"><code>class CGrandChild   size(40):
+    +---
+    | +--- (base class CChild1)
+ 0  | | {vfptr}
+ 4  | | {vbptr}
+ 8  | | m_iChild1
+    | +---
+    | +--- (base class CChild2)
+12  | | {vfptr}
+16  | | {vbptr}
+20  | | m_iChild2
+    | +---
+24  | m_iGrandChild
+    +---
+28  | (vtordisp for vbase CBase)
+    +--- (virtual base CBase)
+32  | {vfptr}
+36  | m_iBase
+    +---
+</code></pre>
+</div>
+
+
+    </div>
+  </div>
+
+  <style>
+  .post-nav {
+    overflow: hidden;
+    /* margin-top: 60px; */
+    padding: 12px;
+    white-space: nowrap;
+    /* border-top: 1px solid #eee; */
+  }
+
+  .post-nav-item {
+    display: inline-block;
+    width: 50%;
+    white-space: normal;
+  }
+
+  .post-nav-item a {
+    position: relative;
+    display: inline-block;
+    line-height: 25px;
+    font-size: 14px;
+    color: #555;
+    border-bottom: none;
+  }
+
+  .post-nav-item a:hover {
+    color: #222;
+    font-weight: bold;
+    border-bottom: none;
+  }
+
+  .post-nav-item a:active {
+    top: 2px;
+  }
+
+  .post-nav-item a:before,
+  .post-nav-item a:after {
+    display: inline-block;
+    width: 16px;
+    height: 25px;
+    vertical-align: top;
+    opacity: 0.4;
+    background-size: 16px;
+  }
+
+  .post-nav-none a:none {
+    content: ' ';
+    background-size: 8px;
+  }
+
+  .post-nav-none a:hover:none {
+    opacity: 1;
+  }
+
+  .post-nav-prev a:before {
+    content: ' ';
+    background: url("data:image/svg+xml;base64,PD94bWwgdmVyc2lvbj0iMS4wIiA/PjxzdmcgaGVpZ2h0PSIxMnB4IiB2ZXJzaW9uPSIxLjEiIHZpZXdCb3g9IjAgMCA5IDEyIiB3aWR0aD0iOXB4IiB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHhtbG5zOnNrZXRjaD0iaHR0cDovL3d3dy5ib2hlbWlhbmNvZGluZy5jb20vc2tldGNoL25zIiB4bWxuczp4bGluaz0iaHR0cDovL3d3dy53My5vcmcvMTk5OS94bGluayI+PHRpdGxlLz48ZGVzYy8+PGRlZnMvPjxnIGZpbGw9Im5vbmUiIGZpbGwtcnVsZT0iZXZlbm9kZCIgaWQ9IlBhZ2UtMSIgc3Ryb2tlPSJub25lIiBzdHJva2Utd2lkdGg9IjEiPjxnIGZpbGw9IiMwMDAwMDAiIGlkPSJDb3JlIiB0cmFuc2Zvcm09InRyYW5zbGF0ZSgtMjE4LjAwMDAwMCwgLTkwLjAwMDAwMCkiPjxnIGlkPSJjaGV2cm9uLWxlZnQiIHRyYW5zZm9ybT0idHJhbnNsYXRlKDIxOC41MDAwMDAsIDkwLjAwMDAwMCkiPjxwYXRoIGQ9Ik03LjQsMS40IEw2LDAgTC04Ljg4MTc4NDJlLTE2LDYgTDYsMTIgTDcuNCwxMC42IEwyLjgsNiBMNy40LDEuNCBaIiBpZD0iU2hhcGUiLz48L2c+PC9nPjwvZz48L3N2Zz4=") no-repeat 0 50%;
+    background-size: 8px;
+  }
+
+  .post-nav-prev a:hover:before {
+    opacity: 1;
+  }
+
+  .post-nav-next {
+    text-align: right;
+  }
+
+  .post-nav-next a:after {
+    content: ' ';
+    background: url("data:image/svg+xml;base64,PD94bWwgdmVyc2lvbj0iMS4wIiA/PjxzdmcgaGVpZ2h0PSIxMnB4IiB2ZXJzaW9uPSIxLjEiIHZpZXdCb3g9IjAgMCA5IDEyIiB3aWR0aD0iOXB4IiB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHhtbG5zOnNrZXRjaD0iaHR0cDovL3d3dy5ib2hlbWlhbmNvZGluZy5jb20vc2tldGNoL25zIiB4bWxuczp4bGluaz0iaHR0cDovL3d3dy53My5vcmcvMTk5OS94bGluayI+PHRpdGxlLz48ZGVzYy8+PGRlZnMvPjxnIGZpbGw9Im5vbmUiIGZpbGwtcnVsZT0iZXZlbm9kZCIgaWQ9IlBhZ2UtMSIgc3Ryb2tlPSJub25lIiBzdHJva2Utd2lkdGg9IjEiPjxnIGZpbGw9IiMwMDAwMDAiIGlkPSJDb3JlIiB0cmFuc2Zvcm09InRyYW5zbGF0ZSgtMjYwLjAwMDAwMCwgLTkwLjAwMDAwMCkiPjxnIGlkPSJjaGV2cm9uLXJpZ2h0IiB0cmFuc2Zvcm09InRyYW5zbGF0ZSgyNjAuNTAwMDAwLCA5MC4wMDAwMDApIj48cGF0aCBkPSJNMSwwIEwtMC40LDEuNCBMNC4yLDYgTC0wLjQsMTAuNiBMMSwxMiBMNyw2IEwxLDAgWiIgaWQ9IlNoYXBlIi8+PC9nPjwvZz48L2c+PC9zdmc+") no-repeat 100% 50%;
+    background-size: 8px;
+  }
+
+  .post-nav-next a:hover:after {
+    opacity: 1;
+  }
+</style>
+
+
+
+<div class="post-nav">
+
+  
+  <div class="post-nav-none post-nav-item">
+    <a href=""> </a>
+  </div>
+  
+
+  
+  <div class="post-nav-next post-nav-item">
+    
+    <a href="/blog/2021/adb/"> Android下的特殊文件夹</a>
+  </div>
+  
+
+</div>
+
+</article>
+    </div>
+
+    <footer class="site-footer">
+  <div class="container">
+    <ul class="social">
+  <li><a href="https://twitter.com/penghuailiang" target="_blank"><i class="icon icon-twitter"></i></a></li>
+  <li><a href="https://www.zhihu.com/people/huailiangpenguin" target="_blank"><i class="icon icon-zhihu"></i></a></li>
+  <li><a href="https://www.facebook.com/profile.php?id=100004290725320" target="_blank"><i class="icon icon-facebook"></i></a></li>
+  <li><a href="https://weibo.com/6212299692/profile?topnav=1&wvr=6" target="_blank"><i class="icon icon-sina"></i></a></li>
+  <li><a href="https://www.linkedin.com/in/penghuailiang/" target="_blank"><i class="icon icon-linkedin"></i></a></li>
+  <li><a href="https://github.com/huailiang" target="_blank"><i class="icon icon-github"></i></a></li>
+</ul>
+    <p class="txt-medium-gray">
+      <small>&copy;2021 All rights reserved. </small>
+    </p>
+  </div>
+</footer>
+    <a href="https://github.com/huailiang" target="_blank" class="github-corner"><svg width="80" height="80" viewBox="0 0 250 250" style="fill:#337ab7; color:#fff; position: absolute; top: 0; border: 0; right: 0;"><path d="M0,0 L115,115 L130,115 L142,142 L250,250 L250,0 Z"></path><path d="M128.3,109.0 C113.8,99.7 119.0,89.6 119.0,89.6 C122.0,82.7 120.5,78.6 120.5,78.6 C119.2,72.0 123.4,76.3 123.4,76.3 C127.3,80.9 125.5,87.3 125.5,87.3 C122.9,97.6 130.6,101.9 134.4,103.2" fill="currentColor" style="transform-origin: 130px 106px;" class="octo-arm"></path><path d="M115.0,115.0 C114.9,115.1 118.7,116.5 119.8,115.4 L133.7,101.6 C136.9,99.2 139.9,98.4 142.2,98.6 C133.8,88.0 127.5,74.4 143.8,58.0 C148.5,53.4 154.0,51.2 159.7,51.0 C160.3,49.4 163.2,43.6 171.4,40.1 C171.4,40.1 176.1,42.5 178.8,56.2 C183.1,58.6 187.2,61.8 190.9,65.4 C194.5,69.0 197.7,73.2 200.1,77.6 C213.8,80.2 216.3,84.9 216.3,84.9 C212.7,93.1 206.9,96.0 205.4,96.6 C205.1,102.4 203.0,107.8 198.3,112.5 C181.9,128.9 168.3,122.5 157.7,114.1 C157.9,116.9 156.7,120.9 152.7,124.9 L141.0,136.5 C139.8,137.7 141.6,141.9 141.8,141.8 Z" fill="currentColor" class="octo-body"></path></svg></a>
+
+
+    <script src="//code.jquery.com/jquery-1.11.3.min.js"></script>
+    <script>
+      $(document).ready(function () {
+        $('.sliding-panel-button,.sliding-panel-fade-screen,.sliding-panel-close').on('click touchstart', function (e) {
+          $('.sliding-panel-content,.sliding-panel-fade-screen').toggleClass('is-visible');
+          e.preventDefault();
+        });
+      });
+    </script>
+  </main>
+</body>
+
+</html>
