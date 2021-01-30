@@ -1,13 +1,12 @@
 ---
 layout:     post
-title:      "C++ 中类的内存布局(转载)"
+title:      "C++ 中struct/class的内存布局"
 date:       2021-01-30 02:00:00
 author:     "huailiang"
 tags:
     - 引擎
 ---
 
-> 
 
 ### struct 的内存布局：
 
@@ -25,6 +24,22 @@ struct 的起始地址需要能够被其成员中最宽的基本数据类型整�
 struct 的size 也必须能够被其成员中最宽的基本数据类型整除；
 struct 中每个成员地址相对于struct 的起始地址的offset，必须是自然对齐的。
 
+如下面的例子：
+
+```c
+struct MyStruct
+{
+    char dda;   //偏移量为0，满足对齐方式，dda占用1个字节；
+    double dda1;//下一个可用的地址的偏移量为1，不是sizeof(double)=8的倍数，需要补足7个字节才能使偏移量变为8（满足对齐方式），
+                //因此VC自动填充7个字节，dda1存放在偏移量为8
+                //的地址上，它占用8个字节。
+    int type;   //下一个可用的地址的偏移量为16，是sizeof(int)=4的倍数，满足int的对齐方式，
+                //所以不需要VC自动填充，type存
+                //放在偏移量为16的地址上，它占用4个字节。
+};
+//所有成员变量都分配了空间，空间总的大小为1+7+8+4=20，不是结构的节边界数（即结构中占用最大空间的类型所占用的字节数sizeof(double)=8）的倍数，
+// 所以需要填充4个字节，以满足结构的大小为sizeof(double)=8的倍数。
+```
 
 ### Class 的内存布局：
 在学习C++ 的class 的内存布局前，先介绍下文会被用到的Visual studio 中的编译选项"/d1reportAllClassLayout" 和 "/d1reportSingleClassLayout[ClassName]"。
@@ -116,7 +131,7 @@ CBase::$vftable@:
  0  | &CBase::h
  ```
 
-可以看到该类的起始地址是放了一个"vfptr"，这个指针用来指向该类的虚函数表。
+可以看到该类的起始地址是放了一个vfptr，这个指针用来指向该类的虚函数表。
 
 单一继承的类(无虚函数)
 
