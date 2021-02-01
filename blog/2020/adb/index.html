@@ -11,7 +11,7 @@
 
   <link rel="shortcut icon" href="/img/favicon.ico">
   <link rel="stylesheet" href="/css/main.css">
-  <link rel="canonical" href="https://huailiang.github.io/blog/2021/adb/">
+  <link rel="canonical" href="https://huailiang.github.io/blog/2020/adb/">
 
 </head>
 
@@ -68,7 +68,7 @@ MathJax.Hub.Config({
   <div class="card">
     <header class="post-header">
       <h1 class="post-title">Android下的特殊文件夹</h1>
-      <p class="post-meta">Jan 18, 2021 •
+      <p class="post-meta">Jan 18, 2020 •
         huailiang</p>
     </header>
 
@@ -181,20 +181,22 @@ MathJax.Hub.Config({
 </div>
 
 <p>JNI的c++接口:</p>
-
 <div class="language-c++ highlighter-rouge"><pre class="highlight"><code><span class="cp">#include "mylog.h"
 #include &lt;jni.h&gt;
 #include &lt;sys/types.h&gt;
 #include &lt;stdlib.h&gt;
 #include &lt;android/asset_manager_jni.h&gt;
 #include &lt;android/asset_manager.h&gt;
-</span>
-<span class="k">extern</span> <span class="s">"C"</span><span class="p">{</span>
-<span class="n">JNIEXPORT</span>  <span class="n">jstring</span> <span class="n">JNICALL</span> <span class="n">Java_org_yanzi_lib_MyLib_readFromAssets</span><span class="p">(</span><span class="n">JNIEnv</span><span class="o">*</span> <span class="n">env</span><span class="p">,</span><span class="n">jclass</span> <span class="n">clazz</span><span class="p">,</span> <span class="n">jobject</span> <span class="n">assetManager</span><span class="p">,</span><span class="n">jstring</span> <span class="n">name</span><span class="p">);</span>
+</span> 
+<span class="c1">//jclass clazz,
+</span><span class="k">extern</span> <span class="s">"C"</span><span class="p">{</span>
+<span class="n">JNIEXPORT</span>  <span class="n">jstring</span>  <span class="n">JNICALL</span> <span class="n">Java_org_yanzi_lib_MyLib_readFromAssets</span><span class="p">(</span><span class="n">JNIEnv</span><span class="o">*</span> <span class="n">env</span><span class="p">,</span><span class="n">jclass</span> <span class="n">clazz</span><span class="p">,</span> <span class="n">jobject</span> <span class="n">assetManager</span><span class="p">,</span><span class="n">jstring</span> <span class="n">name</span><span class="p">);</span>
 <span class="n">JNIEXPORT</span>  <span class="n">jstring</span> <span class="n">JNICALL</span> <span class="n">Java_org_yanzi_lib_MyLib_readFromAssets</span><span class="p">(</span><span class="n">JNIEnv</span><span class="o">*</span> <span class="n">env</span><span class="p">,</span> <span class="n">jclass</span> <span class="n">clazz</span><span class="p">,</span> <span class="n">jobject</span> <span class="n">assetManager</span><span class="p">,</span><span class="n">jstring</span> <span class="n">name</span><span class="p">){</span>
 	<span class="n">LOGI</span><span class="p">(</span><span class="s">"readFromAssets enter..."</span><span class="p">);</span> <span class="c1">//jclass this,
 </span>	<span class="n">jstring</span> <span class="n">resultStr</span><span class="p">;</span>
+	<span class="n">LOGI</span><span class="p">(</span><span class="s">"readFromAssets enter111..."</span><span class="p">);</span>
 	<span class="n">AAssetManager</span><span class="o">*</span> <span class="n">mgr</span> <span class="o">=</span> <span class="n">AAssetManager_fromJava</span><span class="p">(</span><span class="n">env</span><span class="p">,</span> <span class="n">assetManager</span><span class="p">);</span>
+	<span class="n">LOGI</span><span class="p">(</span><span class="s">"readFromAssets enter000..."</span><span class="p">);</span>
 	<span class="k">if</span><span class="p">(</span><span class="n">mgr</span><span class="o">==</span><span class="nb">NULL</span><span class="p">)</span>
 	<span class="p">{</span>
 		<span class="n">LOGI</span><span class="p">(</span><span class="s">" %s"</span><span class="p">,</span><span class="s">"AAssetManager==NULL"</span><span class="p">);</span>
@@ -224,7 +226,7 @@ MathJax.Hub.Config({
 	<span class="n">AAsset_close</span><span class="p">(</span><span class="n">asset</span><span class="p">);</span>
 	<span class="n">LOGI</span><span class="p">(</span><span class="s">"readFromAssets exit..."</span><span class="p">);</span>
 	<span class="k">return</span> <span class="n">resultStr</span><span class="p">;</span>
-  <span class="p">}</span>
+<span class="p">}</span>
 <span class="p">}</span>
 </code></pre>
 </div>
@@ -259,7 +261,9 @@ APP_ABI:= armeabi-v7a</p>
       <li>Context.getCacheDir()，该方法返回/data/data/youPackageName/cache的File对象。</li>
     </ul>
   </li>
-  <li><strong>customDir</strong>
+  <li>
+    <p><strong>custom dir</strong></p>
+
     <ul>
       <li>getDir(String name, int mode)，返回/data/data/youPackageName/下的指定名称的文件夹File对象，如果该文件夹不存在则用指定名称创建一个新的文件夹。</li>
     </ul>
@@ -268,60 +272,14 @@ APP_ABI:= armeabi-v7a</p>
 
 <h2 id="persistentdatapath-temporarycachepath">persistentDataPath, temporaryCachePath</h2>
 
-<p>这两个目录路径在storage/Android/data/youPackageName目录下， 一般情况下可以通过手机自带的文件浏览器可以直接 编辑/删除 这些文件， 权限给的比较高，卸载程序此两个文件夹也会一起删除。temporaryCachePath是一个临时目录， 在操作系统磁盘不足的情况下， 会自动被系统清除， 适合存一些临时的文件， 而persistentDataPath适合存一些持久化的文件， 比如说游戏的bundle。</p>
-
-<p>persistentDataPath: storage/Android/data/yourpackageName/files<br />
-temporaryCachePath: storage/Android/data/yourpackageName/cache</p>
-
-<p>使用原生的方式获取路径：</p>
-
-<div class="language-java highlighter-rouge"><pre class="highlight"><code><span class="n">MLog</span><span class="o">.</span><span class="na">d</span><span class="o">(</span><span class="n">TAG</span><span class="o">,</span> <span class="s">"output: "</span> <span class="o">+</span> <span class="n">gameContext</span><span class="o">.</span><span class="na">getExternalFilesDir</span><span class="o">(</span><span class="err">“”</span><span class="o">).</span><span class="na">getAbsolutePath</span><span class="o">();</span>
-<span class="n">MLog</span><span class="o">.</span><span class="na">d</span><span class="o">(</span><span class="n">TAG</span><span class="o">,</span> <span class="s">"package: "</span> <span class="o">+</span> <span class="n">gameContext</span><span class="o">.</span><span class="na">getPackageResourcePath</span><span class="o">());</span>
-<span class="n">MLog</span><span class="o">.</span><span class="na">d</span><span class="o">(</span><span class="n">TAG</span><span class="o">,</span> <span class="s">"cache: "</span> <span class="o">+</span> <span class="n">gameContext</span><span class="o">.</span><span class="na">getCacheDir</span><span class="o">().</span><span class="na">getPath</span><span class="o">());</span>
-<span class="n">MLog</span><span class="o">.</span><span class="na">d</span><span class="o">(</span><span class="n">TAG</span><span class="o">,</span> <span class="s">"exCache: "</span> <span class="o">+</span> <span class="n">gameContext</span><span class="o">.</span><span class="na">getExternalCacheDir</span><span class="o">().</span><span class="na">getPath</span><span class="o">());</span>
-<span class="n">MLog</span><span class="o">.</span><span class="na">d</span><span class="o">(</span><span class="n">TAG</span><span class="o">,</span> <span class="s">"file: "</span> <span class="o">+</span> <span class="n">gameContext</span><span class="o">.</span><span class="na">getFilesDir</span><span class="o">().</span><span class="na">getPath</span><span class="o">());</span>
-<span class="n">MLog</span><span class="o">.</span><span class="na">d</span><span class="o">(</span><span class="n">TAG</span><span class="o">,</span> <span class="s">"code: "</span> <span class="o">+</span> <span class="n">gameContext</span><span class="o">.</span><span class="na">getPackageCodePath</span><span class="o">());</span>
-</code></pre>
-</div>
-
-<p>对应的输出是：</p>
-
-<p><img src="/img/post-android/jar7.jpg" alt="" /></p>
-
-<h2 id="内部存储外部存储的概念">内部存储，外部存储的概念</h2>
-
-<h4 id="内部存储">内部存储</h4>
-<p>概念：注意内部存储不是内存。内部存储位于系统中很特殊的一个位置，如果你想将文件存储于内部存储中，那么文件默认只能被你的应用访问到，且一个应用所创建的所有文件都在和应用包名相同的目录下。也就是说应用创建于内部存储的文件，与这个应用是关联起来的。当一个应用卸载之后，内部存储中的这些文件也被删除。从技术上来讲如果你在创建内部存储文件的时候将文件属性设置成可读，其他app能够访问自己应用的数据，前提是他知道你这个应用的包名，如果一个文件的属性是私有（private），那么即使知道包名其他应用也无法访问。 内部存储空间十分有限，因而显得可贵，另外，它也是系统本身和系统应用程序主要的数据存储所在地，一旦内部存储空间耗尽，手机也就无法使用了。所以对于内部存储空间，我们要尽量避免使用。Shared Preferences和SQLite数据库都是存储在内部存储空间上的。内部存储一般用Context来获取和操作。 <br />
-访问内部存储的API方法： <br />
-1、Environment.getDataDirectory() <br />
-2、getFilesDir().getAbsolutePath() <br />
-3、getCacheDir().getAbsolutePath() <br />
-4、getDir(“myFile”, MODE_PRIVATE).getAbsolutePath()</p>
-
-<h4 id="外部存储">外部存储</h4>
-<p>概念：最容易混淆的是外部存储，因为老的Android系统的跟新的Android系统是有差别的，很多人去网上查找资料，看了一下以前的资料，又看了一下现在的资料，但是发现它们说法不一样然后就困惑了。首先说一个大家普遍的概念“如果在pc机上是区分外部存储和内部存储的话，那么电脑自带的硬盘算是内部存储，U盘或者移动硬盘就是外部存储了。”因此很多人带着这样的理解去看待安卓手机，把内置存储（机身存储）当做内部存储，而把扩展的SD卡当做是外部存储。这么认为确实没错，因为在4.4（API19）以前的手机上确实是这样的，手机自身带的存储卡就是内部存储，而扩展的SD卡就是外部存储。但是从4.4的系统开始，很多的中高端机器都将自己的机身存储扩展到了8G以上，比如有的人的手机是16G的，有的人的手机是32G的，但是这个16G，32G是内部存储吗，不是的！！！，它们依然是外部存储，也就是说4.4系统及以上的手机将机身存储存储（手机自身带的存储叫做机身存储）在概念上分成了”内部存储internal” 和”外部存储external” 两部分。既然16G，32G是外部存储，那有人又有疑惑了，那4.4系统及以上的手机要是插了SD卡呢，SD卡又是什么呢，如果SD卡也是外部存储的话，那怎么区分机身存储的外部存储跟SD卡的外部存储呢？对，SD卡也是外部存储，那怎么区分呢，在4.4以后的系统中，API提供了这样一个方法来遍历手机的外部存储路径：</p>
-
-<div class="language-java highlighter-rouge"><pre class="highlight"><code><span class="n">File</span><span class="o">[]</span> <span class="n">files</span><span class="o">;</span>
-<span class="k">if</span> <span class="o">(</span><span class="n">Build</span><span class="o">.</span><span class="na">VERSION</span><span class="o">.</span><span class="na">SDK_INT</span> <span class="o">&gt;=</span> <span class="n">Build</span><span class="o">.</span><span class="na">VERSION_CODES</span><span class="o">.</span><span class="na">KITKAT</span><span class="o">)</span> <span class="o">{</span>
-    <span class="n">files</span> <span class="o">=</span> <span class="n">getExternalFilesDirs</span><span class="o">(</span><span class="n">Environment</span><span class="o">.</span><span class="na">MEDIA_MOUNTED</span><span class="o">);</span>
-    <span class="k">for</span><span class="o">(</span><span class="n">File</span> <span class="nl">file:</span><span class="n">files</span><span class="o">){</span>
-        <span class="n">Log</span><span class="o">.</span><span class="na">e</span><span class="o">(</span><span class="s">"main"</span><span class="o">,</span><span class="n">file</span><span class="o">);</span>
-    <span class="o">}</span>
-<span class="o">}</span>
-</code></pre>
-</div>
-
-<p>如果你的手机插了SD卡的话，那么它打印的路径就有两条了，例如我的华为荣耀7插了SD卡，它的结果如下： <br />
-/storage/emulated/0/Android/data/packname/files/mounted <br />
-/storage/B3E4-1711/Android/data/packname/files/mounted <br />
-其中/storage/emulated/0目录就是机身存储的外部存储路径, 而/storage/B3E4-1711/就是SD卡的路径</p>
+<p>这两个目录路径在storage/Android/data/youPackageName目录下， 一般</p>
 
 <h2 id="参考">参考</h2>
 
 <ul>
   <li><a href="https://blog.csdn.net/zy394383693/article/details/40627467">android工程目录结构</a></li>
   <li><a href="https://www.cnblogs.com/daishuguang/p/3854472.html">Android获取文件夹路径 /data/data/</a></li>
-  <li><a href="https://blog.csdn.net/u010937230/article/details/73303034/">Android文件存储—内部存储，外部存储</a></li>
+  <li><a href="https://zhuanlan.zhihu.com/p/87595524">现代图形 API 的内存管理</a></li>
 </ul>
 
 
@@ -413,14 +371,14 @@ temporaryCachePath: storage/Android/data/yourpackageName/cache</p>
   
   <div class="post-nav-prev post-nav-item">
     
-    <a href="/blog/2021/cpp/"> C++ 中struct/class的内存布局</a>
+    <a href="/blog/2020/job/"> Unity DOTS</a>
   </div>
   
 
   
   <div class="post-nav-next post-nav-item">
     
-    <a href="/blog/2020/tdbr/"> TDBR & Xcode Profile</a>
+    <a href="/blog/2020/ray2/"> 光线追踪-降噪与硬件加速</a>
   </div>
   
 
