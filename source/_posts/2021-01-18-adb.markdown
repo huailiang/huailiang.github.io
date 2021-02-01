@@ -205,7 +205,7 @@ temporaryCachePath: storage/Android/data/yourpackageName/cache
 
 
 ```java
-MLog.d(TAG, "output: " + output);
+MLog.d(TAG, "output: " + gameContext.getExternalFilesDir("").getAbsolutePath();
 MLog.d(TAG, "package: " + gameContext.getPackageResourcePath());
 MLog.d(TAG, "cache: " + gameContext.getCacheDir().getPath());
 MLog.d(TAG, "exCache: " + gameContext.getExternalCacheDir().getPath());
