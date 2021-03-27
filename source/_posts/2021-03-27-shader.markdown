@@ -1,0 +1,35 @@
+---
+layout:     post
+title:      "shader 的更新测试"
+date:       2021-03-27 02:00:00
+author:     "huailiang"
+tags:
+    - Unity
+---
+
+
+
+
+#### 三个原则：
+
+　1.如果shader没有与使用它的材质打在一个AB中,那么shader_feature的所有宏相关的代码都不会被包含进AB包中(有一种例外,就是当shader_feature _A这种形式的时候是可以的),这个shader最终被程序从AB包中拿出来使用也会是错误的(粉红色).
+
+　　2.把shader和使用它的材质放到一个AB包中,但是材质中没有保存任何的keyword信息(你再编辑器中也是这种情况),shader_feature会默认的把第一个keyword也就是上面的_A和_C(即每个shader_feature的第一个)作为你的选择。而不会把_A _D,_B _C,_B _D这三种组合的代码编译到AB包中。
+
+　　3.把shader和使用它的材质放到一个AB包中,并且材质保存了keyword信息(_A _C)为例,那么这个AB包就只包含_A _C的shaderVariant.
+
+
+## 参考
+
+* [Unity中Shader是否可以热更新的测试][i1]
+* [Unity的Shader加载编译优化][i2]
+* [一种Shader变体收集和打包编译优化的思路][i3]
+* [Unity的Shader加载解析和ShaderVariantCollection的warmup][i4]
+* [UnityShaderVariant的一些探究心得][i5]
+
+[i1]: https://www.pianshen.com/article/92971003031/
+[i2]: https://blog.csdn.net/Rhett_Yuan/article/details/90483236
+[i3]: https://github.com/lujian101/ShaderVariantCollector
+[i4]: https://answer.uwa4d.com/question/5ce5467ad1d3d045c846d769
+[i5]: https://blog.csdn.net/long0801/article/details/77413453?utm_source=blogxgwz8
+[i6]: https://github.com/huailiang/Variants_Proj
