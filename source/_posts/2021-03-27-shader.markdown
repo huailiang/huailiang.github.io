@@ -1,6 +1,6 @@
 ---
 layout:     post
-title:      "shader 的更新测试"
+title:      "shader/Variant 的更新测试"
 date:       2021-03-27 02:00:00
 author:     "huailiang"
 tags:
@@ -8,7 +8,22 @@ tags:
 ---
 
 
+### 什么是变体
 
+引用Unity官方文档的解释: [ShaderVariant](https://docs.unity3d.com/ScriptReference/ShaderVariantCollection.ShaderVariant.html)
+> In Unity, many shaders internally have multiple "variants", to account for different light modes, lightmaps, shadows and so on. These variants are indentified by a shader pass type, and a set of shader keywords.
+
+Unity的shader资源不仅含有GPU上执行的着色器代码，还包含了渲染状态，属性的定义，以及对应不同渲染管线不同渲染阶段用于的着色器代码，每一小段代码也可能会有不同的编译参数，以对应不同的渲染功能
+
+在带有多个变体的shader代码片段中，最显著的特征就是拥有这些预编译开关如：
+
+```
+#pragma multi_compile_fwdbase // unity 内置前向管线编译设置集合，控制光照，阴影等很多相关功能
+#pragma shader_feature _USE_FEATURE_A // 自定义功能开关
+#pragma multi_compile _USE_FUNCTION_A _USE_FUNCTION_B // 自定义多编译选项
+```
+
+有了这些编译开关标记，我们就可以只写很少的shader代码，从而依附在这份骨架代码上，来实现含有细微差异功能的变种shader代码。当然功能越多，这些变体数量也成指数级增长，如何控制这些变体可能产生的数量，也需要较为丰富的经验和技巧。
 
 #### 三个原则：
 
@@ -19,6 +34,159 @@ tags:
 　　3.把shader和使用它的材质放到一个AB包中,并且材质保存了keyword信息(_A _C)为例,那么这个AB包就只包含_A _C的shaderVariant.
 
 
+### 着色器变种的筛选
+
+添加过多的特性使我们的着色器变得臃肿，导致最后生成大量的着色器变种。我们可以尝试使用shader-feature编译指令，但是这样的话，在发布时只会包含当前使用的材质中开启的关键字。而 multi_compile 指令不会有这种限制。
+
+Unity在发布时会基于场景设置自动帮我们剔除一些关键字keywords，比如LIGHTMAP_ON,DYNAMICLIGHTMAP_ON,  INSTANCING_ON等。但即使这样，在发布时还是会剩下很多我们不会用到的关键字。所以Unity提供了一个方法，允许我们在发布时自己选择跳过部分着色器变种。
+
+
+#### Preprocessing Shaders
+
+发布时，Unity编辑器会寻找实现了IPreprocessShaders接口的类（定义在UnityEditor.Build中）。Unity会为这个类创造一个实例，接着将着色器变种传给它用于剔除。所以我们在Editor文件夹中定义这样一个类。
+
+
+```csharp
+using UnityEditor.Build;
+ 
+public class MyPipelineShaderPreprocessor : IPreprocessShaders { }
+```
+
+这个接口要求我们实现两件事，首先是一个叫做callbackOrder的只读属性，它返回一个整型，表示该预处理的调用序号，以防存在多个实现该接口的类，而调用顺序不确定。我们返回0就可以了。
+```csharp
+public int callbackOrder { get { return 0; } }
+```
+
+
+
+然后是方法，它传入shader、  ShaderSnippetData、和一列表的shadercompilerData，其中包含了着色器变种的设置，我们先打印一下看看着色器的名字。
+```csharp
+using UnityEditor.Build;
+using UnityEditor.Rendering;
+using UnityEngine;
+ 
+public class MyPipelineShaderPreprocessor : IPreprocessShaders 
+{
+    public void OnProcessShader(Shader shader, ShaderSnippetData snippet, IList<ShaderCompilerData> data) 
+    {
+        Debug.Log(shader.name);
+    }
+}
+```
+
+现在如果我们发布项目就看到一大串的着色器名字被打印出来。有些是我们自己的shader，有些则是默认的着色器，你可以在project settings的Graphic面板里对这些进行管理。另外还有许多的重复，那是因为编译程序分离了shader变种，但是我们不需要担心他的实际顺序和分组。
+
+
+#### 只在自己的pipeline下处理
+
+发布时，所有定义的预处理程序都会被调用。所以我们前面在项目中写的预处理总是会被调用，即使项目并没有使用我们的pipeline。为了防止干涉其他的pipeline，我们需要判断当前使用的pipeline是否是我们自己写的。我们可以通过GraphicsSettings.renderPipelineAsset来获取当前的pipeline，然后来判断它是不是MyPipelineAsset类型的。
+
+```csharp
+using UnityEngine.Rendering;
+ 
+public class MyPipelineShaderPreprocessor : IPreprocessShaders {
+	
+	public void OnProcessShader(Shader shader, ShaderSnippetData snippet, IList…ShaderCompilerData> data) {
+		if (!(GraphicsSettings.renderPipelineAsset is MyPipelineAsset)) {
+			return;
+		}
+		Debug.Log(shader.name);
+	}
+}
+```
+
+
+### Variants 更新
+
+#### 测试案例一：
+
+
+使用ShaderVariantCollection（后续简称为 SVC），记录所有用到的variant。
+
+将SVC和shader打入一个Shader AssetBundle。将材质打成Material AssetBundle.
+
+运行时加载ShaderAB，取SVC，WarmUp，再加载MaterialAB。
+
+对应到 [例子][i6] 中 variants 的场景中， 先选中两个 prefab 和 material， 右键 点击生成 BuildBundle - Mat Sep,在 StreamingAssets 目录下，可以看见生成的 bundle.
+
+
+![](/img/post-unity/var1.jpg)
+
+<上面两个是直接从 prefab 中加载出来， 下面两个使用的是从 Assetbundle 中加载而来. 左边使用的是shader_feature, 右边使用的是 multi_compile>
+
+SVC 中 只开启了 绿色
+
+![](/img/post-unity/var2.jpg)
+
+从 Bundle 中加载从来的 cube 变成红色（即默认_CL_R）， 说明使用 shader_feature 在没有对应的 Variant打进bundle 的时候会退变使用第一个， 而 multi_compile 则不受影响。 而 当 shader_feature 存在对应的 Varaiant 的时候， 则表现是正常的。
+
+
+![](/img/post-unity/var3.jpg)
+
+使用如下代码加载对应的 SVC:
+
+```csharp
+    void OnGUI()
+    {
+        if (GUI.Button(new Rect(20, 140, 200, 100), "LoadVariants - Mat"))
+        {
+            Profiler.BeginSample("LoadVariants");
+            LoadVariants();
+            LoadMat("mat_shaderfeature");
+            LoadMat("mat_multicompile");
+            LoadCube("cubemulticompile", new Vector3(2, 0, 0));
+            LoadCube("cubefeature", new Vector3(-2, 0, 0));
+            Profiler.EndSample();
+        }
+    }
+
+    private void LoadVariants()
+    {
+        var pat = Path.Combine(prefix, "shader");
+        var b = AssetBundle.LoadFromFile(pat);
+        var svc = b.LoadAsset<ShaderVariantCollection>("MultiShaderVariants");
+        svc.WarmUp();
+        // svc的WarmUp就会触发相关Shader的预编译，触发预编译之后再加载Shader Asset即可
+        // b.LoadAllAssets<Shader>();
+		b.LoadAllAssets<Material>();
+    }
+
+    private void LoadMat(string mat)
+    {
+        var pat = Path.Combine(prefix, mat);
+        var b = AssetBundle.LoadFromFile(pat);
+        b.LoadAllAssets<Material>();
+    }
+
+    private void LoadCube(string name, Vector3 pos)
+    {
+        var pat = Path.Combine(prefix, name);
+        var b = AssetBundle.LoadFromFile(pat);
+        var obj = b.LoadAsset<GameObject>(name);
+        var go = GameObject.Instantiate(obj);
+        go.name = name + "...";
+        go.transform.position = pos;
+        b.Unload(false);
+    }
+```
+
+#### 测试案例二：
+
+SVC、shader和Material打成一个包。
+
+依旧是 [例子][i6] 中 variants 的场景中， 此次只选中两个 prefab， 右键 点击生成 BuildBundle - Mat Join, Material 就会和 shader/SVC 打到一个 Bundle 中。运行时我们不再单独加载 Material：
+
+```csharp
+Profiler.BeginSample("LoadVariants");
+LoadVariants();
+LoadCube("cubemulticompile", new Vector3(2, 0, 0));
+LoadCube("cubefeature", new Vector3(-2, 0, 0));
+Profiler.EndSample();
+```
+
+此次我们看到 无论 shader_feature 对应的 variant 是否对应在 svc中， 则表现都正确。坏处就是所有的资源都关联在一个 bundle 中了。
+
+
 ## 参考
 
 * [Unity中Shader是否可以热更新的测试][i1]
@@ -26,6 +194,8 @@ tags:
 * [一种Shader变体收集和打包编译优化的思路][i3]
 * [Unity的Shader加载解析和ShaderVariantCollection的warmup][i4]
 * [UnityShaderVariant的一些探究心得][i5]
+* [Unity Doc IPreprocessShaders][i7]
+* [PCSSLight 中使用ShaderVariantCollection的 Demo][i8]
 
 [i1]: https://www.pianshen.com/article/92971003031/
 [i2]: https://blog.csdn.net/Rhett_Yuan/article/details/90483236
@@ -33,3 +203,5 @@ tags:
 [i4]: https://answer.uwa4d.com/question/5ce5467ad1d3d045c846d769
 [i5]: https://blog.csdn.net/long0801/article/details/77413453?utm_source=blogxgwz8
 [i6]: https://github.com/huailiang/Variants_Proj
+[i7]: https://docs.unity3d.com/cn/2019.3/ScriptReference/Build.IPreprocessShaders.html
+[i8]: https://github.com/TheMasonX/UnityPCSS/blob/7ebf495e0366cdb8805af1cf6c692455d06493c9/Assets/PCSS/Scripts/PCSSLight.cs
