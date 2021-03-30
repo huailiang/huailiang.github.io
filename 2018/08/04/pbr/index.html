@@ -1,0 +1,565 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="utf-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="google-site-verification" content="xBT4GhYoi5qRD5tr338pgPM5OWHHIDR6mNg1a3euekI" />
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="description" content="关于前端与设计、黑客与画家 | 怀亮，Web & Mobile Lover，Software Engineer，Game Designer | 这里是 @Huailiang怀亮 的个人博客，与你一起发现更大的世界。">
+    <meta name="keywords"  content="怀亮, Huailiang怀亮, Huailiang, Unity, Tensorflow, AR, 怀亮的博客, Huailiang Blog, 博客, U3D, 互联网, AR, JavaScript">
+    <meta name="theme-color" content="#000000">
+
+    <title>PBR基于物理的着色 - 怀亮的博客 | Huailiang Blog</title>
+
+    <!-- Web App Manifest -->
+    <link rel="manifest" href="/pwa/manifest.json">
+
+    <!-- Favicon -->
+    <link rel="shortcut icon" href="/img/favicon.ico">
+
+    <!-- Canonical URL -->
+    <link rel="canonical" href="http://localhost:4000/2018/08/04/pbr/">
+
+    <!-- Bootstrap Core CSS -->
+    <link rel="stylesheet" href="/css/bootstrap.min.css">
+
+    <!-- Custom CSS -->
+    <link rel="stylesheet" href="/css/hux-blog.min.css">
+
+    <!-- Pygments Github CSS -->
+    <link rel="stylesheet" href="/css/syntax.css">
+
+    <!-- Custom Fonts -->
+    <!-- <link href="http://maxcdn.bootstrapcdn.com/font-awesome/4.3.0/css/font-awesome.min.css" rel="stylesheet" type="text/css"> -->
+    <!-- Hux change font-awesome CDN to qiniu -->
+    <link href="//cdnjs.cloudflare.com/ajax/libs/font-awesome/4.6.3/css/font-awesome.min.css" rel="stylesheet" type="text/css">
+
+    <!-- ga & ba script hoook -->
+    <script></script>
+</head>
+
+
+<!-- hack iOS CSS :active style -->
+<body ontouchstart="">
+
+    <!-- Navigation -->
+<nav class="navbar navbar-default navbar-custom navbar-fixed-top">
+    <div class="container-fluid">
+        <!-- Brand and toggle get grouped for better mobile display -->
+        <div class="navbar-header page-scroll">
+            <button type="button" class="navbar-toggle">
+                <span class="sr-only">Toggle navigation</span>
+                <span class="icon-bar"></span>
+                <span class="icon-bar"></span>
+                <span class="icon-bar"></span>
+            </button>
+            <a class="navbar-brand" href="/">Huailiang Blog</a>
+        </div>
+
+        <!-- Collect the nav links, forms, and other content for toggling -->
+        <div id="huxblog_navbar">
+            <div class="navbar-collapse">
+                <ul class="nav navbar-nav navbar-right">
+                    <li>
+                        <a href="/">Home</a>
+                    </li>
+                    
+                    <li>
+                        <a href="/about/">About</a>
+                    </li>
+                    
+                    <li>
+                        <a href="/portfolio/">Portfolio</a>
+                    </li>
+                    
+                    <li>
+                        <a href="/tags/">Tags</a>
+                    </li>
+                    
+                </ul>
+            </div>
+        </div>
+        <!-- /.navbar-collapse -->
+    </div>
+    <!-- /.container -->
+</nav>
+<script>
+    // Drop Bootstarp low-performance Navbar
+    // Use customize navbar with high-quality material design animation
+    // in high-perf jank-free CSS3 implementation
+    var $body   = document.body;
+    var $toggle = document.querySelector('.navbar-toggle');
+    var $navbar = document.querySelector('#huxblog_navbar');
+    var $collapse = document.querySelector('.navbar-collapse');
+
+    var __HuxNav__ = {
+        close: function(){
+            $navbar.className = " ";
+            // wait until animation end.
+            setTimeout(function(){
+                // prevent frequently toggle
+                if($navbar.className.indexOf('in') < 0) {
+                    $collapse.style.height = "0px"
+                }
+            },400)
+        },
+        open: function(){
+            $collapse.style.height = "auto"
+            $navbar.className += " in";
+        }
+    }
+
+    // Bind Event
+    $toggle.addEventListener('click', function(e){
+        if ($navbar.className.indexOf('in') > 0) {
+            __HuxNav__.close()
+        }else{
+            __HuxNav__.open()
+        }
+    })
+
+    /**
+     * Since Fastclick is used to delegate 'touchstart' globally
+     * to hack 300ms delay in iOS by performing a fake 'click',
+     * Using 'e.stopPropagation' to stop 'touchstart' event from
+     * $toggle/$collapse will break global delegation.
+     *
+     * Instead, we use a 'e.target' filter to prevent handler
+     * added to document close HuxNav.
+     *
+     * Also, we use 'click' instead of 'touchstart' as compromise
+     */
+    document.addEventListener('click', function(e){
+        if(e.target == $toggle) return;
+        if(e.target.className == 'icon-bar') return;
+        __HuxNav__.close();
+    })
+</script>
+
+
+    <!-- Image to hack wechat -->
+<!-- <img src="/img/icon_wechat.png" width="0" height="0"> -->
+<!-- <img src="/img/post-bg-pbr.jpg" width="0" height="0"> -->
+
+<!-- Post Header -->
+<style type="text/css">
+    header.intro-header{
+        position: relative;
+        background-image: url('/img/post-bg-pbr.jpg')
+    }
+
+    
+    header.intro-header .header-mask{
+        width: 100%;
+        height: 100%;
+        position: absolute;
+        background: rgba(0,0,0, 0.3);
+    }
+    
+</style>
+<header class="intro-header" >
+    <div class="header-mask"></div>
+    <div class="container">
+        <div class="row">
+            <div class="col-lg-8 col-lg-offset-2 col-md-10 col-md-offset-1">
+                <div class="post-heading">
+                    <div class="tags">
+                        
+                        <a class="tag" href="/tags/#Unity" title="Unity">Unity</a>
+                        
+                        <a class="tag" href="/tags/#前端开发" title="前端开发">前端开发</a>
+                        
+                    </div>
+                    <h1>PBR基于物理的着色</h1>
+                    
+                    
+                    <h2 class="subheading">基于物理的着色，让材质真实而又不真实</h2>
+                    
+                    <span class="meta">Posted by Huailiang on August 4, 2018</span>
+                </div>
+            </div>
+        </div>
+    </div>
+</header>
+
+<!-- Post Content -->
+<article>
+    <div class="container">
+        <div class="row">
+
+    <!-- Post Container -->
+            <div class="
+                col-lg-8 col-lg-offset-2
+                col-md-10 col-md-offset-1
+                post-container">
+
+                <!-- Multi-Lingual -->
+                
+
+				<blockquote>
+  <p>Unity5之后加入新的渲染方式 PBR。PBR是一种着色和渲染技术，用于更精确的描述光如何与物体表面互动。PBS（Physically Based Shading）在有一些地方也叫PBR（Physically Based Rendering），是一个基于物体表面材质属性的着色方法。与之前的Blinn-Phong等算法不同。PBS通过对物体表面的材质属性与周围光照信息来进行着色计算。PBS着色系统中，一个物体不仅受到光源的影响，还会受到周围环境的影响。 这会使得整个场景更加真实。</p>
+</blockquote>
+
+<p>PBS有一个大前提，就是它能够满足光能传播过程中的能量守衡。能量守衡体现在三个方面。</p>
+
+<p>1、一个对象反射出来的光照信息，不可能超过它接受到的信息。也就是说，全反射是一个物体的极限。</p>
+
+<p>2、一个物体越光亮，那么它的颜色信息应该越少。（可以看出，refection 和 diffuse 应该是一个插值关系）</p>
+
+<p>3、一个物体越平滑，那么它的高亮点会越小，越亮。</p>
+
+<p>下面以一个自己实现的 pbr 例子，例子下载地址，<a href="https://github.com/huailiang/pbr_proj">点击这里</a>。</p>
+
+<p>关于 pbr shader的实现这里就不再赘述了，工程附带的 readme 推导公式、源码都给的很详细。本文主要是通过此例子来验证 pbr 的一些特性。</p>
+
+<p>选中材质，开启 OpenDebug 选项。通过输出参数控制来调试 pbr 的各种效果。当然这些只是在编辑器里预览，游戏运行时，可以通过 material.DisableKeyword()来关闭此选项，来避免不必要的计算。</p>
+
+<p>我们都知道PBR 材质金属性越强，反射的光越少，因为大部分光都被金属吸收了，转化为热能或者说电能。
+为了验证 pbr 这一特性，我们 debugmode 选中 Diffuse，如下图所示，拖拽 Matillic 属性来改变材质的金属性发现：matallic 值越大，材质的颜色越暗；反之，材质的颜色越亮。</p>
+
+<p><img src="/img/in-post/post-pbr/pbr1.jpg" alt="" /></p>
+
+<p>下面我们再验证 PBR 材质的能量守恒性质：</p>
+
+<p>我们把 Debug Mode 选中 None, 不要开启边缘发光效果，我们拖拽 Gloss 选项来改变材质的光滑度。通过滑动，我们可以发现，Gloss 越小，漫反射（高光部分）区域越大，但光线锐度越小；Gloss 越大，虽然高光区域越小，但光线的亮度越高，锐度越犀利。</p>
+
+<p><img src="/img/in-post/post-pbr/pbr4.jpg" alt="" /></p>
+
+<p>更多的调试选项这里就不一一列举了，比如查看材质发现的方向，PBR 公式计算的过程中 法线分布函数、微平面遮挡系数、Fresnel 现象等等，等等都可以通过 DebugMode 来调试。</p>
+
+<p><img src="/img/in-post/post-pbr/pbr6.jpg" alt="" /></p>
+
+<p>然而，尽管实现了 pbr 的特性，往往却不能满足美术或者说策划大大们的需求，这些需求往往并不是更真实的着色，比如说我们在展示 avatar 的时候，需要一圈外发光效果。有时候外发光的颜色使我们场景里主光的颜色，有时外发光的颜色是某一个指定的颜色。</p>
+
+<p>在材质的选项中，我们没有勾选 SpecialRimColor,外发光的颜色为主光的颜色，当我们勾选之后，可以指定一个特定的外发光颜色。效果如下图所示：</p>
+
+<p><img src="/img/in-post/post-pbr/pbr5.jpg" alt="" /></p>
+
+<p>处理半透明有多重方式，主要是 AlphaTest 和 AlphaBlend 两种。在例子的Example_ALPHA的 scene 中，我们给了四种 alpha 混合方式：Opaque、 Cutout、 CutoutTansparent、 Transparent四种裁剪方式。</p>
+
+<p><img src="/img/in-post/post-pbr/pbr2.jpg" alt="" /></p>
+
+<p>Opaque 的渲染队列是Geometry， RenderType 是Opaque 效果是右下角，没有透明度也没有Alpha裁剪</p>
+
+<p>Cutout 的渲染队列是AlphaTest，RenderType 是Opaque 效果如左下角，没有透明度但有 Alpha 裁剪</p>
+
+<p>CutoutTransparent 渲染队列是Transparent， RenderType 是TransparentCutout， 有透明度也有 Alha 裁剪</p>
+
+<p>Transparent 的渲染队列是Transparent， RenderType 是Transparent， 有透明度 Alpha混合处理</p>
+
+<p>结语：我们可以使用 PBR，当然也可以再之基础上添加更多的效果，艺术的大脑是无限的。</p>
+
+
+
+                <hr style="visibility: hidden;">
+
+                <ul class="pager">
+                    
+                    <li class="previous">
+                        <a href="/2018/07/15/terrain/" data-toggle="tooltip" data-placement="top" title="Unity 大地形加载研究">
+                        Previous<br>
+                        <span>Unity 大地形加载研究</span>
+                        </a>
+                    </li>
+                    
+                    
+                </ul>
+
+
+                
+                <!-- disqus 评论框 start -->
+                <div class="comment">
+                    <div id="disqus_thread" class="disqus-thread"></div>
+                </div>
+                <!-- disqus 评论框 end -->
+                
+
+                
+            </div>
+
+    <!-- Side Catalog Container -->
+        
+
+    <!-- Sidebar Container -->
+            <div class="
+                col-lg-8 col-lg-offset-2
+                col-md-10 col-md-offset-1
+                sidebar-container">
+
+                <!-- Featured Tags -->
+                
+                <section>
+                    <hr class="hidden-sm hidden-xs">
+                    <h5><a href="/tags/">FEATURED TAGS</a></h5>
+                    <div class="tags">
+        				          
+                				       <a href="/tags/#OSX" title="OSX" rel="4">OSX</a>
+        				          
+                				       <a href="/tags/#前端开发" title="前端开发" rel="15">前端开发</a>
+        				          
+                				       <a href="/tags/#JavaScript" title="JavaScript" rel="8">JavaScript</a>
+        				          
+                				       <a href="/tags/#Lua" title="Lua" rel="1">Lua</a>
+        				          
+                				       <a href="/tags/#Unity" title="Unity" rel="16">Unity</a>
+        				          
+                				       <a href="/tags/#手机游戏" title="手机游戏" rel="7">手机游戏</a>
+        				          
+                				       <a href="/tags/#Jenkins" title="Jenkins" rel="1">Jenkins</a>
+        				          
+                				       <a href="/tags/#C++" title="C++" rel="3">C++</a>
+        				          
+                				       <a href="/tags/#Tensorflow" title="Tensorflow" rel="6">Tensorflow</a>
+        				          
+                				       <a href="/tags/#人工智能" title="人工智能" rel="7">人工智能</a>
+        				          
+                				       <a href="/tags/#Python" title="Python" rel="8">Python</a>
+        				          
+                				       <a href="/tags/#工具" title="工具" rel="5">工具</a>
+        				          
+                				       <a href="/tags/#强化学习" title="强化学习" rel="4">强化学习</a>
+        				          
+        			      </div>
+                </section>
+                
+
+                <!-- Friends Blog -->
+                
+                <hr>
+                <h5>FRIENDS</h5>
+                <ul class="list-inline">
+                    
+                        <li><a href="http://www.gamelook.com.cn">GameLook</a></li>
+                    
+                        <li><a href="http://forum.china.unity3d.com/forum.php">游戏人社区</a></li>
+                    
+                        <li><a href="https://unity3d.com">Unity3D</a></li>
+                    
+                        <li><a href="https://www.uwa4d.com">UWA-简单优化</a></li>
+                    
+                        <li><a href="https://blog.openai.com/openai-baselines-ppo/">OpenAI新的策略优化算法PPO</a></li>
+                    
+                        <li><a href="https://www.zhihu.com/people/morvan/activities">知乎-莫烦 Python</a></li>
+                    
+                        <li><a href="http://blog.sina.com.cn/s/blog_471132920101d5kh.html">风宇冲的 Blog</a></li>
+                    
+                        <li><a href="http://wiki.jikexueyuan.com/project/tensorflow-zh/tutorials/mnist_beginners.html">极客学院-Tensotflow</a></li>
+                    
+                        <li><a href="https://unity3d.com/cn/solutions/mobile-ar">Unity for Mobile AR</a></li>
+                    
+                </ul>
+                
+            </div>
+        </div>
+    </div>
+</article>
+
+
+
+
+
+
+<!-- disqus 公共JS代码 start (一个网页只需插入一次) -->
+<script type="text/javascript">
+    /* * * CONFIGURATION VARIABLES * * */
+    var disqus_shortname = "Huailiang";
+    var disqus_identifier = "/2018/08/04/pbr";
+    var disqus_url = "http://localhost:4000/2018/08/04/pbr/";
+
+    (function() {
+        var dsq = document.createElement('script'); dsq.type = 'text/javascript'; dsq.async = true;
+        dsq.src = '//' + disqus_shortname + '.disqus.com/embed.js';
+        (document.getElementsByTagName('head')[0] || document.getElementsByTagName('body')[0]).appendChild(dsq);
+    })();
+</script>
+<!-- disqus 公共JS代码 end -->
+
+
+
+
+<!-- async load function -->
+<script>
+    function async(u, c) {
+      var d = document, t = 'script',
+          o = d.createElement(t),
+          s = d.getElementsByTagName(t)[0];
+      o.src = u;
+      if (c) { o.addEventListener('load', function (e) { c(null, e); }, false); }
+      s.parentNode.insertBefore(o, s);
+    }
+</script>
+<!-- anchor-js, Doc:http://bryanbraun.github.io/anchorjs/ -->
+<script>
+    async("//cdnjs.cloudflare.com/ajax/libs/anchor-js/1.1.1/anchor.min.js",function(){
+        anchors.options = {
+          visible: 'always',
+          placement: 'right',
+          icon: '#'
+        };
+        anchors.add().remove('.intro-header h1').remove('.subheading').remove('.sidebar-container h5');
+    })
+</script>
+<style>
+    /* place left on bigger screen */
+    @media all and (min-width: 800px) {
+        .anchorjs-link{
+            position: absolute;
+            left: -0.75em;
+            font-size: 1.1em;
+            margin-top : -0.1em;
+        }
+    }
+</style>
+
+
+
+    <!-- Footer -->
+<footer>
+    <div class="container">
+        <div class="row">
+            <div class="col-lg-8 col-lg-offset-2 col-md-10 col-md-offset-1">
+                <ul class="list-inline text-center">
+                     
+
+                    <!-- add Weibo, Zhihu by Hux, add target = "_blank" to <a> by Hux -->
+                    
+                    <li>
+                        <a target="_blank" href="https://www.zhihu.com/">
+                            <span class="fa-stack fa-lg">
+                                <i class="fa fa-circle fa-stack-2x"></i>
+                                <i class="fa  fa-stack-1x fa-inverse">知</i>
+                            </span>
+                        </a>
+                    </li>
+                     
+                    <li>
+                        <a target="_blank" href="https://weibo.com/u/6212299692">
+                            <span class="fa-stack fa-lg">
+                                <i class="fa fa-circle fa-stack-2x"></i>
+                                <i class="fa fa-weibo fa-stack-1x fa-inverse"></i>
+                            </span>
+                        </a>
+                    </li>
+                     
+                    <li>
+                        <a target="_blank" href="https://www.facebook.com/profile.php?id=100004290725320">
+                            <span class="fa-stack fa-lg">
+                                <i class="fa fa-circle fa-stack-2x"></i>
+                                <i class="fa fa-facebook fa-stack-1x fa-inverse"></i>
+                            </span>
+                        </a>
+                    </li>
+                     
+                    <li>
+                        <a target="_blank" href="https://github.com/huailiang">
+                            <span class="fa-stack fa-lg">
+                                <i class="fa fa-circle fa-stack-2x"></i>
+                                <i class="fa fa-github fa-stack-1x fa-inverse"></i>
+                            </span>
+                        </a>
+                    </li>
+                     
+                </ul>
+                <p class="copyright text-muted">
+                    Copyright &copy; Huailiang Blog 2018
+                    <br> Power by
+                    <a href="http://huailiang.github.io">Huailiang</a> |
+                    <iframe style="margin-left: 2px; margin-bottom:-5px;" frameborder="0" scrolling="0" width="100px" height="20px" src="https://ghbtns.com/github-btn.html?user=huailiang&type=star&count=true">
+                    </iframe>
+                </p>
+            </div>
+        </div>
+    </div>
+</footer>
+
+<!-- jQuery -->
+<script src=" /js/jquery.min.js "></script>
+
+<!-- Bootstrap Core JavaScript -->
+<!-- Currently, only navbar scroll-down effect at desktop still depends on this -->
+<script src=" /js/bootstrap.min.js "></script>
+
+<!-- Custom Theme JavaScript -->
+<script src=" /js/hux-blog.min.js "></script>
+
+<!-- Service Worker -->
+
+<script src=" /js/snackbar.js "></script>
+<script src=" /js/sw-registration.js "></script> 
+
+<!-- async load function -->
+<script>
+    function async(u, c) {
+        var d = document, t = 'script',
+            o = d.createElement(t),
+            s = d.getElementsByTagName(t)[0];
+        o.src = u;
+        if (c) { o.addEventListener('load', function (e) { c(null, e); }, false); }
+        s.parentNode.insertBefore(o, s);
+    }
+</script>
+
+
+<!-- jquery.tagcloud.js -->
+<script>
+    // only load tagcloud.js in tag.html
+    if ($('#tag_cloud').length !== 0) {
+        async('/js/jquery.tagcloud.js', function () {
+            $.fn.tagcloud.defaults = {
+                //size: {start: 1, end: 1, unit: 'em'},
+                color: { start: '#bbbbee', end: '#0085a1' },
+            };
+            $('#tag_cloud a').tagcloud();
+        })
+    }
+</script>
+
+<!--fastClick.js -->
+<script>
+    async("//cdnjs.cloudflare.com/ajax/libs/fastclick/1.0.6/fastclick.min.js", function () {
+        var $nav = document.querySelector("nav");
+        if ($nav) FastClick.attach($nav);
+    })
+</script>
+
+
+<!-- Google Analytics -->
+
+<script>
+    // dynamic User by Hux
+    var _gaId = 'UA-49627206-1';
+    var _gaDomain = 'github.io';
+
+    // Originial
+    (function (i, s, o, g, r, a, m) {
+        i['GoogleAnalyticsObject'] = r; i[r] = i[r] || function () {
+            (i[r].q = i[r].q || []).push(arguments)
+        }, i[r].l = 1 * new Date(); a = s.createElement(o),
+            m = s.getElementsByTagName(o)[0]; a.async = 1; a.src = g; m.parentNode.insertBefore(a, m)
+    })(window, document, 'script', '//www.google-analytics.com/analytics.js', 'ga');
+
+    ga('create', _gaId, _gaDomain);
+    ga('send', 'pageview');
+</script> 
+
+
+<!-- Baidu Tongji -->
+
+
+
+<!-- Side Catalog -->
+
+
+
+<!-- Multi-Lingual -->
+
+
+
+<!-- Image to hack wechat -->
+<img src="/img/icon_wechat.png" width="0" height="0" />
+<!-- Migrate from head to bottom, no longer block render and still work -->
+
+</body>
+
+</html>

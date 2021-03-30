@@ -1,0 +1,439 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <meta http-equiv="X-UA-Compatible" content="IE=edge">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+
+  <title>shader/Variant 的更新测试</title>
+  <meta name="description"
+    content="什么是变体">
+
+  <link rel="shortcut icon" href="/img/favicon.ico">
+  <link rel="stylesheet" href="/css/main.css">
+  <link rel="canonical" href="https://huailiang.github.io/blog/2021/shader/">
+
+</head>
+
+<body>
+  <main>
+    <header class="site-header">
+  <div class="container">
+    <h1><a href="/">Hom<span>e</span></a></h1>
+
+    <button type="button" class="sliding-panel-button">
+      <span></span>
+      <span></span>
+      <span></span>
+    </button>
+
+    <nav class="navbar sliding-panel-content">
+      <ul>
+        
+        <li><a href="/about" title="About">About</a>
+        </li>
+        
+        <li><a href="/blog" title="Blog">Blog</a>
+        </li>
+        
+       <li><a href="/category/" target="_blank"><i class="icon icon-feed"></i></a></li>
+      </ul>
+    </nav>
+  </div>
+</header>
+
+<div class="sliding-panel-fade-screen"></div>
+    <script type="text/javascript" src="/js/MathJax.js?config=TeX-AMS-MML_HTMLorMML"></script>
+
+<script type="text/x-mathjax-config">
+MathJax.Hub.Config({
+  tex2jax: {
+    inlineMath: [['$','$'], ['\\(','\\)']],
+    processEscapes: true
+  }
+});
+</script>
+
+<script type="text/x-mathjax-config">
+  MathJax.Hub.Config({
+    tex2jax: {
+      skipTags: ['script', 'noscript', 'style', 'textarea', 'pre', 'code']
+    }
+  });
+
+</script>
+    <div class="container">
+      <article role="article" class="post">
+
+  <div class="card">
+    <header class="post-header">
+      <h1 class="post-title">shader/Variant 的更新测试</h1>
+      <p class="post-meta">Mar 27, 2021 •
+        huailiang</p>
+    </header>
+
+    <div class="post-content">
+      <h3 id="什么是变体">什么是变体</h3>
+
+<p>引用Unity官方文档的解释: <a href="https://docs.unity3d.com/ScriptReference/ShaderVariantCollection.ShaderVariant.html">ShaderVariant</a></p>
+<blockquote>
+  <p>In Unity, many shaders internally have multiple “variants”, to account for different light modes, lightmaps, shadows and so on. These variants are indentified by a shader pass type, and a set of shader keywords.</p>
+</blockquote>
+
+<p>Unity的shader资源不仅含有GPU上执行的着色器代码，还包含了渲染状态，属性的定义，以及对应不同渲染管线不同渲染阶段用于的着色器代码，每一小段代码也可能会有不同的编译参数，以对应不同的渲染功能</p>
+
+<p>在带有多个变体的shader代码片段中，最显著的特征就是拥有这些预编译开关如：</p>
+
+<div class="language-c highlighter-rouge"><pre class="highlight"><code><span class="c1">// unity 内置前向管线编译设置集合，控制光照，阴影等很多相关功能
+</span><span class="cp">#pragma multi_compile_fwdbase 
+</span><span class="c1">// 自定义功能开关
+</span><span class="cp">#pragma shader_feature _USE_FEATURE_A 
+</span><span class="c1">// 自定义多编译选项
+</span><span class="cp">#pragma multi_compile _USE_FUNCTION_A _USE_FUNCTION_B 
+</span></code></pre>
+</div>
+
+<p>有了这些编译开关标记，我们就可以只写很少的shader代码，从而依附在这份骨架代码上，来实现含有细微差异功能的变种shader代码。当然功能越多，这些变体数量也成指数级增长，如何控制这些变体可能产生的数量，也需要较为丰富的经验和技巧。</p>
+
+<h4 id="三个原则">三个原则：</h4>
+
+<p>　1.如果shader没有与使用它的材质打在一个AB中,那么shader_feature的所有宏相关的代码都不会被包含进AB包中(有一种例外,就是当shader_feature _A这种形式的时候是可以的),这个shader最终被程序从AB包中拿出来使用也会是错误的(粉红色).</p>
+
+<p>　　2.把shader和使用它的材质放到一个AB包中,但是材质中没有保存任何的keyword信息(你再编辑器中也是这种情况),shader_feature会默认的把第一个keyword也就是上面的_A和_C(即每个shader_feature的第一个)作为你的选择。而不会把_A _D,_B _C,_B _D这三种组合的代码编译到AB包中。</p>
+
+<p>　　3.把shader和使用它的材质放到一个AB包中,并且材质保存了keyword信息(_A _C)为例,那么这个AB包就只包含_A _C的shaderVariant.</p>
+
+<h3 id="着色器变种的筛选">着色器变种的筛选</h3>
+
+<p>添加过多的特性使我们的着色器变得臃肿，导致最后生成大量的着色器变种。我们可以尝试使用shader-feature编译指令，但是这样的话，在发布时只会包含当前使用的材质中开启的关键字。而 multi_compile 指令不会有这种限制。</p>
+
+<p>Unity在发布时会基于场景设置自动帮我们剔除一些关键字keywords，比如LIGHTMAP_ON,DYNAMICLIGHTMAP_ON,  INSTANCING_ON等。但即使这样，在发布时还是会剩下很多我们不会用到的关键字。所以Unity提供了一个方法，允许我们在发布时自己选择跳过部分着色器变种。</p>
+
+<h4 id="preprocessing-shaders">Preprocessing Shaders</h4>
+
+<p>发布时，Unity编辑器会寻找实现了IPreprocessShaders接口的类（定义在UnityEditor.Build中）。Unity会为这个类创造一个实例，接着将着色器变种传给它用于剔除。所以我们在Editor文件夹中定义这样一个类。</p>
+
+<div class="language-csharp highlighter-rouge"><pre class="highlight"><code><span class="k">using</span> <span class="nn">UnityEditor.Build</span><span class="p">;</span>
+ 
+<span class="k">public</span> <span class="k">class</span> <span class="nc">MyPipelineShaderPreprocessor</span> <span class="p">:</span> <span class="n">IPreprocessShaders</span> <span class="p">{</span> <span class="p">}</span>
+</code></pre>
+</div>
+
+<p>这个接口要求我们实现两件事，首先是一个叫做callbackOrder的只读属性，它返回一个整型，表示该预处理的调用序号，以防存在多个实现该接口的类，而调用顺序不确定。我们返回0就可以了。</p>
+<div class="language-csharp highlighter-rouge"><pre class="highlight"><code><span class="k">public</span> <span class="kt">int</span> <span class="n">callbackOrder</span> <span class="p">{</span> <span class="k">get</span> <span class="p">{</span> <span class="k">return</span> <span class="m">0</span><span class="p">;</span> <span class="p">}</span> <span class="p">}</span>
+</code></pre>
+</div>
+
+<p>然后是方法，它传入shader、  ShaderSnippetData、和一列表的shadercompilerData，其中包含了着色器变种的设置，我们先打印一下看看着色器的名字。</p>
+<div class="language-csharp highlighter-rouge"><pre class="highlight"><code><span class="k">using</span> <span class="nn">UnityEditor.Rendering</span><span class="p">;</span>
+<span class="k">using</span> <span class="nn">UnityEngine</span><span class="p">;</span>
+ 
+<span class="k">public</span> <span class="k">class</span> <span class="nc">MyPipelineShaderPreprocessor</span> <span class="p">:</span> <span class="n">IPreprocessShaders</span> 
+<span class="p">{</span>
+    <span class="k">public</span> <span class="k">void</span> <span class="nf">OnProcessShader</span><span class="p">(</span><span class="n">Shader</span> <span class="n">shader</span><span class="p">,</span> 
+    <span class="n">ShaderSnippetData</span> <span class="n">snippet</span><span class="p">,</span> <span class="n">IList</span><span class="p">&lt;</span><span class="n">ShaderCompilerData</span><span class="p">&gt;</span> <span class="n">data</span><span class="p">)</span> 
+    <span class="p">{</span>
+        <span class="n">Debug</span><span class="p">.</span><span class="nf">Log</span><span class="p">(</span><span class="n">shader</span><span class="p">.</span><span class="n">name</span><span class="p">);</span>
+    <span class="p">}</span>
+<span class="p">}</span>
+</code></pre>
+</div>
+
+<p>现在如果我们发布项目就看到一大串的着色器名字被打印出来。有些是我们自己的shader，有些则是默认的着色器，你可以在project settings的Graphic面板里对这些进行管理。另外还有许多的重复，那是因为编译程序分离了shader变种，但是我们不需要担心他的实际顺序和分组。</p>
+
+<h4 id="只在自己的pipeline下处理">只在自己的pipeline下处理</h4>
+
+<p>发布时，所有定义的预处理程序都会被调用。所以我们前面在项目中写的预处理总是会被调用，即使项目并没有使用我们的pipeline。为了防止干涉其他的pipeline，我们需要判断当前使用的pipeline是否是我们自己写的。我们可以通过GraphicsSettings.renderPipelineAsset来获取当前的pipeline，然后来判断它是不是MyPipelineAsset类型的。</p>
+
+<div class="language-csharp highlighter-rouge"><pre class="highlight"><code><span class="k">using</span> <span class="nn">UnityEngine.Rendering</span><span class="p">;</span>
+ 
+<span class="k">public</span> <span class="k">class</span> <span class="nc">MyPipelineShaderPreprocessor</span> <span class="p">:</span> <span class="n">IPreprocessShaders</span> <span class="p">{</span>
+	
+    <span class="k">public</span> <span class="k">void</span> <span class="nf">OnProcessShader</span><span class="p">(</span><span class="n">Shader</span> <span class="n">shader</span><span class="p">,</span> 
+    <span class="n">ShaderSnippetData</span> <span class="n">snippet</span><span class="p">,</span> <span class="n">IList</span><span class="p">&lt;</span><span class="n">ShaderCompilerData</span><span class="p">&gt;</span> <span class="n">data</span><span class="p">)</span>
+    <span class="p">{</span>
+        <span class="k">if</span> <span class="p">(!(</span><span class="n">GraphicsSettings</span><span class="p">.</span><span class="n">renderPipelineAsset</span> <span class="k">is</span> <span class="n">MyPipelineAsset</span><span class="p">))</span> 
+        <span class="p">{</span>
+            <span class="k">return</span><span class="p">;</span>
+        <span class="p">}</span>
+        <span class="n">Debug</span><span class="p">.</span><span class="nf">Log</span><span class="p">(</span><span class="n">shader</span><span class="p">.</span><span class="n">name</span><span class="p">);</span>
+    <span class="p">}</span>
+<span class="p">}</span>
+</code></pre>
+</div>
+
+<h3 id="variants-更新">Variants 更新</h3>
+
+<h4 id="测试案例一">测试案例一：</h4>
+
+<p>使用ShaderVariantCollection（后续简称为 SVC），记录所有用到的variant。</p>
+
+<p>将SVC和shader打入一个Shader AssetBundle。将材质打成Material AssetBundle.</p>
+
+<p>运行时加载Shader AssetBundle，取SVC，WarmUp，再加载Material AssetBundle。</p>
+
+<p>对应到 <a href="https://github.com/huailiang/Variants_Proj">例子</a> 中 variants 的场景中， 先选中两个 prefab 和 material， 右键 点击生成 BuildBundle - Mat Sep,在 StreamingAssets 目录下，可以看见生成的 bundle.</p>
+
+<p><img src="/img/post-unity/var1.jpg" alt="" /></p>
+
+<p>&lt;上面两个是直接从 prefab 中加载出来， 下面两个使用的是从 Assetbundle 中加载而来. 左边使用的是shader_feature, 右边使用的是 multi_compile&gt;</p>
+
+<p>SVC 中 只开启了 绿色</p>
+
+<p><img src="/img/post-unity/var2.jpg" alt="" /></p>
+
+<p>从 Bundle 中加载从来的 cube 变成红色（即默认_CL_R）， 说明使用 shader_feature 在没有对应的 Variant打进bundle 的时候会退变使用第一个， 而 multi_compile 则不受影响。 而 当 shader_feature 存在对应的 Varaiant 的时候， 则表现是正常的。</p>
+
+<p><img src="/img/post-unity/var3.jpg" alt="" /></p>
+
+<p>使用如下代码加载对应的 SVC:</p>
+
+<div class="language-csharp highlighter-rouge"><pre class="highlight"><code><span class="k">void</span> <span class="nf">OnGUI</span><span class="p">()</span>
+<span class="p">{</span>
+    <span class="k">if</span> <span class="p">(</span><span class="n">GUI</span><span class="p">.</span><span class="nf">Button</span><span class="p">(</span><span class="k">new</span> <span class="nf">Rect</span><span class="p">(</span><span class="m">20</span><span class="p">,</span> <span class="m">140</span><span class="p">,</span> <span class="m">200</span><span class="p">,</span> <span class="m">100</span><span class="p">),</span> <span class="s">"LoadVariants - Mat"</span><span class="p">))</span>
+    <span class="p">{</span>
+        <span class="n">Profiler</span><span class="p">.</span><span class="nf">BeginSample</span><span class="p">(</span><span class="s">"LoadVariants"</span><span class="p">);</span>
+        <span class="nf">LoadVariants</span><span class="p">();</span>
+        <span class="nf">LoadMat</span><span class="p">(</span><span class="s">"mat_shaderfeature"</span><span class="p">);</span>
+        <span class="nf">LoadMat</span><span class="p">(</span><span class="s">"mat_multicompile"</span><span class="p">);</span>
+        <span class="nf">LoadCube</span><span class="p">(</span><span class="s">"cubemulticompile"</span><span class="p">,</span> <span class="k">new</span> <span class="nf">Vector3</span><span class="p">(</span><span class="m">2</span><span class="p">,</span> <span class="m">0</span><span class="p">,</span> <span class="m">0</span><span class="p">));</span>
+        <span class="nf">LoadCube</span><span class="p">(</span><span class="s">"cubefeature"</span><span class="p">,</span> <span class="k">new</span> <span class="nf">Vector3</span><span class="p">(-</span><span class="m">2</span><span class="p">,</span> <span class="m">0</span><span class="p">,</span> <span class="m">0</span><span class="p">));</span>
+        <span class="n">Profiler</span><span class="p">.</span><span class="nf">EndSample</span><span class="p">();</span>
+    <span class="p">}</span>
+<span class="p">}</span>
+
+<span class="k">private</span> <span class="k">void</span> <span class="nf">LoadVariants</span><span class="p">()</span>
+<span class="p">{</span>
+    <span class="kt">var</span> <span class="n">pat</span> <span class="p">=</span> <span class="n">Path</span><span class="p">.</span><span class="nf">Combine</span><span class="p">(</span><span class="n">prefix</span><span class="p">,</span> <span class="s">"shader"</span><span class="p">);</span>
+    <span class="kt">var</span> <span class="n">b</span> <span class="p">=</span> <span class="n">AssetBundle</span><span class="p">.</span><span class="nf">LoadFromFile</span><span class="p">(</span><span class="n">pat</span><span class="p">);</span>
+    <span class="kt">var</span> <span class="n">svc</span> <span class="p">=</span> <span class="n">b</span><span class="p">.</span><span class="n">LoadAsset</span><span class="p">&lt;</span><span class="n">ShaderVariantCollection</span><span class="p">&gt;(</span><span class="s">"MultiShaderVariants"</span><span class="p">);</span>
+    <span class="n">svc</span><span class="p">.</span><span class="nf">WarmUp</span><span class="p">();</span>
+    <span class="c1">// svc的WarmUp就会触发相关Shader的预编译，触发预编译之后再加载Shader Asset即可
+</span>    <span class="c1">// b.LoadAllAssets&lt;Shader&gt;();
+</span>    <span class="n">b</span><span class="p">.</span><span class="n">LoadAllAssets</span><span class="p">&lt;</span><span class="n">Material</span><span class="p">&gt;();</span>
+<span class="p">}</span>
+
+<span class="k">private</span> <span class="k">void</span> <span class="nf">LoadMat</span><span class="p">(</span><span class="kt">string</span> <span class="n">mat</span><span class="p">)</span>
+<span class="p">{</span>
+    <span class="kt">var</span> <span class="n">pat</span> <span class="p">=</span> <span class="n">Path</span><span class="p">.</span><span class="nf">Combine</span><span class="p">(</span><span class="n">prefix</span><span class="p">,</span> <span class="n">mat</span><span class="p">);</span>
+    <span class="kt">var</span> <span class="n">b</span> <span class="p">=</span> <span class="n">AssetBundle</span><span class="p">.</span><span class="nf">LoadFromFile</span><span class="p">(</span><span class="n">pat</span><span class="p">);</span>
+    <span class="n">b</span><span class="p">.</span><span class="n">LoadAllAssets</span><span class="p">&lt;</span><span class="n">Material</span><span class="p">&gt;();</span>
+<span class="p">}</span>
+
+<span class="k">private</span> <span class="k">void</span> <span class="nf">LoadCube</span><span class="p">(</span><span class="kt">string</span> <span class="n">name</span><span class="p">,</span> <span class="n">Vector3</span> <span class="n">pos</span><span class="p">)</span>
+<span class="p">{</span>
+    <span class="kt">var</span> <span class="n">pat</span> <span class="p">=</span> <span class="n">Path</span><span class="p">.</span><span class="nf">Combine</span><span class="p">(</span><span class="n">prefix</span><span class="p">,</span> <span class="n">name</span><span class="p">);</span>
+    <span class="kt">var</span> <span class="n">b</span> <span class="p">=</span> <span class="n">AssetBundle</span><span class="p">.</span><span class="nf">LoadFromFile</span><span class="p">(</span><span class="n">pat</span><span class="p">);</span>
+    <span class="kt">var</span> <span class="n">obj</span> <span class="p">=</span> <span class="n">b</span><span class="p">.</span><span class="n">LoadAsset</span><span class="p">&lt;</span><span class="n">GameObject</span><span class="p">&gt;(</span><span class="n">name</span><span class="p">);</span>
+    <span class="kt">var</span> <span class="n">go</span> <span class="p">=</span> <span class="n">GameObject</span><span class="p">.</span><span class="nf">Instantiate</span><span class="p">(</span><span class="n">obj</span><span class="p">);</span>
+    <span class="n">go</span><span class="p">.</span><span class="n">name</span> <span class="p">=</span> <span class="n">name</span> <span class="p">+</span> <span class="s">"..."</span><span class="p">;</span>
+    <span class="n">go</span><span class="p">.</span><span class="n">transform</span><span class="p">.</span><span class="n">position</span> <span class="p">=</span> <span class="n">pos</span><span class="p">;</span>
+    <span class="n">b</span><span class="p">.</span><span class="nf">Unload</span><span class="p">(</span><span class="k">false</span><span class="p">);</span>
+<span class="p">}</span>
+</code></pre>
+</div>
+
+<h4 id="测试案例二">测试案例二：</h4>
+
+<p>SVC、shader和Material打成一个包。</p>
+
+<p>依旧是 <a href="https://github.com/huailiang/Variants_Proj">例子</a> 中 variants 的场景中， 此次只选中两个 prefab， 右键 点击生成 BuildBundle - Mat Join, Material 就会和 shader/SVC 打到一个 Bundle 中。运行时我们不再单独加载 Material：</p>
+
+<div class="language-csharp highlighter-rouge"><pre class="highlight"><code><span class="n">Profiler</span><span class="p">.</span><span class="nf">BeginSample</span><span class="p">(</span><span class="s">"LoadVariants"</span><span class="p">);</span>
+<span class="nf">LoadVariants</span><span class="p">();</span>
+<span class="nf">LoadCube</span><span class="p">(</span><span class="s">"cubemulticompile"</span><span class="p">,</span> <span class="k">new</span> <span class="nf">Vector3</span><span class="p">(</span><span class="m">2</span><span class="p">,</span> <span class="m">0</span><span class="p">,</span> <span class="m">0</span><span class="p">));</span>
+<span class="nf">LoadCube</span><span class="p">(</span><span class="s">"cubefeature"</span><span class="p">,</span> <span class="k">new</span> <span class="nf">Vector3</span><span class="p">(-</span><span class="m">2</span><span class="p">,</span> <span class="m">0</span><span class="p">,</span> <span class="m">0</span><span class="p">));</span>
+<span class="n">Profiler</span><span class="p">.</span><span class="nf">EndSample</span><span class="p">();</span>
+</code></pre>
+</div>
+
+<p>此次我们看到 无论 shader_feature 对应的 variant 是否对应在 svc中， 则表现都正确。坏处就是所有的资源都关联在一个 bundle 中了。</p>
+
+<p><img src="/img/post-unity/var3.jpg" alt="" /></p>
+
+<h3 id="关于shaderfind">关于Shader.Find</h3>
+
+<p>关于Shader.Find，个人猜测如下：</p>
+
+<p>Unity内部使用一个字典或者HashSet来支持Shader.Find，这里暂且叫它ShaderMap。ShaderMap的键是ShaderLab语法中的名字；值是Shader文件的GUID。</p>
+
+<p>ShaderMap生成于Build项目时，保存了来自三个地方的shader cache引用关系：</p>
+
+<ol>
+  <li>
+    <p>Resources中的shader或Resources其中其他资源引用到的shader</p>
+  </li>
+  <li>
+    <p>任意场景中引用到的shader</p>
+  </li>
+  <li>
+    <p>StreamingAssets中Asset Bundle内的Shader。 运行时使用ShaderFind，只能找到这些Shader，如果对应GUID的shader不存在，查找就会失败，即使热更新后加入了新的Asset Bundle中含有同名Shader（即ShaderLab语法同名）。</p>
+  </li>
+  <li>
+    <p>目前没有办法在发布以后动态更新ShaderMap。</p>
+  </li>
+</ol>
+
+<p><img src="/img/post-unity/var5.png" alt="" /></p>
+
+<h3 id="性能测试">性能测试</h3>
+
+<p>写一个uber shader, 最终出包时不要有 Material, 通过自己定义的 bytes 文件来记录材质参数（贴图路径、颜色等），Shader 和 SVC 打包到同一个Assetsbundle 中。</p>
+
+<p>运行时 new 一个使用uber shader的Material（或者 MaterialPropertyBlock), 读取 bytes 文件里参数初始化 Material， 然后通过 keyword 来开启不同的效果和算法。</p>
+
+<p><img src="/img/post-unity/var4.jpg" alt="" /></p>
+
+<p>使用ShaderVariantCollection来WarmUp，而不是全部WarmUp，是为了优化Shader.CreateGpuProgram(创建CPU执行程序片段)</p>
+
+<p>使用ClearCurrentShaderVariantCollection和SaveCurrentShaderVariantCollection来计算生成多个ShaderVariantCollection，多帧进行WarmUp</p>
+
+<p>变种太多会导致ShaderLab内存占用变大，Shader.Parse(编译Shader)和Shader.CreateGpuProgram(创建CPU执行程序片段)占用CPU时间变长</p>
+
+<h2 id="参考">参考</h2>
+
+<ul>
+  <li><a href="https://www.pianshen.com/article/92971003031/">Unity中Shader是否可以热更新的测试</a></li>
+  <li><a href="https://blog.csdn.net/Rhett_Yuan/article/details/90483236">Unity的Shader加载编译优化</a></li>
+  <li><a href="https://github.com/lujian101/ShaderVariantCollector">一种Shader变体收集和打包编译优化的思路</a></li>
+  <li><a href="https://answer.uwa4d.com/question/5ce5467ad1d3d045c846d769">Unity的Shader加载解析和ShaderVariantCollection的warmup</a></li>
+  <li><a href="https://blog.csdn.net/long0801/article/details/77413453?utm_source=blogxgwz8">UnityShaderVariant的一些探究心得</a></li>
+  <li><a href="https://docs.unity3d.com/cn/2019.3/ScriptReference/Build.IPreprocessShaders.html">Unity Doc IPreprocessShaders</a></li>
+  <li><a href="https://github.com/TheMasonX/UnityPCSS/blob/7ebf495e0366cdb8805af1cf6c692455d06493c9/Assets/PCSS/Scripts/PCSSLight.cs">PCSSLight 中使用ShaderVariantCollection的 Demo</a></li>
+</ul>
+
+
+    </div>
+  </div>
+
+  <style>
+  .post-nav {
+    overflow: hidden;
+    /* margin-top: 60px; */
+    padding: 12px;
+    white-space: nowrap;
+    /* border-top: 1px solid #eee; */
+  }
+
+  .post-nav-item {
+    display: inline-block;
+    width: 50%;
+    white-space: normal;
+  }
+
+  .post-nav-item a {
+    position: relative;
+    display: inline-block;
+    line-height: 25px;
+    font-size: 14px;
+    color: #555;
+    border-bottom: none;
+  }
+
+  .post-nav-item a:hover {
+    color: #222;
+    font-weight: bold;
+    border-bottom: none;
+  }
+
+  .post-nav-item a:active {
+    top: 2px;
+  }
+
+  .post-nav-item a:before,
+  .post-nav-item a:after {
+    display: inline-block;
+    width: 16px;
+    height: 25px;
+    vertical-align: top;
+    opacity: 0.4;
+    background-size: 16px;
+  }
+
+  .post-nav-none a:none {
+    content: ' ';
+    background-size: 8px;
+  }
+
+  .post-nav-none a:hover:none {
+    opacity: 1;
+  }
+
+  .post-nav-prev a:before {
+    content: ' ';
+    background: url("data:image/svg+xml;base64,PD94bWwgdmVyc2lvbj0iMS4wIiA/PjxzdmcgaGVpZ2h0PSIxMnB4IiB2ZXJzaW9uPSIxLjEiIHZpZXdCb3g9IjAgMCA5IDEyIiB3aWR0aD0iOXB4IiB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHhtbG5zOnNrZXRjaD0iaHR0cDovL3d3dy5ib2hlbWlhbmNvZGluZy5jb20vc2tldGNoL25zIiB4bWxuczp4bGluaz0iaHR0cDovL3d3dy53My5vcmcvMTk5OS94bGluayI+PHRpdGxlLz48ZGVzYy8+PGRlZnMvPjxnIGZpbGw9Im5vbmUiIGZpbGwtcnVsZT0iZXZlbm9kZCIgaWQ9IlBhZ2UtMSIgc3Ryb2tlPSJub25lIiBzdHJva2Utd2lkdGg9IjEiPjxnIGZpbGw9IiMwMDAwMDAiIGlkPSJDb3JlIiB0cmFuc2Zvcm09InRyYW5zbGF0ZSgtMjE4LjAwMDAwMCwgLTkwLjAwMDAwMCkiPjxnIGlkPSJjaGV2cm9uLWxlZnQiIHRyYW5zZm9ybT0idHJhbnNsYXRlKDIxOC41MDAwMDAsIDkwLjAwMDAwMCkiPjxwYXRoIGQ9Ik03LjQsMS40IEw2LDAgTC04Ljg4MTc4NDJlLTE2LDYgTDYsMTIgTDcuNCwxMC42IEwyLjgsNiBMNy40LDEuNCBaIiBpZD0iU2hhcGUiLz48L2c+PC9nPjwvZz48L3N2Zz4=") no-repeat 0 50%;
+    background-size: 8px;
+  }
+
+  .post-nav-prev a:hover:before {
+    opacity: 1;
+  }
+
+  .post-nav-next {
+    text-align: right;
+  }
+
+  .post-nav-next a:after {
+    content: ' ';
+    background: url("data:image/svg+xml;base64,PD94bWwgdmVyc2lvbj0iMS4wIiA/PjxzdmcgaGVpZ2h0PSIxMnB4IiB2ZXJzaW9uPSIxLjEiIHZpZXdCb3g9IjAgMCA5IDEyIiB3aWR0aD0iOXB4IiB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHhtbG5zOnNrZXRjaD0iaHR0cDovL3d3dy5ib2hlbWlhbmNvZGluZy5jb20vc2tldGNoL25zIiB4bWxuczp4bGluaz0iaHR0cDovL3d3dy53My5vcmcvMTk5OS94bGluayI+PHRpdGxlLz48ZGVzYy8+PGRlZnMvPjxnIGZpbGw9Im5vbmUiIGZpbGwtcnVsZT0iZXZlbm9kZCIgaWQ9IlBhZ2UtMSIgc3Ryb2tlPSJub25lIiBzdHJva2Utd2lkdGg9IjEiPjxnIGZpbGw9IiMwMDAwMDAiIGlkPSJDb3JlIiB0cmFuc2Zvcm09InRyYW5zbGF0ZSgtMjYwLjAwMDAwMCwgLTkwLjAwMDAwMCkiPjxnIGlkPSJjaGV2cm9uLXJpZ2h0IiB0cmFuc2Zvcm09InRyYW5zbGF0ZSgyNjAuNTAwMDAwLCA5MC4wMDAwMDApIj48cGF0aCBkPSJNMSwwIEwtMC40LDEuNCBMNC4yLDYgTC0wLjQsMTAuNiBMMSwxMiBMNyw2IEwxLDAgWiIgaWQ9IlNoYXBlIi8+PC9nPjwvZz48L2c+PC9zdmc+") no-repeat 100% 50%;
+    background-size: 8px;
+  }
+
+  .post-nav-next a:hover:after {
+    opacity: 1;
+  }
+</style>
+
+
+
+<div class="post-nav">
+
+  
+  <div class="post-nav-none post-nav-item">
+    <a href=""> </a>
+  </div>
+  
+
+  
+  <div class="post-nav-next post-nav-item">
+    
+    <a href="/blog/2021/cpp/"> C++ 中struct/class的内存布局</a>
+  </div>
+  
+
+</div>
+
+</article>
+    </div>
+
+    <footer class="site-footer">
+  <div class="container">
+    <ul class="social">
+  <li><a href="https://twitter.com/penghuailiang" target="_blank"><i class="icon icon-twitter"></i></a></li>
+  <li><a href="https://www.zhihu.com/people/huailiangpenguin" target="_blank"><i class="icon icon-zhihu"></i></a></li>
+  <li><a href="https://www.facebook.com/profile.php?id=100004290725320" target="_blank"><i class="icon icon-facebook"></i></a></li>
+  <li><a href="https://weibo.com/6212299692/profile?topnav=1&wvr=6" target="_blank"><i class="icon icon-sina"></i></a></li>
+  <li><a href="https://www.linkedin.com/in/penghuailiang/" target="_blank"><i class="icon icon-linkedin"></i></a></li>
+  <li><a href="https://github.com/huailiang" target="_blank"><i class="icon icon-github"></i></a></li>
+</ul>
+    <p class="txt-medium-gray">
+      <small>&copy;2021 All rights reserved. </small>
+    </p>
+  </div>
+</footer>
+    <a href="https://github.com/huailiang" target="_blank" class="github-corner"><svg width="80" height="80" viewBox="0 0 250 250" style="fill:#337ab7; color:#fff; position: absolute; top: 0; border: 0; right: 0;"><path d="M0,0 L115,115 L130,115 L142,142 L250,250 L250,0 Z"></path><path d="M128.3,109.0 C113.8,99.7 119.0,89.6 119.0,89.6 C122.0,82.7 120.5,78.6 120.5,78.6 C119.2,72.0 123.4,76.3 123.4,76.3 C127.3,80.9 125.5,87.3 125.5,87.3 C122.9,97.6 130.6,101.9 134.4,103.2" fill="currentColor" style="transform-origin: 130px 106px;" class="octo-arm"></path><path d="M115.0,115.0 C114.9,115.1 118.7,116.5 119.8,115.4 L133.7,101.6 C136.9,99.2 139.9,98.4 142.2,98.6 C133.8,88.0 127.5,74.4 143.8,58.0 C148.5,53.4 154.0,51.2 159.7,51.0 C160.3,49.4 163.2,43.6 171.4,40.1 C171.4,40.1 176.1,42.5 178.8,56.2 C183.1,58.6 187.2,61.8 190.9,65.4 C194.5,69.0 197.7,73.2 200.1,77.6 C213.8,80.2 216.3,84.9 216.3,84.9 C212.7,93.1 206.9,96.0 205.4,96.6 C205.1,102.4 203.0,107.8 198.3,112.5 C181.9,128.9 168.3,122.5 157.7,114.1 C157.9,116.9 156.7,120.9 152.7,124.9 L141.0,136.5 C139.8,137.7 141.6,141.9 141.8,141.8 Z" fill="currentColor" class="octo-body"></path></svg></a>
+
+
+    <script src="//code.jquery.com/jquery-1.11.3.min.js"></script>
+    <script>
+      $(document).ready(function () {
+        $('.sliding-panel-button,.sliding-panel-fade-screen,.sliding-panel-close').on('click touchstart', function (e) {
+          $('.sliding-panel-content,.sliding-panel-fade-screen').toggleClass('is-visible');
+          e.preventDefault();
+        });
+      });
+    </script>
+  </main>
+</body>
+
+</html>

@@ -1,0 +1,659 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="utf-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="google-site-verification" content="xBT4GhYoi5qRD5tr338pgPM5OWHHIDR6mNg1a3euekI" />
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="description" content="关于前端与设计、黑客与画家 | 怀亮，Web & Mobile Lover，Software Engineer，Game Designer | 这里是 @Huailiang怀亮 的个人博客，与你一起发现更大的世界。">
+    <meta name="keywords"  content="怀亮, Huailiang怀亮, Huailiang, Unity, Tensorflow, AR, 怀亮的博客, Huailiang Blog, 博客, U3D, 互联网, AR, JavaScript">
+    <meta name="theme-color" content="#000000">
+
+    <title>强化学习-游戏AI Trainning (三) - 怀亮的博客 | Huailiang Blog</title>
+
+    <!-- Web App Manifest -->
+    <link rel="manifest" href="/pwa/manifest.json">
+
+    <!-- Favicon -->
+    <link rel="shortcut icon" href="/img/favicon.ico">
+
+    <!-- Canonical URL -->
+    <link rel="canonical" href="http://localhost:4000/2018/03/23/reinforcement3/">
+
+    <!-- Bootstrap Core CSS -->
+    <link rel="stylesheet" href="/css/bootstrap.min.css">
+
+    <!-- Custom CSS -->
+    <link rel="stylesheet" href="/css/hux-blog.min.css">
+
+    <!-- Pygments Github CSS -->
+    <link rel="stylesheet" href="/css/syntax.css">
+
+    <!-- Custom Fonts -->
+    <!-- <link href="http://maxcdn.bootstrapcdn.com/font-awesome/4.3.0/css/font-awesome.min.css" rel="stylesheet" type="text/css"> -->
+    <!-- Hux change font-awesome CDN to qiniu -->
+    <link href="//cdnjs.cloudflare.com/ajax/libs/font-awesome/4.6.3/css/font-awesome.min.css" rel="stylesheet" type="text/css">
+
+    <!-- ga & ba script hoook -->
+    <script></script>
+</head>
+
+
+<!-- hack iOS CSS :active style -->
+<body ontouchstart="">
+
+    <!-- Navigation -->
+<nav class="navbar navbar-default navbar-custom navbar-fixed-top">
+    <div class="container-fluid">
+        <!-- Brand and toggle get grouped for better mobile display -->
+        <div class="navbar-header page-scroll">
+            <button type="button" class="navbar-toggle">
+                <span class="sr-only">Toggle navigation</span>
+                <span class="icon-bar"></span>
+                <span class="icon-bar"></span>
+                <span class="icon-bar"></span>
+            </button>
+            <a class="navbar-brand" href="/">Huailiang Blog</a>
+        </div>
+
+        <!-- Collect the nav links, forms, and other content for toggling -->
+        <div id="huxblog_navbar">
+            <div class="navbar-collapse">
+                <ul class="nav navbar-nav navbar-right">
+                    <li>
+                        <a href="/">Home</a>
+                    </li>
+                    
+                    <li>
+                        <a href="/about/">About</a>
+                    </li>
+                    
+                    <li>
+                        <a href="/portfolio/">Portfolio</a>
+                    </li>
+                    
+                    <li>
+                        <a href="/tags/">Tags</a>
+                    </li>
+                    
+                </ul>
+            </div>
+        </div>
+        <!-- /.navbar-collapse -->
+    </div>
+    <!-- /.container -->
+</nav>
+<script>
+    // Drop Bootstarp low-performance Navbar
+    // Use customize navbar with high-quality material design animation
+    // in high-perf jank-free CSS3 implementation
+    var $body   = document.body;
+    var $toggle = document.querySelector('.navbar-toggle');
+    var $navbar = document.querySelector('#huxblog_navbar');
+    var $collapse = document.querySelector('.navbar-collapse');
+
+    var __HuxNav__ = {
+        close: function(){
+            $navbar.className = " ";
+            // wait until animation end.
+            setTimeout(function(){
+                // prevent frequently toggle
+                if($navbar.className.indexOf('in') < 0) {
+                    $collapse.style.height = "0px"
+                }
+            },400)
+        },
+        open: function(){
+            $collapse.style.height = "auto"
+            $navbar.className += " in";
+        }
+    }
+
+    // Bind Event
+    $toggle.addEventListener('click', function(e){
+        if ($navbar.className.indexOf('in') > 0) {
+            __HuxNav__.close()
+        }else{
+            __HuxNav__.open()
+        }
+    })
+
+    /**
+     * Since Fastclick is used to delegate 'touchstart' globally
+     * to hack 300ms delay in iOS by performing a fake 'click',
+     * Using 'e.stopPropagation' to stop 'touchstart' event from
+     * $toggle/$collapse will break global delegation.
+     *
+     * Instead, we use a 'e.target' filter to prevent handler
+     * added to document close HuxNav.
+     *
+     * Also, we use 'click' instead of 'touchstart' as compromise
+     */
+    document.addEventListener('click', function(e){
+        if(e.target == $toggle) return;
+        if(e.target.className == 'icon-bar') return;
+        __HuxNav__.close();
+    })
+</script>
+
+
+    <!-- Image to hack wechat -->
+<!-- <img src="/img/icon_wechat.png" width="0" height="0"> -->
+<!-- <img src="/img/post-bg-unix-linux.jpg" width="0" height="0"> -->
+
+<!-- Post Header -->
+<style type="text/css">
+    header.intro-header{
+        position: relative;
+        background-image: url('/img/post-bg-unix-linux.jpg')
+    }
+
+    
+    header.intro-header .header-mask{
+        width: 100%;
+        height: 100%;
+        position: absolute;
+        background: rgba(0,0,0, 0.3);
+    }
+    
+</style>
+<header class="intro-header" >
+    <div class="header-mask"></div>
+    <div class="container">
+        <div class="row">
+            <div class="col-lg-8 col-lg-offset-2 col-md-10 col-md-offset-1">
+                <div class="post-heading">
+                    <div class="tags">
+                        
+                        <a class="tag" href="/tags/#强化学习" title="强化学习">强化学习</a>
+                        
+                        <a class="tag" href="/tags/#Unity" title="Unity">Unity</a>
+                        
+                        <a class="tag" href="/tags/#Python" title="Python">Python</a>
+                        
+                        <a class="tag" href="/tags/#Tensorflow" title="Tensorflow">Tensorflow</a>
+                        
+                    </div>
+                    <h1>强化学习-游戏AI Trainning (三)</h1>
+                    
+                    
+                    <h2 class="subheading">使用Deep Q Network 神经经网络训练游戏AI</h2>
+                    
+                    <span class="meta">Posted by Huailiang on March 23, 2018</span>
+                </div>
+            </div>
+        </div>
+    </div>
+</header>
+
+<!-- Post Content -->
+<article>
+    <div class="container">
+        <div class="row">
+
+    <!-- Post Container -->
+            <div class="
+                col-lg-8 col-lg-offset-2
+                col-md-10 col-md-offset-1
+                post-container">
+
+                <!-- Multi-Lingual -->
+                
+
+				<blockquote>
+  <p>前两节我们学会了利用q_learning来做游戏强化学习，并能提取出来再外部训练，下面一节我们继续深入学习使用DQN神经网络来训练我们的模型。</p>
+</blockquote>
+
+<p>完成本节内容，你需要本地有如下环境：</p>
+<ul>
+  <li>Python</li>
+  <li>Pandas</li>
+  <li>Numpy</li>
+  <li>matplotlib（可选）</li>
+  <li>Tensorflow</li>
+  <li>Jupyter notebook(可选)</li>
+</ul>
+
+<h3 id="deepqnetwork">DeepQNetwork</h3>
+
+<p>Deep Q Network 的简称叫 DQN, 是将 Q learning 的优势 和 Neural networks 结合了. 如果我们使用 tabular Q learning, 对于每一个 state, action 我们都需要存放在一张 q_table 的表中. 如果像显示生活中, 情况可就比那个迷宫的状况复杂多了, 我们有千千万万个 state, 如果将这千万个 state 的值都放在表中, 受限于我们计算机硬件, 这样从表中获取数据, 更新数据是没有效率的. 这就是 DQN 产生的原因了. 我们可以使用神经网络来 估算 这个 state 的值, 这样就不需要一张表了。</p>
+
+<p>为了使用 Tensorflow 来实现 DQN, 比较推荐的方式是搭建两个神经网络, target_net 用于预测 q_target 值, 他不会及时更新参数. eval_net 用于预测 q_eval, 这个神经网络拥有最新的神经网络参数. 不过这两个神经网络结构是完全一样的, 只是里面的参数不一样。最终运行的Graph在tensorboard上可视化的结果如下图所示：</p>
+
+<p><img src="/img/in-post/post-reinforcement/re12.jpg" alt="" /></p>
+
+<h3 id="项目设置">项目设置</h3>
+
+<p>本节所有的代码都上传到<a href="https://github.com/huailiang/bird">github</a>,需要联系的同学可以到github下载到本地练习。</p>
+
+<p>训练的时候你需要将Unity导出mac或者windows的安装包，注意安装包需导出到Python目录之下。</p>
+
+<p>Python的main.py需要做如下设置, from的模块选择的是dqn_environment，而不是environment：</p>
+
+<p><img src="/img/in-post/post-reinforcement/re13.jpg" alt="" /></p>
+
+<p>如果你安装了jupyter notebook的话，在terminal,cd到python所在的目录,，然后输入：</p>
+
+<div class="language-sh highlighter-rouge"><div class="highlight"><pre class="highlight"><code>jupyter notebook
+</code></pre></div></div>
+<p>之后你可以在notebook里选择main.ipynb，进入主页：</p>
+
+<p><img src="/img/in-post/post-reinforcement/re14.jpg" alt="" /></p>
+
+<p>选择cell,Run就可以了。</p>
+
+<p>eval_net用来训练模型，他的输入端是agent的状态值（state),输出的是得来的action对应的不同状态的数组，我们根据最大的q值选取相应的action</p>
+
+<div class="language-py highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="k">def</span> <span class="nf">choose_action</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">observation</span><span class="p">):</span>
+    <span class="c"># print observation</span>
+    <span class="n">observation</span> <span class="o">=</span> <span class="n">observation</span><span class="p">[</span><span class="n">np</span><span class="o">.</span><span class="n">newaxis</span><span class="p">]</span>
+
+    <span class="k">if</span> <span class="n">np</span><span class="o">.</span><span class="n">random</span><span class="o">.</span><span class="n">uniform</span><span class="p">()</span> <span class="o">&lt;</span> <span class="bp">self</span><span class="o">.</span><span class="n">epsilon</span><span class="p">:</span>
+        <span class="c"># forward feed the observation and get q value for every actions</span>
+        <span class="n">actions_value</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">sess</span><span class="o">.</span><span class="n">run</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">q_eval</span><span class="p">,</span> <span class="n">feed_dict</span><span class="o">=</span><span class="p">{</span><span class="bp">self</span><span class="o">.</span><span class="n">s</span><span class="p">:</span> <span class="n">observation</span><span class="p">})</span>
+        <span class="n">action</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">argmax</span><span class="p">(</span><span class="n">actions_value</span><span class="p">)</span>
+    <span class="k">else</span><span class="p">:</span>
+        <span class="n">action</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">random</span><span class="o">.</span><span class="n">randint</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">n_actions</span><span class="p">)</span>
+
+</code></pre></div></div>
+
+<p>更新memory，在learn的过程中，我们每步我们都会在q_eval的memory储存信息，只是五步同步一次到q_target。实际运行的时候，在替换q_target之后，小鸟的智能明显提高了。</p>
+
+<div class="language-py highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="k">def</span> <span class="nf">_to_learn</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span><span class="n">j</span><span class="p">):</span>
+     <span class="n">state_</span> <span class="o">=</span> <span class="n">j</span><span class="p">[</span><span class="s">"state_"</span><span class="p">]</span>
+     <span class="n">state</span>  <span class="o">=</span> <span class="n">j</span><span class="p">[</span><span class="s">"state"</span><span class="p">]</span>
+     <span class="n">action</span> <span class="o">=</span> <span class="n">j</span><span class="p">[</span><span class="s">"action"</span><span class="p">]</span>
+     <span class="n">rewd</span> <span class="o">=</span> <span class="n">j</span><span class="p">[</span><span class="s">"rewd"</span><span class="p">]</span>
+
+     <span class="k">if</span> <span class="n">action</span> <span class="o">==</span> <span class="bp">True</span><span class="p">:</span>
+         <span class="n">action</span> <span class="o">=</span> <span class="mi">0</span> <span class="c">#"pad"</span>
+     <span class="k">else</span><span class="p">:</span>
+         <span class="n">action</span> <span class="o">=</span> <span class="mi">1</span> <span class="c"># "stay"</span>
+
+     <span class="n">state</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">TransBrainState</span><span class="p">(</span><span class="n">state</span><span class="p">)</span>
+     <span class="n">state_</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">TransBrainState</span><span class="p">(</span><span class="n">state_</span><span class="p">)</span>
+     <span class="bp">self</span><span class="o">.</span><span class="n">RL</span><span class="o">.</span><span class="n">store_transition</span><span class="p">(</span><span class="n">state</span><span class="p">,</span><span class="n">action</span><span class="p">,</span><span class="n">rewd</span><span class="p">,</span><span class="n">state_</span><span class="p">)</span>
+     <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">step</span> <span class="o">&gt;</span> <span class="mi">20</span> <span class="ow">and</span> <span class="bp">self</span><span class="o">.</span><span class="n">step</span> <span class="o">%</span> <span class="mi">5</span> <span class="o">==</span> <span class="mi">0</span> <span class="p">:</span>
+         <span class="bp">self</span><span class="o">.</span><span class="n">RL</span><span class="o">.</span><span class="n">learn</span><span class="p">()</span>
+     <span class="bp">self</span><span class="o">.</span><span class="n">step</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">step</span><span class="o">+</span><span class="mi">1</span>
+</code></pre></div></div>
+
+<p>而在q_target神经网络的输入端，就是之前跟q_learning一样，包含如下信息：</p>
+
+<ul>
+  <li>state   当前agent的状态</li>
+  <li>state_  下一步agent的状态</li>
+  <li>reward  当前agent采取动作获的奖励</li>
+  <li>action  当前agent采取的动作</li>
+</ul>
+
+<p>我们使用的神经网络输出得到的实际值和预估值做平方差再求均值来计算损失函数。</p>
+
+<div class="highlighter-rouge"><div class="highlight"><pre class="highlight"><code>说明：
+tf.squared_difference(x,y,name=None)
+
+功能：计算(x-y)(x-y)。
+输入：x为张量，可以为`half`,`float32`, `float64`类型。
+</code></pre></div></div>
+
+<div class="language-py highlighter-rouge"><div class="highlight"><pre class="highlight"><code>
+<span class="c"># 计算损失函数  </span>
+<span class="k">with</span> <span class="n">tf</span><span class="o">.</span><span class="n">variable_scope</span><span class="p">(</span><span class="s">'loss'</span><span class="p">):</span>
+    <span class="bp">self</span><span class="o">.</span><span class="n">loss</span> <span class="o">=</span> <span class="n">tf</span><span class="o">.</span><span class="n">reduce_mean</span><span class="p">(</span><span class="n">tf</span><span class="o">.</span><span class="n">squared_difference</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">q_target</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">q_eval</span><span class="p">))</span>
+
+<span class="c"># 根据损失函数训练模型  </span>
+<span class="k">with</span> <span class="n">tf</span><span class="o">.</span><span class="n">variable_scope</span><span class="p">(</span><span class="s">'train'</span><span class="p">):</span>
+    <span class="bp">self</span><span class="o">.</span><span class="n">_train_op</span> <span class="o">=</span> <span class="n">tf</span><span class="o">.</span><span class="n">train</span><span class="o">.</span><span class="n">RMSPropOptimizer</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">lr</span><span class="p">)</span><span class="o">.</span><span class="n">minimize</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">loss</span><span class="p">)</span>
+
+</code></pre></div></div>
+
+<p>我们可以在若干步之后，打印出loss的变化，实现如下：</p>
+
+<div class="language-py highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="k">def</span> <span class="nf">plot_cost</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+     <span class="kn">import</span> <span class="nn">matplotlib.pyplot</span> <span class="k">as</span> <span class="n">plt</span>
+     <span class="n">plt</span><span class="o">.</span><span class="n">plot</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">arange</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">cost_his</span><span class="p">)),</span> <span class="bp">self</span><span class="o">.</span><span class="n">cost_his</span><span class="p">)</span>
+     <span class="n">plt</span><span class="o">.</span><span class="n">ylabel</span><span class="p">(</span><span class="s">'Cost'</span><span class="p">)</span>
+     <span class="n">plt</span><span class="o">.</span><span class="n">xlabel</span><span class="p">(</span><span class="s">'training steps'</span><span class="p">)</span>
+     <span class="n">plt</span><span class="o">.</span><span class="n">show</span><span class="p">()</span>
+</code></pre></div></div>
+
+<h3 id="结果">结果</h3>
+
+<p>我们在tensorboard里观察数据的变化：</p>
+
+<p>在terminal中cd 到对应的python目录，如果游戏已经运行了一段时间了，你可以看到本地多了一个logs的目录，这个本地生成对应的tensorboard的日志文件。
+然后在终端界面输入：</p>
+<div class="language-sh highlighter-rouge"><div class="highlight"><pre class="highlight"><code>tensorboard <span class="nt">--logdir</span><span class="o">=</span>logs/
+</code></pre></div></div>
+
+<p>接着在浏览器里输入http://localhost:6006/ 就可以看到我们设置的变量和一些值得变化了：</p>
+
+<p>如传入nn的一些参数可以在Text一栏可以观察到：</p>
+
+<p><img src="/img/in-post/post-reinforcement/re15.jpg" alt="" /></p>
+
+<p>比如loss损失函数的变化：</p>
+
+<p><img src="/img/in-post/post-reinforcement/re16.jpg" alt="" /></p>
+
+
+
+                <hr style="visibility: hidden;">
+
+                <ul class="pager">
+                    
+                    <li class="previous">
+                        <a href="/2018/03/20/reinforcement2/" data-toggle="tooltip" data-placement="top" title="强化学习-游戏AI Trainning (二)">
+                        Previous<br>
+                        <span>强化学习-游戏AI Trainning (二)</span>
+                        </a>
+                    </li>
+                    
+                    
+                    <li class="next">
+                        <a href="/2018/04/01/gameai/" data-toggle="tooltip" data-placement="top" title="腾讯、网易都入局的游戏+AI，想象力有多大[转载]">
+                        Next<br>
+                        <span>腾讯、网易都入局的游戏+AI，想象力有多大[转载]</span>
+                        </a>
+                    </li>
+                    
+                </ul>
+
+
+                
+                <!-- disqus 评论框 start -->
+                <div class="comment">
+                    <div id="disqus_thread" class="disqus-thread"></div>
+                </div>
+                <!-- disqus 评论框 end -->
+                
+
+                
+            </div>
+
+    <!-- Side Catalog Container -->
+        
+
+    <!-- Sidebar Container -->
+            <div class="
+                col-lg-8 col-lg-offset-2
+                col-md-10 col-md-offset-1
+                sidebar-container">
+
+                <!-- Featured Tags -->
+                
+                <section>
+                    <hr class="hidden-sm hidden-xs">
+                    <h5><a href="/tags/">FEATURED TAGS</a></h5>
+                    <div class="tags">
+        				          
+                				       <a href="/tags/#OSX" title="OSX" rel="4">OSX</a>
+        				          
+                				       <a href="/tags/#前端开发" title="前端开发" rel="15">前端开发</a>
+        				          
+                				       <a href="/tags/#JavaScript" title="JavaScript" rel="8">JavaScript</a>
+        				          
+                				       <a href="/tags/#Lua" title="Lua" rel="1">Lua</a>
+        				          
+                				       <a href="/tags/#Unity" title="Unity" rel="16">Unity</a>
+        				          
+                				       <a href="/tags/#手机游戏" title="手机游戏" rel="7">手机游戏</a>
+        				          
+                				       <a href="/tags/#Jenkins" title="Jenkins" rel="1">Jenkins</a>
+        				          
+                				       <a href="/tags/#C++" title="C++" rel="3">C++</a>
+        				          
+                				       <a href="/tags/#Tensorflow" title="Tensorflow" rel="6">Tensorflow</a>
+        				          
+                				       <a href="/tags/#人工智能" title="人工智能" rel="7">人工智能</a>
+        				          
+                				       <a href="/tags/#Python" title="Python" rel="8">Python</a>
+        				          
+                				       <a href="/tags/#工具" title="工具" rel="5">工具</a>
+        				          
+                				       <a href="/tags/#强化学习" title="强化学习" rel="4">强化学习</a>
+        				          
+        			      </div>
+                </section>
+                
+
+                <!-- Friends Blog -->
+                
+                <hr>
+                <h5>FRIENDS</h5>
+                <ul class="list-inline">
+                    
+                        <li><a href="http://www.gamelook.com.cn">GameLook</a></li>
+                    
+                        <li><a href="http://forum.china.unity3d.com/forum.php">游戏人社区</a></li>
+                    
+                        <li><a href="https://unity3d.com">Unity3D</a></li>
+                    
+                        <li><a href="https://www.uwa4d.com">UWA-简单优化</a></li>
+                    
+                        <li><a href="https://blog.openai.com/openai-baselines-ppo/">OpenAI新的策略优化算法PPO</a></li>
+                    
+                        <li><a href="https://www.zhihu.com/people/morvan/activities">知乎-莫烦 Python</a></li>
+                    
+                        <li><a href="http://blog.sina.com.cn/s/blog_471132920101d5kh.html">风宇冲的 Blog</a></li>
+                    
+                        <li><a href="http://wiki.jikexueyuan.com/project/tensorflow-zh/tutorials/mnist_beginners.html">极客学院-Tensotflow</a></li>
+                    
+                        <li><a href="https://unity3d.com/cn/solutions/mobile-ar">Unity for Mobile AR</a></li>
+                    
+                </ul>
+                
+            </div>
+        </div>
+    </div>
+</article>
+
+
+
+
+
+
+<!-- disqus 公共JS代码 start (一个网页只需插入一次) -->
+<script type="text/javascript">
+    /* * * CONFIGURATION VARIABLES * * */
+    var disqus_shortname = "Huailiang";
+    var disqus_identifier = "/2018/03/23/reinforcement3";
+    var disqus_url = "http://localhost:4000/2018/03/23/reinforcement3/";
+
+    (function() {
+        var dsq = document.createElement('script'); dsq.type = 'text/javascript'; dsq.async = true;
+        dsq.src = '//' + disqus_shortname + '.disqus.com/embed.js';
+        (document.getElementsByTagName('head')[0] || document.getElementsByTagName('body')[0]).appendChild(dsq);
+    })();
+</script>
+<!-- disqus 公共JS代码 end -->
+
+
+
+
+<!-- async load function -->
+<script>
+    function async(u, c) {
+      var d = document, t = 'script',
+          o = d.createElement(t),
+          s = d.getElementsByTagName(t)[0];
+      o.src = u;
+      if (c) { o.addEventListener('load', function (e) { c(null, e); }, false); }
+      s.parentNode.insertBefore(o, s);
+    }
+</script>
+<!-- anchor-js, Doc:http://bryanbraun.github.io/anchorjs/ -->
+<script>
+    async("//cdnjs.cloudflare.com/ajax/libs/anchor-js/1.1.1/anchor.min.js",function(){
+        anchors.options = {
+          visible: 'always',
+          placement: 'right',
+          icon: '#'
+        };
+        anchors.add().remove('.intro-header h1').remove('.subheading').remove('.sidebar-container h5');
+    })
+</script>
+<style>
+    /* place left on bigger screen */
+    @media all and (min-width: 800px) {
+        .anchorjs-link{
+            position: absolute;
+            left: -0.75em;
+            font-size: 1.1em;
+            margin-top : -0.1em;
+        }
+    }
+</style>
+
+
+
+    <!-- Footer -->
+<footer>
+    <div class="container">
+        <div class="row">
+            <div class="col-lg-8 col-lg-offset-2 col-md-10 col-md-offset-1">
+                <ul class="list-inline text-center">
+                     
+
+                    <!-- add Weibo, Zhihu by Hux, add target = "_blank" to <a> by Hux -->
+                    
+                    <li>
+                        <a target="_blank" href="https://www.zhihu.com/">
+                            <span class="fa-stack fa-lg">
+                                <i class="fa fa-circle fa-stack-2x"></i>
+                                <i class="fa  fa-stack-1x fa-inverse">知</i>
+                            </span>
+                        </a>
+                    </li>
+                     
+                    <li>
+                        <a target="_blank" href="https://weibo.com/u/6212299692">
+                            <span class="fa-stack fa-lg">
+                                <i class="fa fa-circle fa-stack-2x"></i>
+                                <i class="fa fa-weibo fa-stack-1x fa-inverse"></i>
+                            </span>
+                        </a>
+                    </li>
+                     
+                    <li>
+                        <a target="_blank" href="https://www.facebook.com/profile.php?id=100004290725320">
+                            <span class="fa-stack fa-lg">
+                                <i class="fa fa-circle fa-stack-2x"></i>
+                                <i class="fa fa-facebook fa-stack-1x fa-inverse"></i>
+                            </span>
+                        </a>
+                    </li>
+                     
+                    <li>
+                        <a target="_blank" href="https://github.com/huailiang">
+                            <span class="fa-stack fa-lg">
+                                <i class="fa fa-circle fa-stack-2x"></i>
+                                <i class="fa fa-github fa-stack-1x fa-inverse"></i>
+                            </span>
+                        </a>
+                    </li>
+                     
+                </ul>
+                <p class="copyright text-muted">
+                    Copyright &copy; Huailiang Blog 2018
+                    <br> Power by
+                    <a href="http://huailiang.github.io">Huailiang</a> |
+                    <iframe style="margin-left: 2px; margin-bottom:-5px;" frameborder="0" scrolling="0" width="100px" height="20px" src="https://ghbtns.com/github-btn.html?user=huailiang&type=star&count=true">
+                    </iframe>
+                </p>
+            </div>
+        </div>
+    </div>
+</footer>
+
+<!-- jQuery -->
+<script src=" /js/jquery.min.js "></script>
+
+<!-- Bootstrap Core JavaScript -->
+<!-- Currently, only navbar scroll-down effect at desktop still depends on this -->
+<script src=" /js/bootstrap.min.js "></script>
+
+<!-- Custom Theme JavaScript -->
+<script src=" /js/hux-blog.min.js "></script>
+
+<!-- Service Worker -->
+
+<script src=" /js/snackbar.js "></script>
+<script src=" /js/sw-registration.js "></script> 
+
+<!-- async load function -->
+<script>
+    function async(u, c) {
+        var d = document, t = 'script',
+            o = d.createElement(t),
+            s = d.getElementsByTagName(t)[0];
+        o.src = u;
+        if (c) { o.addEventListener('load', function (e) { c(null, e); }, false); }
+        s.parentNode.insertBefore(o, s);
+    }
+</script>
+
+
+<!-- jquery.tagcloud.js -->
+<script>
+    // only load tagcloud.js in tag.html
+    if ($('#tag_cloud').length !== 0) {
+        async('/js/jquery.tagcloud.js', function () {
+            $.fn.tagcloud.defaults = {
+                //size: {start: 1, end: 1, unit: 'em'},
+                color: { start: '#bbbbee', end: '#0085a1' },
+            };
+            $('#tag_cloud a').tagcloud();
+        })
+    }
+</script>
+
+<!--fastClick.js -->
+<script>
+    async("//cdnjs.cloudflare.com/ajax/libs/fastclick/1.0.6/fastclick.min.js", function () {
+        var $nav = document.querySelector("nav");
+        if ($nav) FastClick.attach($nav);
+    })
+</script>
+
+
+<!-- Google Analytics -->
+
+<script>
+    // dynamic User by Hux
+    var _gaId = 'UA-49627206-1';
+    var _gaDomain = 'github.io';
+
+    // Originial
+    (function (i, s, o, g, r, a, m) {
+        i['GoogleAnalyticsObject'] = r; i[r] = i[r] || function () {
+            (i[r].q = i[r].q || []).push(arguments)
+        }, i[r].l = 1 * new Date(); a = s.createElement(o),
+            m = s.getElementsByTagName(o)[0]; a.async = 1; a.src = g; m.parentNode.insertBefore(a, m)
+    })(window, document, 'script', '//www.google-analytics.com/analytics.js', 'ga');
+
+    ga('create', _gaId, _gaDomain);
+    ga('send', 'pageview');
+</script> 
+
+
+<!-- Baidu Tongji -->
+
+
+
+<!-- Side Catalog -->
+
+
+
+<!-- Multi-Lingual -->
+
+
+
+<!-- Image to hack wechat -->
+<img src="/img/icon_wechat.png" width="0" height="0" />
+<!-- Migrate from head to bottom, no longer block render and still work -->
+
+</body>
+
+</html>
