@@ -17,10 +17,13 @@ Unity的shader资源不仅含有GPU上执行的着色器代码，还包含了渲
 
 在带有多个变体的shader代码片段中，最显著的特征就是拥有这些预编译开关如：
 
-```
-#pragma multi_compile_fwdbase // unity 内置前向管线编译设置集合，控制光照，阴影等很多相关功能
-#pragma shader_feature _USE_FEATURE_A // 自定义功能开关
-#pragma multi_compile _USE_FUNCTION_A _USE_FUNCTION_B // 自定义多编译选项
+```c
+// unity 内置前向管线编译设置集合，控制光照，阴影等很多相关功能
+#pragma multi_compile_fwdbase 
+// 自定义功能开关
+#pragma shader_feature _USE_FEATURE_A 
+// 自定义多编译选项
+#pragma multi_compile _USE_FUNCTION_A _USE_FUNCTION_B 
 ```
 
 有了这些编译开关标记，我们就可以只写很少的shader代码，从而依附在这份骨架代码上，来实现含有细微差异功能的变种shader代码。当然功能越多，这些变体数量也成指数级增长，如何控制这些变体可能产生的数量，也需要较为丰富的经验和技巧。
@@ -61,13 +64,13 @@ public int callbackOrder { get { return 0; } }
 
 然后是方法，它传入shader、  ShaderSnippetData、和一列表的shadercompilerData，其中包含了着色器变种的设置，我们先打印一下看看着色器的名字。
 ```csharp
-using UnityEditor.Build;
 using UnityEditor.Rendering;
 using UnityEngine;
  
 public class MyPipelineShaderPreprocessor : IPreprocessShaders 
 {
-    public void OnProcessShader(Shader shader, ShaderSnippetData snippet, IList<ShaderCompilerData> data) 
+    public void OnProcessShader(Shader shader, 
+    ShaderSnippetData snippet, IList<ShaderCompilerData> data) 
     {
         Debug.Log(shader.name);
     }
@@ -86,12 +89,15 @@ using UnityEngine.Rendering;
  
 public class MyPipelineShaderPreprocessor : IPreprocessShaders {
 	
-	public void OnProcessShader(Shader shader, ShaderSnippetData snippet, IList…ShaderCompilerData> data) {
-		if (!(GraphicsSettings.renderPipelineAsset is MyPipelineAsset)) {
-			return;
-		}
-		Debug.Log(shader.name);
-	}
+    public void OnProcessShader(Shader shader, 
+    ShaderSnippetData snippet, IList<ShaderCompilerData> data)
+    {
+        if (!(GraphicsSettings.renderPipelineAsset is MyPipelineAsset)) 
+        {
+            return;
+        }
+        Debug.Log(shader.name);
+    }
 }
 ```
 
@@ -105,7 +111,7 @@ public class MyPipelineShaderPreprocessor : IPreprocessShaders {
 
 将SVC和shader打入一个Shader AssetBundle。将材质打成Material AssetBundle.
 
-运行时加载ShaderAB，取SVC，WarmUp，再加载MaterialAB。
+运行时加载Shader AssetBundle，取SVC，WarmUp，再加载Material AssetBundle。
 
 对应到 [例子][i6] 中 variants 的场景中， 先选中两个 prefab 和 material， 右键 点击生成 BuildBundle - Mat Sep,在 StreamingAssets 目录下，可以看见生成的 bundle.
 
@@ -126,48 +132,48 @@ SVC 中 只开启了 绿色
 使用如下代码加载对应的 SVC:
 
 ```csharp
-    void OnGUI()
+void OnGUI()
+{
+    if (GUI.Button(new Rect(20, 140, 200, 100), "LoadVariants - Mat"))
     {
-        if (GUI.Button(new Rect(20, 140, 200, 100), "LoadVariants - Mat"))
-        {
-            Profiler.BeginSample("LoadVariants");
-            LoadVariants();
-            LoadMat("mat_shaderfeature");
-            LoadMat("mat_multicompile");
-            LoadCube("cubemulticompile", new Vector3(2, 0, 0));
-            LoadCube("cubefeature", new Vector3(-2, 0, 0));
-            Profiler.EndSample();
-        }
+        Profiler.BeginSample("LoadVariants");
+        LoadVariants();
+        LoadMat("mat_shaderfeature");
+        LoadMat("mat_multicompile");
+        LoadCube("cubemulticompile", new Vector3(2, 0, 0));
+        LoadCube("cubefeature", new Vector3(-2, 0, 0));
+        Profiler.EndSample();
     }
+}
 
-    private void LoadVariants()
-    {
-        var pat = Path.Combine(prefix, "shader");
-        var b = AssetBundle.LoadFromFile(pat);
-        var svc = b.LoadAsset<ShaderVariantCollection>("MultiShaderVariants");
-        svc.WarmUp();
-        // svc的WarmUp就会触发相关Shader的预编译，触发预编译之后再加载Shader Asset即可
-        // b.LoadAllAssets<Shader>();
-		b.LoadAllAssets<Material>();
-    }
+private void LoadVariants()
+{
+    var pat = Path.Combine(prefix, "shader");
+    var b = AssetBundle.LoadFromFile(pat);
+    var svc = b.LoadAsset<ShaderVariantCollection>("MultiShaderVariants");
+    svc.WarmUp();
+    // svc的WarmUp就会触发相关Shader的预编译，触发预编译之后再加载Shader Asset即可
+    // b.LoadAllAssets<Shader>();
+    b.LoadAllAssets<Material>();
+}
 
-    private void LoadMat(string mat)
-    {
-        var pat = Path.Combine(prefix, mat);
-        var b = AssetBundle.LoadFromFile(pat);
-        b.LoadAllAssets<Material>();
-    }
+private void LoadMat(string mat)
+{
+    var pat = Path.Combine(prefix, mat);
+    var b = AssetBundle.LoadFromFile(pat);
+    b.LoadAllAssets<Material>();
+}
 
-    private void LoadCube(string name, Vector3 pos)
-    {
-        var pat = Path.Combine(prefix, name);
-        var b = AssetBundle.LoadFromFile(pat);
-        var obj = b.LoadAsset<GameObject>(name);
-        var go = GameObject.Instantiate(obj);
-        go.name = name + "...";
-        go.transform.position = pos;
-        b.Unload(false);
-    }
+private void LoadCube(string name, Vector3 pos)
+{
+    var pat = Path.Combine(prefix, name);
+    var b = AssetBundle.LoadFromFile(pat);
+    var obj = b.LoadAsset<GameObject>(name);
+    var go = GameObject.Instantiate(obj);
+    go.name = name + "...";
+    go.transform.position = pos;
+    b.Unload(false);
+}
 ```
 
 #### 测试案例二：
@@ -185,6 +191,43 @@ Profiler.EndSample();
 ```
 
 此次我们看到 无论 shader_feature 对应的 variant 是否对应在 svc中， 则表现都正确。坏处就是所有的资源都关联在一个 bundle 中了。
+
+![](/img/post-unity/var3.jpg)
+
+
+### 关于Shader.Find
+
+关于Shader.Find，个人猜测如下：
+
+Unity内部使用一个字典或者HashSet来支持Shader.Find，这里暂且叫它ShaderMap。ShaderMap的键是ShaderLab语法中的名字；值是Shader文件的GUID。
+
+ShaderMap生成于Build项目时，保存了来自三个地方的shader cache引用关系：
+
+1. Resources中的shader或Resources其中其他资源引用到的shader
+
+2. 任意场景中引用到的shader
+
+3. StreamingAssets中Asset Bundle内的Shader。 运行时使用ShaderFind，只能找到这些Shader，如果对应GUID的shader不存在，查找就会失败，即使热更新后加入了新的Asset Bundle中含有同名Shader（即ShaderLab语法同名）。
+
+4. 目前没有办法在发布以后动态更新ShaderMap。
+
+![](/img/post-unity/var5.png)
+
+
+### 性能测试
+
+写一个uber shader, 最终出包时不要有 Material, 通过自己定义的 bytes 文件来记录材质参数（贴图路径、颜色等），Shader 和 SVC 打包到同一个Assetsbundle 中。
+
+运行时 new 一个使用uber shader的Material（或者 MaterialPropertyBlock), 读取 bytes 文件里参数初始化 Material， 然后通过 keyword 来开启不同的效果和算法。
+
+
+![](/img/post-unity/var4.jpg)
+
+使用ShaderVariantCollection来WarmUp，而不是全部WarmUp，是为了优化Shader.CreateGpuProgram(创建CPU执行程序片段)
+
+使用ClearCurrentShaderVariantCollection和SaveCurrentShaderVariantCollection来计算生成多个ShaderVariantCollection，多帧进行WarmUp
+
+变种太多会导致ShaderLab内存占用变大，Shader.Parse(编译Shader)和Shader.CreateGpuProgram(创建CPU执行程序片段)占用CPU时间变长
 
 
 ## 参考
