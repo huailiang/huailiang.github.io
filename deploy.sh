@@ -96,6 +96,8 @@ exec_git_push
 
 echo "job done, bye"
 
+rm -rf /tmp/temp*
+
 # echo "start sync Gitee"
 
 # workdir=`pwd`
