@@ -20,7 +20,7 @@ tags:
 
 <!-- ![](/img/post-unity/toy.jpg) -->
 
-<iframe width="640" height="360" frameborder="0" src="https://www.shadertoy.com/embed/ld3Gz2?gui=true&t=10&paused=true&muted=false" allowfullscreen></iframe>
+<iframe width="640" height="360" frameborder="0" src="https://www.shadertoy.com/embed/ld3Gz2?gui=false&t=10&paused=true&muted=true" allowfullscreen></iframe>
 
 这个效果用了什么Maya或3ds Max做出的模型吗？答案其实是没有的，没有任何外部的模型输入，纹理和模型都是由程序生成的。当你打开它的界面时，其实所有的输入和程序都一目了然：
 
