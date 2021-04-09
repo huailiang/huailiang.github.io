@@ -18,9 +18,9 @@ tags:
 很多人都在好奇那些绚丽的效果是怎么来的，比如iq刚写的[这个效果][i2]：
 
 
-<!-- ![](/img/post-unity/toy.jpg) -->
+![](/img/post-unity/toy.jpg)
 
-<iframe width="640" height="360" frameborder="0" src="https://www.shadertoy.com/embed/ld3Gz2?gui=false&t=10&paused=true&muted=true" allowfullscreen></iframe>
+<!-- <iframe width="640" height="360" frameborder="0" src="https://www.shadertoy.com/embed/ld3Gz2?gui=false&t=10&paused=true&muted=true" allowfullscreen></iframe> -->
 
 这个效果用了什么Maya或3ds Max做出的模型吗？答案其实是没有的，没有任何外部的模型输入，纹理和模型都是由程序生成的。当你打开它的界面时，其实所有的输入和程序都一目了然：
 
@@ -56,19 +56,28 @@ uniform float     iSampleRate;           // 帧率
 
 由于ShaderToy针对的是pixel shaders，这也意味着它们的vertex shaders都是一样的，只需要计算基本的顶点位置和屏幕位置即可。
 
-除了void mainImage( out vec4 fragColor, in vec2 fragCoord ) 这样的入口函数， ShaderToy 还提供了专门针对 VR 应用的入口函数：
+##### 虚拟现实着色器
+
+除了void mainImage， ShaderToy 还提供了专门针对 VR 应用的入口函数：
+
 
 ```c
-void mainVR( out vec4 fragColor, in vec2 fragCoord, in vec3 ro, in vec3 rd )
+void mainVR(out vec4 fragColor, in vec2 fragCoord, in vec3 fragRayOri, in vec3 fragRayDir)
 ```
+
+变量fragRayOri和fragRayDir包含在跟踪器空间中给出的经过虚拟空间里的像素的射线原点和射线方向。 如果移动的相机是通过虚拟空间移动，那么着色器将把这些值转换到相机空间。射线原点是一个变量并且在相机不作为针孔相机的VR系统中不是uniform参数。
+
+
+###### 声音着色器
 
 专门针对 GPU Audio 的入口函数：
 
 ```c
 vec2 mainSound( in int samp,float time)
 ```
+其中time变量变量是用于计算波幅的声音样本的时间（以秒为单位）。这个时间将以iSampleRateuniform指定的采样率进行采样，根据应用程序，该采样率通常为44100或48000。
 
-Audio 的声音 ShaderToy 上的 [Planet Shadertoy][i9]：
+通过mainSound函数的返回值，将期望的波幅输出为立体声（左和右声道）声音的一对值。
 
 
 ### VSCode
@@ -245,3 +254,4 @@ public class ShaderToyHelper : MonoBehaviour {
 [i7]: https://www.shadertoy.com/view/sdS3Wy
 [i8]: https://huailiang.github.io/blog/2019/cg/
 [i9]: https://www.shadertoy.com/view/4tjGRh
+[i10]: https://www.shadertoy.com/howto
