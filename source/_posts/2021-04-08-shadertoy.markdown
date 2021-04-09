@@ -160,7 +160,6 @@ Shader "Shadertoy/Template" {
     SubShader {    
         Pass {    
             CGPROGRAM    
-
             #pragma vertex vert    
             #pragma fragment frag    
             #pragma fragmentoption ARB_precision_hint_fastest     
@@ -170,7 +169,7 @@ Shader "Shadertoy/Template" {
     FallBack Off    
 }
 ```
-代码比较简单。主要是在开头定义了一系列宏来和ShaderToy中的GLSL衔接。其中main函数对应了之前的mainImage函数。在后面，我们只需要在CGINCLUDE中定义其他函数，并填充main函数即可。
+代码比较简单。主要是在开头定义了一系列宏来和ShaderToy中的GLSL衔接， 更多的两种 shader 语言之间的转换，可以参考我之前的一篇文章: [CG/hlsl 内置函数][i8]。其中main函数对应了之前的mainImage函数。在后面，我们只需要在CGINCLUDE中定义其他函数，并填充main函数即可。
 
 为了可以响应鼠标操作，我们还可以写一个C#脚本，以便在鼠标进行拖拽时将鼠标位置传递给shader。
 ```csharp
@@ -226,3 +225,4 @@ public class ShaderToyHelper : MonoBehaviour {
 [i5]: http://blog.csdn.net/stalendp/article/category/1628145
 [i6]: https://blog.csdn.net/candycat1992/article/details/44039077
 [i7]: https://www.shadertoy.com/view/sdS3Wy
+[i8]: https://huailiang.github.io/blog/2019/cg/
