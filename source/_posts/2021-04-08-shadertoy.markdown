@@ -54,6 +54,20 @@ uniform float     iSampleRate;           // 帧率
 
 由于ShaderToy针对的是pixel shaders，这也意味着它们的vertex shaders都是一样的，只需要计算基本的顶点位置和屏幕位置即可。
 
+除了void mainImage( out vec4 fragColor, in vec2 fragCoord ) 这样的入口函数， ShaderToy 还提供了专门针对 VR 应用的入口函数：
+
+```c
+void mainVR( out vec4 fragColor, in vec2 fragCoord, in vec3 ro, in vec3 rd )
+```
+
+专门针对 GPU Audio 的入口函数：
+
+```c
+vec2 mainSound( in int samp,float time)
+```
+
+Audio 的声音 ShaderToy 上的 [Planet Shadertoy][i9]：
+
 
 ### VSCode
 
@@ -84,6 +98,8 @@ void mainImage(out vec4 fragColor,in vec2 fragCoord)
 ```
 
 分享一个我实现的画国民党旗的 [Demo][i7], 还是挺有意思的。
+
+<iframe width="640" height="360" frameborder="0" src="https://www.shadertoy.com/embed/sdS3Wy?gui=false&t=10&paused=false&muted=true" allowfullscreen></iframe>
 
 ### 在Unity中实践
 
@@ -226,3 +242,4 @@ public class ShaderToyHelper : MonoBehaviour {
 [i6]: https://blog.csdn.net/candycat1992/article/details/44039077
 [i7]: https://www.shadertoy.com/view/sdS3Wy
 [i8]: https://huailiang.github.io/blog/2019/cg/
+[i9]: https://www.shadertoy.com/view/4tjGRh
