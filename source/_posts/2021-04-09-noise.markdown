@@ -114,6 +114,11 @@ float noise_perlin (vec2 p) {
 }
 ```
 
+Perlin-Noise-Texture的生成代码我已上传ShaderToy， 预览如下（国内加载有点儿慢）。
+
+
+<iframe width="640" height="360" frameborder="0" src="https://www.shadertoy.com/embed/sdjGWc?gui=false&t=10&paused=false&muted=false" allowfullscreen></iframe>
+
 ### 细胞噪声 (Celluar Noise)
 
 ![](/img/post-engine/noise8.jpg)
@@ -167,6 +172,10 @@ float noise(vec2 p) {
 
 最后一步，将F1映射为当前像素点的颜色值，可以是gl_FragColor = vec4(vec3(pow(noise(uv), 2.)), 1.0);。
 不仅如此，我们还可以取特征点v到点p第二近的距离F2，通过F2 - F1，得到类似泰森多变形的纹理，如上图最右侧。
+
+在 ShaderToy 里实现如下 (国内加载有点慢)：
+
+<iframe width="640" height="360" frameborder="0" src="https://www.shadertoy.com/embed/ss2GWc?gui=true&t=10&paused=true&muted=false" allowfullscreen></iframe>
 
 ### 噪声算法组合
 
@@ -227,6 +236,10 @@ float fbm_abs_noise(vec2 p)
 现在结合上文提到的梯度噪声和细胞噪声分别进行fbm，可以实现以下效果：
 
 ![](/img/post-engine/noise14.jpg)
+
+算法在 ShaderToy 中预览如下：
+
+<iframe width="640" height="360" frameborder="0" src="https://www.shadertoy.com/embed/ssj3Wc?gui=true&t=10&paused=true&muted=false" allowfullscreen></iframe>
 
 ##### 翘曲域（Domain Wrapping）
 
@@ -299,9 +312,23 @@ void main() {
 
 这里的噪声值被映射为法线贴图的color值。
 
+参考文献： 
+1、[《大自然的分形几何学》[波] 伯努瓦·B. 曼德布罗特（Mandelbrot）][i7]
+2、[Perlin Noise][i5]
+3、[关于噪声的一些基本定义][i6]
+4、[Fractal Brownian Motion][i3]
+5、[Understanding Perlin Noise][i2]
+6、[谈谈噪声][i1] 
+7、[基于ComputeShader生成Perlin Noise噪声图][i8]
+8、[Understanding Perlin Noise][i9]
 
-
-[i1]: https://www.shadertoy.com
-[i2]: https://www.shadertoy.com/view/ld3Gz2
-[i3]: https://www.shadertoy.com/view/4slSD8
+[i1]: http://blog.csdn.net/candycat1992/article/details/50346469
+[i2]: https://flafla2.github.io/2014/08/09/perlinnoise.html
+[i3]: hhttps://thebookofshaders.com/13/ 
 [i4]: https://www.iquilezles.org/www/articles/warp/warp.htm
+[i5]: http://freespace.virgin.net/hugo.elias/models/m_perlin.htm 
+[i6]: http://www.gamersky.com/handbook/201601/708963_2.shtml?tag=wap
+[i7]: https://max.book118.com/html/2019/0301/6135100204002012.shtm
+[i8]: https://zhuanlan.zhihu.com/p/88518193
+[i9]: http://adrianb.io/2014/08/09/perlinnoise.html
+[i10]:  https://www.shadertoy.com/view/sdjGWc
