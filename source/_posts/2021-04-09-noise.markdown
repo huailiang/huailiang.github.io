@@ -114,7 +114,7 @@ float noise_perlin (vec2 p) {
 }
 ```
 
-Perlin-Noise-Texture的生成代码我已上传ShaderToy， 预览如下（国内加载有点儿慢）。
+[Perlin-Noise-Texture的生成代码][i10]我已上传ShaderToy， 预览如下（国内加载有点儿慢）。
 
 
 <iframe width="640" height="360" frameborder="0" src="https://www.shadertoy.com/embed/sdjGWc?gui=true&t=10&paused=false&muted=true" allowfullscreen></iframe>
@@ -173,7 +173,7 @@ float noise(vec2 p) {
 最后一步，将F1映射为当前像素点的颜色值，可以是gl_FragColor = vec4(vec3(pow(noise(uv), 2.)), 1.0);。
 不仅如此，我们还可以取特征点v到点p第二近的距离F2，通过F2 - F1，得到类似泰森多变形的纹理，如上图最右侧。
 
-在 ShaderToy 里实现如下 (国内加载有点慢)：
+[Celluar Noise Texture 生成算法][i12]我已经上传ShaderToy， 预览如下 (国内加载有点慢)：
 
 <iframe width="640" height="360" frameborder="0" src="https://www.shadertoy.com/embed/ss2GWc?gui=true&t=10&paused=true&muted=true" allowfullscreen></iframe>
 
@@ -237,7 +237,7 @@ float fbm_abs_noise(vec2 p)
 
 ![](/img/post-engine/noise14.jpg)
 
-基于 PerlinNoise 的Turbulence算法在 ShaderToy 中预览如下 (国内加载有点慢)：
+基于 PerlinNoise 的[Turbulence算法][i11]在 ShaderToy 中预览如下 (国内加载有点慢)：
 
 <iframe width="640" height="360" frameborder="0" src="https://www.shadertoy.com/embed/ssj3Wc?gui=true&t=10&paused=false&muted=true" allowfullscreen></iframe>
 
@@ -331,4 +331,6 @@ void main() {
 [i7]: https://max.book118.com/html/2019/0301/6135100204002012.shtm
 [i8]: https://zhuanlan.zhihu.com/p/88518193
 [i9]: http://adrianb.io/2014/08/09/perlinnoise.html
-[i10]:  https://www.shadertoy.com/view/sdjGWc
+[i10]: https://www.shadertoy.com/view/sdjGWc
+[i11]: https://www.shadertoy.com/view/ssj3Wc
+[i12]: https://www.shadertoy.com/view/ss2GWc
