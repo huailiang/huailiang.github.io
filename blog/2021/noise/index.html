@@ -175,6 +175,10 @@ MathJax.Hub.Config({
 </code></pre>
 </div>
 
+<p><a href="https://www.shadertoy.com/view/sdjGWc">Perlin-Noise-Texture的生成代码</a>我已上传ShaderToy， 预览如下（国内加载有点儿慢）。</p>
+
+<iframe width="640" height="360" frameborder="0" src="https://www.shadertoy.com/embed/sdjGWc?gui=true&amp;t=10&amp;paused=false&amp;muted=true" allowfullscreen=""></iframe>
+
 <h3 id="细胞噪声-celluar-noise">细胞噪声 (Celluar Noise)</h3>
 
 <p><img src="/img/post-engine/noise8.jpg" alt="" /></p>
@@ -228,6 +232,10 @@ MathJax.Hub.Config({
 
 <p>最后一步，将F1映射为当前像素点的颜色值，可以是gl_FragColor = vec4(vec3(pow(noise(uv), 2.)), 1.0);。<br />
 不仅如此，我们还可以取特征点v到点p第二近的距离F2，通过F2 - F1，得到类似泰森多变形的纹理，如上图最右侧。</p>
+
+<p><a href="https://www.shadertoy.com/view/ss2GWc">Celluar Noise Texture 生成算法</a>我已经上传ShaderToy， 预览如下 (国内加载有点慢)：</p>
+
+<iframe width="640" height="360" frameborder="0" src="https://www.shadertoy.com/embed/ss2GWc?gui=true&amp;t=10&amp;paused=true&amp;muted=true" allowfullscreen=""></iframe>
 
 <h3 id="噪声算法组合">噪声算法组合</h3>
 
@@ -288,6 +296,10 @@ MathJax.Hub.Config({
 <p>现在结合上文提到的梯度噪声和细胞噪声分别进行fbm，可以实现以下效果：</p>
 
 <p><img src="/img/post-engine/noise14.jpg" alt="" /></p>
+
+<p>基于 PerlinNoise 的<a href="https://www.shadertoy.com/view/ssj3Wc">Turbulence算法</a>在 ShaderToy 中预览如下 (国内加载有点慢)：</p>
+
+<iframe width="640" height="360" frameborder="0" src="https://www.shadertoy.com/embed/ssj3Wc?gui=true&amp;t=10&amp;paused=false&amp;muted=true" allowfullscreen=""></iframe>
 
 <h5 id="翘曲域domain-wrapping">翘曲域（Domain Wrapping）</h5>
 
@@ -359,6 +371,16 @@ MathJax.Hub.Config({
 <img src="/img/post-engine/noise20.jpg" alt="" /></p>
 
 <p>这里的噪声值被映射为法线贴图的color值。</p>
+
+<p>参考文献： <br />
+1、<a href="https://max.book118.com/html/2019/0301/6135100204002012.shtm">《大自然的分形几何学》[波] 伯努瓦·B. 曼德布罗特（Mandelbrot）</a><br />
+2、<a href="http://freespace.virgin.net/hugo.elias/models/m_perlin.htm">Perlin Noise</a><br />
+3、<a href="http://www.gamersky.com/handbook/201601/708963_2.shtml?tag=wap">关于噪声的一些基本定义</a><br />
+4、<a href="hhttps://thebookofshaders.com/13/">Fractal Brownian Motion</a><br />
+5、<a href="https://flafla2.github.io/2014/08/09/perlinnoise.html">Understanding Perlin Noise</a><br />
+6、<a href="http://blog.csdn.net/candycat1992/article/details/50346469">谈谈噪声</a> <br />
+7、<a href="https://zhuanlan.zhihu.com/p/88518193">基于ComputeShader生成Perlin Noise噪声图</a><br />
+8、<a href="http://adrianb.io/2014/08/09/perlinnoise.html">Understanding Perlin Noise</a></p>
 
 
     </div>
