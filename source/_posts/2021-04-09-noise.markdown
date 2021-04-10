@@ -117,7 +117,7 @@ float noise_perlin (vec2 p) {
 Perlin-Noise-Texture的生成代码我已上传ShaderToy， 预览如下（国内加载有点儿慢）。
 
 
-<iframe width="640" height="360" frameborder="0" src="https://www.shadertoy.com/embed/sdjGWc?gui=false&t=10&paused=false&muted=false" allowfullscreen></iframe>
+<iframe width="640" height="360" frameborder="0" src="https://www.shadertoy.com/embed/sdjGWc?gui=true&t=10&paused=false&muted=true" allowfullscreen></iframe>
 
 ### 细胞噪声 (Celluar Noise)
 
@@ -175,7 +175,7 @@ float noise(vec2 p) {
 
 在 ShaderToy 里实现如下 (国内加载有点慢)：
 
-<iframe width="640" height="360" frameborder="0" src="https://www.shadertoy.com/embed/ss2GWc?gui=true&t=10&paused=true&muted=false" allowfullscreen></iframe>
+<iframe width="640" height="360" frameborder="0" src="https://www.shadertoy.com/embed/ss2GWc?gui=true&t=10&paused=true&muted=true" allowfullscreen></iframe>
 
 ### 噪声算法组合
 
@@ -237,9 +237,9 @@ float fbm_abs_noise(vec2 p)
 
 ![](/img/post-engine/noise14.jpg)
 
-算法在 ShaderToy 中预览如下：
+基于 PerlinNoise 的Turbulence算法在 ShaderToy 中预览如下 (国内加载有点慢)：
 
-<iframe width="640" height="360" frameborder="0" src="https://www.shadertoy.com/embed/ssj3Wc?gui=true&t=10&paused=true&muted=false" allowfullscreen></iframe>
+<iframe width="640" height="360" frameborder="0" src="https://www.shadertoy.com/embed/ssj3Wc?gui=true&t=10&paused=false&muted=true" allowfullscreen></iframe>
 
 ##### 翘曲域（Domain Wrapping）
 
