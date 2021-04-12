@@ -56,6 +56,17 @@ uniform float     iSampleRate;           // 帧率
 
 由于ShaderToy针对的是pixel shaders，这也意味着它们的vertex shaders都是一样的，只需要计算基本的顶点位置和屏幕位置即可。
 
+##### 多Pass
+
+可以创建多个Pass作为最后一个Pass的输入， 新建一个Buffer, ShaderToy 似乎只支持四个Buffer， 分别命名BufferA, BufferB, BufferC, BufferD, 编辑完成之后可以在Image Pass的iChannel选项，选择上面四个buffer， buffer的输出作为Image iChannel的输入。 在Image pass中直接texture(iChannel，uv)就可以了。 一个比较好的实现就是 [Noise Contour][i11]。
+
+
+![](/img/post-unity/toy5.jpg)
+
+还可以创建Common buffer, 把复用高或者通用的代码封装在一块， 后面直接Image的pass可以直接调用就可以了， 比如说 [Tetrahedral Voxel Traversal][i12]。
+
+
+
 ##### 虚拟现实着色器
 
 除了void mainImage， ShaderToy 还提供了专门针对 VR 应用的入口函数：
@@ -255,3 +266,5 @@ public class ShaderToyHelper : MonoBehaviour {
 [i8]: https://huailiang.github.io/blog/2019/cg/
 [i9]: https://www.shadertoy.com/view/4tjGRh
 [i10]: https://www.shadertoy.com/howto
+[i11]: https://www.shadertoy.com/view/MscSzf
+[i12]: https://www.shadertoy.com/view/wtfXWB
