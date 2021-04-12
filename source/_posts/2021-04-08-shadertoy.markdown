@@ -20,7 +20,6 @@ tags:
 
 ![](/img/post-unity/toy.jpg)
 
-<!-- <iframe width="640" height="360" frameborder="0" src="https://www.shadertoy.com/embed/ld3Gz2?gui=false&t=10&paused=true&muted=true" allowfullscreen></iframe> -->
 
 这个效果用了什么Maya或3ds Max做出的模型吗？答案其实是没有的，没有任何外部的模型输入，纹理和模型都是由程序生成的。当你打开它的界面时，其实所有的输入和程序都一目了然：
 
@@ -56,20 +55,22 @@ uniform float     iSampleRate;           // 帧率
 
 由于ShaderToy针对的是pixel shaders，这也意味着它们的vertex shaders都是一样的，只需要计算基本的顶点位置和屏幕位置即可。
 
-##### 多Pass
-
-可以创建多个Pass作为最后一个Pass的输入， 新建一个Buffer, ShaderToy 似乎只支持四个Buffer， 分别命名BufferA, BufferB, BufferC, BufferD, 编辑完成之后可以在Image Pass的iChannel选项，选择上面四个buffer， buffer的输出作为Image iChannel的输入。 在Image pass中直接texture(iChannel，uv)就可以了。 一个比较好的实现就是 [Noise Contour][i11]。
-
-作者在BufferA画深度和法线， 在BufferB中做边缘检测，最终的渲染效果实在Image中渲染完毕。
+##### 多Pass支持
 
 ![](/img/post-unity/toy5.jpg)
 
+可以创建多个Pass作为最后一个Pass的输入， 新建一个Buffer, ShaderToy 似乎只支持四个Buffer， 分别命名BufferA, BufferB, BufferC, BufferD, 编辑完成之后可以在Image Pass的iChannel选项，选择上面四个buffer， buffer的输出作为Image iChannel的输入。 在Image pass中直接texture(iChannel，uv)就可以了。 一个比较好的实现就是 [Noise Contour][i11]。
 
-如果实现里使用到了多余的Buffer， 在shadertoy搜索过滤器multipass过滤出来：
+作者在BufferA使用raymarching的方式画出形状的深度和法线， 然后在BufferB中做边缘检测，最终的渲染效果实在Image中完成。每个pass输出如下图所示：
+
+![](/img/post-unity/toy7.jpg)
+
+
+如果实现里使用到了Image之外的Buffer， 在shadertoy搜索过滤器multipass筛选出来：
 
 ![](/img/post-unity/toy6.jpg)
 
-还可以创建Common buffer, 把复用高或者通用的代码封装在一块， 后面直接Image的pass可以直接调用就可以了， 比如说 [Tetrahedral Voxel Traversal][i12]。
+还可以创建Common buffer, 把复用高或者通用的代码封装在一块， 后面直接Image的pass可以直接调用就可以了， 比如说 [Tetrahedral Voxel Traversal][i12]。  当然ShaderToy还支持了类型是Sound和Cubemap类型的输出pass，这里就不具体展开了。
 
   
 
@@ -123,6 +124,12 @@ void mainImage(out vec4 fragColor,in vec2 fragCoord)
 #iChannel0::MinFilter "NearestMipMapNearest"
 #iChannel0::MagFilter "Nearest"
 #iChannel0::WrapMode "Repeat"
+```
+vscode中#iChannel的指定除了是一张纹理， 还可以是.glsl类型的shader， 这样就可以实现shadertoy上的多pass的效果了。
+
+```c
+#iChannel0 "file://bufferA.glsl"
+#iChannel1 "file://bufferB.glsl"
 ```
 
 分享一个我实现的画国民党旗的 [Demo][i7], 还是挺有意思的。
