@@ -64,6 +64,11 @@ uniform float     iSampleRate;           // 帧率
 
 ![](/img/post-unity/toy5.jpg)
 
+
+如果实现里使用到了多余的Buffer， 在shadertoy搜索过滤器multipass过滤出来：
+
+![](/img/post-unity/toy6.jpg)
+
 还可以创建Common buffer, 把复用高或者通用的代码封装在一块， 后面直接Image的pass可以直接调用就可以了， 比如说 [Tetrahedral Voxel Traversal][i12]。
 
   
