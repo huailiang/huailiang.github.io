@@ -60,12 +60,13 @@ uniform float     iSampleRate;           // 帧率
 
 可以创建多个Pass作为最后一个Pass的输入， 新建一个Buffer, ShaderToy 似乎只支持四个Buffer， 分别命名BufferA, BufferB, BufferC, BufferD, 编辑完成之后可以在Image Pass的iChannel选项，选择上面四个buffer， buffer的输出作为Image iChannel的输入。 在Image pass中直接texture(iChannel，uv)就可以了。 一个比较好的实现就是 [Noise Contour][i11]。
 
+作者在BufferA画深度和法线， 在BufferB中做边缘检测，最终的渲染效果实在Image中渲染完毕。
 
 ![](/img/post-unity/toy5.jpg)
 
 还可以创建Common buffer, 把复用高或者通用的代码封装在一块， 后面直接Image的pass可以直接调用就可以了， 比如说 [Tetrahedral Voxel Traversal][i12]。
 
-
+  
 
 ##### 虚拟现实着色器
 
