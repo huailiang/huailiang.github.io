@@ -12,10 +12,7 @@ tags:
 
 说简单点，这个网站是专门让人们分享和编写GLSL的pixel shaders的。 换句话说，里面那些绚丽的效果仅仅依靠pixel shaders就可以完成了（当然还有纹理的配合），是不是很强大？里面的强人很多，就像头脑风暴一样，让你一次次发出惊叹，原来还可以这样做！但是，这里面也蕴含了很多数学和算法知识，所以你可能会经常发现自己脑袋不够用，跟不上作者的思路。。。不过，脑袋都是靠锻炼的嘛，没有捷径可走，多看多写总是没错的~
 
-强烈建议大家先去逛一逛，有很多很好玩的东西，例如这个人写了一个莫比乌斯带，而[这个人][i3]写了一个耀眼的小太阳！一开始你很难相信这些完全都是用shader计算出来的。
-
-
-很多人都在好奇那些绚丽的效果是怎么来的，比如iq刚写的[这个效果][i2]：
+强烈建议大家先去逛一逛，有很多很好玩的东西，例如这个人写了一个莫比乌斯带，而[这个人][i3]写了一个耀眼的小太阳！一开始你很难相信这些完全都是用shader计算出来的。很多人都在好奇那些绚丽的效果是怎么来的，比如iq刚写的[这个效果][i2]：
 
 
 ![](/img/post-unity/toy.jpg)
@@ -61,7 +58,7 @@ uniform float     iSampleRate;           // 帧率
 
 可以创建多个Pass作为最后一个Pass的输入， 新建一个Buffer, ShaderToy 似乎只支持四个Buffer， 分别命名BufferA, BufferB, BufferC, BufferD, 编辑完成之后可以在Image Pass的iChannel选项，选择上面四个buffer， buffer的输出作为Image iChannel的输入。 在Image pass中直接texture(iChannel，uv)就可以了。 一个比较好的实现就是 [Noise Contour][i11]。
 
-作者在BufferA使用raymarching的方式画出形状的深度和法线， 然后在BufferB中做边缘检测，最终的渲染效果实在Image中完成。每个pass输出如下图所示：
+作者在BufferA使用raymarching的方式画出形状的深度和法线， 然后在BufferB中做边缘检测，最终的渲染效果是在Image中完成。每个pass输出如下图所示：
 
 ![](/img/post-unity/toy7.jpg)
 
@@ -118,7 +115,7 @@ void mainImage(out vec4 fragColor,in vec2 fragCoord)
 }
 ```
 
-上面纹理使用的本地的文件， 还可以使用 web 连接的方式， 在后面配置一个 http 地址就可以了。当然也可以指定采样器的采样方式和图片的环绕方式, 类似下面的代码
+上面纹理使用的本地的文件， 还可以使用 web 连接的方式， 在后面配置一个 http 地址就可以了。这比shadertoy上只能使用固定的一些纹理灵活多了。 除了使用自定义问题，vscode中还可以指定采样器的采样方式和图片的环绕方式, 类似下面的代码：
 
 ```glsl
 #iChannel0::MinFilter "NearestMipMapNearest"
