@@ -76,7 +76,7 @@ frac(x)     &nbsp;返回标量或矢量的小数
 
 frexp(x, out i) &nbsp;将浮点数x分解为尾数和指数，即x=m∗2i， 返回m，并将指数存入i中；如果x为0，则尾数和指数都返回0
 
-fwidth(x) &nbsp;只能用在fragment shaderm 表示X和Y方向偏导数的绝对值的和，而单方向的偏导可以通过ddx和ddy
+fwidth(x) &nbsp;只能用在fragment shaderm 表示X和Y方向偏导数的绝对值的和，而单方向的偏导可以通过ddx和ddy, 即 abs(ddx(p)+ddy(p))
 
 isfinite(x) &nbsp;判断标量或者向量中的每个数据是否是有限数，如果是返回true；否则返回false;
 

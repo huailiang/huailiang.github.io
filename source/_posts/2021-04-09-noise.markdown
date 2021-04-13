@@ -175,7 +175,7 @@ float noise(vec2 p) {
 
 [Celluar Noise Texture 生成算法][i12]我已经上传ShaderToy， 预览如下 (国内加载有点慢)：
 
-<iframe width="640" height="360" frameborder="0" src="https://www.shadertoy.com/embed/ss2GWc?gui=true&t=10&paused=true&muted=true" allowfullscreen></iframe>
+<iframe width="640" height="360" frameborder="0" src="https://www.shadertoy.com/embed/ss2GWc?gui=true&t=10&paused=false&muted=true" allowfullscreen></iframe>
 
 ### 噪声算法组合
 
