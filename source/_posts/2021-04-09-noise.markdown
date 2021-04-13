@@ -10,13 +10,13 @@ tags:
 
 >大自然蕴含着各式各样的纹理，小到细胞菌落分布，大到宇宙星球表面。运用图形噪声，我们可以在3d场景中模拟它们，本文就带大家一起走进万能的图形噪声。 图形噪声，是计算机图形学中一类随机算法，经常用来模拟自然界中的各种纹理材质，如下图的云、山脉等，都是通过噪声算法模拟出来的​。
 
-![](/img/post-engine/noise1.jpeg)
+![](/img/post-engine/noise1.jpg)
 
 
 通过不同的噪声算法，作用在物体纹理和材质细节，我们可以模拟不同类型的材质。
 
 
-![](/img/post-engine/noise2.jpeg)
+![](/img/post-engine/noise2.jpg)
 
 
 ### 基础噪声算法
@@ -25,7 +25,7 @@ tags:
 我们将这个浮点值转成灰度颜色，形成噪声图，具体可以通过编写片元着色器程序来绘制。
 
 
-![](/img/post-engine/noise3.jpeg)
+![](/img/post-engine/noise3.jpg)
 
 上图是各类噪声函数在片元着色器中的运行效果，代码如下：
 
@@ -50,7 +50,7 @@ void main() {
 
 梯度噪声产生的纹理具有连续性，所以经常用来模拟山脉、云朵等具有连续性的物质，该类噪声的典型代表是Perlin Noise。
 
-![](/img/post-engine/noise4.jpeg)
+![](/img/post-engine/noise4.jpg)
 
 其它梯度噪声还有Simplex Noise和Wavelet Noise，它们也是由Perlin Noise演变而来。
 
@@ -58,7 +58,7 @@ void main() {
 
 梯度噪声是通过多个随机梯度相互影响计算得到，通过梯度向量的方向与片元的位置计算噪声值。这里以2d举例，主要分为四步：1. 网格生成；2. 网格随机梯度生成；3. 梯度贡献值计算；4. 平滑插值
 
-![](/img/post-engine/noise5.jpeg)
+![](/img/post-engine/noise5.jpg)
 
 第一步，我们将2d平面分成m×n个大小相同的网格，具体数值取决于我们需要生成的纹理密度（下面以4×4作为例子）；
 
