@@ -77,13 +77,9 @@ MathJax.Hub.Config({
 
 <p>说简单点，这个网站是专门让人们分享和编写GLSL的pixel shaders的。 换句话说，里面那些绚丽的效果仅仅依靠pixel shaders就可以完成了（当然还有纹理的配合），是不是很强大？里面的强人很多，就像头脑风暴一样，让你一次次发出惊叹，原来还可以这样做！但是，这里面也蕴含了很多数学和算法知识，所以你可能会经常发现自己脑袋不够用，跟不上作者的思路。。。不过，脑袋都是靠锻炼的嘛，没有捷径可走，多看多写总是没错的~</p>
 
-<p>强烈建议大家先去逛一逛，有很多很好玩的东西，例如这个人写了一个莫比乌斯带，而<a href="https://www.shadertoy.com/view/4slSD8">这个人</a>写了一个耀眼的小太阳！一开始你很难相信这些完全都是用shader计算出来的。</p>
-
-<p>很多人都在好奇那些绚丽的效果是怎么来的，比如iq刚写的<a href="https://www.shadertoy.com/view/ld3Gz2">这个效果</a>：</p>
+<p>强烈建议大家先去逛一逛，有很多很好玩的东西，例如这个人写了一个莫比乌斯带，而<a href="https://www.shadertoy.com/view/4slSD8">这个人</a>写了一个耀眼的小太阳！一开始你很难相信这些完全都是用shader计算出来的。很多人都在好奇那些绚丽的效果是怎么来的，比如iq刚写的<a href="https://www.shadertoy.com/view/ld3Gz2">这个效果</a>：</p>
 
 <p><img src="/img/post-unity/toy.jpg" alt="" /></p>
-
-<!-- <iframe width="640" height="360" frameborder="0" src="https://www.shadertoy.com/embed/ld3Gz2?gui=false&t=10&paused=true&muted=true" allowfullscreen></iframe> -->
 
 <p>这个效果用了什么Maya或3ds Max做出的模型吗？答案其实是没有的，没有任何外部的模型输入，纹理和模型都是由程序生成的。当你打开它的界面时，其实所有的输入和程序都一目了然：</p>
 
@@ -113,6 +109,22 @@ MathJax.Hub.Config({
 <p><img src="/img/post-unity/toy3.jpg" alt="" /></p>
 
 <p>由于ShaderToy针对的是pixel shaders，这也意味着它们的vertex shaders都是一样的，只需要计算基本的顶点位置和屏幕位置即可。</p>
+
+<h5 id="多pass支持">多Pass支持</h5>
+
+<p><img src="/img/post-unity/toy5.jpg" alt="" /></p>
+
+<p>可以创建多个Pass作为最后一个Pass的输入， 新建一个Buffer, ShaderToy 似乎只支持四个Buffer， 分别命名BufferA, BufferB, BufferC, BufferD, 编辑完成之后可以在Image Pass的iChannel选项，选择上面四个buffer， buffer的输出作为Image iChannel的输入。 在Image pass中直接texture(iChannel，uv)就可以了。 一个比较好的实现就是 <a href="https://www.shadertoy.com/view/MscSzf">Noise Contour</a>。</p>
+
+<p>作者在BufferA使用raymarching的方式画出形状的深度和法线， 然后在BufferB中做边缘检测，最终的渲染效果是在Image中完成。每个pass输出如下图所示：</p>
+
+<p><img src="/img/post-unity/toy7.jpg" alt="" /></p>
+
+<p>如果实现里使用到了Image之外的Buffer， 在shadertoy搜索过滤器multipass筛选出来：</p>
+
+<p><img src="/img/post-unity/toy6.jpg" alt="" /></p>
+
+<p>还可以创建Common buffer, 把复用高或者通用的代码封装在一块， 后面直接Image的pass可以直接调用就可以了， 比如说 <a href="https://www.shadertoy.com/view/wtfXWB">Tetrahedral Voxel Traversal</a>。  当然ShaderToy还支持了类型是Sound和Cubemap类型的输出pass，这里就不具体展开了。</p>
 
 <h5 id="虚拟现实着色器">虚拟现实着色器</h5>
 
@@ -154,11 +166,17 @@ MathJax.Hub.Config({
 </code></pre>
 </div>
 
-<p>上面纹理使用的本地的文件， 还可以使用 web 连接的方式， 在后面配置一个 http 地址就可以了。当然也可以指定采样器的采样方式和图片的环绕方式, 类似下面的代码</p>
+<p>上面纹理使用的本地的文件， 还可以使用 web 连接的方式， 在后面配置一个 http 地址就可以了。这比shadertoy上只能使用固定的一些纹理灵活多了。 除了使用自定义问题，vscode中还可以指定采样器的采样方式和图片的环绕方式, 类似下面的代码：</p>
 
 <div class="language-glsl highlighter-rouge"><pre class="highlight"><code><span class="cp">#iChannel0::MinFilter "NearestMipMapNearest"
 #iChannel0::MagFilter "Nearest"
 #iChannel0::WrapMode "Repeat"
+</span></code></pre>
+</div>
+<p>vscode中#iChannel的指定除了是一张纹理， 还可以是.glsl类型的shader， 这样就可以实现shadertoy上的多pass的效果了。</p>
+
+<div class="language-c highlighter-rouge"><pre class="highlight"><code><span class="cp">#iChannel0 "file://bufferA.glsl"
+#iChannel1 "file://bufferB.glsl"
 </span></code></pre>
 </div>
 
