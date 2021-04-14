@@ -137,6 +137,8 @@ a × b =（y_1z_2 - z_1y_2）i+（z_1y_2-x_1z_2）j+（x_1y_2-y_1x_2）k</script
 
 <p>frexp(x, out i)  将浮点数x分解为尾数和指数，即x=m∗2i， 返回m，并将指数存入i中；如果x为0，则尾数和指数都返回0</p>
 
+<p>fwidth(x)  只能用在fragment shaderm 表示X和Y方向偏导数的绝对值的和，而单方向的偏导可以通过ddx和ddy, 即 abs(ddx(p)+ddy(p))</p>
+
 <p>isfinite(x)  判断标量或者向量中的每个数据是否是有限数，如果是返回true；否则返回false;</p>
 
 <p>isinf(x)     判断标量或者向量中的每个数据是否是无限，如果是返回true；否则返回false;</p>
@@ -331,6 +333,12 @@ q表示这是一个透视值，在进行纹理查找之前，它被用来除以�
     <td>clamp(x, 0.0, 1.0)</td>
 </tr>     
 </table>
+
+<ol>
+  <li><a href="https://www.khronos.org/registry/OpenGL-Refpages/gl4/">glsl API手册</a></li>
+  <li><a href="https://developer.download.nvidia.cn/cg/index_stdlib.html">nVidia cg API 手册</a></li>
+</ol>
+
 
     </div>
   </div>

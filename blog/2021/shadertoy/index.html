@@ -173,12 +173,32 @@ MathJax.Hub.Config({
 #iChannel0::WrapMode "Repeat"
 </span></code></pre>
 </div>
+
+<h6 id="glsl作为独立pass输入">glsl作为独立pass输入</h6>
+
 <p>vscode中#iChannel的指定除了是一张纹理， 还可以是.glsl类型的shader， 这样就可以实现shadertoy上的多pass的效果了。</p>
 
 <div class="language-c highlighter-rouge"><pre class="highlight"><code><span class="cp">#iChannel0 "file://bufferA.glsl"
 #iChannel1 "file://bufferB.glsl"
 </span></code></pre>
 </div>
+
+<h6 id="立方贴图输入">立方贴图输入</h6>
+
+<p>Cubemaps可以指定为任何其他纹理，事实上，它们是 Cubemaps 的路径包含通配符和它们的类型被显式声明的组合。</p>
+<div class="language-c highlighter-rouge"><pre class="highlight"><code><span class="cp">#iChannel0 "file://cubemaps/yokohama_{}.jpg" // 注意 '{}'
+#iChannel0::Type "CubeMap"
+</span></code></pre>
+</div>
+
+<p>通配符将通过替换下列集合中的任何值来解析</p>
+
+<p>[ ‘e’, ‘w’, ‘u’, ‘d’, ‘n’, ‘s’ ],<br />
+[ ‘east’, ‘west’, ‘up’, ‘down’, ‘north’, ‘south’ ],<br />
+[ ‘px’, ‘nx’, ‘py’, ‘ny’, ‘pz’, ‘nz’ ] or<br />
+[ ‘posx’, ‘negx’, ‘posy’, ‘negy’, ‘posz’, ‘negz’ ].</p>
+
+<p>如果找不到这六个文件中的任何一个，就从下一个集合的第一个开始尝试。</p>
 
 <p>分享一个我实现的画国民党旗的 <a href="https://www.shadertoy.com/view/sdS3Wy">Demo</a>, 还是挺有意思的。</p>
 
