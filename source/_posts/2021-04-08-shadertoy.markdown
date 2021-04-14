@@ -122,12 +122,33 @@ void mainImage(out vec4 fragColor,in vec2 fragCoord)
 #iChannel0::MagFilter "Nearest"
 #iChannel0::WrapMode "Repeat"
 ```
+
+###### glsl作为独立pass输入
+
 vscode中#iChannel的指定除了是一张纹理， 还可以是.glsl类型的shader， 这样就可以实现shadertoy上的多pass的效果了。
 
 ```c
 #iChannel0 "file://bufferA.glsl"
 #iChannel1 "file://bufferB.glsl"
 ```
+
+###### 立方贴图输入
+
+Cubemaps可以指定为任何其他纹理，事实上，它们是 Cubemaps 的路径包含通配符和它们的类型被显式声明的组合。
+```c
+#iChannel0 "file://cubemaps/yokohama_{}.jpg" // 注意 '{}'
+#iChannel0::Type "CubeMap"
+```
+
+通配符将通过替换下列集合中的任何值来解析
+
+[ 'e', 'w', 'u', 'd', 'n', 's' ],
+[ 'east', 'west', 'up', 'down', 'north', 'south' ],
+[ 'px', 'nx', 'py', 'ny', 'pz', 'nz' ] or
+[ 'posx', 'negx', 'posy', 'negy', 'posz', 'negz' ].
+
+如果找不到这六个文件中的任何一个，就从下一个集合的第一个开始尝试。
+
 
 分享一个我实现的画国民党旗的 [Demo][i7], 还是挺有意思的。
 
@@ -278,3 +299,4 @@ public class ShaderToyHelper : MonoBehaviour {
 [i10]: https://www.shadertoy.com/howto
 [i11]: https://www.shadertoy.com/view/MscSzf
 [i12]: https://www.shadertoy.com/view/wtfXWB
+[i13]: https://panda1234lee.blog.csdn.net/article/details/104456475
