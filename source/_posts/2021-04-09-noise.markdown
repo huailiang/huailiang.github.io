@@ -212,6 +212,11 @@ float fbm_noise(vec2 p)
 }
 ```
 
+基于 PerlinNoise 的[fbm算法][i11]在 ShaderToy 中预览如下 (国内加载有点慢)：
+
+<iframe width="640" height="360" frameborder="0" src="https://www.shadertoy.com/embed/ssfSWn?gui=true&t=10&paused=false&muted=true" allowfullscreen></iframe>
+
+
 ##### 湍流（Turbulence）
 
 另外一种变种是在fbm中对噪声函数取绝对值，使噪声值等于0处发生突变，产生湍流纹理：
@@ -233,9 +238,6 @@ float fbm_abs_noise(vec2 p)
     return f;
 }
 ```
-现在结合上文提到的梯度噪声和细胞噪声分别进行fbm，可以实现以下效果：
-
-![](/img/post-engine/noise14.jpg)
 
 基于 PerlinNoise 的[Turbulence算法][i11]在 ShaderToy 中预览如下 (国内加载有点慢)：
 
@@ -247,22 +249,61 @@ float fbm_abs_noise(vec2 p)
 
 翘曲域噪声用来模拟卷曲、螺旋状的纹理，比如烟雾、大理石等，实现公式如下：
 
-```
-公式：f(p) = fbm( p + fbm( p + fbm( p ) ) )
-```
+对于图像定义为函数f(x,y), 更紧凑地写为f(p)，其中p是空间中的位置，我们可以据此评估定义（等）表面或图像颜色的体积密度。弯曲只是意味着我们在评估f之前用另一个函数g(p)扭曲域。基本上，我们将f(p)替换为f(g(p))。g可以是任何东西，有意义的是让g(p)就是恒等式加上一个小的任意失真h(p), 即：
+
+$$
+g(p)= p + h(p)
+$$
+
+这种技术非常强大，可让您塑造苹果，建筑物，动物或您可能想象的其他任何东西。 我们针对f和h使用基于fBM, 产生一些抽象但美丽的图像，并具有相当的品相。
+
+![](/img/post-engine/noise14.jpg)
+
+
+$$
+f(p) = fBM(p)
+$$
+
+我们对初始的fBM公式进行变换：
+
+$$
+f(p) =  fBM(p + fBM(p) ) 
+$$
+
+代码如下：
 
 ```glsl
-float domain_wraping( vec2 p )
+float pattern( in vec2 p )
 {
-    vec2 q = vec2( fbm(p), fbm(p) );
+    vec2 q = vec2( fbm( p + vec2(0.0,0.0) ),
+                   fbm( p + vec2(5.2,1.3) ) );
 
-    vec2 r = vec2( fbm(p + q), fbm(p + q) );
-
-    return fbm( st + r );
+    return fbm( p + 4.0*q );
 }
 ```
 
-具体实现可参考[Inigo Quiles的文章][i4]
+进行更复杂的变换：
+
+$$
+f(p) = fBM(p + fBM(p + fBM(p)))
+$$
+
+```glsl
+float pattern( in vec2 p )
+{
+    vec2 q = vec2( fbm( p + vec2(0.0,0.0) ),
+                   fbm( p + vec2(5.2,1.3) ) );
+
+    vec2 r = vec2( fbm( p + 4.0*q + vec2(1.7,9.2) ),
+                   fbm( p + 4.0*q + vec2(8.3,2.8) ) );
+
+    return fbm( p + 4.0*r );
+}
+```
+
+实现效果参考shadertoy的预览（国内加载可能有点儿慢）：
+
+<iframe width="640" height="360" frameborder="0" src="https://www.shadertoy.com/embed/4s23zz?gui=true&t=10&paused=false&muted=true" allowfullscreen></iframe>
 
 #### 动态纹理
 
@@ -334,3 +375,4 @@ void main() {
 [i10]: https://www.shadertoy.com/view/sdjGWc
 [i11]: https://www.shadertoy.com/view/ssj3Wc
 [i12]: https://www.shadertoy.com/view/ss2GWc
+[I13]: https://www.shadertoy.com/view/ssfSWn
