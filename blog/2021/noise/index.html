@@ -272,6 +272,10 @@ MathJax.Hub.Config({
 </code></pre>
 </div>
 
+<p>基于 PerlinNoise 的<a href="https://www.shadertoy.com/view/ssj3Wc">fbm算法</a>在 ShaderToy 中预览如下 (国内加载有点慢)：</p>
+
+<iframe width="640" height="360" frameborder="0" src="https://www.shadertoy.com/embed/ssfSWn?gui=true&amp;t=10&amp;paused=false&amp;muted=true" allowfullscreen=""></iframe>
+
 <h5 id="湍流turbulence">湍流（Turbulence）</h5>
 
 <p>另外一种变种是在fbm中对噪声函数取绝对值，使噪声值等于0处发生突变，产生湍流纹理：</p>
@@ -293,9 +297,6 @@ MathJax.Hub.Config({
 <span class="p">}</span>
 </code></pre>
 </div>
-<p>现在结合上文提到的梯度噪声和细胞噪声分别进行fbm，可以实现以下效果：</p>
-
-<p><img src="/img/post-engine/noise14.jpg" alt="" /></p>
 
 <p>基于 PerlinNoise 的<a href="https://www.shadertoy.com/view/ssj3Wc">Turbulence算法</a>在 ShaderToy 中预览如下 (国内加载有点慢)：</p>
 
@@ -307,22 +308,52 @@ MathJax.Hub.Config({
 
 <p>翘曲域噪声用来模拟卷曲、螺旋状的纹理，比如烟雾、大理石等，实现公式如下：</p>
 
-<div class="highlighter-rouge"><pre class="highlight"><code>公式：f(p) = fbm( p + fbm( p + fbm( p ) ) )
-</code></pre>
-</div>
+<p>对于图像定义为函数f(x,y), 更紧凑地写为f(p)，其中p是空间中的位置，我们可以据此评估定义（等）表面或图像颜色的体积密度。弯曲只是意味着我们在评估f之前用另一个函数g(p)扭曲域。基本上，我们将f(p)替换为f(g(p))。g可以是任何东西，有意义的是让g(p)就是恒等式加上一个小的任意失真h(p), 即：</p>
 
-<div class="language-glsl highlighter-rouge"><pre class="highlight"><code><span class="kt">float</span> <span class="nf">domain_wraping</span><span class="p">(</span> <span class="kt">vec2</span> <span class="n">p</span> <span class="p">)</span>
+<script type="math/tex; mode=display">g(p)= p + h(p)</script>
+
+<p>这种技术非常强大，可让您塑造苹果，建筑物，动物或您可能想象的其他任何东西。 我们针对f和h使用基于fBM, 产生一些抽象但美丽的图像，并具有相当的品相。</p>
+
+<p><img src="/img/post-engine/noise14.jpg" alt="" /></p>
+
+<script type="math/tex; mode=display">f(p) = fBM(p)</script>
+
+<p>我们对初始的fBM公式进行变换：</p>
+
+<script type="math/tex; mode=display">f(p) =  fBM(p + fBM(p) )</script>
+
+<p>代码如下：</p>
+
+<div class="language-glsl highlighter-rouge"><pre class="highlight"><code><span class="kt">float</span> <span class="nf">pattern</span><span class="p">(</span> <span class="k">in</span> <span class="kt">vec2</span> <span class="n">p</span> <span class="p">)</span>
 <span class="p">{</span>
-    <span class="kt">vec2</span> <span class="n">q</span> <span class="o">=</span> <span class="kt">vec2</span><span class="p">(</span> <span class="n">fbm</span><span class="p">(</span><span class="n">p</span><span class="p">),</span> <span class="n">fbm</span><span class="p">(</span><span class="n">p</span><span class="p">)</span> <span class="p">);</span>
+    <span class="kt">vec2</span> <span class="n">q</span> <span class="o">=</span> <span class="kt">vec2</span><span class="p">(</span> <span class="n">fbm</span><span class="p">(</span> <span class="n">p</span> <span class="o">+</span> <span class="kt">vec2</span><span class="p">(</span><span class="mi">0</span><span class="p">.</span><span class="mi">0</span><span class="p">,</span><span class="mi">0</span><span class="p">.</span><span class="mi">0</span><span class="p">)</span> <span class="p">),</span>
+                   <span class="n">fbm</span><span class="p">(</span> <span class="n">p</span> <span class="o">+</span> <span class="kt">vec2</span><span class="p">(</span><span class="mi">5</span><span class="p">.</span><span class="mi">2</span><span class="p">,</span><span class="mi">1</span><span class="p">.</span><span class="mi">3</span><span class="p">)</span> <span class="p">)</span> <span class="p">);</span>
 
-    <span class="kt">vec2</span> <span class="n">r</span> <span class="o">=</span> <span class="kt">vec2</span><span class="p">(</span> <span class="n">fbm</span><span class="p">(</span><span class="n">p</span> <span class="o">+</span> <span class="n">q</span><span class="p">),</span> <span class="n">fbm</span><span class="p">(</span><span class="n">p</span> <span class="o">+</span> <span class="n">q</span><span class="p">)</span> <span class="p">);</span>
-
-    <span class="k">return</span> <span class="n">fbm</span><span class="p">(</span> <span class="n">st</span> <span class="o">+</span> <span class="n">r</span> <span class="p">);</span>
+    <span class="k">return</span> <span class="n">fbm</span><span class="p">(</span> <span class="n">p</span> <span class="o">+</span> <span class="mi">4</span><span class="p">.</span><span class="mi">0</span><span class="o">*</span><span class="n">q</span> <span class="p">);</span>
 <span class="p">}</span>
 </code></pre>
 </div>
 
-<p>具体实现可参考<a href="https://www.iquilezles.org/www/articles/warp/warp.htm">Inigo Quiles的文章</a></p>
+<p>进行更复杂的变换：</p>
+
+<script type="math/tex; mode=display">f(p) = fBM(p + fBM(p + fBM(p)))</script>
+
+<div class="language-glsl highlighter-rouge"><pre class="highlight"><code><span class="kt">float</span> <span class="nf">pattern</span><span class="p">(</span> <span class="k">in</span> <span class="kt">vec2</span> <span class="n">p</span> <span class="p">)</span>
+<span class="p">{</span>
+    <span class="kt">vec2</span> <span class="n">q</span> <span class="o">=</span> <span class="kt">vec2</span><span class="p">(</span> <span class="n">fbm</span><span class="p">(</span> <span class="n">p</span> <span class="o">+</span> <span class="kt">vec2</span><span class="p">(</span><span class="mi">0</span><span class="p">.</span><span class="mi">0</span><span class="p">,</span><span class="mi">0</span><span class="p">.</span><span class="mi">0</span><span class="p">)</span> <span class="p">),</span>
+                   <span class="n">fbm</span><span class="p">(</span> <span class="n">p</span> <span class="o">+</span> <span class="kt">vec2</span><span class="p">(</span><span class="mi">5</span><span class="p">.</span><span class="mi">2</span><span class="p">,</span><span class="mi">1</span><span class="p">.</span><span class="mi">3</span><span class="p">)</span> <span class="p">)</span> <span class="p">);</span>
+
+    <span class="kt">vec2</span> <span class="n">r</span> <span class="o">=</span> <span class="kt">vec2</span><span class="p">(</span> <span class="n">fbm</span><span class="p">(</span> <span class="n">p</span> <span class="o">+</span> <span class="mi">4</span><span class="p">.</span><span class="mi">0</span><span class="o">*</span><span class="n">q</span> <span class="o">+</span> <span class="kt">vec2</span><span class="p">(</span><span class="mi">1</span><span class="p">.</span><span class="mi">7</span><span class="p">,</span><span class="mi">9</span><span class="p">.</span><span class="mi">2</span><span class="p">)</span> <span class="p">),</span>
+                   <span class="n">fbm</span><span class="p">(</span> <span class="n">p</span> <span class="o">+</span> <span class="mi">4</span><span class="p">.</span><span class="mi">0</span><span class="o">*</span><span class="n">q</span> <span class="o">+</span> <span class="kt">vec2</span><span class="p">(</span><span class="mi">8</span><span class="p">.</span><span class="mi">3</span><span class="p">,</span><span class="mi">2</span><span class="p">.</span><span class="mi">8</span><span class="p">)</span> <span class="p">)</span> <span class="p">);</span>
+
+    <span class="k">return</span> <span class="n">fbm</span><span class="p">(</span> <span class="n">p</span> <span class="o">+</span> <span class="mi">4</span><span class="p">.</span><span class="mi">0</span><span class="o">*</span><span class="n">r</span> <span class="p">);</span>
+<span class="p">}</span>
+</code></pre>
+</div>
+
+<p>实现效果参考shadertoy的预览（国内加载可能有点儿慢）：</p>
+
+<iframe width="640" height="360" frameborder="0" src="https://www.shadertoy.com/embed/4s23zz?gui=true&amp;t=10&amp;paused=false&amp;muted=true" allowfullscreen=""></iframe>
 
 <h4 id="动态纹理">动态纹理</h4>
 
