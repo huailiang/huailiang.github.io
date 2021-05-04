@@ -1,0 +1,132 @@
+---
+layout:     post
+title:      "AndroidStudio搭建本地Maven仓库"
+date:       2021-05-04 02:00:00
+author:     "huailiang"
+tags:
+    - 引擎
+---
+
+
+## 发布本地库流程如下：
+
+#### 一、新建一个Android项目
+
+在项目下创建一个Libary（如果直接在Android项目下发布到本地仓库会生成apk包，而lib下生成的是aar包可以作为依赖使用）。
+
+![](/img/post-android/mav1.jpg)
+
+#### 二、配置参数
+
+在Library也就是刚才创建的AndroidLib下的中添加配置 maven-release-aar.gradle
+
+maven-release-aar.gradle 就是用来设置打包的脚本，在文件中添加如下代码
+
+```groovy
+//1.maven-插件
+apply plugin: 'maven'
+
+//2.maven-信息
+ext {
+    PUBLISH_GROUP_ID = 'com'
+    PUBLISH_ARTIFACT_ID = 'math3d'
+    PUBLISH_VERSION = '1.0.5'
+}
+
+//3.maven-输出路径
+uploadArchives {
+    repositories.mavenDeployer {
+        repository(url: uri('/tmp/maven-release'))
+
+        pom.project {
+            groupId project.PUBLISH_GROUP_ID
+            artifactId project.PUBLISH_ARTIFACT_ID
+            version project.PUBLISH_VERSION
+            packaging 'aar'
+        }
+    }
+}
+
+//以下代码会生成 jar 包源文件，如果是不开源码，请不要输入这段, aar内包含注释
+task androidSourcesJar(type: Jar) {
+    from android.sourceSets.main.java.sourceFiles
+}
+
+artifacts {
+    archives androidSourcesJar
+}
+```
+
+
+也可以通过maven-publish方式发布
+
+```groovy
+apply plugin: 'maven-publish'
+ext {
+    PUBLISH_GROUP_ID = 'com'
+    PUBLISH_ARTIFACT_ID = 'math3d'
+    PUBLISH_VERSION = '1.0.5'
+}
+
+uploadArchives {
+    repositories.mavenDeployer {
+        repository(url: uri('/tmp/maven-release'))
+        pom.project {
+            groupId project.PUBLISH_GROUP_ID
+            artifactId project.PUBLISH_ARTIFACT_ID
+            version project.PUBLISH_VERSION
+            packaging 'aar'
+        }
+    }
+}
+
+task androidSourcesJar(type: Jar) {
+    from android.sourceSets.main.java.sourceFiles
+}
+
+artifacts {
+    archives androidSourcesJar
+}
+```
+
+然后在 Library 的 build.gradle 中增加如下行
+
+```sh
+apply from: 'maven-release-aar.gradle
+```
+
+### 三、发布到本地仓库
+
+#### maven方式命令
+
+```sh
+gradlew  uploadArchives
+```
+
+#### aven-publish方式
+```sh
+gradlew  publishToMavenLocal
+```
+
+#### AS Gradle
+
+在 Android studio 右侧有个 gradle 侧边栏， 双击 uploadArchives
+
+![](/img/post-android/mav2.jpg)
+
+之后就可以在本地的gradle 中指定的路径下可以看到发布的内容了
+
+![](/img/post-android/mav3.jpg)
+
+
+
+### 四、使用本地库
+
+在Android项目下的build.gradle文件中配置路径, 添加如下图配置
+
+
+![](/img/post-android/mav4.jpg)
+
+代码中就可以正常添加引用了:
+
+![](/img/post-android/mav5.jpg)
