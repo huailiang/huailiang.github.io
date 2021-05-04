@@ -1,0 +1,746 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="utf-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="google-site-verification" content="xBT4GhYoi5qRD5tr338pgPM5OWHHIDR6mNg1a3euekI" />
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="description" content="关于前端与设计、黑客与画家 | 怀亮，Web & Mobile Lover，Software Engineer，Game Designer | 这里是 @Huailiang怀亮 的个人博客，与你一起发现更大的世界。">
+    <meta name="keywords"  content="怀亮, Huailiang怀亮, Huailiang, Unity, Tensorflow, AR, 怀亮的博客, Huailiang Blog, 博客, U3D, 互联网, AR, JavaScript">
+    <meta name="theme-color" content="#000000">
+
+    <title>怀亮的博客 | Huailiang Blog</title>
+
+    <!-- Web App Manifest -->
+    <link rel="manifest" href="/pwa/manifest.json">
+
+    <!-- Favicon -->
+    <link rel="shortcut icon" href="/img/favicon.ico">
+
+    <!-- Canonical URL -->
+    <link rel="canonical" href="http://localhost:4000/page2/">
+
+    <!-- Bootstrap Core CSS -->
+    <link rel="stylesheet" href="/css/bootstrap.min.css">
+
+    <!-- Custom CSS -->
+    <link rel="stylesheet" href="/css/hux-blog.min.css">
+
+    <!-- Pygments Github CSS -->
+    <link rel="stylesheet" href="/css/syntax.css">
+
+    <!-- Custom Fonts -->
+    <!-- <link href="http://maxcdn.bootstrapcdn.com/font-awesome/4.3.0/css/font-awesome.min.css" rel="stylesheet" type="text/css"> -->
+    <!-- Hux change font-awesome CDN to qiniu -->
+    <link href="//cdnjs.cloudflare.com/ajax/libs/font-awesome/4.6.3/css/font-awesome.min.css" rel="stylesheet" type="text/css">
+
+    <!-- ga & ba script hoook -->
+    <script></script>
+</head>
+
+
+<!-- hack iOS CSS :active style -->
+<body ontouchstart="">
+
+    <!-- Navigation -->
+<nav class="navbar navbar-default navbar-custom navbar-fixed-top">
+    <div class="container-fluid">
+        <!-- Brand and toggle get grouped for better mobile display -->
+        <div class="navbar-header page-scroll">
+            <button type="button" class="navbar-toggle">
+                <span class="sr-only">Toggle navigation</span>
+                <span class="icon-bar"></span>
+                <span class="icon-bar"></span>
+                <span class="icon-bar"></span>
+            </button>
+            <a class="navbar-brand" href="/">Huailiang Blog</a>
+        </div>
+
+        <!-- Collect the nav links, forms, and other content for toggling -->
+        <div id="huxblog_navbar">
+            <div class="navbar-collapse">
+                <ul class="nav navbar-nav navbar-right">
+                    <li>
+                        <a href="/">Home</a>
+                    </li>
+                    
+                    <li>
+                        <a href="/about/">About</a>
+                    </li>
+                    
+                    <li>
+                        <a href="/portfolio/">Portfolio</a>
+                    </li>
+                    
+                    <li>
+                        <a href="/tags/">Tags</a>
+                    </li>
+                    
+                </ul>
+            </div>
+        </div>
+        <!-- /.navbar-collapse -->
+    </div>
+    <!-- /.container -->
+</nav>
+<script>
+    // Drop Bootstarp low-performance Navbar
+    // Use customize navbar with high-quality material design animation
+    // in high-perf jank-free CSS3 implementation
+    var $body   = document.body;
+    var $toggle = document.querySelector('.navbar-toggle');
+    var $navbar = document.querySelector('#huxblog_navbar');
+    var $collapse = document.querySelector('.navbar-collapse');
+
+    var __HuxNav__ = {
+        close: function(){
+            $navbar.className = " ";
+            // wait until animation end.
+            setTimeout(function(){
+                // prevent frequently toggle
+                if($navbar.className.indexOf('in') < 0) {
+                    $collapse.style.height = "0px"
+                }
+            },400)
+        },
+        open: function(){
+            $collapse.style.height = "auto"
+            $navbar.className += " in";
+        }
+    }
+
+    // Bind Event
+    $toggle.addEventListener('click', function(e){
+        if ($navbar.className.indexOf('in') > 0) {
+            __HuxNav__.close()
+        }else{
+            __HuxNav__.open()
+        }
+    })
+
+    /**
+     * Since Fastclick is used to delegate 'touchstart' globally
+     * to hack 300ms delay in iOS by performing a fake 'click',
+     * Using 'e.stopPropagation' to stop 'touchstart' event from
+     * $toggle/$collapse will break global delegation.
+     *
+     * Instead, we use a 'e.target' filter to prevent handler
+     * added to document close HuxNav.
+     *
+     * Also, we use 'click' instead of 'touchstart' as compromise
+     */
+    document.addEventListener('click', function(e){
+        if(e.target == $toggle) return;
+        if(e.target.className == 'icon-bar') return;
+        __HuxNav__.close();
+    })
+</script>
+
+
+    <!-- Page Header -->
+<header class="intro-header" style="background-image: url('/img/home-bg.jpg')">
+    <div class="container">
+        <div class="row">
+            <div class="col-lg-8 col-lg-offset-2 col-md-10 col-md-offset-1 ">
+                <div class="site-heading">
+                    <h1>Huailiang Blog</h1>
+                    <!--<hr class="small">-->
+                    <span class="subheading">笑，全世界便与你同声笑，哭，你便独自哭。</span>
+                </div>
+            </div>
+        </div>
+    </div>
+</header>
+
+<!-- Main Content -->
+<div class="container">
+	<div class="row">
+        
+
+<!-- USE SIDEBAR -->
+    <!-- PostList Container -->
+    		<div class="
+                col-lg-8 col-lg-offset-1
+                col-md-8 col-md-offset-1
+                col-sm-12
+                col-xs-12
+                postlist-container
+            ">
+    			
+<div class="post-preview">
+    <a href="/2018/03/12/cnn/">
+        <h2 class="post-title">
+            TensorFlow-搭建 CNN 网络
+        </h2>
+        
+        <h3 class="post-subtitle">
+            主流的图像、语音识别算法
+        </h3>
+        
+        <div class="post-content-preview">
+            
+  人工神经网络是由大量处理单元互联组成的非线性、自适应信息处理系统。它是在现代神经科学研究成果的基础上提出的，试图通过模拟大脑神经网络处理、记忆信息的方式进行信息处理。
+
+
+CNN（Convolutional Neural Network）——卷积神经网络，人工神经网络（Neural Network，NN）的一种，其它还有RNN、DNN等类型，而CNN就是利用卷积进行滤波的神经网络。换句...
+        </div>
+    </a>
+    <p class="post-meta">
+        Posted by Huailiang on March 12, 2018
+    </p>
+</div>
+<hr>
+
+<div class="post-preview">
+    <a href="/2018/03/11/urlib/">
+        <h2 class="post-title">
+            Python扒取网络图片
+        </h2>
+        
+        <h3 class="post-subtitle">
+            分析网页数据，得到你想要的好看的图片
+        </h3>
+        
+        <div class="post-content-preview">
+            
+  就像一个黑客，随意扒取别人的资源为己用，想想就知道是一件多么酷的事儿，好像全世界的图片都是我的一样。
+
+
+首先安装 BeautifulSoup。
+
+beautifulsoup就是一个非常强大的工具，爬虫利器。
+
+beautifulSoup “美味的汤，绿色的浓汤”
+
+一个灵活又方便的网页解析库，处理高效，支持多种解析器。
+
+利用它就不用编写正则表达式也能方便的实现网页信息的抓取。
+
+B...
+        </div>
+    </a>
+    <p class="post-meta">
+        Posted by Huailiang on March 11, 2018
+    </p>
+</div>
+<hr>
+
+<div class="post-preview">
+    <a href="/2018/03/09/tensorflow/">
+        <h2 class="post-title">
+            TensorFlow-神经网络
+        </h2>
+        
+        <h3 class="post-subtitle">
+            机器学习-梯度下降算法-求最优解
+        </h3>
+        
+        <div class="post-content-preview">
+            
+  人工神经网络是由大量处理单元互联组成的非线性、自适应信息处理系统。它是在现代神经科学研究成果的基础上提出的，试图通过模拟大脑神经网络处理、记忆信息的方式进行信息处理。
+
+
+上来先说一个例子。城里正在举办一年一度的游戏动漫展览，小明拿不定主意，周末要不要去参观。
+
+他决定考虑三个因素。
+
+  天气：周末是否晴天？
+  同伴：能否找到人一起去？
+  价格：门票是否可承受？
+
+
+
+
+现实中，...
+        </div>
+    </a>
+    <p class="post-meta">
+        Posted by Huailiang on March 9, 2018
+    </p>
+</div>
+<hr>
+
+<div class="post-preview">
+    <a href="/2018/03/08/tensor/">
+        <h2 class="post-title">
+            TensorFlow 学习入门
+        </h2>
+        
+        <h3 class="post-subtitle">
+            使用TensorFlow Python API 编程入门
+        </h3>
+        
+        <div class="post-content-preview">
+            
+  TensorFlow是谷歌基于DistBelief进行研发的第二代人工智能学习系统，其命名来源于本身的运行原理。Tensor（张量）意味着N维数组，Flow（流）意味着基于数据流图的计算，TensorFlow为张量从流图的一端流动到另一端计算过程。TensorFlow是将复杂的数据结构传输至人工智能神经网中进行分析和处理过程的系统。
+
+
+导入TensorFlow
+
+典型的导入Tenso...
+        </div>
+    </a>
+    <p class="post-meta">
+        Posted by Huailiang on March 8, 2018
+    </p>
+</div>
+<hr>
+
+<div class="post-preview">
+    <a href="/2018/03/07/pil/">
+        <h2 class="post-title">
+            Python Pillow做一个强大的图形工具
+        </h2>
+        
+        <h3 class="post-subtitle">
+            批处理大量的图形资源再也不用手动搞了
+        </h3>
+        
+        <div class="post-content-preview">
+            
+  对于图像识别，大量的工作在于图像的处理，处理效果好，那么才能很好地识别，因此，良好的图像处理是识别的基础。在Python中，有一个优秀的图像处理框架，就是PIL库。感觉就是装逼利器啊…
+
+
+Pillow是PIL（Python Imaging Library，Python图像库）的一个分支，提供了对于开发者许多比较友好和直观的功能。
+
+
+
+安装 Pillow:
+
+#Python3
+ pi...
+        </div>
+    </a>
+    <p class="post-meta">
+        Posted by Huailiang on March 7, 2018
+    </p>
+</div>
+<hr>
+
+<div class="post-preview">
+    <a href="/2018/03/06/vsdebug/">
+        <h2 class="post-title">
+            Mac上用VS Code调试 Unity程序
+        </h2>
+        
+        <h3 class="post-subtitle">
+            让你的开发更加便捷，腾出更多的时间做该做的事
+        </h3>
+        
+        <div class="post-content-preview">
+            
+  相信很多人，在做Unity 游戏开发的时候，是喜欢用 visual studio 来写代码了。可惜的是，如果你在 mac 上开发就没有 Windows 那样便利了。别跟我说 mac 版的 visual studio，在我看来就像阉割版。
+
+
+vs code 像 sublime、notepad++、atom 等编辑器一样，轻量级，插件多。今天笔者就在开发的时候 monoDevelop 莫...
+        </div>
+    </a>
+    <p class="post-meta">
+        Posted by Huailiang on March 6, 2018
+    </p>
+</div>
+<hr>
+
+<div class="post-preview">
+    <a href="/2018/03/03/mlearn/">
+        <h2 class="post-title">
+            机器学习-Unity 3D平衡球[转载]
+        </h2>
+        
+        <h3 class="post-subtitle">
+            用Tensorflow框架，OpenAI 2017年提出的PPO算法
+        </h3>
+        
+        <div class="post-content-preview">
+            
+  最近，Unity宣布推出Unity Machine Learning Agent（ML-Agent），将游戏引擎连接到谷歌TensorFlow等机器学习框架中。通过深度强化学习算法，让非玩家角色（NPC）通过不断尝试和犯错，变得更有创造性和策略性。
+
+
+在游戏开发的过程中，既不能让玩家因过于简单而无聊，也不能因难度太高丧失玩家兴趣。Unity开发者Arthur Juliani表示，Un...
+        </div>
+    </a>
+    <p class="post-meta">
+        Posted by Huailiang on March 3, 2018
+    </p>
+</div>
+<hr>
+
+<div class="post-preview">
+    <a href="/2018/03/01/exportcpp/">
+        <h2 class="post-title">
+            自动化导出c++各个平台库
+        </h2>
+        
+        <h3 class="post-subtitle">
+            快速导出unity可以使用的ios静态库（.a） android 静态库（.so） mac下的bundle库
+        </h3>
+        
+        <div class="post-content-preview">
+            
+  在上面一节，我们学习了c++和c#混合编程，主要是针对windows平台。接下来我们会讲下在其他平台c++库在Unity中使用的方法。unity可以使用的ios静态库（.a） android 静态库（.so） mac下的bundle库。上面的库导出以后，放在Unity Plugins目录下，Unity在编译包或者在编辑器里运行的时候会自动对应相应的库。
+
+
+unity 使用 在 Plu...
+        </div>
+    </a>
+    <p class="post-meta">
+        Posted by Huailiang on March 1, 2018
+    </p>
+</div>
+<hr>
+
+<div class="post-preview">
+    <a href="/2018/02/28/combinecoding/">
+        <h2 class="post-title">
+            Unity c#与c++混合编程
+        </h2>
+        
+        <h3 class="post-subtitle">
+            c++编程，让你的代码在Unity中飞！
+        </h3>
+        
+        <div class="post-content-preview">
+            
+  首先，Unity是基于Mono也就是.Net的运行环境的，所以它肯定支持C#；然后，Unity团队自行开发了一种Boo的语言；后面可能考虑到用户的接受程度的问题，又开发了类似JS的一种语言，但那绝对不是JS，勉强可以称之为UnityScript。这三种语言的代码最后都会被编译执行，而且可以互相访问。
+
+
+在Unity游戏的开发当中，我们的游戏项目变得越来越复杂，以至于有些项目功能必须通...
+        </div>
+    </a>
+    <p class="post-meta">
+        Posted by Huailiang on February 28, 2018
+    </p>
+</div>
+<hr>
+
+<div class="post-preview">
+    <a href="/2018/02/27/autopublish/">
+        <h2 class="post-title">
+            龙之谷是如何做自动化部署的
+        </h2>
+        
+        <h3 class="post-subtitle">
+            远程发布版本，打补丁，再也不用熬夜出包了
+        </h3>
+        
+        <div class="post-content-preview">
+            
+  大家如何是如何管理自己项目的打包、打补丁流程了。还需要手动给 QA、策划或者运营出包吗？出包还需要使用 Unity 吗？你的项目是如何持续集成的，下面我们来一步步从头说起。
+
+
+使用 Jenkins 出包
+
+Jenkins是一个开源软件项目，是基于Java开发的一种持续集成工具，用于监控持续重复的工作，旨在提供一个开放易用的软件平台，使软件的持续集成变成可能。
+
+Jenkins功能包括...
+        </div>
+    </a>
+    <p class="post-meta">
+        Posted by Huailiang on February 27, 2018
+    </p>
+</div>
+<hr>
+
+
+<!-- Pager -->
+
+<ul class="pager">
+    
+    <li class="previous">
+        <a href="/">&larr; Newer Posts</a>
+    </li>
+    
+    
+    <li class="next">
+        <a href="/page3">Older Posts &rarr;</a>
+    </li>
+    
+</ul>
+
+
+    		</div>
+    <!-- Sidebar Container -->
+            <div class="
+                col-lg-3 col-lg-offset-0
+                col-md-3 col-md-offset-0
+                col-sm-12
+                col-xs-12
+                sidebar-container
+            ">
+                <!-- Featured Tags -->
+                
+                <section>
+                    <hr class="hidden-sm hidden-xs">
+                    <h5><a href="/tags/">FEATURED TAGS</a></h5>
+                    <div class="tags">
+                        
+                            <a href="/tags/#OSX" title="OSX" rel="4">OSX</a>
+                        
+                            <a href="/tags/#前端开发" title="前端开发" rel="15">前端开发</a>
+                        
+                            <a href="/tags/#JavaScript" title="JavaScript" rel="8">JavaScript</a>
+                        
+                            <a href="/tags/#Lua" title="Lua" rel="1">Lua</a>
+                        
+                            <a href="/tags/#Unity" title="Unity" rel="16">Unity</a>
+                        
+                            <a href="/tags/#手机游戏" title="手机游戏" rel="7">手机游戏</a>
+                        
+                            <a href="/tags/#Jenkins" title="Jenkins" rel="1">Jenkins</a>
+                        
+                            <a href="/tags/#C++" title="C++" rel="3">C++</a>
+                        
+                            <a href="/tags/#Tensorflow" title="Tensorflow" rel="6">Tensorflow</a>
+                        
+                            <a href="/tags/#人工智能" title="人工智能" rel="7">人工智能</a>
+                        
+                            <a href="/tags/#Python" title="Python" rel="8">Python</a>
+                        
+                            <a href="/tags/#工具" title="工具" rel="5">工具</a>
+                        
+                            <a href="/tags/#强化学习" title="强化学习" rel="4">强化学习</a>
+                        
+                    </div>
+                </section>
+                
+
+                <!-- Short About -->
+                <section class="visible-md visible-lg">
+                    <hr><h5><a href="/about/">ABOUT ME</a></h5>
+                    <div class="short-about">
+                        
+                            <img src="/img/avatar-Alex.jpg" />
+                        
+                        
+                            <p>写写代码，做做设计，<br>离开世界之前，一切都是过程 <br>Email:peng_huailiang@qq.com</p>
+                        
+                        <!-- SNS Link -->
+                        <ul class="list-inline">
+                            
+                            
+                            
+                            <li>
+                                <a target="_blank" href="https://www.zhihu.com/people/huailiangpenguin">
+                                    <span class="fa-stack fa-lg">
+                                        <i class="fa fa-circle fa-stack-2x"></i>
+                                        <i class="fa  fa-stack-1x fa-inverse">知</i>
+                                    </span>
+                                </a>
+                            </li>
+                            
+                            
+                            <li>
+                                <a target="_blank" href="http://weibo.com/6212299692">
+                                    <span class="fa-stack fa-lg">
+                                        <i class="fa fa-circle fa-stack-2x"></i>
+                                        <i class="fa fa-weibo fa-stack-1x fa-inverse"></i>
+                                    </span>
+                                </a>
+                            </li>
+                            
+                            
+                            <li>
+                                <a target="_blank" href="https://www.facebook.com/profile.php?id=100004290725320">
+                                    <span class="fa-stack fa-lg">
+                                        <i class="fa fa-circle fa-stack-2x"></i>
+                                        <i class="fa fa-facebook fa-stack-1x fa-inverse"></i>
+                                    </span>
+                                </a>
+                            </li>
+                            
+                            
+                            <li>
+                                <a target="_blank" href="https://github.com/huailiang">
+                                    <span class="fa-stack fa-lg">
+                                        <i class="fa fa-circle fa-stack-2x"></i>
+                                        <i class="fa fa-github fa-stack-1x fa-inverse"></i>
+                                    </span>
+                                </a>
+                            </li>
+                            
+                            
+                        </ul>
+                    </div>
+                </section>
+                <!-- Friends Blog -->
+                
+                <hr>
+                <h5>FRIENDS</h5>
+                <ul class="list-inline">
+                    
+                        <li><a href="http://www.gamelook.com.cn">GameLook</a></li>
+                    
+                        <li><a href="http://forum.china.unity3d.com/forum.php">游戏人社区</a></li>
+                    
+                        <li><a href="https://unity3d.com">Unity3D</a></li>
+                    
+                        <li><a href="https://www.uwa4d.com">UWA-简单优化</a></li>
+                    
+                        <li><a href="https://blog.openai.com/openai-baselines-ppo/">OpenAI新的策略优化算法PPO</a></li>
+                    
+                        <li><a href="https://www.zhihu.com/people/morvan/activities">知乎-莫烦 Python</a></li>
+                    
+                        <li><a href="http://blog.sina.com.cn/s/blog_471132920101d5kh.html">风宇冲的 Blog</a></li>
+                    
+                        <li><a href="http://wiki.jikexueyuan.com/project/tensorflow-zh/tutorials/mnist_beginners.html">极客学院-Tensotflow</a></li>
+                    
+                        <li><a href="https://unity3d.com/cn/solutions/mobile-ar">Unity for Mobile AR</a></li>
+                    
+                </ul>
+                
+    		</div>
+        
+	</div>
+</div>
+
+
+    <!-- Footer -->
+<footer>
+    <div class="container">
+        <div class="row">
+            <div class="col-lg-8 col-lg-offset-2 col-md-10 col-md-offset-1">
+                <ul class="list-inline text-center">
+                     
+
+                    <!-- add Weibo, Zhihu by Hux, add target = "_blank" to <a> by Hux -->
+                    
+                    <li>
+                        <a target="_blank" href="https://www.zhihu.com/">
+                            <span class="fa-stack fa-lg">
+                                <i class="fa fa-circle fa-stack-2x"></i>
+                                <i class="fa  fa-stack-1x fa-inverse">知</i>
+                            </span>
+                        </a>
+                    </li>
+                     
+                    <li>
+                        <a target="_blank" href="https://weibo.com/u/6212299692">
+                            <span class="fa-stack fa-lg">
+                                <i class="fa fa-circle fa-stack-2x"></i>
+                                <i class="fa fa-weibo fa-stack-1x fa-inverse"></i>
+                            </span>
+                        </a>
+                    </li>
+                     
+                    <li>
+                        <a target="_blank" href="https://www.facebook.com/profile.php?id=100004290725320">
+                            <span class="fa-stack fa-lg">
+                                <i class="fa fa-circle fa-stack-2x"></i>
+                                <i class="fa fa-facebook fa-stack-1x fa-inverse"></i>
+                            </span>
+                        </a>
+                    </li>
+                     
+                    <li>
+                        <a target="_blank" href="https://github.com/huailiang">
+                            <span class="fa-stack fa-lg">
+                                <i class="fa fa-circle fa-stack-2x"></i>
+                                <i class="fa fa-github fa-stack-1x fa-inverse"></i>
+                            </span>
+                        </a>
+                    </li>
+                     
+                </ul>
+                <p class="copyright text-muted">
+                    Copyright &copy; Huailiang Blog 2018
+                    <br> Power by
+                    <a href="http://huailiang.github.io">Huailiang</a> |
+                    <iframe style="margin-left: 2px; margin-bottom:-5px;" frameborder="0" scrolling="0" width="100px" height="20px" src="https://ghbtns.com/github-btn.html?user=huailiang&type=star&count=true">
+                    </iframe>
+                </p>
+            </div>
+        </div>
+    </div>
+</footer>
+
+<!-- jQuery -->
+<script src=" /js/jquery.min.js "></script>
+
+<!-- Bootstrap Core JavaScript -->
+<!-- Currently, only navbar scroll-down effect at desktop still depends on this -->
+<script src=" /js/bootstrap.min.js "></script>
+
+<!-- Custom Theme JavaScript -->
+<script src=" /js/hux-blog.min.js "></script>
+
+<!-- Service Worker -->
+
+<script src=" /js/snackbar.js "></script>
+<script src=" /js/sw-registration.js "></script> 
+
+<!-- async load function -->
+<script>
+    function async(u, c) {
+        var d = document, t = 'script',
+            o = d.createElement(t),
+            s = d.getElementsByTagName(t)[0];
+        o.src = u;
+        if (c) { o.addEventListener('load', function (e) { c(null, e); }, false); }
+        s.parentNode.insertBefore(o, s);
+    }
+</script>
+
+
+<!-- jquery.tagcloud.js -->
+<script>
+    // only load tagcloud.js in tag.html
+    if ($('#tag_cloud').length !== 0) {
+        async('/js/jquery.tagcloud.js', function () {
+            $.fn.tagcloud.defaults = {
+                //size: {start: 1, end: 1, unit: 'em'},
+                color: { start: '#bbbbee', end: '#0085a1' },
+            };
+            $('#tag_cloud a').tagcloud();
+        })
+    }
+</script>
+
+<!--fastClick.js -->
+<script>
+    async("//cdnjs.cloudflare.com/ajax/libs/fastclick/1.0.6/fastclick.min.js", function () {
+        var $nav = document.querySelector("nav");
+        if ($nav) FastClick.attach($nav);
+    })
+</script>
+
+
+<!-- Google Analytics -->
+
+<script>
+    // dynamic User by Hux
+    var _gaId = 'UA-49627206-1';
+    var _gaDomain = 'github.io';
+
+    // Originial
+    (function (i, s, o, g, r, a, m) {
+        i['GoogleAnalyticsObject'] = r; i[r] = i[r] || function () {
+            (i[r].q = i[r].q || []).push(arguments)
+        }, i[r].l = 1 * new Date(); a = s.createElement(o),
+            m = s.getElementsByTagName(o)[0]; a.async = 1; a.src = g; m.parentNode.insertBefore(a, m)
+    })(window, document, 'script', '//www.google-analytics.com/analytics.js', 'ga');
+
+    ga('create', _gaId, _gaDomain);
+    ga('send', 'pageview');
+</script> 
+
+
+<!-- Baidu Tongji -->
+
+
+
+<!-- Side Catalog -->
+
+
+
+<!-- Multi-Lingual -->
+
+
+
+<!-- Image to hack wechat -->
+<img src="/img/icon_wechat.png" width="0" height="0" />
+<!-- Migrate from head to bottom, no longer block render and still work -->
+
+</body>
+
+</html>

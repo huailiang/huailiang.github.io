@@ -1,0 +1,692 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="utf-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="google-site-verification" content="xBT4GhYoi5qRD5tr338pgPM5OWHHIDR6mNg1a3euekI" />
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="description" content="关于前端与设计、黑客与画家 | 怀亮，Web & Mobile Lover，Software Engineer，Game Designer | 这里是 @Huailiang怀亮 的个人博客，与你一起发现更大的世界。">
+    <meta name="keywords"  content="怀亮, Huailiang怀亮, Huailiang, Unity, Tensorflow, AR, 怀亮的博客, Huailiang Blog, 博客, U3D, 互联网, AR, JavaScript">
+    <meta name="theme-color" content="#000000">
+
+    <title>TensorFlow TFRecord图形处理工具 - 怀亮的博客 | Huailiang Blog</title>
+
+    <!-- Web App Manifest -->
+    <link rel="manifest" href="/pwa/manifest.json">
+
+    <!-- Favicon -->
+    <link rel="shortcut icon" href="/img/favicon.ico">
+
+    <!-- Canonical URL -->
+    <link rel="canonical" href="http://localhost:4000/2018/03/13/tfrecord/">
+
+    <!-- Bootstrap Core CSS -->
+    <link rel="stylesheet" href="/css/bootstrap.min.css">
+
+    <!-- Custom CSS -->
+    <link rel="stylesheet" href="/css/hux-blog.min.css">
+
+    <!-- Pygments Github CSS -->
+    <link rel="stylesheet" href="/css/syntax.css">
+
+    <!-- Custom Fonts -->
+    <!-- <link href="http://maxcdn.bootstrapcdn.com/font-awesome/4.3.0/css/font-awesome.min.css" rel="stylesheet" type="text/css"> -->
+    <!-- Hux change font-awesome CDN to qiniu -->
+    <link href="//cdnjs.cloudflare.com/ajax/libs/font-awesome/4.6.3/css/font-awesome.min.css" rel="stylesheet" type="text/css">
+
+    <!-- ga & ba script hoook -->
+    <script></script>
+</head>
+
+
+<!-- hack iOS CSS :active style -->
+<body ontouchstart="">
+
+    <!-- Navigation -->
+<nav class="navbar navbar-default navbar-custom navbar-fixed-top">
+    <div class="container-fluid">
+        <!-- Brand and toggle get grouped for better mobile display -->
+        <div class="navbar-header page-scroll">
+            <button type="button" class="navbar-toggle">
+                <span class="sr-only">Toggle navigation</span>
+                <span class="icon-bar"></span>
+                <span class="icon-bar"></span>
+                <span class="icon-bar"></span>
+            </button>
+            <a class="navbar-brand" href="/">Huailiang Blog</a>
+        </div>
+
+        <!-- Collect the nav links, forms, and other content for toggling -->
+        <div id="huxblog_navbar">
+            <div class="navbar-collapse">
+                <ul class="nav navbar-nav navbar-right">
+                    <li>
+                        <a href="/">Home</a>
+                    </li>
+                    
+                    <li>
+                        <a href="/about/">About</a>
+                    </li>
+                    
+                    <li>
+                        <a href="/portfolio/">Portfolio</a>
+                    </li>
+                    
+                    <li>
+                        <a href="/tags/">Tags</a>
+                    </li>
+                    
+                </ul>
+            </div>
+        </div>
+        <!-- /.navbar-collapse -->
+    </div>
+    <!-- /.container -->
+</nav>
+<script>
+    // Drop Bootstarp low-performance Navbar
+    // Use customize navbar with high-quality material design animation
+    // in high-perf jank-free CSS3 implementation
+    var $body   = document.body;
+    var $toggle = document.querySelector('.navbar-toggle');
+    var $navbar = document.querySelector('#huxblog_navbar');
+    var $collapse = document.querySelector('.navbar-collapse');
+
+    var __HuxNav__ = {
+        close: function(){
+            $navbar.className = " ";
+            // wait until animation end.
+            setTimeout(function(){
+                // prevent frequently toggle
+                if($navbar.className.indexOf('in') < 0) {
+                    $collapse.style.height = "0px"
+                }
+            },400)
+        },
+        open: function(){
+            $collapse.style.height = "auto"
+            $navbar.className += " in";
+        }
+    }
+
+    // Bind Event
+    $toggle.addEventListener('click', function(e){
+        if ($navbar.className.indexOf('in') > 0) {
+            __HuxNav__.close()
+        }else{
+            __HuxNav__.open()
+        }
+    })
+
+    /**
+     * Since Fastclick is used to delegate 'touchstart' globally
+     * to hack 300ms delay in iOS by performing a fake 'click',
+     * Using 'e.stopPropagation' to stop 'touchstart' event from
+     * $toggle/$collapse will break global delegation.
+     *
+     * Instead, we use a 'e.target' filter to prevent handler
+     * added to document close HuxNav.
+     *
+     * Also, we use 'click' instead of 'touchstart' as compromise
+     */
+    document.addEventListener('click', function(e){
+        if(e.target == $toggle) return;
+        if(e.target.className == 'icon-bar') return;
+        __HuxNav__.close();
+    })
+</script>
+
+
+    <!-- Image to hack wechat -->
+<!-- <img src="/img/icon_wechat.png" width="0" height="0"> -->
+<!-- <img src="/img/post-bg-ios9-web.jpg" width="0" height="0"> -->
+
+<!-- Post Header -->
+<style type="text/css">
+    header.intro-header{
+        position: relative;
+        background-image: url('/img/post-bg-ios9-web.jpg')
+    }
+
+    
+    header.intro-header .header-mask{
+        width: 100%;
+        height: 100%;
+        position: absolute;
+        background: rgba(0,0,0, 0.3);
+    }
+    
+</style>
+<header class="intro-header" >
+    <div class="header-mask"></div>
+    <div class="container">
+        <div class="row">
+            <div class="col-lg-8 col-lg-offset-2 col-md-10 col-md-offset-1">
+                <div class="post-heading">
+                    <div class="tags">
+                        
+                        <a class="tag" href="/tags/#Python" title="Python">Python</a>
+                        
+                        <a class="tag" href="/tags/#人工智能" title="人工智能">人工智能</a>
+                        
+                        <a class="tag" href="/tags/#Tensorflow" title="Tensorflow">Tensorflow</a>
+                        
+                        <a class="tag" href="/tags/#工具" title="工具">工具</a>
+                        
+                    </div>
+                    <h1>TensorFlow TFRecord图形处理工具</h1>
+                    
+                    
+                    <h2 class="subheading">这套工具和 Pillow各有优劣</h2>
+                    
+                    <span class="meta">Posted by Huailiang on March 13, 2018</span>
+                </div>
+            </div>
+        </div>
+    </div>
+</header>
+
+<!-- Post Content -->
+<article>
+    <div class="container">
+        <div class="row">
+
+    <!-- Post Container -->
+            <div class="
+                col-lg-8 col-lg-offset-2
+                col-md-10 col-md-offset-1
+                post-container">
+
+                <!-- Multi-Lingual -->
+                
+
+				<blockquote>
+  <p>在之前的文章里，我们介绍过Pillow这个强大的图形工具,<a href="https://huailiang.github.io/2018/03/07/pil/">跳转地址</a>，今天我们再介绍一下 TensorFlow 是怎么预处理图像的。这二者有很多共通之处，下面我们就开始今天的图形之旅。</p>
+</blockquote>
+
+<p>matplotlib是python上的一个2D绘图库，它可以在夸平台上边出很多高质量的图像。综旨就是让简单的事变得更简单，让复杂的事变得可能。我们可以用matplotlib生成 绘图、直方图、功率谱、柱状图、误差图、散点图等 。详细了解matplotlib,请点击<a href="http://blog.csdn.net/qq_31192383/article/details/53977822">这里</a></p>
+
+<div class="language-py highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="kn">import</span> <span class="nn">matplotlib.pyplot</span> <span class="k">as</span> <span class="n">plt</span>
+<span class="kn">import</span> <span class="nn">tensorflow</span> <span class="k">as</span> <span class="n">tf</span>   
+<span class="kn">import</span> <span class="nn">numpy</span> <span class="k">as</span> <span class="n">np</span>
+
+<span class="n">image_raw_data</span> <span class="o">=</span> <span class="n">tf</span><span class="o">.</span><span class="n">gfile</span><span class="o">.</span><span class="n">FastGFile</span><span class="p">(</span><span class="s">"img/tiger/1351742906_31b427fb23.jpg"</span><span class="p">,</span><span class="s">'rb'</span><span class="p">)</span><span class="o">.</span><span class="n">read</span><span class="p">()</span>
+
+<span class="k">with</span> <span class="n">tf</span><span class="o">.</span><span class="n">Session</span><span class="p">()</span> <span class="k">as</span> <span class="n">sess</span><span class="p">:</span>
+    <span class="n">img_data</span> <span class="o">=</span> <span class="n">tf</span><span class="o">.</span><span class="n">image</span><span class="o">.</span><span class="n">decode_jpeg</span><span class="p">(</span><span class="n">image_raw_data</span><span class="p">)</span>
+    <span class="n">img_data</span><span class="o">.</span><span class="n">set_shape</span><span class="p">([</span><span class="mi">1797</span><span class="p">,</span> <span class="mi">2673</span><span class="p">,</span> <span class="mi">3</span><span class="p">])</span>
+    <span class="k">print</span><span class="p">(</span><span class="n">img_data</span><span class="o">.</span><span class="n">get_shape</span><span class="p">())</span>
+
+    <span class="k">print</span> <span class="n">img_data</span>
+    <span class="n">plt</span><span class="o">.</span><span class="n">imshow</span><span class="p">(</span><span class="n">img_data</span><span class="o">.</span><span class="nb">eval</span><span class="p">())</span>
+    <span class="n">plt</span><span class="o">.</span><span class="n">show</span><span class="p">()</span>
+
+    <span class="n">img_data</span> <span class="o">=</span> <span class="n">tf</span><span class="o">.</span><span class="n">image</span><span class="o">.</span><span class="n">convert_image_dtype</span><span class="p">(</span><span class="n">img_data</span><span class="p">,</span><span class="n">dtype</span><span class="o">=</span><span class="n">tf</span><span class="o">.</span><span class="n">uint8</span><span class="p">)</span>
+    <span class="n">encode_img</span><span class="o">=</span><span class="n">tf</span><span class="o">.</span><span class="n">image</span><span class="o">.</span><span class="n">encode_jpeg</span><span class="p">(</span><span class="n">img_data</span><span class="p">)</span>
+    <span class="k">with</span> <span class="n">tf</span><span class="o">.</span><span class="n">gfile</span><span class="o">.</span><span class="n">GFile</span><span class="p">(</span><span class="s">"tfrecord/img_data.jpg"</span><span class="p">,</span><span class="s">"wb"</span><span class="p">)</span> <span class="k">as</span> <span class="n">f</span><span class="p">:</span>
+    	<span class="n">f</span><span class="o">.</span><span class="n">write</span><span class="p">(</span><span class="n">encode_img</span><span class="o">.</span><span class="nb">eval</span><span class="p">())</span>
+</code></pre></div></div>
+
+<p><img src="/img/in-post/post-tf/tf30.jpg" alt="" /></p>
+
+<h3 id="改变大小">改变大小</h3>
+
+<p>缩放效果,参数method:</p>
+<ul>
+  <li>ResizeMethod.BILINEAR ：双线性插值</li>
+  <li>ResizeMethod.NEAREST_NEIGHBOR ： 最近邻插值</li>
+  <li>ResizeMethod.BICUBIC ： 双三次插值</li>
+  <li>ResizeMethod.AREA ：面积插值</li>
+</ul>
+
+<div class="language-py highlighter-rouge"><div class="highlight"><pre class="highlight"><code>  <span class="n">image_float</span> <span class="o">=</span> <span class="n">tf</span><span class="o">.</span><span class="n">image</span><span class="o">.</span><span class="n">convert_image_dtype</span><span class="p">(</span><span class="n">img_data</span><span class="p">,</span> <span class="n">tf</span><span class="o">.</span><span class="n">float32</span><span class="p">)</span>
+  <span class="n">resized</span> <span class="o">=</span> <span class="n">tf</span><span class="o">.</span><span class="n">image</span><span class="o">.</span><span class="n">resize_images</span><span class="p">(</span><span class="n">image_float</span><span class="p">,</span> <span class="p">[</span><span class="mi">300</span><span class="p">,</span> <span class="mi">300</span><span class="p">],</span> <span class="n">method</span><span class="o">=</span><span class="mi">0</span><span class="p">)</span>
+  <span class="n">plt</span><span class="o">.</span><span class="n">imshow</span><span class="p">(</span><span class="n">resized</span><span class="o">.</span><span class="nb">eval</span><span class="p">())</span>
+  <span class="n">plt</span><span class="o">.</span><span class="n">show</span><span class="p">()</span>
+
+</code></pre></div></div>
+
+<p><img src="/img/in-post/post-tf/tf31.jpg" alt="" /></p>
+
+<h3 id="裁剪">裁剪</h3>
+<div class="language-py highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="n">croped</span> <span class="o">=</span> <span class="n">tf</span><span class="o">.</span><span class="n">image</span><span class="o">.</span><span class="n">resize_image_with_crop_or_pad</span><span class="p">(</span><span class="n">img_data</span><span class="p">,</span> <span class="mi">100</span><span class="p">,</span> <span class="mi">100</span><span class="p">)</span>
+<span class="n">padded</span> <span class="o">=</span> <span class="n">tf</span><span class="o">.</span><span class="n">image</span><span class="o">.</span><span class="n">resize_image_with_crop_or_pad</span><span class="p">(</span><span class="n">img_data</span><span class="p">,</span> <span class="mi">200</span><span class="p">,</span> <span class="mi">200</span><span class="p">)</span>
+<span class="n">plt</span><span class="o">.</span><span class="n">imshow</span><span class="p">(</span><span class="n">croped</span><span class="o">.</span><span class="nb">eval</span><span class="p">())</span>
+<span class="n">plt</span><span class="o">.</span><span class="n">show</span><span class="p">()</span>
+<span class="n">plt</span><span class="o">.</span><span class="n">imshow</span><span class="p">(</span><span class="n">padded</span><span class="o">.</span><span class="nb">eval</span><span class="p">())</span>
+<span class="n">plt</span><span class="o">.</span><span class="n">show</span><span class="p">()</span>
+
+</code></pre></div></div>
+
+<p><img src="/img/in-post/post-tf/tf32.jpg" alt="" /></p>
+
+<p>按照一定的比例裁剪：</p>
+<div class="language-py highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="c"># 截取中间50%的图片</span>
+<span class="n">central_cropped</span> <span class="o">=</span> <span class="n">tf</span><span class="o">.</span><span class="n">image</span><span class="o">.</span><span class="n">central_crop</span><span class="p">(</span><span class="n">img_data</span><span class="p">,</span> <span class="mf">0.4</span><span class="p">)</span>
+<span class="n">plt</span><span class="o">.</span><span class="n">imshow</span><span class="p">(</span><span class="n">central_cropped</span><span class="o">.</span><span class="nb">eval</span><span class="p">())</span>
+<span class="n">plt</span><span class="o">.</span><span class="n">show</span><span class="p">()</span>
+
+</code></pre></div></div>
+<p><img src="/img/in-post/post-tf/tf33.jpg" alt="" /></p>
+
+<h3 id="翻转">翻转</h3>
+
+<div class="language-py highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="c"># 上下翻转</span>
+  <span class="n">flipped1</span> <span class="o">=</span> <span class="n">tf</span><span class="o">.</span><span class="n">image</span><span class="o">.</span><span class="n">flip_up_down</span><span class="p">(</span><span class="n">img_data</span><span class="p">)</span>
+  <span class="c"># 左右翻转</span>
+  <span class="c">#flipped2 = tf.image.flip_left_right(img_data)</span>
+
+  <span class="c">#对角线翻转</span>
+  <span class="c"># transposed = tf.image.transpose_image(img_data)</span>
+  <span class="n">plt</span><span class="o">.</span><span class="n">imshow</span><span class="p">(</span><span class="n">flipped1</span><span class="o">.</span><span class="nb">eval</span><span class="p">())</span>
+  <span class="n">plt</span><span class="o">.</span><span class="n">show</span><span class="p">()</span>
+</code></pre></div></div>
+<p><img src="/img/in-post/post-tf/tf34.jpg" alt="" /></p>
+
+<h3 id="修改亮度对比度">修改亮度、对比度</h3>
+
+<div class="language-py highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="c"># 将图片的亮度-0.5。</span>
+<span class="n">adjusted</span> <span class="o">=</span> <span class="n">tf</span><span class="o">.</span><span class="n">image</span><span class="o">.</span><span class="n">adjust_brightness</span><span class="p">(</span><span class="n">img_data</span><span class="p">,</span> <span class="o">-</span><span class="mf">0.5</span><span class="p">)</span>
+
+<span class="c"># 将图片的亮度+0.5</span>
+<span class="c"># adjusted = tf.image.adjust_brightness(img_data, 0.5)</span>
+
+<span class="c"># 在[-max_delta, max_delta)的范围随机调整图片的亮度。</span>
+<span class="c"># adjusted = tf.image.random_brightness(img_data, max_delta=0.5)</span>
+
+<span class="c"># 将图片的对比度-5</span>
+<span class="c"># adjusted = tf.image.adjust_contrast(img_data, -5)</span>
+
+<span class="c"># 将图片的对比度+5</span>
+<span class="c"># adjusted = tf.image.adjust_contrast(img_data, 5)</span>
+
+<span class="c"># 在[lower, upper]的范围随机调整图的对比度。</span>
+<span class="c">#adjusted = tf.image.random_contrast(img_data, lower, upper)</span>
+
+<span class="c"># 在最终输出前，将实数取值截取到0-1范围内。</span>
+<span class="c"># adjusted = tf.clip_by_value(adjusted, 0.0, 1.0)</span>
+<span class="n">plt</span><span class="o">.</span><span class="n">imshow</span><span class="p">(</span><span class="n">adjusted</span><span class="o">.</span><span class="nb">eval</span><span class="p">())</span>
+<span class="n">plt</span><span class="o">.</span><span class="n">show</span><span class="p">()</span>
+
+</code></pre></div></div>
+
+<h3 id="修改色相">修改色相、</h3>
+<div class="language-py highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="n">image_float</span> <span class="o">=</span> <span class="n">tf</span><span class="o">.</span><span class="n">image</span><span class="o">.</span><span class="n">convert_image_dtype</span><span class="p">(</span><span class="n">img_data</span><span class="p">,</span> <span class="n">tf</span><span class="o">.</span><span class="n">float32</span><span class="p">)</span>
+
+<span class="n">adjusted</span> <span class="o">=</span> <span class="n">tf</span><span class="o">.</span><span class="n">image</span><span class="o">.</span><span class="n">adjust_hue</span><span class="p">(</span><span class="n">image_float</span><span class="p">,</span> <span class="mf">0.1</span><span class="p">)</span>
+<span class="c"># adjusted = tf.image.adjust_hue(image_float, 0.3)</span>
+<span class="c">#adjusted = tf.image.adjust_hue(image_float, 0.6)</span>
+<span class="c"># adjusted = tf.image.adjust_hue(image_float, 0.9)</span>
+
+<span class="c"># 在[-max_delta, max_delta]的范围随机调整图片的色相。max_delta的取值在[0, 0.5]之间。</span>
+<span class="c">#adjusted = tf.image.random_hue(image_float, max_delta)</span>
+
+<span class="c"># 将图片的饱和度-5。</span>
+<span class="c"># adjusted = tf.image.adjust_saturation(image_float, -0.1)</span>
+<span class="c"># 将图片的饱和度+5。</span>
+<span class="c">#adjusted = tf.image.adjust_saturation(image_float, 5)</span>
+<span class="c"># 在[lower, upper]的范围随机调整图的饱和度。</span>
+<span class="c">#adjusted = tf.image.random_saturation(image_float, lower, upper)</span>
+
+<span class="c"># 将代表一张图片的三维矩阵中的数字均值变为0，方差变为1。</span>
+<span class="c">#adjusted = tf.image.per_image_whitening(image_float)</span>
+
+<span class="c"># 在最终输出前，将实数取值截取到0-1范围内。</span>
+<span class="c"># adjusted = tf.clip_by_value(adjusted, 0.0, 1.0)</span>
+<span class="n">plt</span><span class="o">.</span><span class="n">imshow</span><span class="p">(</span><span class="n">adjusted</span><span class="o">.</span><span class="nb">eval</span><span class="p">())</span>
+<span class="n">plt</span><span class="o">.</span><span class="n">show</span><span class="p">()</span>
+
+</code></pre></div></div>
+
+<p><img src="/img/in-post/post-tf/tf35.jpg" alt="" /></p>
+
+<h3 id="图片做标记">图片做标记</h3>
+<div class="language-py highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="n">boxes</span> <span class="o">=</span> <span class="n">tf</span><span class="o">.</span><span class="n">constant</span><span class="p">([[[</span><span class="mf">0.05</span><span class="p">,</span> <span class="mf">0.05</span><span class="p">,</span> <span class="mf">0.9</span><span class="p">,</span> <span class="mf">0.7</span><span class="p">],</span> <span class="p">[</span><span class="mf">0.35</span><span class="p">,</span> <span class="mf">0.47</span><span class="p">,</span> <span class="mf">0.5</span><span class="p">,</span> <span class="mf">0.56</span><span class="p">]]])</span>
+
+<span class="c"># sample_distorted_bounding_box要求输入图片必须是实数类型。</span>
+<span class="n">image_float</span> <span class="o">=</span> <span class="n">tf</span><span class="o">.</span><span class="n">image</span><span class="o">.</span><span class="n">convert_image_dtype</span><span class="p">(</span><span class="n">img_data</span><span class="p">,</span> <span class="n">tf</span><span class="o">.</span><span class="n">float32</span><span class="p">)</span>
+
+<span class="n">begin</span><span class="p">,</span> <span class="n">size</span><span class="p">,</span> <span class="n">bbox_for_draw</span> <span class="o">=</span> <span class="n">tf</span><span class="o">.</span><span class="n">image</span><span class="o">.</span><span class="n">sample_distorted_bounding_box</span><span class="p">(</span>
+    <span class="n">tf</span><span class="o">.</span><span class="n">shape</span><span class="p">(</span><span class="n">image_float</span><span class="p">),</span> <span class="n">bounding_boxes</span><span class="o">=</span><span class="n">boxes</span><span class="p">,</span> <span class="n">min_object_covered</span><span class="o">=</span><span class="mf">0.4</span><span class="p">)</span>
+
+<span class="c"># 截取后的图片</span>
+<span class="n">distorted_image</span> <span class="o">=</span> <span class="n">tf</span><span class="o">.</span><span class="nb">slice</span><span class="p">(</span><span class="n">image_float</span><span class="p">,</span> <span class="n">begin</span><span class="p">,</span> <span class="n">size</span><span class="p">)</span>
+<span class="n">plt</span><span class="o">.</span><span class="n">imshow</span><span class="p">(</span><span class="n">distorted_image</span><span class="o">.</span><span class="nb">eval</span><span class="p">())</span>
+<span class="n">plt</span><span class="o">.</span><span class="n">show</span><span class="p">()</span>
+
+<span class="c"># 在原图上用标注框画出截取的范围。由于原图的分辨率较大（2673x1797)，生成的标注框</span>
+<span class="c"># 在Jupyter Notebook上通常因边框过细而无法分辨，这里为了演示方便先缩小分辨率。</span>
+<span class="n">image_small</span> <span class="o">=</span> <span class="n">tf</span><span class="o">.</span><span class="n">image</span><span class="o">.</span><span class="n">resize_images</span><span class="p">(</span><span class="n">image_float</span><span class="p">,</span> <span class="p">[</span><span class="mi">180</span><span class="p">,</span> <span class="mi">267</span><span class="p">],</span> <span class="n">method</span><span class="o">=</span><span class="mi">0</span><span class="p">)</span>
+<span class="n">batchced_img</span> <span class="o">=</span> <span class="n">tf</span><span class="o">.</span><span class="n">expand_dims</span><span class="p">(</span><span class="n">image_small</span><span class="p">,</span> <span class="mi">0</span><span class="p">)</span>
+<span class="n">image_with_box</span> <span class="o">=</span> <span class="n">tf</span><span class="o">.</span><span class="n">image</span><span class="o">.</span><span class="n">draw_bounding_boxes</span><span class="p">(</span><span class="n">batchced_img</span><span class="p">,</span> <span class="n">bbox_for_draw</span><span class="p">)</span>
+<span class="k">print</span><span class="p">(</span><span class="n">bbox_for_draw</span><span class="o">.</span><span class="nb">eval</span><span class="p">())</span>
+<span class="n">plt</span><span class="o">.</span><span class="n">imshow</span><span class="p">(</span><span class="n">image_with_box</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="o">.</span><span class="nb">eval</span><span class="p">())</span>
+<span class="n">plt</span><span class="o">.</span><span class="n">show</span><span class="p">()</span>
+
+</code></pre></div></div>
+
+<p><img src="/img/in-post/post-tf/tf36.jpg" alt="" /></p>
+
+<p>对比 PIL 和 TFRecord，我们发现二者虽有很多相同之处，但依旧存在着细微的差别，比如说 PIL 可以做图片合并、Blend 等，甚至基于像素的计算，而 TFRecord 更像是用来对图片做预处理，比如改变图像的大小、打标签等。</p>
+
+
+
+                <hr style="visibility: hidden;">
+
+                <ul class="pager">
+                    
+                    <li class="previous">
+                        <a href="/2018/03/12/cnn/" data-toggle="tooltip" data-placement="top" title="TensorFlow-搭建 CNN 网络">
+                        Previous<br>
+                        <span>TensorFlow-搭建 CNN 网络</span>
+                        </a>
+                    </li>
+                    
+                    
+                    <li class="next">
+                        <a href="/2018/03/19/reinforcement/" data-toggle="tooltip" data-placement="top" title="强化学习-游戏AI Trainning (一)">
+                        Next<br>
+                        <span>强化学习-游戏AI Trainning (一)</span>
+                        </a>
+                    </li>
+                    
+                </ul>
+
+
+                
+                <!-- disqus 评论框 start -->
+                <div class="comment">
+                    <div id="disqus_thread" class="disqus-thread"></div>
+                </div>
+                <!-- disqus 评论框 end -->
+                
+
+                
+            </div>
+
+    <!-- Side Catalog Container -->
+        
+
+    <!-- Sidebar Container -->
+            <div class="
+                col-lg-8 col-lg-offset-2
+                col-md-10 col-md-offset-1
+                sidebar-container">
+
+                <!-- Featured Tags -->
+                
+                <section>
+                    <hr class="hidden-sm hidden-xs">
+                    <h5><a href="/tags/">FEATURED TAGS</a></h5>
+                    <div class="tags">
+        				          
+                				       <a href="/tags/#OSX" title="OSX" rel="4">OSX</a>
+        				          
+                				       <a href="/tags/#前端开发" title="前端开发" rel="15">前端开发</a>
+        				          
+                				       <a href="/tags/#JavaScript" title="JavaScript" rel="8">JavaScript</a>
+        				          
+                				       <a href="/tags/#Lua" title="Lua" rel="1">Lua</a>
+        				          
+                				       <a href="/tags/#Unity" title="Unity" rel="16">Unity</a>
+        				          
+                				       <a href="/tags/#手机游戏" title="手机游戏" rel="7">手机游戏</a>
+        				          
+                				       <a href="/tags/#Jenkins" title="Jenkins" rel="1">Jenkins</a>
+        				          
+                				       <a href="/tags/#C++" title="C++" rel="3">C++</a>
+        				          
+                				       <a href="/tags/#Tensorflow" title="Tensorflow" rel="6">Tensorflow</a>
+        				          
+                				       <a href="/tags/#人工智能" title="人工智能" rel="7">人工智能</a>
+        				          
+                				       <a href="/tags/#Python" title="Python" rel="8">Python</a>
+        				          
+                				       <a href="/tags/#工具" title="工具" rel="5">工具</a>
+        				          
+                				       <a href="/tags/#强化学习" title="强化学习" rel="4">强化学习</a>
+        				          
+        			      </div>
+                </section>
+                
+
+                <!-- Friends Blog -->
+                
+                <hr>
+                <h5>FRIENDS</h5>
+                <ul class="list-inline">
+                    
+                        <li><a href="http://www.gamelook.com.cn">GameLook</a></li>
+                    
+                        <li><a href="http://forum.china.unity3d.com/forum.php">游戏人社区</a></li>
+                    
+                        <li><a href="https://unity3d.com">Unity3D</a></li>
+                    
+                        <li><a href="https://www.uwa4d.com">UWA-简单优化</a></li>
+                    
+                        <li><a href="https://blog.openai.com/openai-baselines-ppo/">OpenAI新的策略优化算法PPO</a></li>
+                    
+                        <li><a href="https://www.zhihu.com/people/morvan/activities">知乎-莫烦 Python</a></li>
+                    
+                        <li><a href="http://blog.sina.com.cn/s/blog_471132920101d5kh.html">风宇冲的 Blog</a></li>
+                    
+                        <li><a href="http://wiki.jikexueyuan.com/project/tensorflow-zh/tutorials/mnist_beginners.html">极客学院-Tensotflow</a></li>
+                    
+                        <li><a href="https://unity3d.com/cn/solutions/mobile-ar">Unity for Mobile AR</a></li>
+                    
+                </ul>
+                
+            </div>
+        </div>
+    </div>
+</article>
+
+
+
+
+
+
+<!-- disqus 公共JS代码 start (一个网页只需插入一次) -->
+<script type="text/javascript">
+    /* * * CONFIGURATION VARIABLES * * */
+    var disqus_shortname = "Huailiang";
+    var disqus_identifier = "/2018/03/13/tfrecord";
+    var disqus_url = "http://localhost:4000/2018/03/13/tfrecord/";
+
+    (function() {
+        var dsq = document.createElement('script'); dsq.type = 'text/javascript'; dsq.async = true;
+        dsq.src = '//' + disqus_shortname + '.disqus.com/embed.js';
+        (document.getElementsByTagName('head')[0] || document.getElementsByTagName('body')[0]).appendChild(dsq);
+    })();
+</script>
+<!-- disqus 公共JS代码 end -->
+
+
+
+
+<!-- async load function -->
+<script>
+    function async(u, c) {
+      var d = document, t = 'script',
+          o = d.createElement(t),
+          s = d.getElementsByTagName(t)[0];
+      o.src = u;
+      if (c) { o.addEventListener('load', function (e) { c(null, e); }, false); }
+      s.parentNode.insertBefore(o, s);
+    }
+</script>
+<!-- anchor-js, Doc:http://bryanbraun.github.io/anchorjs/ -->
+<script>
+    async("//cdnjs.cloudflare.com/ajax/libs/anchor-js/1.1.1/anchor.min.js",function(){
+        anchors.options = {
+          visible: 'always',
+          placement: 'right',
+          icon: '#'
+        };
+        anchors.add().remove('.intro-header h1').remove('.subheading').remove('.sidebar-container h5');
+    })
+</script>
+<style>
+    /* place left on bigger screen */
+    @media all and (min-width: 800px) {
+        .anchorjs-link{
+            position: absolute;
+            left: -0.75em;
+            font-size: 1.1em;
+            margin-top : -0.1em;
+        }
+    }
+</style>
+
+
+
+    <!-- Footer -->
+<footer>
+    <div class="container">
+        <div class="row">
+            <div class="col-lg-8 col-lg-offset-2 col-md-10 col-md-offset-1">
+                <ul class="list-inline text-center">
+                     
+
+                    <!-- add Weibo, Zhihu by Hux, add target = "_blank" to <a> by Hux -->
+                    
+                    <li>
+                        <a target="_blank" href="https://www.zhihu.com/">
+                            <span class="fa-stack fa-lg">
+                                <i class="fa fa-circle fa-stack-2x"></i>
+                                <i class="fa  fa-stack-1x fa-inverse">知</i>
+                            </span>
+                        </a>
+                    </li>
+                     
+                    <li>
+                        <a target="_blank" href="https://weibo.com/u/6212299692">
+                            <span class="fa-stack fa-lg">
+                                <i class="fa fa-circle fa-stack-2x"></i>
+                                <i class="fa fa-weibo fa-stack-1x fa-inverse"></i>
+                            </span>
+                        </a>
+                    </li>
+                     
+                    <li>
+                        <a target="_blank" href="https://www.facebook.com/profile.php?id=100004290725320">
+                            <span class="fa-stack fa-lg">
+                                <i class="fa fa-circle fa-stack-2x"></i>
+                                <i class="fa fa-facebook fa-stack-1x fa-inverse"></i>
+                            </span>
+                        </a>
+                    </li>
+                     
+                    <li>
+                        <a target="_blank" href="https://github.com/huailiang">
+                            <span class="fa-stack fa-lg">
+                                <i class="fa fa-circle fa-stack-2x"></i>
+                                <i class="fa fa-github fa-stack-1x fa-inverse"></i>
+                            </span>
+                        </a>
+                    </li>
+                     
+                </ul>
+                <p class="copyright text-muted">
+                    Copyright &copy; Huailiang Blog 2018
+                    <br> Power by
+                    <a href="http://huailiang.github.io">Huailiang</a> |
+                    <iframe style="margin-left: 2px; margin-bottom:-5px;" frameborder="0" scrolling="0" width="100px" height="20px" src="https://ghbtns.com/github-btn.html?user=huailiang&type=star&count=true">
+                    </iframe>
+                </p>
+            </div>
+        </div>
+    </div>
+</footer>
+
+<!-- jQuery -->
+<script src=" /js/jquery.min.js "></script>
+
+<!-- Bootstrap Core JavaScript -->
+<!-- Currently, only navbar scroll-down effect at desktop still depends on this -->
+<script src=" /js/bootstrap.min.js "></script>
+
+<!-- Custom Theme JavaScript -->
+<script src=" /js/hux-blog.min.js "></script>
+
+<!-- Service Worker -->
+
+<script src=" /js/snackbar.js "></script>
+<script src=" /js/sw-registration.js "></script> 
+
+<!-- async load function -->
+<script>
+    function async(u, c) {
+        var d = document, t = 'script',
+            o = d.createElement(t),
+            s = d.getElementsByTagName(t)[0];
+        o.src = u;
+        if (c) { o.addEventListener('load', function (e) { c(null, e); }, false); }
+        s.parentNode.insertBefore(o, s);
+    }
+</script>
+
+
+<!-- jquery.tagcloud.js -->
+<script>
+    // only load tagcloud.js in tag.html
+    if ($('#tag_cloud').length !== 0) {
+        async('/js/jquery.tagcloud.js', function () {
+            $.fn.tagcloud.defaults = {
+                //size: {start: 1, end: 1, unit: 'em'},
+                color: { start: '#bbbbee', end: '#0085a1' },
+            };
+            $('#tag_cloud a').tagcloud();
+        })
+    }
+</script>
+
+<!--fastClick.js -->
+<script>
+    async("//cdnjs.cloudflare.com/ajax/libs/fastclick/1.0.6/fastclick.min.js", function () {
+        var $nav = document.querySelector("nav");
+        if ($nav) FastClick.attach($nav);
+    })
+</script>
+
+
+<!-- Google Analytics -->
+
+<script>
+    // dynamic User by Hux
+    var _gaId = 'UA-49627206-1';
+    var _gaDomain = 'github.io';
+
+    // Originial
+    (function (i, s, o, g, r, a, m) {
+        i['GoogleAnalyticsObject'] = r; i[r] = i[r] || function () {
+            (i[r].q = i[r].q || []).push(arguments)
+        }, i[r].l = 1 * new Date(); a = s.createElement(o),
+            m = s.getElementsByTagName(o)[0]; a.async = 1; a.src = g; m.parentNode.insertBefore(a, m)
+    })(window, document, 'script', '//www.google-analytics.com/analytics.js', 'ga');
+
+    ga('create', _gaId, _gaDomain);
+    ga('send', 'pageview');
+</script> 
+
+
+<!-- Baidu Tongji -->
+
+
+
+<!-- Side Catalog -->
+
+
+
+<!-- Multi-Lingual -->
+
+
+
+<!-- Image to hack wechat -->
+<img src="/img/icon_wechat.png" width="0" height="0" />
+<!-- Migrate from head to bottom, no longer block render and still work -->
+
+</body>
+
+</html>
