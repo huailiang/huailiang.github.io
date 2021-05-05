@@ -87,31 +87,22 @@ MathJax.Hub.Config({
 
 <p>maven-release-aar.gradle 就是用来设置打包的脚本，在文件中添加如下代码</p>
 
-<div class="language-groovy highlighter-rouge"><pre class="highlight"><code><span class="c1">//1.maven-插件</span>
-<span class="n">apply</span> <span class="nl">plugin:</span> <span class="s1">'maven'</span>
+<div class="language-groovy highlighter-rouge"><pre class="highlight"><code><span class="n">apply</span> <span class="nl">plugin:</span> <span class="s1">'maven'</span>
 
-<span class="c1">//2.maven-信息</span>
-<span class="n">ext</span> <span class="o">{</span>
-    <span class="n">PUBLISH_GROUP_ID</span> <span class="o">=</span> <span class="s1">'com'</span>
-    <span class="n">PUBLISH_ARTIFACT_ID</span> <span class="o">=</span> <span class="s1">'math3d'</span>
-    <span class="n">PUBLISH_VERSION</span> <span class="o">=</span> <span class="s1">'1.0.5'</span>
-<span class="o">}</span>
-
-<span class="c1">//3.maven-输出路径</span>
 <span class="n">uploadArchives</span> <span class="o">{</span>
     <span class="n">repositories</span><span class="o">.</span><span class="na">mavenDeployer</span> <span class="o">{</span>
         <span class="n">repository</span><span class="o">(</span><span class="nl">url:</span> <span class="n">uri</span><span class="o">(</span><span class="s1">'/tmp/maven-release'</span><span class="o">))</span>
 
         <span class="n">pom</span><span class="o">.</span><span class="na">project</span> <span class="o">{</span>
-            <span class="n">groupId</span> <span class="n">project</span><span class="o">.</span><span class="na">PUBLISH_GROUP_ID</span>
-            <span class="n">artifactId</span> <span class="n">project</span><span class="o">.</span><span class="na">PUBLISH_ARTIFACT_ID</span>
-            <span class="n">version</span> <span class="n">project</span><span class="o">.</span><span class="na">PUBLISH_VERSION</span>
-            <span class="n">packaging</span> <span class="s1">'aar'</span>
+            <span class="n">groupId</span> <span class="s1">'com'</span>
+            <span class="n">artifactId</span> <span class="s1">'math3d'</span>
+            <span class="n">version</span> <span class="s1">'1.0.5'</span>
         <span class="o">}</span>
     <span class="o">}</span>
 <span class="o">}</span>
 
-<span class="c1">//以下代码会生成 jar 包源文件，如果是不开源码，请不要输入这段, aar内包含注释</span>
+<span class="c1">//以下代码会生成 jar 包源文件，如果是不开源码，请不要输入这段</span>
+<span class="c1">//aar 包内包含注释</span>
 <span class="n">task</span> <span class="nf">androidSourcesJar</span><span class="o">(</span><span class="nl">type:</span> <span class="n">Jar</span><span class="o">)</span> <span class="o">{</span>
     <span class="n">from</span> <span class="n">android</span><span class="o">.</span><span class="na">sourceSets</span><span class="o">.</span><span class="na">main</span><span class="o">.</span><span class="na">java</span><span class="o">.</span><span class="na">sourceFiles</span>
 <span class="o">}</span>
@@ -125,20 +116,14 @@ MathJax.Hub.Config({
 <p>也可以通过maven-publish方式发布</p>
 
 <div class="language-groovy highlighter-rouge"><pre class="highlight"><code><span class="n">apply</span> <span class="nl">plugin:</span> <span class="s1">'maven-publish'</span>
-<span class="n">ext</span> <span class="o">{</span>
-    <span class="n">PUBLISH_GROUP_ID</span> <span class="o">=</span> <span class="s1">'com'</span>
-    <span class="n">PUBLISH_ARTIFACT_ID</span> <span class="o">=</span> <span class="s1">'math3d'</span>
-    <span class="n">PUBLISH_VERSION</span> <span class="o">=</span> <span class="s1">'1.0.5'</span>
-<span class="o">}</span>
 
 <span class="n">uploadArchives</span> <span class="o">{</span>
     <span class="n">repositories</span><span class="o">.</span><span class="na">mavenDeployer</span> <span class="o">{</span>
         <span class="n">repository</span><span class="o">(</span><span class="nl">url:</span> <span class="n">uri</span><span class="o">(</span><span class="s1">'/tmp/maven-release'</span><span class="o">))</span>
         <span class="n">pom</span><span class="o">.</span><span class="na">project</span> <span class="o">{</span>
-            <span class="n">groupId</span> <span class="n">project</span><span class="o">.</span><span class="na">PUBLISH_GROUP_ID</span>
-            <span class="n">artifactId</span> <span class="n">project</span><span class="o">.</span><span class="na">PUBLISH_ARTIFACT_ID</span>
-            <span class="n">version</span> <span class="n">project</span><span class="o">.</span><span class="na">PUBLISH_VERSION</span>
-            <span class="n">packaging</span> <span class="s1">'aar'</span>
+            <span class="n">groupId</span> <span class="s1">'com'</span>
+            <span class="n">artifactId</span> <span class="s1">'math3d'</span>
+            <span class="n">version</span> <span class="s1">'1.0.5'</span>
         <span class="o">}</span>
     <span class="o">}</span>
 <span class="o">}</span>
@@ -174,7 +159,7 @@ MathJax.Hub.Config({
 
 <h4 id="as-gradle">AS Gradle</h4>
 
-<p>在 Android studio 右侧有个 gradle 侧边栏， 双击 uploadArchives</p>
+<p>在 Android studio 右侧有个 gradle 侧边栏， 双击 uploadArchives也可以上传到仓库</p>
 
 <p><img src="/img/post-android/mav2.jpg" alt="" /></p>
 
@@ -191,6 +176,27 @@ MathJax.Hub.Config({
 <p>代码中就可以正常添加引用了:</p>
 
 <p><img src="/img/post-android/mav5.jpg" alt="" /></p>
+
+<h3 id="附录">附录</h3>
+
+<p>gradlew常用命令</p>
+
+<div class="language-sh highlighter-rouge"><pre class="highlight"><code>./gradlew clean  clean项目
+./gradlew build  构建项目
+./gradlew assembleDebug or /gradlew aD 编译并打Debug包
+./gradlew assembleRelease or /gradlew aR 编译并打Release的包
+./gradlew installRelease or /gradlew iR Release模式打包并安装
+./gradlew installDebug or /gradlew iD Debug模式打包并安装
+./gradlew uninstallRelease or ./gradlew uR 卸载Release模式包
+./gradlew uninstallDebug or ./gradlew uD 卸载Debug模式包
+./gradlew tasks --all  //查看所有任务
+./gradlew dependencies ////依赖信息查看
+./gradlew clean build --refresh-dependencies //强制更新最新依赖，清除并构建
+./gradlew makeJar //生成 jar
+需要说明的是这些命令可以叠加使用，例如：
+./gradlew clean build --info &gt; bugtags.log
+</code></pre>
+</div>
 
     </div>
   </div>
