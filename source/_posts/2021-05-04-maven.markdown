@@ -110,7 +110,7 @@ gradlew  publishToMavenLocal
 
 #### AS Gradle
 
-在 Android studio 右侧有个 gradle 侧边栏， 双击 uploadArchives
+在 Android studio 右侧有个 gradle 侧边栏， 双击 uploadArchives也可以上传到仓库
 
 ![](/img/post-android/mav2.jpg)
 
@@ -130,3 +130,27 @@ gradlew  publishToMavenLocal
 代码中就可以正常添加引用了:
 
 ![](/img/post-android/mav5.jpg)
+
+
+
+### 附录
+
+
+gradlew常用命令
+
+```sh
+./gradlew clean  clean项目
+./gradlew build  构建项目
+./gradlew assembleDebug or /gradlew aD 编译并打Debug包
+./gradlew assembleRelease or /gradlew aR 编译并打Release的包
+./gradlew installRelease or /gradlew iR Release模式打包并安装
+./gradlew installDebug or /gradlew iD Debug模式打包并安装
+./gradlew uninstallRelease or ./gradlew uR 卸载Release模式包
+./gradlew uninstallDebug or ./gradlew uD 卸载Debug模式包
+./gradlew tasks --all  //查看所有任务
+./gradlew dependencies ////依赖信息查看
+./gradlew clean build --refresh-dependencies //强制更新最新依赖，清除并构建
+./gradlew makeJar //生成 jar
+需要说明的是这些命令可以叠加使用，例如：
+./gradlew clean build --info > bugtags.log
+```
