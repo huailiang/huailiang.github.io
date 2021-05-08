@@ -186,9 +186,57 @@ MathJax.Hub.Config({
 
 <p>完整路径是：C:\Users\用户名.gradle\caches\modules-2\files-2.1\com.google.http-client\google-http-client-jackson\1.15.0-rc\哈希值\jar或aar文件</p>
 
+<h3 id="五-配置-maven-web环境">五. 配置 Maven Web环境</h3>
+
+<p>安装 Maven 之前要求先确定JDK 已经安装配置完成。Maven是 Apache 下的一个项目，目前新版本是 3.0.4。</p>
+
+<p>1.首先去官网下载 Maven：http://www.apache.org/dyn/closer.cgi/maven/binaries/apache-maven-3.0.4-bin.tar.gz</p>
+
+<p>2.配置 maven 环境变量：</p>
+
+<p>系统变量：MAVEN_HOME = D:\Development\apache-maven-3.0.4</p>
+
+<p>系统变量：path = %MAVEN_HOME%\bin</p>
+
+<p>mac 系统可以配置在用户目录的.bash_profile 文件中</p>
+
+<div class="language-sh highlighter-rouge"><pre class="highlight"><code><span class="nb">export </span><span class="nv">M2_HOME</span><span class="o">=</span>~/Documents/software/apache-maven-3.8.1
+<span class="nb">export </span><span class="nv">PATH</span><span class="o">=</span><span class="nv">$M2_HOME</span>/bin:<span class="nv">$PATH</span>
+</code></pre>
+</div>
+
+<p>配置好之后， source ~/.bash_profile 使环境变量生效。</p>
+
+<p>相信大家都有配过环境变量的，详细步骤就不说了，对着把属性名和属性值配上的OK了。</p>
+
+<p>打开 cmd或者 Terminal(MacOS)，在里面敲：mvn -version</p>
+
+<p><img src="/img/post-android/mav6.jpg" alt="" /></p>
+
+<p>mvn 是 maven 的一个指令，mvn -version 是查看版本信息，我的操作系统是 32位的 WIN7，安装的 maven 是 3.8.1</p>
+
+<p>如果能打印如上信息，说明到此 Maven3 已经在你的电脑上安装完成。</p>
+
+<h4 id="修改-maven-本地仓库存放位置">修改 maven 本地仓库存放位置</h4>
+
+<p>找到 apache-maven-3.0.4下的 conf 下的 settings.xml 配置文件，我的是在 D:\Development\apache-maven-3.0.4\conf\settings.xml</p>
+
+<p><img src="/img/post-android/mav7.jpg" alt="" /></p>
+
+<h4 id="maven-使用案例">maven 使用案例</h4>
+
+<p>1.创建简单的maven 的web项目<br />
+    mvn archetype:create <br />
+    举例：mvn archetype:create  -DgroupId=com.demo.app -DartifactId=demo-app  -DarchetypeArtifactId=maven-archetype-webapp</p>
+
+<p>2.生成和清除Eclipse项目结构：<br />
+   mvn eclipse:eclipse 将maven项目变成eclipse,其实是在项目中生成 .project 和 .classpath 两个文件<br />
+   mvn eclipse:clean 清理（删除target目录下编译内容）<br />
+   mvn clean 打包发布</p>
+
 <h3 id="附录">附录</h3>
 
-<p>gradlew常用命令</p>
+<h4 id="1gradlew常用命令">1.gradlew常用命令</h4>
 
 <div class="language-sh highlighter-rouge"><pre class="highlight"><code>./gradlew clean  clean项目
 ./gradlew build  构建项目
@@ -204,6 +252,24 @@ MathJax.Hub.Config({
 ./gradlew makeJar //生成 jar
 需要说明的是这些命令可以叠加使用，例如：
 ./gradlew clean build --info &gt; bugtags.log
+</code></pre>
+</div>
+
+<h4 id="2maven常用命令">2.maven常用命令：</h4>
+
+<div class="language-sh highlighter-rouge"><pre class="highlight"><code>mvn clean       清空产生的项目<span class="o">(</span> target里<span class="o">)</span>
+mvn compile     编译源代码
+mvn install     在本地repository中安装jar（包含mvn compile，mvn package，然后上传到本地仓库）
+mvn deploy      上传到私服<span class="o">(</span>包含mvn install,然后，上传到私服<span class="o">)</span>
+mvn package     打包
+mvn <span class="nb">test        </span>运行测试
+mvn site        产生site
+mvn <span class="nb">test</span>-compile   编译测试代码
+mvn -Dtest package  只打包不测试
+mvn  jar:jar    只打jar包
+mvn  <span class="nb">test</span> -skipping compile -skipping <span class="nb">test</span>-compile  只测试而不编译，也不测试编译
+mvn  deploy   
+mvn  source.jar   源码打包
 </code></pre>
 </div>
 
