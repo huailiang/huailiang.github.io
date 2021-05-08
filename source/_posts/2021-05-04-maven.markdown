@@ -131,7 +131,14 @@ gradlew  publishToMavenLocal
 
 ![](/img/post-android/mav5.jpg)
 
+在Android Studio中所有项目都共用同一个本地缓存库，路径是：C:\Users\用户名\.gradle\caches\modules-2\files-2.1。
+然后通过：包名\模块名\版本号\哈希值\jar或aar文件
 
+例如要找如下依赖的jar或aar：
+
+compile ('com.google.http-client:google-http-client-jackson:1.15.0-rc')
+
+完整路径是：C:\Users\用户名\.gradle\caches\modules-2\files-2.1\com.google.http-client\google-http-client-jackson\1.15.0-rc\哈希值\jar或aar文件
 
 ### 附录
 
