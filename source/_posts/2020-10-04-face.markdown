@@ -4,7 +4,7 @@ title:      "3D人脸重建"
 date:       2020-10-04 02:00:00
 author:     "huailiang"
 tags:
-    - AI
+    - 人工智能
 ---
 
 
