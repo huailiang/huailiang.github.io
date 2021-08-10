@@ -198,6 +198,19 @@ glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR_MIPMAP_LINEAR);
 ```
 
 
+在Unity中可以使用如下方法直接加载, 得到一个GPU支持的压缩格式的2D纹理：
+
+```csharp
+WWW www = new WWW("file://test.pvr");
+yield return www; 
+int headerSize = 52;
+byte[] buffer = new byte[www.size - headerSize];
+System.Buffer.BlockCopy(www.bytes, headerSize, buffer, 0, www.size - headerSize);
+Texture2D tex = new Texture2D(512,256,TextureFormat.PVRTC_RGBA4,false,true);
+tex.LoadRawTextureData(buffer);
+tex.Apply();
+```
+
 ## 5. 压缩纹理工具的使用
 
 每种压缩纹理以及相应的厂商都提供了压缩纹理的工具，工具都分两个版本：
