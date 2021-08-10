@@ -5,7 +5,7 @@
   <meta http-equiv="X-UA-Compatible" content="IE=edge">
   <meta name="viewport" content="width=device-width, initial-scale=1">
 
-  <title>移动端AI算计加速</title>
+  <title>移动端AI算力加速</title>
   <meta name="description"
     content="  目前支持移动端（手机端）的框架， 主流的实现架构诸如苹果公司的CoreML, 华为麒麟芯片的支持AI加速的NPU和在上面运行框架HiAI，阿里的优化框架MNN， 还有腾讯公司的NCNN。 过去我们使用的AI运算大都是PC端搭建的GPU集群，往往运行着后端（云侧）， 而在端侧往往只是负责拿到云侧数据进行表现。 ...">
 
@@ -67,7 +67,7 @@ MathJax.Hub.Config({
 
   <div class="card">
     <header class="post-header">
-      <h1 class="post-title">移动端AI算计加速</h1>
+      <h1 class="post-title">移动端AI算力加速</h1>
       <p class="post-meta">May 26, 2021 •
         huailiang</p>
     </header>
@@ -86,6 +86,8 @@ MathJax.Hub.Config({
 <p>随着国内厂商不断的优化， 我们看到了华为推出的麒麟芯片（麒麟980之后带独立的NPU）使用<a href="https://developer.huawei.com/consumer/cn/hiai#Foundation">HiAI</a>框架来进行AI加速运算， <a href="https://github.com/alibaba/MNN">阿里的MNN</a>则依靠大量手写汇编实现核心运算，充分发挥 ARM CPU 的算力， 整合不同后端（backend: OpenCL、Vulkan、OpenGL, Metal)进行深度优化来适配不同的设备。这些国内的厂商都提供了各自的工具（比如说华为HiAI的转换工具OMG, 阿里的mmnconvert）来转换主机上运行的Tensorflow、Caffee模型为自己量化的模型。</p>
 
 <p><img src="/img/post-ml/hiai.jpeg" alt="" /></p>
+
+<p>在处理相同的AI运算时，NPU的性能是 CPU 的 25 倍，GPU 的 6.25 倍（25/4），能效比上，NPU 更是达到了 CPU 的 50 倍，GPU 的 6.25 倍（50/8）。在测试中发现，麒麟 970 的 NPU 每分钟可以识别出 2005 张照片，而不使用 NPU 的话则每分钟只能识别 97 张，明显看出独立NPU的算力优势巨大。</p>
 
 <h4 id="二环境">二、环境</h4>
 
