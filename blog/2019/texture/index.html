@@ -258,6 +258,19 @@ GL_COMPRESSED_RGBA_S3TC_DXT5 (RGBA，每个像素1个字节)</internal></p>
 </code></pre>
 </div>
 
+<p>在Unity中可以使用如下方法直接加载, 得到一个GPU支持的压缩格式的2D纹理：</p>
+
+<div class="language-csharp highlighter-rouge"><pre class="highlight"><code><span class="n">WWW</span> <span class="n">www</span> <span class="p">=</span> <span class="k">new</span> <span class="nf">WWW</span><span class="p">(</span><span class="s">"file://test.pvr"</span><span class="p">);</span>
+<span class="k">yield</span> <span class="k">return</span> <span class="n">www</span><span class="p">;</span> 
+<span class="kt">int</span> <span class="n">headerSize</span> <span class="p">=</span> <span class="m">52</span><span class="p">;</span>
+<span class="kt">byte</span><span class="p">[]</span> <span class="n">buffer</span> <span class="p">=</span> <span class="k">new</span> <span class="kt">byte</span><span class="p">[</span><span class="n">www</span><span class="p">.</span><span class="n">size</span> <span class="p">-</span> <span class="n">headerSize</span><span class="p">];</span>
+<span class="n">System</span><span class="p">.</span><span class="n">Buffer</span><span class="p">.</span><span class="nf">BlockCopy</span><span class="p">(</span><span class="n">www</span><span class="p">.</span><span class="n">bytes</span><span class="p">,</span> <span class="n">headerSize</span><span class="p">,</span> <span class="n">buffer</span><span class="p">,</span> <span class="m">0</span><span class="p">,</span> <span class="n">www</span><span class="p">.</span><span class="n">size</span> <span class="p">-</span> <span class="n">headerSize</span><span class="p">);</span>
+<span class="n">Texture2D</span> <span class="n">tex</span> <span class="p">=</span> <span class="k">new</span> <span class="nf">Texture2D</span><span class="p">(</span><span class="m">512</span><span class="p">,</span><span class="m">256</span><span class="p">,</span><span class="n">TextureFormat</span><span class="p">.</span><span class="n">PVRTC_RGBA4</span><span class="p">,</span><span class="k">false</span><span class="p">,</span><span class="k">true</span><span class="p">);</span>
+<span class="n">tex</span><span class="p">.</span><span class="nf">LoadRawTextureData</span><span class="p">(</span><span class="n">buffer</span><span class="p">);</span>
+<span class="n">tex</span><span class="p">.</span><span class="nf">Apply</span><span class="p">();</span>
+</code></pre>
+</div>
+
 <h2 id="5-压缩纹理工具的使用">5. 压缩纹理工具的使用</h2>
 
 <p>每种压缩纹理以及相应的厂商都提供了压缩纹理的工具，工具都分两个版本：<br />
