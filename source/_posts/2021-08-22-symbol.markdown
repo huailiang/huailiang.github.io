@@ -11,9 +11,17 @@ tags:
 #### 一、概述
 
 ###### 什么是符号表？
+
+<br>
+
 符号表是内存地址与函数名、文件名、行号的映射表。符号表元素如下所示：
 
+
+```
 <起始地址> <结束地址> <函数> [<文件名:行号>]
+```
+
+<br>
 
 ![](/img/post-ml/sym4.png)
 
@@ -23,9 +31,17 @@ tags:
 
 Android平台中，目标文件对应的是SO文件。Debug SO文件是指具有调试信息的SO文件。 为了方便找回Crash对应的Debug SO文件和还原堆栈，建议每次构建或者发布APP版本的时候，备份好Debug SO文件。
 
-IDE如果使用Android Sutdio+NDK，默认情况下，Debug编译的Debug SO文件将位于： <项目文件夹>/<Module>/build/intermediates/ndk/debug/obj/local<架构>/
+IDE如果使用Android Sutdio+NDK，默认情况下，Debug编译的Debug SO文件将位于：
 
-而Release编译的Debug SO文件将位于： <项目文件夹>/<Module>/build/intermediates/ndk/release/obj/local<架构>/
+```
+../<Module>/build/intermediates/ndk/debug/obj/local<架构>/
+```
+
+而Release编译的Debug SO文件将位于： 
+
+```
+../<Module>/build/intermediates/ndk/release/obj/local<架构>/
+```
 
 #### 二. readelf 解析ELF格式文件符号表
 
@@ -218,6 +234,8 @@ aarch64-linux-android-addr2line -f -C -e libmnistcore.so 6148
 
 ![](/img/post-ml/sym8.jpg)
 
+
+如果你的项目集成了CI， 在打包的时候自动上传符号表，然后crash的时候自动去查询奔溃堆栈， 一套组合拳打下来，工作效率会提升很多。
 
 
 [i1]: https://bugly.qq.com/v2/workbench/apps
