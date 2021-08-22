@@ -21,11 +21,10 @@ tags:
 <起始地址> <结束地址> <函数> [<文件名:行号>]
 ```
 
-<br>
 
 ![](/img/post-ml/sym4.png)
 
-<br>
+
 
 编译器带-g就会有调试信息。这是gcc相关的。默认其实android编译的就是带符号表的，只是在strip掉了。
 
@@ -229,6 +228,13 @@ aarch64-linux-android-addr2line -f -C -e libmnistcore.so 6148
 
 ![](/img/post-ml/sym7.jpg)
 
+
+需要注意的是Gradle 不同的Task 生成不同版本的so， 他们共享一套地址， 也就意味着我们可以在发布的时候使用strip过符号表的so， 然后线下可以使用带符号表的so还原出堆栈信息.
+
+![](/img/post-ml/sym9.jpg)
+
+
+
 我们也可以接入腾讯[Bugly][i1], 不用每次闪退都看log。 当应用发生闪退时， bugly直接会上传堆栈到server， 然后解析符号表，生成奔溃信息。
 
 
@@ -236,6 +242,8 @@ aarch64-linux-android-addr2line -f -C -e libmnistcore.so 6148
 
 
 如果你的项目集成了CI， 在打包的时候自动上传符号表，然后crash的时候自动去查询奔溃堆栈， 一套组合拳打下来，工作效率会提升很多。
+
+![bugly 上传符号表](/img/post-ml/sym10.jpg)
 
 
 [i1]: https://bugly.qq.com/v2/workbench/apps
