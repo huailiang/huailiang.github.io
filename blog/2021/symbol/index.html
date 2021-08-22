@@ -85,11 +85,7 @@ MathJax.Hub.Config({
 </code></pre>
 </div>
 
-<p><br /></p>
-
 <p><img src="/img/post-ml/sym4.png" alt="" /></p>
-
-<p><br /></p>
 
 <p>编译器带-g就会有调试信息。这是gcc相关的。默认其实android编译的就是带符号表的，只是在strip掉了。</p>
 
@@ -283,11 +279,17 @@ For compilers to find binutils you may need to set:
 
 <p><img src="/img/post-ml/sym7.jpg" alt="" /></p>
 
+<p>需要注意的是Gradle 不同的Task 生成不同版本的so， 他们共享一套地址， 也就意味着我们可以在发布的时候使用strip过符号表的so， 然后线下可以使用带符号表的so还原出堆栈信息.</p>
+
+<p><img src="/img/post-ml/sym9.jpg" alt="" /></p>
+
 <p>我们也可以接入腾讯<a href="https://bugly.qq.com/v2/workbench/apps">Bugly</a>, 不用每次闪退都看log。 当应用发生闪退时， bugly直接会上传堆栈到server， 然后解析符号表，生成奔溃信息。</p>
 
 <p><img src="/img/post-ml/sym8.jpg" alt="" /></p>
 
 <p>如果你的项目集成了CI， 在打包的时候自动上传符号表，然后crash的时候自动去查询奔溃堆栈， 一套组合拳打下来，工作效率会提升很多。</p>
+
+<p><img src="/img/post-ml/sym10.jpg" alt="bugly 上传符号表" /></p>
 
 
     </div>
