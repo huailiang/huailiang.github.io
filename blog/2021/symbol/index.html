@@ -1,0 +1,426 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <meta http-equiv="X-UA-Compatible" content="IE=edge">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+
+  <title>so符号表工具</title>
+  <meta name="description"
+    content="一、概述">
+
+  <link rel="shortcut icon" href="/img/favicon.ico">
+  <link rel="stylesheet" href="/css/main.css">
+  <link rel="canonical" href="https://huailiang.github.io/blog/2021/symbol/">
+
+</head>
+
+<body>
+  <main>
+    <header class="site-header">
+  <div class="container">
+    <h1><a href="/">Hom<span>e</span></a></h1>
+
+    <button type="button" class="sliding-panel-button">
+      <span></span>
+      <span></span>
+      <span></span>
+    </button>
+
+    <nav class="navbar sliding-panel-content">
+      <ul>
+        
+        <li><a href="/about" title="About">About</a>
+        </li>
+        
+        <li><a href="/blog" title="Blog">Blog</a>
+        </li>
+        
+       <li><a href="/category/" target="_blank"><i class="icon icon-feed"></i></a></li>
+      </ul>
+    </nav>
+  </div>
+</header>
+
+<div class="sliding-panel-fade-screen"></div>
+    <script type="text/javascript" src="/js/MathJax.js?config=TeX-AMS-MML_HTMLorMML"></script>
+
+<script type="text/x-mathjax-config">
+MathJax.Hub.Config({
+  tex2jax: {
+    inlineMath: [['$','$'], ['\\(','\\)']],
+    processEscapes: true
+  }
+});
+</script>
+
+<script type="text/x-mathjax-config">
+  MathJax.Hub.Config({
+    tex2jax: {
+      skipTags: ['script', 'noscript', 'style', 'textarea', 'pre', 'code']
+    }
+  });
+
+</script>
+    <div class="container">
+      <article role="article" class="post">
+
+  <div class="card">
+    <header class="post-header">
+      <h1 class="post-title">so符号表工具</h1>
+      <p class="post-meta">Aug 22, 2021 •
+        huailiang</p>
+    </header>
+
+    <div class="post-content">
+      <h4 id="一概述">一、概述</h4>
+
+<h6 id="什么是符号表">什么是符号表？</h6>
+<p>符号表是内存地址与函数名、文件名、行号的映射表。符号表元素如下所示：</p>
+
+<起始地址> <结束地址> <函数> [<文件名:行号>]
+
+![](/img/post-ml/sym4.png)
+
+<br />
+
+编译器带-g就会有调试信息。这是gcc相关的。默认其实android编译的就是带符号表的，只是在strip掉了。
+
+Android平台中，目标文件对应的是SO文件。Debug SO文件是指具有调试信息的SO文件。 为了方便找回Crash对应的Debug SO文件和还原堆栈，建议每次构建或者发布APP版本的时候，备份好Debug SO文件。
+
+IDE如果使用Android Sutdio+NDK，默认情况下，Debug编译的Debug SO文件将位于： <项目文件夹>/<Module>/build/intermediates/ndk/debug/obj/local<架构>/
+
+而Release编译的Debug SO文件将位于： <项目文件夹>/<Module>/build/intermediates/ndk/release/obj/local<架构>/
+
+#### 二. readelf 解析ELF格式文件符号表
+
+在 linux 下，用 readelf 来看 ELF（linux 下目标文件的格式） 文件头部或者其它各 section 的内容，用 objdump 来对指定的内容（.text, .data等）进行反汇编。
+
+
+##### 读取ELF文件头
+
+```sh
+readelf -h **.so
+```
+
+![](/img/post-ml/sym5.jpg)
+
+
+在 readelf 的输出中：
+第 1 行，ELF Header: 指名 ELF 文件头开始。
+第 2 行，Magic 魔数，用来指名该文件是一个 ELF 目标文件。第一个字节 7F 是个固定的数；后面的 3 个字节正是 E, L, F 三个字母的 ASCII 形式。
+第 3 行，CLASS 表示文件类型，这里是 64位的 ELF 格式。
+第 4 行，Data 表示文件中的数据是按照什么格式组织(大端或小端)的，不同处理器平台数据组织格式可能就不同，如x86平台为小端存储格式。
+第 5 行，当前 ELF 文件头版本号，这里版本号为 1 。
+第 6 行，OS/ABI ，指出操作系统类型，ABI 是 Application Binary Interface 的缩写。
+第 7 行，ABI 版本号，当前为 0 。
+第 8 行，Type 表示文件类型。ELF 文件有 3 种类型，一种是如上所示的 Relocatable file 可重定位目标文件，一种是可执行文件(Executable)，另外一种是共享库(Shared Library) 。
+第 9 行，机器平台类型。
+第 10 行，当前目标文件的版本号。
+第 11 行，程序的虚拟地址入口点，因为这还不是可运行的程序，故而这里为零。
+第 12 行，与 11 行同理，这个目标文件没有 Program Headers。
+第 13 行，sections 头开始处，这里 208 是十进制，表示从地址偏移 0xD0 处开始。
+第 14 行，是一个与处理器相关联的标志，x86 平台上该处为 0 。
+第 15 行，ELF 文件头的字节数。
+第 16 行，因为这个不是可执行程序，故此处大小为 0。
+第 17 行，同理于第 16 行。
+第 18 行，sections header 的大小，这里每个 section 头大小为 40 个字节。
+第 19 行，一共有多少个 section 头，这里是 8 个。
+第 20 行，section 头字符串表索引号，从 Section Headers 输出部分可以看到其内容的偏移在 0xa0 处，从此处开始到0xcf 结束保存着各个 sections 的名字，如 .data，.text，.bss等。
+
+在 Section Headers 这里，可以看到 .bss 和 .shstrtab 的偏移都为 0xa0 。这是因为，没有被初始化的全局变量，会在加载阶段被用 0 来初始化，这时候它和 .data 段一样可读可写。但在编译阶段，.data 段会被分配一部分空间已存放数据(这里从偏移 0x6c 开始)，而 .bss 则没有，.bss 仅有的是 section headers 。
+链接器从 .rel.text  就可以知道哪些地方需要进行重定位(relocate)。 .symtab 是符号表。
+Ndx 是符号表所在的 section 的 section header 编号。如 .data 段的 section header 编号是 3，而string1，string2，lenght 都是在 .data 段的。
+
+
+##### 读取节头表
+
+```sh
+readelf -s **.so
+```
+
+但是mac os X下没有这两个命令，可以用 brew 来安装。 使用命令:
+
+```sh
+brew install binutils
+```
+
+然后使用 greadelf 和 gobjdump 命令。
+
+```
+binutils is keg-only, which means it was not symlinked into /usr/local,
+because because Apple provides the same tools and binutils is poorly supported on macOS.
+
+If you need to have binutils first in your PATH run:
+  echo 'export PATH="/usr/local/opt/binutils/bin:$PATH"' &gt;&gt; ~/.bash_profile
+
+For compilers to find binutils you may need to set:
+  export LDFLAGS="-L/usr/local/opt/binutils/lib"
+  export CPPFLAGS="-I/usr/local/opt/binutils/include"
+```
+
+ binutils 并没有符号链接，并且 macOS 对他的支持并不好。
+
+在使用之前，首先需要配置的路径(存放在环境变量里去)，能正确链接，根据提示操作就可以了。
+
+```sh
+echo 'export PATH="/usr/local/opt/binutils/bin:$PATH"' &gt;&gt; ~/.bash_profile
+```
+
+然后使 .bash_profile 生效
+
+```sh
+source ~/.bash_profile
+```
+
+![](/img/post-ml/sym1.jpg)
+
+后面依次执行下面的命令就可以了。
+
+```sh
+export LDFLAGS="-L/usr/local/opt/binutils/lib"
+export CPPFLAGS="-I/usr/local/opt/binutils/include"
+```
+
+下面就可以使用 gobjdump 和 greadelf 命令了
+
+![](/img/post-ml/sym2.jpg)
+
+
+#### 三. ndk-build生成so
+
+
+AndroidStudio里 在执行gradle assembleRelease 之后，我们的工程就会输出三个so 文件
+
+
+![](/img/post-ml/sym3.jpg)
+
+
+其中有两个是带符号表信息的，另外一个是不带符号表信息的。
+
+gradle 生成so对应下面两个Task，生成对应带符号表的so 
+
+
+```
+&gt; Task :app:transformNativeLibsWithMergeJniLibsForRelease UP-TO-DATE
+&gt; Task :app:transformNativeLibsWithStripDebugSymbolForRelease UP-TO-DATE
+```
+
+而裁剪调符号表的so， 执行的Task对应是
+
+```sh
+task 'transformNativeLibsWithStripDebugSymbolForDebug'...
+```
+
+在用户目录.gradle文件夹下 找到 gradle-***.jar包， 查看里面的源码：
+
+StripDebugSymbolTransform.java 在包 com.android.build.gradle.internal.transforms 路径下， 其中，去掉符号的操作，是在stripFile实现的。
+
+```java
+private void stripFile(@NonNull File input, @NonNull File output, @Nullable Abi abi)
+        throws IOException {
+    FileUtils.mkdirs(output.getParentFile());
+    ILogger logger = new LoggerWrapper(project.getLogger());
+    File exe =
+            stripToolFinder.stripToolExecutableFile(
+                    input,
+                    abi,
+                    msg -&gt; {
+                        logger.warning(msg + " Packaging it as is.");
+                        return null;
+                    });
+
+    if (exe == null) {
+        // The strip executable couldn't be found and a message about the failure was reported in getPathToStripExecutable.
+        // Fall back to copying the file to the output location
+        FileUtils.copyFile(input, output);
+        return;
+    }
+
+    ProcessInfoBuilder builder = new ProcessInfoBuilder();
+    builder.setExecutable(exe);
+    builder.addArgs("--strip-unneeded");
+    builder.addArgs("-o");
+    builder.addArgs(output.toString());
+    builder.addArgs(input.toString());
+    ProcessResult result = new GradleProcessExecutor(project).execute(
+            builder.createProcess(),
+            new LoggedProcessOutputHandler(logger));
+    if (result.getExitValue() != 0) {
+        logger.warning(
+                "Unable to strip library '%s' due to error %s returned "
+                        + "from '%s', packaging it as is.",
+                result.getExitValue(), exe, input.getAbsolutePath());
+        FileUtils.copyFile(input, output);
+    }
+}
+```
+
+我们现在NDK的开发一般都是使用cmake的方式来开发，如果你在gradle中使用过cmake，你会发现在gradle执行sync操作后，app目录下就会生成一个叫.externalNativeBuild的文件夹，这个文件夹就是用来进行C/C++代码的编译的，
+
+
+#### 四. addr2line
+
+addr2line是一个十分有用的debug工具，这个工具在ndk的安装目录下就有
+
+![](/img/post-ml/sym6.jpg)
+
+
+在ndk \toolchains\aarch64-linux-android-4.9\prebuilt\windows-x86_64\bin目录下, 我们可以把这个路径配在环境变量PATH里， 这样在终端里就不用每次打印绝对路径了。
+
+可以用于帮助我们分析jni 里面的bug，下面我们故意在jni代码中留一个异常，在运行到memcpy就会发生空指针异常，应用会闪退.
+
+用法如下, 输入so和对应的地址就可以查看函数名字了：
+
+```sh
+aarch64-linux-android-addr2line -f -C -e libmnistcore.so 6148
+```
+
+![](/img/post-ml/sym7.jpg)
+
+我们也可以接入腾讯[Bugly][i1], 不用每次闪退都看log。 当应用发生闪退时， bugly直接会上传堆栈到server， 然后解析符号表，生成奔溃信息。
+
+
+![](/img/post-ml/sym8.jpg)
+
+
+
+[i1]: https://bugly.qq.com/v2/workbench/apps
+[i2]: https://www.jianshu.com/p/fabaad5486bf
+[i3]: https://blog.csdn.net/edonlii/article/details/8779075
+</架构></Module></项目文件夹></架构></Module></项目文件夹></文件名:行号></函数></结束地址></起始地址>
+
+    </div>
+  </div>
+
+  <style>
+  .post-nav {
+    overflow: hidden;
+    /* margin-top: 60px; */
+    padding: 12px;
+    white-space: nowrap;
+    /* border-top: 1px solid #eee; */
+  }
+
+  .post-nav-item {
+    display: inline-block;
+    width: 50%;
+    white-space: normal;
+  }
+
+  .post-nav-item a {
+    position: relative;
+    display: inline-block;
+    line-height: 25px;
+    font-size: 14px;
+    color: #555;
+    border-bottom: none;
+  }
+
+  .post-nav-item a:hover {
+    color: #222;
+    font-weight: bold;
+    border-bottom: none;
+  }
+
+  .post-nav-item a:active {
+    top: 2px;
+  }
+
+  .post-nav-item a:before,
+  .post-nav-item a:after {
+    display: inline-block;
+    width: 16px;
+    height: 25px;
+    vertical-align: top;
+    opacity: 0.4;
+    background-size: 16px;
+  }
+
+  .post-nav-none a:none {
+    content: ' ';
+    background-size: 8px;
+  }
+
+  .post-nav-none a:hover:none {
+    opacity: 1;
+  }
+
+  .post-nav-prev a:before {
+    content: ' ';
+    background: url("data:image/svg+xml;base64,PD94bWwgdmVyc2lvbj0iMS4wIiA/PjxzdmcgaGVpZ2h0PSIxMnB4IiB2ZXJzaW9uPSIxLjEiIHZpZXdCb3g9IjAgMCA5IDEyIiB3aWR0aD0iOXB4IiB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHhtbG5zOnNrZXRjaD0iaHR0cDovL3d3dy5ib2hlbWlhbmNvZGluZy5jb20vc2tldGNoL25zIiB4bWxuczp4bGluaz0iaHR0cDovL3d3dy53My5vcmcvMTk5OS94bGluayI+PHRpdGxlLz48ZGVzYy8+PGRlZnMvPjxnIGZpbGw9Im5vbmUiIGZpbGwtcnVsZT0iZXZlbm9kZCIgaWQ9IlBhZ2UtMSIgc3Ryb2tlPSJub25lIiBzdHJva2Utd2lkdGg9IjEiPjxnIGZpbGw9IiMwMDAwMDAiIGlkPSJDb3JlIiB0cmFuc2Zvcm09InRyYW5zbGF0ZSgtMjE4LjAwMDAwMCwgLTkwLjAwMDAwMCkiPjxnIGlkPSJjaGV2cm9uLWxlZnQiIHRyYW5zZm9ybT0idHJhbnNsYXRlKDIxOC41MDAwMDAsIDkwLjAwMDAwMCkiPjxwYXRoIGQ9Ik03LjQsMS40IEw2LDAgTC04Ljg4MTc4NDJlLTE2LDYgTDYsMTIgTDcuNCwxMC42IEwyLjgsNiBMNy40LDEuNCBaIiBpZD0iU2hhcGUiLz48L2c+PC9nPjwvZz48L3N2Zz4=") no-repeat 0 50%;
+    background-size: 8px;
+  }
+
+  .post-nav-prev a:hover:before {
+    opacity: 1;
+  }
+
+  .post-nav-next {
+    text-align: right;
+  }
+
+  .post-nav-next a:after {
+    content: ' ';
+    background: url("data:image/svg+xml;base64,PD94bWwgdmVyc2lvbj0iMS4wIiA/PjxzdmcgaGVpZ2h0PSIxMnB4IiB2ZXJzaW9uPSIxLjEiIHZpZXdCb3g9IjAgMCA5IDEyIiB3aWR0aD0iOXB4IiB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHhtbG5zOnNrZXRjaD0iaHR0cDovL3d3dy5ib2hlbWlhbmNvZGluZy5jb20vc2tldGNoL25zIiB4bWxuczp4bGluaz0iaHR0cDovL3d3dy53My5vcmcvMTk5OS94bGluayI+PHRpdGxlLz48ZGVzYy8+PGRlZnMvPjxnIGZpbGw9Im5vbmUiIGZpbGwtcnVsZT0iZXZlbm9kZCIgaWQ9IlBhZ2UtMSIgc3Ryb2tlPSJub25lIiBzdHJva2Utd2lkdGg9IjEiPjxnIGZpbGw9IiMwMDAwMDAiIGlkPSJDb3JlIiB0cmFuc2Zvcm09InRyYW5zbGF0ZSgtMjYwLjAwMDAwMCwgLTkwLjAwMDAwMCkiPjxnIGlkPSJjaGV2cm9uLXJpZ2h0IiB0cmFuc2Zvcm09InRyYW5zbGF0ZSgyNjAuNTAwMDAwLCA5MC4wMDAwMDApIj48cGF0aCBkPSJNMSwwIEwtMC40LDEuNCBMNC4yLDYgTC0wLjQsMTAuNiBMMSwxMiBMNyw2IEwxLDAgWiIgaWQ9IlNoYXBlIi8+PC9nPjwvZz48L2c+PC9zdmc+") no-repeat 100% 50%;
+    background-size: 8px;
+  }
+
+  .post-nav-next a:hover:after {
+    opacity: 1;
+  }
+</style>
+
+
+
+<div class="post-nav">
+
+  
+  <div class="post-nav-none post-nav-item">
+    <a href=""> </a>
+  </div>
+  
+
+  
+  <div class="post-nav-next post-nav-item">
+    
+    <a href="/blog/2021/mnn/"> 移动端AI算力加速</a>
+  </div>
+  
+
+</div>
+
+</article>
+    </div>
+
+    <footer class="site-footer">
+  <div class="container">
+    <ul class="social">
+  <li><a href="https://twitter.com/penghuailiang" target="_blank"><i class="icon icon-twitter"></i></a></li>
+  <li><a href="https://www.zhihu.com/people/huailiangpenguin" target="_blank"><i class="icon icon-zhihu"></i></a></li>
+  <li><a href="https://www.facebook.com/profile.php?id=100004290725320" target="_blank"><i class="icon icon-facebook"></i></a></li>
+  <li><a href="https://weibo.com/6212299692/profile?topnav=1&wvr=6" target="_blank"><i class="icon icon-sina"></i></a></li>
+  <li><a href="https://www.linkedin.com/in/penghuailiang/" target="_blank"><i class="icon icon-linkedin"></i></a></li>
+  <li><a href="https://github.com/huailiang" target="_blank"><i class="icon icon-github"></i></a></li>
+</ul>
+    <p class="txt-medium-gray">
+      <small>&copy;2021 All rights reserved. </small>
+    </p>
+  </div>
+</footer>
+    <a href="https://github.com/huailiang" target="_blank" class="github-corner"><svg width="80" height="80" viewBox="0 0 250 250" style="fill:#337ab7; color:#fff; position: absolute; top: 0; border: 0; right: 0;"><path d="M0,0 L115,115 L130,115 L142,142 L250,250 L250,0 Z"></path><path d="M128.3,109.0 C113.8,99.7 119.0,89.6 119.0,89.6 C122.0,82.7 120.5,78.6 120.5,78.6 C119.2,72.0 123.4,76.3 123.4,76.3 C127.3,80.9 125.5,87.3 125.5,87.3 C122.9,97.6 130.6,101.9 134.4,103.2" fill="currentColor" style="transform-origin: 130px 106px;" class="octo-arm"></path><path d="M115.0,115.0 C114.9,115.1 118.7,116.5 119.8,115.4 L133.7,101.6 C136.9,99.2 139.9,98.4 142.2,98.6 C133.8,88.0 127.5,74.4 143.8,58.0 C148.5,53.4 154.0,51.2 159.7,51.0 C160.3,49.4 163.2,43.6 171.4,40.1 C171.4,40.1 176.1,42.5 178.8,56.2 C183.1,58.6 187.2,61.8 190.9,65.4 C194.5,69.0 197.7,73.2 200.1,77.6 C213.8,80.2 216.3,84.9 216.3,84.9 C212.7,93.1 206.9,96.0 205.4,96.6 C205.1,102.4 203.0,107.8 198.3,112.5 C181.9,128.9 168.3,122.5 157.7,114.1 C157.9,116.9 156.7,120.9 152.7,124.9 L141.0,136.5 C139.8,137.7 141.6,141.9 141.8,141.8 Z" fill="currentColor" class="octo-body"></path></svg></a>
+
+
+    <script src="//code.jquery.com/jquery-1.11.3.min.js"></script>
+    <script>
+      $(document).ready(function () {
+        $('.sliding-panel-button,.sliding-panel-fade-screen,.sliding-panel-close').on('click touchstart', function (e) {
+          $('.sliding-panel-content,.sliding-panel-fade-screen').toggleClass('is-visible');
+          e.preventDefault();
+        });
+      });
+    </script>
+  </main>
+</body>
+
+</html>
