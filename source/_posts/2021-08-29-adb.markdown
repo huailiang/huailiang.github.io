@@ -1,0 +1,66 @@
+---
+layout:     post
+title:      "USB端机调试"
+date:       2021-08-29 02:00:00
+author:     "huailiang"
+tags:
+    - 工具
+---
+
+
+#### 一、概述
+
+
+
+由于目前开发的AR内容， 只能在手机上运行， 看不到代码的运行过程。 为了将运行过程中产生的中间数据传送到PC端，比如说预览流， 这里需要实现的一套信息传送机制， 能实现实时将数据从手机传递到PC。 这次实现基于Android端Java代码， PC端c#代码进行单向传递， 并最终在3D编辑器Unity实时显示的框架。
+
+#### 二. adb forward
+
+adb forward的功能是建立一个转发，adb forward tcp:11111 tcp:22222的意思是，将PC端的11111端口收到的数据，转发给到手机中22222端口。但是光执行这个命令还不能转发数据，还需要完成两个步骤才能传数据。这两个步骤是：
+
+（a）在手机端，建立一个端口为22222的server，并打开server到监听状态。
+（b）在PC端，建立一个socket client端，连接到端口为11111的server上。
+
+
+通过运行adb forward --list查看刚才的执行结果
+
+```sh
+adb forward --list
+```
+
+
+![](/img/post-android/adb1.jpg)
+
+
+可以通过adb forward --remove tcp:11111删除建立的转发
+
+```sh
+adb forward --remove tcp:11111
+```
+
+在PC端，adb forward创建了一个监听本机11111端口的server。通过adb 转发的数据，需要先发到11111端口。这个11111端口是约定好的，你也可以改成其他端口。PC端的应用通过socket连接到11111端口，以准备发送数据。但是连接到11111端口之前，还需要在手机端启动端口为22222的server。
+
+
+在PC端的应用开始连接之前，手机端要启动端口为22222的server（socket server）。手机中adb的daemon进程将连接到22222端口，这样PC端应用就可以连接PC端的11111端口了，连接上之后就可以从PC端的应用发送数据给手机端的应用，手机端的应用也可以发送数据给PC端的应用。
+
+![](/img/post-android/adb2.jpg)
+
+
+
+##### PC端的应用与手机端应用通信建立的过程：
+（1）执行adb forward tcp:11111 tcp:22222
+（2）启动手机端应用，建立端口为22222的server，并处于监听状态（LISTENING）
+（3）启动PC端应用，连接端口为11111的server（adb创建的）
+之后，就可以传输数据了。
+
+##### PC端的应用与手机端应用之间传输数据的过程：
+（1）PC端应用将数据发送给端口为11111的server（adb创建的）
+（2）adb将数据转发给手机端adbd进程（通过USB传输）
+（3）adbd进程将数据发送给端口为22222的server（手机端应用创建的）
+传递是双向的，第（1）和第（3）步是通过socket实现的，所以通过socket的读和写就完成了PC端应用和手机端应用的数据传递。
+
+
+
+[i1]: https://blog.csdn.net/u013553529/article/details/80036227
+[i2]: https://www.jianshu.com/p/fabaad5486bf
+[i3]: https://github.com/huailiang/adb-connect
