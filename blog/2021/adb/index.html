@@ -5,9 +5,9 @@
   <meta http-equiv="X-UA-Compatible" content="IE=edge">
   <meta name="viewport" content="width=device-width, initial-scale=1">
 
-  <title>Android下的特殊文件夹</title>
+  <title>USB端机调试</title>
   <meta name="description"
-    content="">
+    content="一、概述">
 
   <link rel="shortcut icon" href="/img/favicon.ico">
   <link rel="stylesheet" href="/css/main.css">
@@ -67,262 +67,85 @@ MathJax.Hub.Config({
 
   <div class="card">
     <header class="post-header">
-      <h1 class="post-title">Android下的特殊文件夹</h1>
-      <p class="post-meta">Jan 18, 2021 •
+      <h1 class="post-title">USB端机调试</h1>
+      <p class="post-meta">Aug 29, 2021 •
         huailiang</p>
     </header>
 
     <div class="post-content">
-      <blockquote>
+      <h3 id="一概述">一、概述</h3>
 
-</blockquote>
+<p>由于目前开发的AR内容， 只能在手机上运行， 看不到代码的运行过程。 为了将运行过程中产生的中间数据传送到PC端，比如说预览流， 这里需要实现的一套信息传送机制， 能实现实时将数据从手机传递到PC。 这次实现基于Android端Java代码， PC端c#代码进行单向传递， 并最终在3D编辑器Unity实时显示的框架。</p>
 
-<h3 id="文件架构">文件架构</h3>
+<h3 id="二-adb-forward">二. adb forward</h3>
 
-<p>Android目录下有很多固定名字的文件夹， 类似Unity中的Resources, Editor这些文件夹， 用来标记相关特殊的功能。具体如下列表：</p>
+<p>adb forward的功能是建立一个转发，adb forward tcp:11111 tcp:22222的意思是，将PC端的11111端口收到的数据，转发给到手机中22222端口。但是光执行这个命令还不能转发数据，还需要完成两个步骤才能传数据。这两个步骤是：</p>
 
-<ul>
-  <li>assets资产目录，这里面的文件会被打包到应用成的apk（安装包）里面，不会被本地化（不会被转成二进制文件）</li>
-  <li>bin 编译后的文件目录</li>
-  <li>gen 自动生成的文件目录 用于统一管理资源，通过id使用资源</li>
-  <li>project.properties 代表编译的版本，对应android.jar的版本eg： target= android-19</li>
-  <li>libs支持jar包，会被添加到android depend</li>
-  <li>res资源目录（会把某些文件存为二进制文件）
-    <ul>
-      <li>drawable存放应用的图片资源，android系统会根据你的手机分辨率加载不同的图片</li>
-      <li>layout布局文件（设置界面显示样式）</li>
-      <li>menu设置菜单文件</li>
-      <li>values包含一些字符串等等</li>
-    </ul>
-  </li>
-  <li>AndroidManifest.xml本应用的配置信息
-    <ul>
-      <li>package：唯一标示一个应用的包名</li>
-      <li>versionCode：版本代码</li>
-      <li>versionName：版本名</li>
-      <li>minSdkVersion：支持的最小版本</li>
-      <li>targetSdkVersion：目标版本（一般高版本手机支持低版本应用）</li>
-      <li>application：icon应用图标，label应用名，activity声明活动</li>
-    </ul>
-  </li>
-</ul>
+<p>（a）在手机端，建立一个端口为22222的server，并打开server到监听状态。<br />
+（b）在PC端，建立一个socket client端，连接到端口为11111的server上。</p>
 
-<h3 id="streamingassets">StreamingAssets</h3>
+<p>通过运行adb forward –list查看刚才的执行结果</p>
 
-<p>unity中的StreamingAssets目录通常用来放一些Bundle，或者诸如Fmod的Bank文件， 但此文件夹在Windows平台和IOS平台下可以通过IO接口直接访问, 这就意味着我们可以使用多线程或者线程池来高效率的读取资源。 但遗憾的是这接口不支持Android。 那具体Android如何存储StreamingAssets下的文件呢？</p>
-
-<p>一般的话， 我们可以通过Assetbundle或者WWW的接口来获取StreamingAssets下的资源， 但需要转换下路径， 不能使用物理路径， 而是相应的需要是映射的虚拟路径。官方推荐使用Application.streamingAssetsPath来获得该文件夹的实际位置，其可以规避平台差异。</p>
-<ul>
-  <li>对于ios平台，其等价于:Application.dataPath + “/Raw”;</li>
-  <li>对于android平台，其等价于:”jar:file://” + Application.dataPath + “!/assets/”;</li>
-</ul>
-
-<div class="language-csharp highlighter-rouge"><pre class="highlight"><code><span class="k">private</span> <span class="k">void</span> <span class="nf">SetupPath</span><span class="p">()</span>
-<span class="p">{</span>
-    <span class="k">switch</span> <span class="p">(</span><span class="n">Application</span><span class="p">.</span><span class="n">platform</span><span class="p">)</span>
-    <span class="p">{</span>
-        <span class="k">case</span> <span class="n">RuntimePlatform</span><span class="p">.</span><span class="n">Android</span><span class="p">:</span>
-            <span class="n">BundleRootDefault</span> <span class="p">=</span> <span class="kt">string</span><span class="p">.</span><span class="nf">Format</span><span class="p">(</span><span class="s">"{0}!assets/{1}/"</span><span class="p">,</span> <span class="n">Application</span><span class="p">.</span><span class="n">dataPath</span><span class="p">,</span> <span class="n">BundleFolder</span><span class="p">);</span>
-            <span class="k">break</span><span class="p">;</span>
-        <span class="k">case</span> <span class="n">RuntimePlatform</span><span class="p">.</span><span class="n">IPhonePlayer</span><span class="p">:</span>
-            <span class="n">BundleRootDefault</span> <span class="p">=</span> <span class="kt">string</span><span class="p">.</span><span class="nf">Format</span><span class="p">(</span><span class="s">"{0}/Raw/{1}/"</span><span class="p">,</span> <span class="n">Application</span><span class="p">.</span><span class="n">dataPath</span><span class="p">,</span> <span class="n">BundleFolder</span><span class="p">);</span>
-            <span class="k">break</span><span class="p">;</span>
-        <span class="k">default</span><span class="p">:</span>
-            <span class="n">BundleRootDefault</span> <span class="p">=</span> <span class="kt">string</span><span class="p">.</span><span class="nf">Format</span><span class="p">(</span><span class="s">"{0}/StreamingAssets/{1}/"</span><span class="p">,</span> <span class="n">Application</span><span class="p">.</span><span class="n">dataPath</span><span class="p">,</span> <span class="n">BundleFolder</span><span class="p">);</span>
-            <span class="k">break</span><span class="p">;</span>
-    <span class="p">}</span>
-<span class="p">}</span>
+<div class="language-sh highlighter-rouge"><pre class="highlight"><code>adb forward --list
 </code></pre>
 </div>
 
-<p>但底层Unity生成的Android包安装之后， 究竟是如何存储的， 这里通过实验的方法一探究竟：</p>
+<p><img src="/img/post-android/adb1.jpg" alt="" /></p>
 
-<p>第一步， 我们先在StreamingAssets目录下， 放几个文件， 如下图所示：</p>
+<p>可以通过adb forward –remove tcp:11111删除建立的转发</p>
 
-<p><img src="/img/post-android/jar1.jpg" alt="" /></p>
-
-<p>第二步，生成Gradle工程(工程放在跟Asset目录同级的Temp文件夹下)， 这里我们发现StreamingAssets目录下的文件其实对应assets文件夹， 并且我们发现gradle生成的apk的过程中，build文件夹下的目录：</p>
-
-<p><img src="/img/post-android/jar2.jpg" alt="" /></p>
-
-<p>第三步， 安装生成的apk， 这里需要一台root的手机或者模拟器， 这里选择网易的mumu模拟器， 直接在设置里勾一下重启就Root掉了， 真是方便。</p>
-
-<p><img src="/img/post-android/jar3.jpg" alt="" /></p>
-
-<p>StreamingAssets安装之后，默认解压到/data/app/包名 文件夹下， 我们通过abd shell命令进入手机（需要电脑配置好Android开发环境。</p>
-
-<p><img src="/img/post-android/jar4.jpg" alt="" /></p>
-
-<p>可以看到里面有个base.apk, 通过命令查看其占用磁盘大小， 基本可以定位这个就是我们放置StreamingAssets文件的</p>
-
-<div class="language-sh highlighter-rouge"><pre class="highlight"><code>du -h base.apk
+<div class="language-sh highlighter-rouge"><pre class="highlight"><code>adb forward --remove tcp:11111
 </code></pre>
 </div>
 
-<p>我们知道.apk本质就是zip压缩， 这里我们改其后缀， 然后使用unzip命令解压， 就可以看到一开始Unity放入StreamingAssets里的文件啦。</p>
+<p>在PC端，adb forward创建了一个监听本机11111端口的server。通过adb 转发的数据，需要先发到11111端口。这个11111端口是约定好的，你也可以改成其他端口。PC端的应用通过socket连接到11111端口，以准备发送数据。但是连接到11111端口之前，还需要在手机端启动端口为22222的server。</p>
 
-<p><img src="/img/post-android/jar5.jpg" alt="" /></p>
+<p>在PC端的应用开始连接之前，手机端要启动端口为22222的server（socket server）。手机中adb的daemon进程将连接到22222端口，这样PC端应用就可以连接PC端的11111端口了，连接上之后就可以从PC端的应用发送数据给手机端的应用，手机端的应用也可以发送数据给PC端的应用。</p>
 
-<p>访问assets文件夹下的资源， 可以通过java或者JNI的接口：</p>
+<p><img src="/img/post-android/adb2.jpg" alt="" /></p>
 
-<div class="language-java highlighter-rouge"><pre class="highlight"><code><span class="kd">public</span> <span class="n">String</span> <span class="nf">readFromAssets</span><span class="o">(</span><span class="n">String</span> <span class="n">name</span><span class="o">){</span>
-<span class="n">String</span> <span class="n">resultStr</span> <span class="o">=</span> <span class="s">""</span><span class="o">;</span>
-<span class="k">try</span> <span class="o">{</span>
-    <span class="n">InputStream</span> <span class="n">inStream</span> <span class="o">=</span> <span class="k">this</span><span class="o">.</span><span class="na">getResources</span><span class="o">().</span><span class="na">getAssets</span><span class="o">().</span><span class="na">open</span><span class="o">(</span><span class="n">name</span><span class="o">);</span>
-    <span class="n">resultStr</span> <span class="o">=</span> <span class="n">convertStream2String</span><span class="o">(</span><span class="n">inStream</span><span class="o">);</span>
+<h5 id="pc端的应用与手机端应用通信建立的过程">PC端的应用与手机端应用通信建立的过程：</h5>
+<p>（1）执行adb forward tcp:11111 tcp:22222<br />
+（2）启动手机端应用，建立端口为22222的server，并处于监听状态（LISTENING）<br />
+（3）启动PC端应用，连接端口为11111的server（adb创建的）<br />
+之后，就可以传输数据了。</p>
 
-    <span class="c1">//convertStreamToString(inStream);</span>
-<span class="o">}</span> <span class="k">catch</span> <span class="o">(</span><span class="n">IOException</span> <span class="n">e</span><span class="o">)</span> <span class="o">{</span>
-    <span class="c1">// TODO Auto-generated catch block</span>
-    <span class="n">e</span><span class="o">.</span><span class="na">printStackTrace</span><span class="o">();</span>
-<span class="o">}</span>
-<span class="k">return</span> <span class="n">resultStr</span><span class="o">;</span>
+<h5 id="pc端的应用与手机端应用之间传输数据的过程">PC端的应用与手机端应用之间传输数据的过程：</h5>
+<p>（1）PC端应用将数据发送给端口为11111的server（adb创建的）<br />
+（2）adb将数据转发给手机端adbd进程（通过USB传输）<br />
+（3）adbd进程将数据发送给端口为22222的server（手机端应用创建的）<br />
+传递是双向的，第（1）和第（3）步是通过socket实现的，所以通过socket的读和写就完成了PC端应用和手机端应用的数据传递。</p>
+
+<h3 id="udp-支持">UDP 支持</h3>
+
+<p>adb forward不能转发UDP端口信息，只能是TCP…. adb forward tcp:6100 tcp:7100. 这样就将宿主机的6100端口映射到模拟器的7100端口上(将tcp改成udp，会一直提示绑定失败),也正因为如此我发现了转发端口的基本命令redir。</p>
+
+<div class="highlighter-rouge"><pre class="highlight"><code>redir add &lt; udp/tcp &gt;:&lt; pc端口 &gt;:&lt; 模拟器端口 &gt;
 </code></pre>
 </div>
 
-<p>JNI的c++接口:</p>
+<p>如:</p>
+<div class="highlighter-rouge"><pre class="highlight"><code>redir add udp:1096:1097 
 
-<div class="language-c++ highlighter-rouge"><pre class="highlight"><code><span class="cp">#include "mylog.h"
-#include &lt;jni.h&gt;
-#include &lt;sys/types.h&gt;
-#include &lt;stdlib.h&gt;
-#include &lt;android/asset_manager_jni.h&gt;
-#include &lt;android/asset_manager.h&gt;
-</span>
-<span class="k">extern</span> <span class="s">"C"</span><span class="p">{</span>
-<span class="n">JNIEXPORT</span>  <span class="n">jstring</span> <span class="n">JNICALL</span> <span class="n">Java_org_yanzi_lib_MyLib_readFromAssets</span><span class="p">(</span><span class="n">JNIEnv</span><span class="o">*</span> <span class="n">env</span><span class="p">,</span><span class="n">jclass</span> <span class="n">clazz</span><span class="p">,</span> <span class="n">jobject</span> <span class="n">assetManager</span><span class="p">,</span><span class="n">jstring</span> <span class="n">name</span><span class="p">);</span>
-<span class="n">JNIEXPORT</span>  <span class="n">jstring</span> <span class="n">JNICALL</span> <span class="n">Java_org_yanzi_lib_MyLib_readFromAssets</span><span class="p">(</span><span class="n">JNIEnv</span><span class="o">*</span> <span class="n">env</span><span class="p">,</span> <span class="n">jclass</span> <span class="n">clazz</span><span class="p">,</span> <span class="n">jobject</span> <span class="n">assetManager</span><span class="p">,</span><span class="n">jstring</span> <span class="n">name</span><span class="p">){</span>
-	<span class="n">LOGI</span><span class="p">(</span><span class="s">"readFromAssets enter..."</span><span class="p">);</span> <span class="c1">//jclass this,
-</span>	<span class="n">jstring</span> <span class="n">resultStr</span><span class="p">;</span>
-	<span class="n">AAssetManager</span><span class="o">*</span> <span class="n">mgr</span> <span class="o">=</span> <span class="n">AAssetManager_fromJava</span><span class="p">(</span><span class="n">env</span><span class="p">,</span> <span class="n">assetManager</span><span class="p">);</span>
-	<span class="k">if</span><span class="p">(</span><span class="n">mgr</span><span class="o">==</span><span class="nb">NULL</span><span class="p">)</span>
-	<span class="p">{</span>
-		<span class="n">LOGI</span><span class="p">(</span><span class="s">" %s"</span><span class="p">,</span><span class="s">"AAssetManager==NULL"</span><span class="p">);</span>
-		<span class="k">return</span> <span class="mi">0</span><span class="p">;</span>
-	<span class="p">}</span>
- 
-	<span class="cm">/*获取文件名并打开*/</span>
-	<span class="n">jboolean</span> <span class="n">iscopy</span><span class="p">;</span>
-	<span class="k">const</span> <span class="kt">char</span> <span class="o">*</span><span class="n">mfile</span> <span class="o">=</span> <span class="n">env</span><span class="o">-&gt;</span><span class="n">GetStringUTFChars</span><span class="p">(</span><span class="n">name</span><span class="p">,</span> <span class="o">&amp;</span><span class="n">iscopy</span><span class="p">);</span> <span class="c1">//(*env)-&gt;GetStringUTFChars(name, &amp;iscopy); env,
-</span>	<span class="n">AAsset</span><span class="o">*</span> <span class="n">asset</span> <span class="o">=</span> <span class="n">AAssetManager_open</span><span class="p">(</span><span class="n">mgr</span><span class="p">,</span> <span class="n">mfile</span><span class="p">,</span><span class="n">AASSET_MODE_UNKNOWN</span><span class="p">);</span>
-	<span class="n">env</span><span class="o">-&gt;</span><span class="n">ReleaseStringUTFChars</span><span class="p">(</span><span class="n">name</span><span class="p">,</span> <span class="n">mfile</span><span class="p">);</span> <span class="c1">//env,
-</span>	<span class="k">if</span><span class="p">(</span><span class="n">asset</span><span class="o">==</span><span class="nb">NULL</span><span class="p">)</span>
-	<span class="p">{</span>
-		<span class="n">LOGI</span><span class="p">(</span><span class="s">" %s"</span><span class="p">,</span><span class="s">"asset==NULL"</span><span class="p">);</span>
-		<span class="k">return</span> <span class="mi">0</span><span class="p">;</span>
-	<span class="p">}</span>
-	<span class="cm">/*获取文件大小*/</span>
-	<span class="kt">off_t</span> <span class="n">bufferSize</span> <span class="o">=</span> <span class="n">AAsset_getLength</span><span class="p">(</span><span class="n">asset</span><span class="p">);</span>
-	<span class="n">LOGI</span><span class="p">(</span><span class="s">"file size : %d</span><span class="se">\n</span><span class="s">"</span><span class="p">,</span><span class="n">bufferSize</span><span class="p">);</span>
-	<span class="kt">char</span> <span class="o">*</span><span class="n">buffer</span><span class="o">=</span><span class="p">(</span><span class="kt">char</span> <span class="o">*</span><span class="p">)</span><span class="n">malloc</span><span class="p">(</span><span class="n">bufferSize</span><span class="o">+</span><span class="mi">1</span><span class="p">);</span>
-	<span class="n">buffer</span><span class="p">[</span><span class="n">bufferSize</span><span class="p">]</span><span class="o">=</span><span class="mi">0</span><span class="p">;</span>
-	<span class="kt">int</span> <span class="n">numBytesRead</span> <span class="o">=</span> <span class="n">AAsset_read</span><span class="p">(</span><span class="n">asset</span><span class="p">,</span> <span class="n">buffer</span><span class="p">,</span> <span class="n">bufferSize</span><span class="p">);</span>
-	<span class="n">LOGI</span><span class="p">(</span><span class="s">"readFromAssets: %s"</span><span class="p">,</span><span class="n">buffer</span><span class="p">);</span>
-	<span class="n">resultStr</span> <span class="o">=</span> <span class="n">env</span><span class="o">-&gt;</span><span class="n">NewStringUTF</span><span class="p">(</span><span class="n">buffer</span><span class="p">);</span>
-	<span class="n">free</span><span class="p">(</span><span class="n">buffer</span><span class="p">);</span>
-	<span class="cm">/*关闭文件*/</span>
-	<span class="n">AAsset_close</span><span class="p">(</span><span class="n">asset</span><span class="p">);</span>
-	<span class="n">LOGI</span><span class="p">(</span><span class="s">"readFromAssets exit..."</span><span class="p">);</span>
-	<span class="k">return</span> <span class="n">resultStr</span><span class="p">;</span>
-  <span class="p">}</span>
-<span class="p">}</span>
+redir tcp:1096:1097
 </code></pre>
 </div>
 
-<p>需要注意的是， 使用JNI的接口，Application.mk文件需要做如下设置：</p>
+<p>作用就是将PC的1096端口转发到android设备的1097端口，当然两个端口号可以相同，因为他们是在两个不同的设备上。但是有个缺点，就是不如adb forward灵活。</p>
 
-<p>APP_STL:=gnustl_static<br />
-APP_CPPFLAGS:=-frtti -fexceptions <br />
-APP_ABI:= armeabi-v7a</p>
+<p>例如：redir add udp:5000:6000  这样所有在开发机上5000端口的udp通信都会被重定向到模拟器的6000端口上。</p>
 
-<h2 id="playerprefs存储路径">PlayerPrefs存储路径</h2>
+<p>添加成功后，我们可以用redir list命令来列出已经添加的映射端口，redir del可以进行删除。</p>
 
-<p>我们知道PlayerPrefs在windows下， 储存在注册表中， Android平台Unity又是怎么处理的？</p>
-
-<p><img src="/img/post-android/jar6.jpg" alt="" /></p>
-
-<p>通过上图，可以发现PlayerPrefs的值是以xml的形式存储在 /data/data/youPackageName/shared_prefs的目录下。由于不是直接储存在压缩包内， 这个xml应该可以通过io接口访问（需要获取相应的权限， 并在Androidmenifest.xml中声明）， 但是由于非root手机一般都进入不到此文件夹， 我们平时也无法直接在资源管理器里访问或者编辑此xml。</p>
-
-<p>/data/data/youPackageName/即内部存储路径下。所有内部存储中保存的文件在用户卸载应用的时候会被删除。Java访问的接口：</p>
-
-<ul>
-  <li><strong>files</strong>
-    <ul>
-      <li>Context.getFilesDir()，该方法返回/data/data/youPackageName/files的File对象。</li>
-      <li>Context.openFileInput()与Context.openFileOutput()，只能读取和写入files下的文件，返回的是FileInputStream和FileOutputStream对象。</li>
-      <li>Context.fileList()，返回files下所有的文件名，返回的是String[]对象。</li>
-      <li>Context.deleteFile(String)，删除files下指定名称的文件。</li>
-    </ul>
-  </li>
-  <li><strong>cache</strong>
-    <ul>
-      <li>Context.getCacheDir()，该方法返回/data/data/youPackageName/cache的File对象。</li>
-    </ul>
-  </li>
-  <li><strong>customDir</strong>
-    <ul>
-      <li>getDir(String name, int mode)，返回/data/data/youPackageName/下的指定名称的文件夹File对象，如果该文件夹不存在则用指定名称创建一个新的文件夹。</li>
-    </ul>
-  </li>
-</ul>
-
-<h2 id="persistentdatapath-temporarycachepath">persistentDataPath, temporaryCachePath</h2>
-
-<p>这两个目录路径在storage/Android/data/youPackageName目录下， 一般情况下可以通过手机自带的文件浏览器可以直接 编辑/删除 这些文件， 权限给的比较高，卸载程序此两个文件夹也会一起删除。temporaryCachePath是一个临时目录， 在操作系统磁盘不足的情况下， 会自动被系统清除， 适合存一些临时的文件， 而persistentDataPath适合存一些持久化的文件， 比如说游戏的bundle。</p>
-
-<p>persistentDataPath: storage/Android/data/yourpackageName/files<br />
-temporaryCachePath: storage/Android/data/yourpackageName/cache</p>
-
-<p>使用原生的方式获取路径：</p>
-
-<div class="language-java highlighter-rouge"><pre class="highlight"><code><span class="n">MLog</span><span class="o">.</span><span class="na">d</span><span class="o">(</span><span class="n">TAG</span><span class="o">,</span> <span class="s">"output: "</span> <span class="o">+</span> <span class="n">gameContext</span><span class="o">.</span><span class="na">getExternalFilesDir</span><span class="o">(</span><span class="s">""</span><span class="o">).</span><span class="na">getAbsolutePath</span><span class="o">();</span>
-<span class="n">MLog</span><span class="o">.</span><span class="na">d</span><span class="o">(</span><span class="n">TAG</span><span class="o">,</span> <span class="s">"package: "</span> <span class="o">+</span> <span class="n">gameContext</span><span class="o">.</span><span class="na">getPackageResourcePath</span><span class="o">());</span>
-<span class="n">MLog</span><span class="o">.</span><span class="na">d</span><span class="o">(</span><span class="n">TAG</span><span class="o">,</span> <span class="s">"cache: "</span> <span class="o">+</span> <span class="n">gameContext</span><span class="o">.</span><span class="na">getCacheDir</span><span class="o">().</span><span class="na">getPath</span><span class="o">());</span>
-<span class="n">MLog</span><span class="o">.</span><span class="na">d</span><span class="o">(</span><span class="n">TAG</span><span class="o">,</span> <span class="s">"exCache: "</span> <span class="o">+</span> <span class="n">gameContext</span><span class="o">.</span><span class="na">getExternalCacheDir</span><span class="o">().</span><span class="na">getPath</span><span class="o">());</span>
-<span class="n">MLog</span><span class="o">.</span><span class="na">d</span><span class="o">(</span><span class="n">TAG</span><span class="o">,</span> <span class="s">"file: "</span> <span class="o">+</span> <span class="n">gameContext</span><span class="o">.</span><span class="na">getFilesDir</span><span class="o">().</span><span class="na">getPath</span><span class="o">());</span>
-<span class="n">MLog</span><span class="o">.</span><span class="na">d</span><span class="o">(</span><span class="n">TAG</span><span class="o">,</span> <span class="s">"code: "</span> <span class="o">+</span> <span class="n">gameContext</span><span class="o">.</span><span class="na">getPackageCodePath</span><span class="o">());</span>
+<div class="highlighter-rouge"><pre class="highlight"><code>redir list
 </code></pre>
 </div>
 
-<p>对应的输出是：</p>
+<h3 id="实践">实践</h3>
 
-<p><img src="/img/post-android/jar7.jpg" alt="" /></p>
+<p>基于adb forward tcp 建立的的端口转发机制， 作者实现了一个Demo, 利用c#的Socket的TCP，手机端进行监听， pc端直接进行连接。 代码已上传到<a href="https://blog.csdn.net/u013553529/article/details/80036227">github</a>, 具体的效果如下图：</p>
 
-<h2 id="内部存储外部存储的概念">内部存储，外部存储的概念</h2>
-
-<h4 id="内部存储">内部存储</h4>
-<p>概念：注意内部存储不是内存。内部存储位于系统中很特殊的一个位置，如果你想将文件存储于内部存储中，那么文件默认只能被你的应用访问到，且一个应用所创建的所有文件都在和应用包名相同的目录下。也就是说应用创建于内部存储的文件，与这个应用是关联起来的。当一个应用卸载之后，内部存储中的这些文件也被删除。从技术上来讲如果你在创建内部存储文件的时候将文件属性设置成可读，其他app能够访问自己应用的数据，前提是他知道你这个应用的包名，如果一个文件的属性是私有（private），那么即使知道包名其他应用也无法访问。 内部存储空间十分有限，因而显得可贵，另外，它也是系统本身和系统应用程序主要的数据存储所在地，一旦内部存储空间耗尽，手机也就无法使用了。所以对于内部存储空间，我们要尽量避免使用。Shared Preferences和SQLite数据库都是存储在内部存储空间上的。内部存储一般用Context来获取和操作。 <br />
-访问内部存储的API方法： <br />
-1、Environment.getDataDirectory() <br />
-2、getFilesDir().getAbsolutePath() <br />
-3、getCacheDir().getAbsolutePath() <br />
-4、getDir(“myFile”, MODE_PRIVATE).getAbsolutePath()</p>
-
-<h4 id="外部存储">外部存储</h4>
-<p>概念：最容易混淆的是外部存储，因为老的Android系统的跟新的Android系统是有差别的，很多人去网上查找资料，看了一下以前的资料，又看了一下现在的资料，但是发现它们说法不一样然后就困惑了。首先说一个大家普遍的概念“如果在pc机上是区分外部存储和内部存储的话，那么电脑自带的硬盘算是内部存储，U盘或者移动硬盘就是外部存储了。”因此很多人带着这样的理解去看待安卓手机，把内置存储（机身存储）当做内部存储，而把扩展的SD卡当做是外部存储。这么认为确实没错，因为在4.4（API19）以前的手机上确实是这样的，手机自身带的存储卡就是内部存储，而扩展的SD卡就是外部存储。但是从4.4的系统开始，很多的中高端机器都将自己的机身存储扩展到了8G以上，比如有的人的手机是16G的，有的人的手机是32G的，但是这个16G，32G是内部存储吗，不是的！！！，它们依然是外部存储，也就是说4.4系统及以上的手机将机身存储存储（手机自身带的存储叫做机身存储）在概念上分成了”内部存储internal” 和”外部存储external” 两部分。既然16G，32G是外部存储，那有人又有疑惑了，那4.4系统及以上的手机要是插了SD卡呢，SD卡又是什么呢，如果SD卡也是外部存储的话，那怎么区分机身存储的外部存储跟SD卡的外部存储呢？对，SD卡也是外部存储，那怎么区分呢，在4.4以后的系统中，API提供了这样一个方法来遍历手机的外部存储路径：</p>
-
-<div class="language-java highlighter-rouge"><pre class="highlight"><code><span class="n">File</span><span class="o">[]</span> <span class="n">files</span><span class="o">;</span>
-<span class="k">if</span> <span class="o">(</span><span class="n">Build</span><span class="o">.</span><span class="na">VERSION</span><span class="o">.</span><span class="na">SDK_INT</span> <span class="o">&gt;=</span> <span class="n">Build</span><span class="o">.</span><span class="na">VERSION_CODES</span><span class="o">.</span><span class="na">KITKAT</span><span class="o">)</span> <span class="o">{</span>
-    <span class="n">files</span> <span class="o">=</span> <span class="n">getExternalFilesDirs</span><span class="o">(</span><span class="n">Environment</span><span class="o">.</span><span class="na">MEDIA_MOUNTED</span><span class="o">);</span>
-    <span class="k">for</span><span class="o">(</span><span class="n">File</span> <span class="nl">file:</span><span class="n">files</span><span class="o">){</span>
-        <span class="n">Log</span><span class="o">.</span><span class="na">e</span><span class="o">(</span><span class="s">"main"</span><span class="o">,</span><span class="n">file</span><span class="o">);</span>
-    <span class="o">}</span>
-<span class="o">}</span>
-</code></pre>
-</div>
-
-<p>如果你的手机插了SD卡的话，那么它打印的路径就有两条了，例如我的华为荣耀7插了SD卡，它的结果如下： <br />
-/storage/emulated/0/Android/data/packname/files/mounted <br />
-/storage/B3E4-1711/Android/data/packname/files/mounted <br />
-其中/storage/emulated/0目录就是机身存储的外部存储路径, 而/storage/B3E4-1711/就是SD卡的路径</p>
-
-<h2 id="参考">参考</h2>
-
-<ul>
-  <li><a href="https://blog.csdn.net/zy394383693/article/details/40627467">android工程目录结构</a></li>
-  <li><a href="https://www.cnblogs.com/daishuguang/p/3854472.html">Android获取文件夹路径 /data/data/</a></li>
-  <li><a href="https://blog.csdn.net/u010937230/article/details/73303034/">Android文件存储—内部存储，外部存储</a></li>
-</ul>
+<p><img src="/img/post-android/adb3.jpg" alt="" /></p>
 
 
     </div>
@@ -411,16 +234,15 @@ temporaryCachePath: storage/Android/data/yourpackageName/cache</p>
 <div class="post-nav">
 
   
-  <div class="post-nav-prev post-nav-item">
-    
-    <a href="/blog/2021/cpp/"> C++ 中struct/class的内存布局</a>
+  <div class="post-nav-none post-nav-item">
+    <a href=""> </a>
   </div>
   
 
   
   <div class="post-nav-next post-nav-item">
     
-    <a href="/blog/2020/tdbr/"> TDBR & Xcode Profile</a>
+    <a href="/blog/2021/symbol/"> so符号表工具</a>
   </div>
   
 

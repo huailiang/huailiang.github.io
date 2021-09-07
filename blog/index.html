@@ -68,6 +68,26 @@ MathJax.Hub.Config({
     <article class="post">
   <header class="post-header">
     <h1 class="post-title2">
+      <a class="post-link" href="/blog/2021/adb/">USB端机调试</a>
+    </h1>
+    <div class="post-meta">
+      <time>Aug 29, 2021</time>
+    </div>
+  </header>
+
+  <p><a href="/blog/2021/adb/" title="Permalink to: USB端机调试"
+      class="read-more">一、概述
+
+由于目前开发的AR内容， 只能在手机上运行， 看不到代码的运行过程。 为了将运行过程中产生的中间数据传送到PC端，比如说预览流， 这里需要实现的一套信息传送机制， 能实现实时将数据从手机传递到PC。 这次实现基于Android端Java代码， PC端c#代码进行单向传递， 并最终在3D编辑器Unity实时显示的框架。
+
+二. adb forward
+
+adb forward的功能...</a></p>
+</article>
+  
+    <article class="post">
+  <header class="post-header">
+    <h1 class="post-title2">
       <a class="post-link" href="/blog/2021/symbol/">so符号表工具</a>
     </h1>
     <div class="post-meta">
@@ -223,32 +243,6 @@ struct 的内存对齐和填充概念学过C 的都应该知道一点。其实�
 三个原则：
 
 struct 的起始地址需要能...</a></p>
-</article>
-  
-    <article class="post">
-  <header class="post-header">
-    <h1 class="post-title2">
-      <a class="post-link" href="/blog/2021/adb/">Android下的特殊文件夹</a>
-    </h1>
-    <div class="post-meta">
-      <time>Jan 18, 2021</time>
-    </div>
-  </header>
-
-  <p><a href="/blog/2021/adb/" title="Permalink to: Android下的特殊文件夹"
-      class="read-more">
-
-
-
-文件架构
-
-Android目录下有很多固定名字的文件夹， 类似Unity中的Resources, Editor这些文件夹， 用来标记相关特殊的功能。具体如下列表：
-
-
-  assets资产目录，这里面的文件会被打包到应用成的apk（安装包）里面，不会被本地化（不会被转成二进制文件）
-  bin 编译后的文件目录
-  gen 自动生成的文件目录 用于统一管理资源，通过id使用资源
-  ...</a></p>
 </article>
   
 
