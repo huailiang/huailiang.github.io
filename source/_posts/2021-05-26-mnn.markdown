@@ -13,9 +13,10 @@ tags:
 
 目前AI的主流实现都是基于反向传播算法的神经网络，前向传播进行推理， 反向传播计算梯度来更新参数。 主机上运行的主流框架多是谷歌公司的Tensorflow (Lite), Facebook公司开发的Pytorch 以及 Caffe, 然后他们在设计这些框架的时候， 往往更多的考虑的是算法的覆盖， 而不是性能。 我们常常看到这些复杂的网络结构大多跑在Nvidia的高端显卡上， 训练时间往往短则数日， 长则数周以致多大一两个月， 比如说Nvidia实现的StyleGAN。 由于这些特性， 特别不适应手机端的芯片。
 
+
 ![](/img/post-ml/mnn.jpeg)
 
-随着国内厂商不断的优化， 我们看到了华为推出的麒麟芯片（麒麟980之后带独立的NPU）使用[HiAI][i2]框架来进行AI加速运算， [阿里的MNN][i1]则依靠大量手写汇编实现核心运算，充分发挥 ARM CPU 的算力， 整合不同后端（backend: OpenCL、Vulkan、OpenGL, Metal)进行深度优化来适配不同的设备。这些国内的厂商都提供了各自的工具（比如说华为HiAI的转换工具OMG, 阿里的mmnconvert）来转换主机上运行的Tensorflow、Caffee模型为自己量化的模型。
+随着国内厂商不断的优化， 我们看到了华为推出的麒麟芯片（麒麟980之后带独立的NPU）使用[HiAI][i2]框架来进行AI加速运算， [阿里的MNN][i1]则依靠大量手写汇编实现核心运算，充分发挥 ARM CPU 的算力， 整合不同后端（backend: OpenCL、Vulkan、OpenGL, Metal)进行深度优化来适配不同的设备。这些国内的厂商都提供了各自的工具（比如说华为HiAI的转换工具OMG, 阿里的mmnconvert）来转换主机上运行的Tensorflow、Caffee模型为自己量化的模型。 在华为内部， 除了开源的HiAI, 也有类似的MNN的框架，同样实现了全平台的支持。 由于暂未开源，这里且不表。
 
 ![](/img/post-ml/hiai.jpeg)
 

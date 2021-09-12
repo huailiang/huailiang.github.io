@@ -55,7 +55,7 @@ adb forward --remove tcp:11111
 ##### PC端的应用与手机端应用之间传输数据的过程：
 （1）PC端应用将数据发送给端口为11111的server（adb创建的）
 （2）adb将数据转发给手机端adbd进程（通过USB传输）
-（3）adbd进程将数据发送给端口为22222的server（手机端应用创建的）
+（3）adb进程将数据发送给端口为22222的server（手机端应用创建的）
 传递是双向的，第（1）和第（3）步是通过socket实现的，所以通过socket的读和写就完成了PC端应用和手机端应用的数据传递。
 
 
@@ -92,10 +92,14 @@ redir list
 ![](/img/post-android/adb3.jpg)
 
 
-除此之后， 我们还可以把预览流、点云信息投射到Editor中。
+除此之后， 我们还可以把基于华为 [AREngine][i4]实现的预览流投射到Editor中。
 
 
 ![](/img/post-android/adb4.jpg)
+
+
+当然要想实现上面的效果， 需要对 [AREnegine][i4]的代码做少许的修改， 比如说手机产生的YUV数据传送到Editor中，将对应的数据转换成生成单通道的 Y-Texture 和 UV-Texture。 然后在Shader中分别采样yuv数据，最后在每个像素中转换成RGB输出到FrameBuffer。
+
 
 
 除了预览流， 使用类似的方法， 还可以将SLAM驱动的相机姿态、点云信息传送到Editor， 可以看到更多的调试信息。
@@ -103,6 +107,11 @@ redir list
 
 ![](/img/post-android/adb5.jpg)
 
+
+
+基于此原理， 那也可以同样做到把 平面信息、场景Mesh、 人脸识别、 骨骼信息、光照估计等相关的算法同步显示在Editor中。 如果你的框架写的好，除了AR的中间变量进行可视化输出，也可以把其他的事件产生的数据都可以在Editor表出来， 这样手机运行的结果和Editor运行的结果是完全一致的。 这里主要是展示原理， 具体的实现就不公开了。 
+
 [i1]: https://blog.csdn.net/u013553529/article/details/80036227
 [i2]: https://www.jianshu.com/p/fabaad5486bf
 [i3]: https://github.com/huailiang/adb-connect
+[i4]: https://developer.huawei.com/consumer/cn/hms/huawei-arengine/
