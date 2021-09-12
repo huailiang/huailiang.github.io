@@ -83,7 +83,7 @@ MathJax.Hub.Config({
 
 <p><img src="/img/post-ml/mnn.jpeg" alt="" /></p>
 
-<p>随着国内厂商不断的优化， 我们看到了华为推出的麒麟芯片（麒麟980之后带独立的NPU）使用<a href="https://developer.huawei.com/consumer/cn/hiai#Foundation">HiAI</a>框架来进行AI加速运算， <a href="https://github.com/alibaba/MNN">阿里的MNN</a>则依靠大量手写汇编实现核心运算，充分发挥 ARM CPU 的算力， 整合不同后端（backend: OpenCL、Vulkan、OpenGL, Metal)进行深度优化来适配不同的设备。这些国内的厂商都提供了各自的工具（比如说华为HiAI的转换工具OMG, 阿里的mmnconvert）来转换主机上运行的Tensorflow、Caffee模型为自己量化的模型。</p>
+<p>随着国内厂商不断的优化， 我们看到了华为推出的麒麟芯片（麒麟980之后带独立的NPU）使用<a href="https://developer.huawei.com/consumer/cn/hiai#Foundation">HiAI</a>框架来进行AI加速运算， <a href="https://github.com/alibaba/MNN">阿里的MNN</a>则依靠大量手写汇编实现核心运算，充分发挥 ARM CPU 的算力， 整合不同后端（backend: OpenCL、Vulkan、OpenGL, Metal)进行深度优化来适配不同的设备。这些国内的厂商都提供了各自的工具（比如说华为HiAI的转换工具OMG, 阿里的mmnconvert）来转换主机上运行的Tensorflow、Caffee模型为自己量化的模型。 在华为内部， 除了开源的HiAI, 也有类似的MNN的框架，同样实现了全平台的支持。 由于暂未开源，这里且不表。</p>
 
 <p><img src="/img/post-ml/hiai.jpeg" alt="" /></p>
 
