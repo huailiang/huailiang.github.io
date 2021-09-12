@@ -92,6 +92,17 @@ redir list
 ![](/img/post-android/adb3.jpg)
 
 
+除此之后， 我们还可以把预览流、点云信息投射到Editor中。
+
+
+![](/img/post-android/adb4.jpg)
+
+
+除了预览流， 使用类似的方法， 还可以将SLAM驱动的相机姿态、点云信息传送到Editor， 可以看到更多的调试信息。
+
+
+![](/img/post-android/adb5.jpg)
+
 [i1]: https://blog.csdn.net/u013553529/article/details/80036227
 [i2]: https://www.jianshu.com/p/fabaad5486bf
 [i3]: https://github.com/huailiang/adb-connect
