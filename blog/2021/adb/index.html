@@ -151,7 +151,7 @@ redir tcp:1096:1097
 
 <div class="language-csharp highlighter-rouge"><pre class="highlight"><code><span class="n">sock</span> <span class="p">=</span> <span class="k">new</span> <span class="nf">Socket</span><span class="p">(</span><span class="n">AddressFamily</span><span class="p">.</span><span class="n">InterNetwork</span><span class="p">,</span> <span class="n">SocketType</span><span class="p">.</span><span class="n">Stream</span><span class="p">,</span> <span class="n">ProtocolType</span><span class="p">.</span><span class="n">Tcp</span><span class="p">);</span>
 <span class="n">sock</span><span class="p">.</span><span class="n">NoDelay</span> <span class="p">=</span> <span class="k">true</span><span class="p">;</span>
-<span class="n">callback</span> <span class="p">=</span> <span class="n">notify</span><span class="p">;</span>
+
 <span class="kt">var</span> <span class="n">ipaddress</span> <span class="p">=</span> <span class="n">IPAddress</span><span class="p">.</span><span class="nf">Parse</span><span class="p">(</span><span class="n">ip</span><span class="p">);</span>
 <span class="kt">var</span> <span class="n">endpoint</span> <span class="p">=</span> <span class="k">new</span> <span class="nf">IPEndPoint</span><span class="p">(</span><span class="n">ipaddress</span><span class="p">,</span> <span class="n">port</span><span class="p">);</span>
 <span class="n">sock</span><span class="p">.</span><span class="nf">Connect</span><span class="p">(</span><span class="n">endpoint</span><span class="p">);</span>
@@ -162,12 +162,12 @@ redir tcp:1096:1097
 </code></pre>
 </div>
 
-<p>手机侧的socket负责监听来自pc侧的连接请求， 相当与运行一个Server:</p>
+<p>手机侧的socket负责监听来自pc侧的连接请求， 相当与运行一个Server。 这里实现用到了两个线程，一个负责监听新的连接， 一个负责接收消息。  由于我们这里只是用来电脑和Android侧进行调试来用， 所以socket的监听队列长度设置为1.</p>
 
-<div class="language-csharp highlighter-rouge"><pre class="highlight"><code><span class="k">public</span> <span class="k">void</span>  <span class="nf">BuildServer</span><span class="p">(</span><span class="kt">string</span> <span class="n">ip</span><span class="p">,</span> <span class="kt">int</span> <span class="n">port</span><span class="p">,</span> <span class="n">SceneState</span> <span class="n">st</span><span class="p">,</span> <span class="n">Action</span><span class="p">&lt;</span><span class="kt">string</span><span class="p">,</span> <span class="n">TcpState</span><span class="p">&gt;</span> <span class="n">notify</span><span class="p">)</span> <span class="p">:</span> 
+<div class="language-csharp highlighter-rouge"><pre class="highlight"><code><span class="k">public</span> <span class="k">void</span>  <span class="nf">BuildServer</span><span class="p">(</span><span class="kt">string</span> <span class="n">ip</span><span class="p">,</span> <span class="kt">int</span> <span class="n">port</span><span class="p">)</span> 
 <span class="p">{</span>
-    <span class="n">socketWatch</span> <span class="p">=</span> <span class="k">new</span> <span class="nf">Socket</span><span class="p">(</span><span class="n">AddressFamily</span><span class="p">.</span><span class="n">InterNetwork</span><span class="p">,</span> <span class="n">SocketType</span><span class="p">.</span><span class="n">Stream</span><span class="p">,</span> <span class="n">ProtocolType</span><span class="p">.</span><span class="n">Tcp</span><span class="p">);</span>
-    <span class="n">callback</span> <span class="p">=</span> <span class="n">notify</span><span class="p">;</span>
+    <span class="n">socketWatch</span> <span class="p">=</span> <span class="k">new</span> <span class="nf">Socket</span><span class="p">(</span><span class="n">AddressFamily</span><span class="p">.</span><span class="n">InterNetwork</span><span class="p">,</span> <span class="n">SocketType</span><span class="p">.</span><span class="n">Stream</span><span class="p">,</span> 
+        <span class="n">ProtocolType</span><span class="p">.</span><span class="n">Tcp</span><span class="p">);</span>
     <span class="kt">var</span> <span class="n">ipaddress</span> <span class="p">=</span> <span class="n">IPAddress</span><span class="p">.</span><span class="nf">Parse</span><span class="p">(</span><span class="n">ip</span><span class="p">);</span>
     <span class="kt">var</span> <span class="n">endpoint</span> <span class="p">=</span> <span class="k">new</span> <span class="nf">IPEndPoint</span><span class="p">(</span><span class="n">ipaddress</span><span class="p">,</span> <span class="n">port</span><span class="p">);</span>
     <span class="n">socketWatch</span><span class="p">.</span><span class="nf">Bind</span><span class="p">(</span><span class="n">endpoint</span><span class="p">);</span>
