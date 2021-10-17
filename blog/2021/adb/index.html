@@ -143,9 +143,63 @@ redir tcp:1096:1097
 
 <h3 id="实践">实践</h3>
 
-<p>基于adb forward tcp 建立的的端口转发机制， 作者实现了一个Demo, 利用c#的Socket的TCP，手机端进行监听， pc端直接进行连接。 代码已上传到<a href="https://blog.csdn.net/u013553529/article/details/80036227">github</a>, 具体的效果如下图：</p>
+<p>基于adb forward tcp 建立的的端口转发机制， 作者实现了一个Demo, 利用c#的Socket的TCP，手机端进行监听， pc端直接进行连接。 代码已上传到<a href="https://blog.csdn.net/u013553529/article/details/80036227">github</a>, 具体的实现就是在多线程里开启一个socket/TCP, 分别在手机上和pc上运行， 端口配置adb forward 转发的端口就。效果如下图：</p>
 
 <p><img src="/img/post-android/adb3.jpg" alt="" /></p>
+
+<p>如下面是pc侧运行代码：</p>
+
+<div class="language-csharp highlighter-rouge"><pre class="highlight"><code><span class="n">sock</span> <span class="p">=</span> <span class="k">new</span> <span class="nf">Socket</span><span class="p">(</span><span class="n">AddressFamily</span><span class="p">.</span><span class="n">InterNetwork</span><span class="p">,</span> <span class="n">SocketType</span><span class="p">.</span><span class="n">Stream</span><span class="p">,</span> <span class="n">ProtocolType</span><span class="p">.</span><span class="n">Tcp</span><span class="p">);</span>
+<span class="n">sock</span><span class="p">.</span><span class="n">NoDelay</span> <span class="p">=</span> <span class="k">true</span><span class="p">;</span>
+<span class="n">callback</span> <span class="p">=</span> <span class="n">notify</span><span class="p">;</span>
+<span class="kt">var</span> <span class="n">ipaddress</span> <span class="p">=</span> <span class="n">IPAddress</span><span class="p">.</span><span class="nf">Parse</span><span class="p">(</span><span class="n">ip</span><span class="p">);</span>
+<span class="kt">var</span> <span class="n">endpoint</span> <span class="p">=</span> <span class="k">new</span> <span class="nf">IPEndPoint</span><span class="p">(</span><span class="n">ipaddress</span><span class="p">,</span> <span class="n">port</span><span class="p">);</span>
+<span class="n">sock</span><span class="p">.</span><span class="nf">Connect</span><span class="p">(</span><span class="n">endpoint</span><span class="p">);</span>
+<span class="nf">callback</span><span class="p">(</span><span class="s">" connect server success"</span><span class="p">,</span> <span class="n">TcpState</span><span class="p">.</span><span class="n">Connect</span><span class="p">);</span>
+<span class="n">thread</span> <span class="p">=</span> <span class="k">new</span> <span class="nf">Thread</span><span class="p">(</span><span class="n">Receive</span><span class="p">);</span>
+<span class="n">thread</span><span class="p">.</span><span class="n">IsBackground</span> <span class="p">=</span> <span class="k">true</span><span class="p">;</span>
+<span class="n">thread</span><span class="p">.</span><span class="nf">Start</span><span class="p">();</span>
+</code></pre>
+</div>
+
+<p>手机侧的socket负责监听来自pc侧的连接请求， 相当与运行一个Server:</p>
+
+<div class="language-csharp highlighter-rouge"><pre class="highlight"><code><span class="k">public</span> <span class="k">void</span>  <span class="nf">BuildServer</span><span class="p">(</span><span class="kt">string</span> <span class="n">ip</span><span class="p">,</span> <span class="kt">int</span> <span class="n">port</span><span class="p">,</span> <span class="n">SceneState</span> <span class="n">st</span><span class="p">,</span> <span class="n">Action</span><span class="p">&lt;</span><span class="kt">string</span><span class="p">,</span> <span class="n">TcpState</span><span class="p">&gt;</span> <span class="n">notify</span><span class="p">)</span> <span class="p">:</span> 
+<span class="p">{</span>
+    <span class="n">socketWatch</span> <span class="p">=</span> <span class="k">new</span> <span class="nf">Socket</span><span class="p">(</span><span class="n">AddressFamily</span><span class="p">.</span><span class="n">InterNetwork</span><span class="p">,</span> <span class="n">SocketType</span><span class="p">.</span><span class="n">Stream</span><span class="p">,</span> <span class="n">ProtocolType</span><span class="p">.</span><span class="n">Tcp</span><span class="p">);</span>
+    <span class="n">callback</span> <span class="p">=</span> <span class="n">notify</span><span class="p">;</span>
+    <span class="kt">var</span> <span class="n">ipaddress</span> <span class="p">=</span> <span class="n">IPAddress</span><span class="p">.</span><span class="nf">Parse</span><span class="p">(</span><span class="n">ip</span><span class="p">);</span>
+    <span class="kt">var</span> <span class="n">endpoint</span> <span class="p">=</span> <span class="k">new</span> <span class="nf">IPEndPoint</span><span class="p">(</span><span class="n">ipaddress</span><span class="p">,</span> <span class="n">port</span><span class="p">);</span>
+    <span class="n">socketWatch</span><span class="p">.</span><span class="nf">Bind</span><span class="p">(</span><span class="n">endpoint</span><span class="p">);</span>
+    <span class="c1">//将套接字的监听队列长度限制为1
+</span>    <span class="n">socketWatch</span><span class="p">.</span><span class="nf">Listen</span><span class="p">(</span><span class="m">1</span><span class="p">);</span>
+    <span class="nf">callback</span><span class="p">(</span><span class="s">" begin listening"</span><span class="p">,</span> <span class="n">TcpState</span><span class="p">.</span><span class="n">Connect</span><span class="p">);</span>
+    <span class="n">thread</span> <span class="p">=</span> <span class="k">new</span> <span class="nf">Thread</span><span class="p">(</span><span class="n">WatchConnecting</span><span class="p">);</span>
+    <span class="n">thread</span><span class="p">.</span><span class="n">IsBackground</span> <span class="p">=</span> <span class="k">true</span><span class="p">;</span>
+    <span class="n">thread</span><span class="p">.</span><span class="nf">Start</span><span class="p">();</span>
+<span class="p">}</span>
+
+
+<span class="k">private</span> <span class="k">void</span> <span class="nf">WatchConnecting</span><span class="p">()</span>
+<span class="p">{</span>
+    <span class="k">while</span> <span class="p">(</span><span class="k">true</span><span class="p">)</span>
+        <span class="k">try</span>
+        <span class="p">{</span>
+            <span class="n">sock</span> <span class="p">=</span> <span class="n">socketWatch</span><span class="p">.</span><span class="nf">Accept</span><span class="p">();</span>
+            <span class="nf">callback</span><span class="p">(</span><span class="s">" connect:"</span> <span class="p">+</span> <span class="n">sock</span><span class="p">.</span><span class="n">RemoteEndPoint</span><span class="p">,</span> <span class="n">TcpState</span><span class="p">.</span><span class="n">Connect</span><span class="p">);</span>
+            <span class="n">state</span> <span class="p">=</span> <span class="n">TcpState</span><span class="p">.</span><span class="n">Connect</span><span class="p">;</span>
+            <span class="n">rcvThread</span> <span class="p">=</span> <span class="k">new</span> <span class="nf">Thread</span><span class="p">(</span><span class="n">Receive</span><span class="p">);</span>
+            <span class="n">rcvThread</span><span class="p">.</span><span class="n">IsBackground</span> <span class="p">=</span> <span class="k">true</span><span class="p">;</span>
+            <span class="n">rcvThread</span><span class="p">.</span><span class="nf">Start</span><span class="p">(</span><span class="n">sock</span><span class="p">);</span>
+            <span class="n">threadRun</span> <span class="p">=</span> <span class="k">true</span><span class="p">;</span>
+        <span class="p">}</span>
+        <span class="k">catch</span> <span class="p">(</span><span class="n">Exception</span> <span class="n">ex</span><span class="p">)</span>
+        <span class="p">{</span>
+            <span class="n">Debug</span><span class="p">.</span><span class="nf">LogError</span><span class="p">(</span><span class="s">"connect error："</span> <span class="p">+</span> <span class="n">ex</span><span class="p">);</span>
+        <span class="p">}</span>
+<span class="p">}</span>
+</code></pre>
+</div>
 
 <p>除此之后， 我们还可以把基于华为 <a href="https://developer.huawei.com/consumer/cn/hms/huawei-arengine/">AREngine</a>实现的预览流投射到Editor中。</p>
 
@@ -165,54 +219,57 @@ redir tcp:1096:1097
 
 <p>从Y通道图片中可以看到图片是翻转的， 这里在shader中需要对 y—texture 采样的时候， 需要做这样翻转：</p>
 
-<pre><code class="language-hlsl">v2f vert(appdata v)
-{
-    v2f o;
-    o.vertex = UnityObjectToClipPos(v.vertex);
-    o.uv = TRANSFORM_TEX(v.uv, _MainTex).yx;
-    return o;
-}
+<div class="language-glsl highlighter-rouge"><pre class="highlight"><code><span class="n">v2f</span> <span class="nf">vert</span><span class="p">(</span><span class="n">appdata</span> <span class="n">v</span><span class="p">)</span>
+<span class="p">{</span>
+    <span class="n">v2f</span> <span class="n">o</span><span class="p">;</span>
+    <span class="n">o</span><span class="p">.</span><span class="n">vertex</span> <span class="o">=</span> <span class="n">UnityObjectToClipPos</span><span class="p">(</span><span class="n">v</span><span class="p">.</span><span class="n">vertex</span><span class="p">);</span>
+    <span class="n">o</span><span class="p">.</span><span class="n">uv</span> <span class="o">=</span> <span class="n">TRANSFORM_TEX</span><span class="p">(</span><span class="n">v</span><span class="p">.</span><span class="n">uv</span><span class="p">,</span> <span class="n">_MainTex</span><span class="p">).</span><span class="n">yx</span><span class="p">;</span>
+    <span class="k">return</span> <span class="n">o</span><span class="p">;</span>
+<span class="p">}</span>
 
-fixed4 frag(v2f i) : SV_Target
-{
-    float2 uv2 = float2(1, 1) - i.uv;
-    fixed4 ycol = tex2D(_YTex, uv2);
-    fixed4 uvcol = tex2D(_UVTex, uv2);
-    //...
-}
+<span class="n">fixed4</span> <span class="n">frag</span><span class="p">(</span><span class="n">v2f</span> <span class="n">i</span><span class="p">)</span> <span class="o">:</span> <span class="n">SV_Target</span>
+<span class="p">{</span>
+    <span class="n">float2</span> <span class="n">uv2</span> <span class="o">=</span> <span class="n">float2</span><span class="p">(</span><span class="mi">1</span><span class="p">,</span> <span class="mi">1</span><span class="p">)</span> <span class="o">-</span> <span class="n">i</span><span class="p">.</span><span class="n">uv</span><span class="p">;</span>
+    <span class="n">fixed4</span> <span class="n">ycol</span> <span class="o">=</span> <span class="n">tex2D</span><span class="p">(</span><span class="n">_YTex</span><span class="p">,</span> <span class="n">uv2</span><span class="p">);</span>
+    <span class="n">fixed4</span> <span class="n">uvcol</span> <span class="o">=</span> <span class="n">tex2D</span><span class="p">(</span><span class="n">_UVTex</span><span class="p">,</span> <span class="n">uv2</span><span class="p">);</span>
+    <span class="c1">//...
+</span><span class="p">}</span>
 </code></pre>
+</div>
 
 <p>上面是后置镜头的yuv图像，如果是前置camera传递的图像 又发生了变化， uv需要做如下翻转：</p>
 
-<pre><code class="language-hlsl">fixed4 frag(v2f i) : SV_Target
-{
-    float2 uv2 = float2(i.uv.x, 1 - i.uv.y);
-    fixed4 ycol = tex2D(_YTex, uv2);
-    fixed4 uvcol = tex2D(_UVTex, uv2);
-    //...
-}
+<div class="language-glsl highlighter-rouge"><pre class="highlight"><code><span class="n">fixed4</span> <span class="n">frag</span><span class="p">(</span><span class="n">v2f</span> <span class="n">i</span><span class="p">)</span> <span class="o">:</span> <span class="n">SV_Target</span>
+<span class="p">{</span>
+    <span class="n">float2</span> <span class="n">uv2</span> <span class="o">=</span> <span class="n">float2</span><span class="p">(</span><span class="n">i</span><span class="p">.</span><span class="n">uv</span><span class="p">.</span><span class="n">x</span><span class="p">,</span> <span class="mi">1</span> <span class="o">-</span> <span class="n">i</span><span class="p">.</span><span class="n">uv</span><span class="p">.</span><span class="n">y</span><span class="p">);</span>
+    <span class="n">fixed4</span> <span class="n">ycol</span> <span class="o">=</span> <span class="n">tex2D</span><span class="p">(</span><span class="n">_YTex</span><span class="p">,</span> <span class="n">uv2</span><span class="p">);</span>
+    <span class="n">fixed4</span> <span class="n">uvcol</span> <span class="o">=</span> <span class="n">tex2D</span><span class="p">(</span><span class="n">_UVTex</span><span class="p">,</span> <span class="n">uv2</span><span class="p">);</span>
+    <span class="c1">//...
+</span><span class="p">}</span>
 </code></pre>
+</div>
 
 <p>综上， 我们shader里使用一个uniform 变量， 通过c#侧传递过的值统一动态的采样图像：</p>
 
-<pre><code class="language-hlsl">float4 uv_st;
+<div class="language-glsl highlighter-rouge"><pre class="highlight"><code><span class="n">float4</span> <span class="n">uv_st</span><span class="p">;</span>
 
-v2f vert(appdata v)
-{
-    v2f o;
-    o.vertex = UnityObjectToClipPos(v.vertex);
-    o.uv = TRANSFORM_TEX(v.uv, _MainTex).yx;
-    return o;
-}
+<span class="n">v2f</span> <span class="nf">vert</span><span class="p">(</span><span class="n">appdata</span> <span class="n">v</span><span class="p">)</span>
+<span class="p">{</span>
+    <span class="n">v2f</span> <span class="n">o</span><span class="p">;</span>
+    <span class="n">o</span><span class="p">.</span><span class="n">vertex</span> <span class="o">=</span> <span class="n">UnityObjectToClipPos</span><span class="p">(</span><span class="n">v</span><span class="p">.</span><span class="n">vertex</span><span class="p">);</span>
+    <span class="n">o</span><span class="p">.</span><span class="n">uv</span> <span class="o">=</span> <span class="n">TRANSFORM_TEX</span><span class="p">(</span><span class="n">v</span><span class="p">.</span><span class="n">uv</span><span class="p">,</span> <span class="n">_MainTex</span><span class="p">).</span><span class="n">yx</span><span class="p">;</span>
+    <span class="k">return</span> <span class="n">o</span><span class="p">;</span>
+<span class="p">}</span>
 
-fixed4 frag(v2f i) : SV_Target
-{
-    float2 uv2 = uv_st.xy + uv_st.zw * i.uv;
-    fixed4 ycol = tex2D(_YTex, uv2);
-    fixed4 uvcol = tex2D(_UVTex, uv2);
-    //...
-}
+<span class="n">fixed4</span> <span class="n">frag</span><span class="p">(</span><span class="n">v2f</span> <span class="n">i</span><span class="p">)</span> <span class="o">:</span> <span class="n">SV_Target</span>
+<span class="p">{</span>
+    <span class="n">float2</span> <span class="n">uv2</span> <span class="o">=</span> <span class="n">uv_st</span><span class="p">.</span><span class="n">xy</span> <span class="o">+</span> <span class="n">uv_st</span><span class="p">.</span><span class="n">zw</span> <span class="o">*</span> <span class="n">i</span><span class="p">.</span><span class="n">uv</span><span class="p">;</span>
+    <span class="n">fixed4</span> <span class="n">ycol</span> <span class="o">=</span> <span class="n">tex2D</span><span class="p">(</span><span class="n">_YTex</span><span class="p">,</span> <span class="n">uv2</span><span class="p">);</span>
+    <span class="n">fixed4</span> <span class="n">uvcol</span> <span class="o">=</span> <span class="n">tex2D</span><span class="p">(</span><span class="n">_UVTex</span><span class="p">,</span> <span class="n">uv2</span><span class="p">);</span>
+    <span class="c1">//...
+</span><span class="p">}</span>
 </code></pre>
+</div>
 
 <p>c# 这样传值：</p>
 
@@ -239,6 +296,14 @@ fixed4 frag(v2f i) : SV_Target
 <p><img src="/img/post-android/hand.jpg" alt="" /></p>
 
 <p>这里将AR的手势识别信息传递到Editor。</p>
+
+<p>下图是Editor下重建人脸示例：</p>
+
+<p><img src="/img/post-android/face.jpg" alt="" /></p>
+
+<p>场景冲击那示例：</p>
+
+<p><img src="/img/post-android/mesh.jpg" alt="" /></p>
 
 <p>基于此原理， 那也可以同样做到把 平面信息、场景Mesh、 人脸识别、 骨骼信息、光照估计等相关的算法同步显示在Editor中。 如果你的框架写的好，除了AR的中间变量进行可视化输出，也可以把其他的事件产生的数据都可以在Editor表出来， 这样手机运行的结果和Editor运行的结果是完全一致的。 这里主要是展示原理， 具体的实现就不公开了。</p>
 
