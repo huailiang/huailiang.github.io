@@ -99,7 +99,7 @@ redir list
 ```csharp
 sock = new Socket(AddressFamily.InterNetwork, SocketType.Stream, ProtocolType.Tcp);
 sock.NoDelay = true;
-callback = notify;
+
 var ipaddress = IPAddress.Parse(ip);
 var endpoint = new IPEndPoint(ipaddress, port);
 sock.Connect(endpoint);
@@ -109,13 +109,13 @@ thread.IsBackground = true;
 thread.Start();
 ```
 
-手机侧的socket负责监听来自pc侧的连接请求， 相当与运行一个Server:
+手机侧的socket负责监听来自pc侧的连接请求， 相当与运行一个Server。 这里实现用到了两个线程，一个负责监听新的连接， 一个负责接收消息。  由于我们这里只是用来电脑和Android侧进行调试来用， 所以socket的监听队列长度设置为1.
 
 ```csharp
-public void  BuildServer(string ip, int port, SceneState st, Action<string, TcpState> notify) : 
+public void  BuildServer(string ip, int port) 
 {
-    socketWatch = new Socket(AddressFamily.InterNetwork, SocketType.Stream, ProtocolType.Tcp);
-    callback = notify;
+    socketWatch = new Socket(AddressFamily.InterNetwork, SocketType.Stream, 
+        ProtocolType.Tcp);
     var ipaddress = IPAddress.Parse(ip);
     var endpoint = new IPEndPoint(ipaddress, port);
     socketWatch.Bind(endpoint);
