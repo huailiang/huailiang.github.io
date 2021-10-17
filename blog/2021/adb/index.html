@@ -5,7 +5,7 @@
   <meta http-equiv="X-UA-Compatible" content="IE=edge">
   <meta name="viewport" content="width=device-width, initial-scale=1">
 
-  <title>USB端机调试</title>
+  <title>AREngine远程同步调试</title>
   <meta name="description"
     content="一、概述">
 
@@ -67,8 +67,8 @@ MathJax.Hub.Config({
 
   <div class="card">
     <header class="post-header">
-      <h1 class="post-title">USB端机调试</h1>
-      <p class="post-meta">Aug 29, 2021 •
+      <h1 class="post-title">AREngine远程同步调试</h1>
+      <p class="post-meta">Sep 28, 2021 •
         huailiang</p>
     </header>
 
@@ -152,6 +152,83 @@ redir tcp:1096:1097
 <p><img src="/img/post-android/adb4.jpg" alt="" /></p>
 
 <p>当然要想实现上面的效果， 需要对 <a href="https://developer.huawei.com/consumer/cn/hms/huawei-arengine/">AREnegine</a>的代码做少许的修改， 比如说手机产生的YUV数据传送到Editor中，将对应的数据转换成生成单通道的 Y-Texture 和 UV-Texture。 然后在Shader中分别采样yuv数据，最后在每个像素中转换成RGB输出到FrameBuffer。</p>
+
+<p>需要注意的是 AREngine 里的像素并不是RGB 排列的， 也不是等距的yuv图像， 而是 YUV-420-888 格式的图像，这意味着 4个y通道分别对应着一个u通道和v通道。 转换成二维的图像， y 通道的图片分辨率即 uv 图片的分辨率的一半。</p>
+
+<p>如下图， 在 huawei meta30 pro 预览流中使用的 640X480 的 y 通道输出到一张 只有 R 通道的 RenderTexture上</p>
+
+<p><img src="/img/post-android/y_tex.jpg" alt="" /></p>
+
+<p>下图是 只有 一半分辨率的 uv 通道(输出到RT的rg两个通道)中 u通道显示：</p>
+
+<p><img src="/img/post-android/uv_tex.jpg" alt="" /></p>
+
+<p>从Y通道图片中可以看到图片是翻转的， 这里在shader中需要对 y—texture 采样的时候， 需要做这样翻转：</p>
+
+<pre><code class="language-hlsl">v2f vert(appdata v)
+{
+    v2f o;
+    o.vertex = UnityObjectToClipPos(v.vertex);
+    o.uv = TRANSFORM_TEX(v.uv, _MainTex).yx;
+    return o;
+}
+
+fixed4 frag(v2f i) : SV_Target
+{
+    float2 uv2 = float2(1, 1) - i.uv;
+    fixed4 ycol = tex2D(_YTex, uv2);
+    fixed4 uvcol = tex2D(_UVTex, uv2);
+    //...
+}
+</code></pre>
+
+<p>上面是后置镜头的yuv图像，如果是前置camera传递的图像 又发生了变化， uv需要做如下翻转：</p>
+
+<pre><code class="language-hlsl">fixed4 frag(v2f i) : SV_Target
+{
+    float2 uv2 = float2(i.uv.x, 1 - i.uv.y);
+    fixed4 ycol = tex2D(_YTex, uv2);
+    fixed4 uvcol = tex2D(_UVTex, uv2);
+    //...
+}
+</code></pre>
+
+<p>综上， 我们shader里使用一个uniform 变量， 通过c#侧传递过的值统一动态的采样图像：</p>
+
+<pre><code class="language-hlsl">float4 uv_st;
+
+v2f vert(appdata v)
+{
+    v2f o;
+    o.vertex = UnityObjectToClipPos(v.vertex);
+    o.uv = TRANSFORM_TEX(v.uv, _MainTex).yx;
+    return o;
+}
+
+fixed4 frag(v2f i) : SV_Target
+{
+    float2 uv2 = uv_st.xy + uv_st.zw * i.uv;
+    fixed4 ycol = tex2D(_YTex, uv2);
+    fixed4 uvcol = tex2D(_UVTex, uv2);
+    //...
+}
+</code></pre>
+
+<p>c# 这样传值：</p>
+
+<div class="language-csharp highlighter-rouge"><pre class="highlight"><code><span class="k">readonly</span> <span class="n">Vector4</span> <span class="n">front_uv</span> <span class="p">=</span> <span class="k">new</span> <span class="nf">Vector4</span><span class="p">(</span><span class="m">0</span><span class="p">,</span> <span class="m">1</span><span class="p">,</span> <span class="m">1</span><span class="p">,</span> <span class="p">-</span><span class="m">1</span><span class="p">);</span>
+<span class="k">readonly</span> <span class="n">Vector4</span> <span class="n">back_uv</span> <span class="p">=</span> <span class="k">new</span> <span class="nf">Vector4</span><span class="p">(</span><span class="m">1</span><span class="p">,</span> <span class="m">1</span><span class="p">,</span> <span class="p">-</span><span class="m">1</span><span class="p">,</span> <span class="p">-</span><span class="m">1</span><span class="p">);</span>
+<span class="k">static</span> <span class="k">readonly</span> <span class="kt">int</span> <span class="n">UVSt</span> <span class="p">=</span> <span class="n">Shader</span><span class="p">.</span><span class="nf">PropertyToID</span><span class="p">(</span><span class="s">"uv_st"</span><span class="p">);</span>
+
+<span class="k">protected</span> <span class="k">override</span> <span class="k">void</span> <span class="nf">OnInitial</span><span class="p">()</span>
+<span class="p">{</span>
+    <span class="kt">var</span> <span class="n">uv_st</span> <span class="p">=</span> <span class="n">sceneState</span> <span class="p">==</span> <span class="n">SceneState</span><span class="p">.</span><span class="n">Face</span> <span class="p">?</span>
+        <span class="n">front_uv</span> <span class="p">:</span>
+        <span class="n">back_uv</span><span class="p">;</span>
+    <span class="n">material</span><span class="p">.</span><span class="nf">SetVector</span><span class="p">(</span><span class="n">UVSt</span><span class="p">,</span> <span class="n">uv_st</span><span class="p">);</span>
+<span class="p">}</span>
+</code></pre>
+</div>
 
 <p>除了预览流， 使用类似的方法， 还可以将SLAM驱动的相机姿态、点云信息传送到Editor， 可以看到更多的调试信息。</p>
 
