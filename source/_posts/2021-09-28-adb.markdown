@@ -1,7 +1,7 @@
 ---
 layout:     post
-title:      "USB端机调试"
-date:       2021-08-29 02:00:00
+title:      "AREngine远程同步调试"
+date:       2021-09-28 02:00:00
 author:     "huailiang"
 tags:
     - 工具
@@ -87,9 +87,66 @@ redir list
 
 ### 实践
 
-基于adb forward tcp 建立的的端口转发机制， 作者实现了一个Demo, 利用c#的Socket的TCP，手机端进行监听， pc端直接进行连接。 代码已上传到[github][i1], 具体的效果如下图：
+基于adb forward tcp 建立的的端口转发机制， 作者实现了一个Demo, 利用c#的Socket的TCP，手机端进行监听， pc端直接进行连接。 代码已上传到[github][i1], 具体的实现就是在多线程里开启一个socket/TCP, 分别在手机上和pc上运行， 端口配置adb forward 转发的端口就。效果如下图：
 
 ![](/img/post-android/adb3.jpg)
+
+
+
+如下面是pc侧运行代码：
+
+
+```csharp
+sock = new Socket(AddressFamily.InterNetwork, SocketType.Stream, ProtocolType.Tcp);
+sock.NoDelay = true;
+callback = notify;
+var ipaddress = IPAddress.Parse(ip);
+var endpoint = new IPEndPoint(ipaddress, port);
+sock.Connect(endpoint);
+callback(" connect server success", TcpState.Connect);
+thread = new Thread(Receive);
+thread.IsBackground = true;
+thread.Start();
+```
+
+手机侧的socket负责监听来自pc侧的连接请求， 相当与运行一个Server:
+
+```csharp
+public void  BuildServer(string ip, int port, SceneState st, Action<string, TcpState> notify) : 
+{
+    socketWatch = new Socket(AddressFamily.InterNetwork, SocketType.Stream, ProtocolType.Tcp);
+    callback = notify;
+    var ipaddress = IPAddress.Parse(ip);
+    var endpoint = new IPEndPoint(ipaddress, port);
+    socketWatch.Bind(endpoint);
+    //将套接字的监听队列长度限制为1
+    socketWatch.Listen(1);
+    callback(" begin listening", TcpState.Connect);
+    thread = new Thread(WatchConnecting);
+    thread.IsBackground = true;
+    thread.Start();
+}
+
+
+private void WatchConnecting()
+{
+    while (true)
+        try
+        {
+            sock = socketWatch.Accept();
+            callback(" connect:" + sock.RemoteEndPoint, TcpState.Connect);
+            state = TcpState.Connect;
+            rcvThread = new Thread(Receive);
+            rcvThread.IsBackground = true;
+            rcvThread.Start(sock);
+            threadRun = true;
+        }
+        catch (Exception ex)
+        {
+            Debug.LogError("connect error：" + ex);
+        }
+}
+```
 
 
 除此之后， 我们还可以把基于华为 [AREngine][i4]实现的预览流投射到Editor中。
@@ -101,6 +158,87 @@ redir list
 当然要想实现上面的效果， 需要对 [AREnegine][i4]的代码做少许的修改， 比如说手机产生的YUV数据传送到Editor中，将对应的数据转换成生成单通道的 Y-Texture 和 UV-Texture。 然后在Shader中分别采样yuv数据，最后在每个像素中转换成RGB输出到FrameBuffer。
 
 
+需要注意的是 AREngine 里的像素并不是RGB 排列的， 也不是等距的yuv图像， 而是 YUV-420-888 格式的图像，这意味着 4个y通道分别对应着一个u通道和v通道。 转换成二维的图像， y 通道的图片分辨率即 uv 图片的分辨率的一半。
+
+如下图， 在 huawei meta30 pro 预览流中使用的 640X480 的 y 通道输出到一张 只有 R 通道的 RenderTexture上
+
+![](/img/post-android/y_tex.jpg)
+
+下图是 只有 一半分辨率的 uv 通道(输出到RT的rg两个通道)中 u通道显示：
+
+![](/img/post-android/uv_tex.jpg)
+
+
+从Y通道图片中可以看到图片是翻转的， 这里在shader中需要对 y—texture 采样的时候， 需要做这样翻转：
+
+```glsl
+v2f vert(appdata v)
+{
+    v2f o;
+    o.vertex = UnityObjectToClipPos(v.vertex);
+    o.uv = TRANSFORM_TEX(v.uv, _MainTex).yx;
+    return o;
+}
+
+fixed4 frag(v2f i) : SV_Target
+{
+    float2 uv2 = float2(1, 1) - i.uv;
+    fixed4 ycol = tex2D(_YTex, uv2);
+    fixed4 uvcol = tex2D(_UVTex, uv2);
+    //...
+}
+```
+
+上面是后置镜头的yuv图像，如果是前置camera传递的图像 又发生了变化， uv需要做如下翻转：
+
+```glsl
+fixed4 frag(v2f i) : SV_Target
+{
+    float2 uv2 = float2(i.uv.x, 1 - i.uv.y);
+    fixed4 ycol = tex2D(_YTex, uv2);
+    fixed4 uvcol = tex2D(_UVTex, uv2);
+    //...
+}
+```
+
+
+综上， 我们shader里使用一个uniform 变量， 通过c#侧传递过的值统一动态的采样图像：
+
+```glsl
+float4 uv_st;
+
+v2f vert(appdata v)
+{
+    v2f o;
+    o.vertex = UnityObjectToClipPos(v.vertex);
+    o.uv = TRANSFORM_TEX(v.uv, _MainTex).yx;
+    return o;
+}
+
+fixed4 frag(v2f i) : SV_Target
+{
+    float2 uv2 = uv_st.xy + uv_st.zw * i.uv;
+    fixed4 ycol = tex2D(_YTex, uv2);
+    fixed4 uvcol = tex2D(_UVTex, uv2);
+    //...
+}
+```
+
+c# 这样传值：
+
+```csharp
+readonly Vector4 front_uv = new Vector4(0, 1, 1, -1);
+readonly Vector4 back_uv = new Vector4(1, 1, -1, -1);
+static readonly int UVSt = Shader.PropertyToID("uv_st");
+
+protected override void OnInitial()
+{
+    var uv_st = sceneState == SceneState.Face ?
+        front_uv :
+        back_uv;
+    material.SetVector(UVSt, uv_st);
+}
+```
 
 除了预览流， 使用类似的方法， 还可以将SLAM驱动的相机姿态、点云信息传送到Editor， 可以看到更多的调试信息。
 
@@ -116,7 +254,19 @@ redir list
 这里将AR的手势识别信息传递到Editor。
 
 
+下图是Editor下重建人脸示例：
+
+![](/img/post-android/face.jpg)
+
+场景冲击那示例：
+
+![](/img/post-android/mesh.jpg)
+
+
 基于此原理， 那也可以同样做到把 平面信息、场景Mesh、 人脸识别、 骨骼信息、光照估计等相关的算法同步显示在Editor中。 如果你的框架写的好，除了AR的中间变量进行可视化输出，也可以把其他的事件产生的数据都可以在Editor表出来， 这样手机运行的结果和Editor运行的结果是完全一致的。 这里主要是展示原理， 具体的实现就不公开了。 
+
+
+
 
 [i1]: https://blog.csdn.net/u013553529/article/details/80036227
 [i2]: https://www.jianshu.com/p/fabaad5486bf
