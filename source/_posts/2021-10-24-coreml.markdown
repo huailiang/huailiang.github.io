@@ -1,0 +1,97 @@
+---
+layout:     post
+title:      "CoreML一瞥"
+date:       2021-10-24 02:00:00
+author:     "huailiang"
+tags:
+    - 工具
+---
+
+
+
+>我总是很想知道事情是如何运作的，所以我认为打开 Core ML 的盖子来感受它是如何工作的会很有趣。
+在这篇博文中，我们将快速了解 Core ML 模型的内部结构，以及运行模型时设备和 GPU 上发生的情况。不用担心，您无需成为 Metal 专家即可跟随。为什么要这样做？好有趣。了解 Core ML 在幕后的工作原理还可以更轻松地解决您在使模型工作时可能遇到的任何问题。
+
+
+### .mlmodel 文件中有什么？
+
+
+要在 Core ML 中使用机器学习模型，它需要采用mlmodel格式。您可以使用coremltools Python 包将经过训练的模型转换为这种格式。但是这样的.mlmodel文件究竟是什么？
+
+mlmodel 文件格式基于protobuf。您可以在此处下载 mlmodel 规范。当您解压缩此文件夹时，它包含一堆.proto文件。主要的一个是Model.proto，它包括所有其他的。
+
+您可以使用文本编辑器打开这些文件并查看内部。这是摘录：
+
+```sh
+message Model {
+    int32 specificationVersion = 1;
+    ModelDescription description = 2;
+
+    // start at 200 here
+    // model specific parameters:
+    oneof Type {
+        // pipeline starts at 200
+        PipelineClassifier pipelineClassifier = 200;
+        PipelineRegressor pipelineRegressor = 201;
+        Pipeline pipeline = 202;
+
+        // regressors start at 300
+        GLMRegressor glmRegressor = 300;
+        . . .
+```
+
+
+Core ML 支持的所有内容都由这些 proto 文件描述。如果它不在这里，Core ML 不支持它。
+
+我建议通读这些 proto 文件，有很多注释解释了一切是如何工作的。例如，如果您对使用 Core ML 进行深度学习感兴趣，请查看NeuralNetwork.proto以查看您可以使用的所有神经网络层。
+
+虽然这些 proto 文件对于理解 Core ML 的可能性和局限性很有用，但我们也可以使用它们来查看 mlmodel 文件的内部。毕竟，mlmodel 文件只不过是这种 protobuf 格式的二进制文件（protobuf 类似于 JSON，但更具表现力、更小、更快）。
+
+我们首先必须编译 proto 文件。如果你还没有，首先安装 protobuf 编译器（我用的是自制软件）：
+
+
+
+```sh
+$ brew update
+$ brew install protobuf
+```
+
+我将使用 Python 来加载和检查 mlmodel 文件，因此我们还需要为 Python 安装 protobuf 库：
+
+```sh
+$ pip3 install -U protobuf
+```
+
+现在进入mlmodel_specification文件夹（包含 proto 文件的文件夹）并运行以下命令：
+
+```
+$ protoc --python_out=. *.proto
+```
+
+这将为每个 proto 文件创建一个_pb2.py文件。protobuf 编译器将 proto 文件中的每个定义转换为可以在 Python 中使用的对象。
+
+使用以下内容创建一个新的 Python 脚本：
+
+
+```py
+import os
+import sys
+import Model_pb2
+
+model = Model_pb2.Model()
+
+with open("Inceptionv3.mlmodel", "rb") as f:
+    model.ParseFromString(f.read())
+```
+
+该行import Model_pb2加载我们刚刚从 Model.proto 生成的文件（依次导入所有其他文件）。该Model_pb2模块包含一个Model可用于加载 mlmodel 文件的类，在本例中为来自developer.apple.com/machine-learning/ 的Inceptionv3.mlmodel。
+
+protobuf 的好处在于它隐藏了所有的解析逻辑。要读取 mlmodel 文件，您只需使用与 proto 文件中的定义看起来完全相同的本机对象。
+
+Model.proto 包含一个Model带有description属性的定义。要打印出此属性的值，您只需将此行添加到脚本中：
+
+
+[i1]: https://blog.csdn.net/u013553529/article/details/80036227
+[i2]: https://www.jianshu.com/p/fabaad5486bf
+[i3]: https://github.com/huailiang/adb-connect
+[i4]: https://developer.huawei.com/consumer/cn/hms/huawei-arengine/
