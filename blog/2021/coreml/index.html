@@ -1,0 +1,572 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <meta http-equiv="X-UA-Compatible" content="IE=edge">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+
+  <title>CoreML一瞥</title>
+  <meta name="description"
+    content="  在这篇博文中，我们将快速了解 Core ML 模型的内部结构，以及运行模型时设备和 GPU 上发生的情况。了解 Core ML 在幕后的工作原理还可以更轻松地解决您在使模型工作时可能遇到的任何问题。">
+
+  <link rel="shortcut icon" href="/img/favicon.ico">
+  <link rel="stylesheet" href="/css/main.css">
+  <link rel="canonical" href="https://huailiang.github.io/blog/2021/coreml/">
+
+</head>
+
+<body>
+  <main>
+    <header class="site-header">
+  <div class="container">
+    <h1><a href="/">Hom<span>e</span></a></h1>
+
+    <button type="button" class="sliding-panel-button">
+      <span></span>
+      <span></span>
+      <span></span>
+    </button>
+
+    <nav class="navbar sliding-panel-content">
+      <ul>
+        
+        <li><a href="/about" title="About">About</a>
+        </li>
+        
+        <li><a href="/blog" title="Blog">Blog</a>
+        </li>
+        
+       <li><a href="/category/" target="_blank"><i class="icon icon-feed"></i></a></li>
+      </ul>
+    </nav>
+  </div>
+</header>
+
+<div class="sliding-panel-fade-screen"></div>
+    <script type="text/javascript" src="/js/MathJax.js?config=TeX-AMS-MML_HTMLorMML"></script>
+
+<script type="text/x-mathjax-config">
+MathJax.Hub.Config({
+  tex2jax: {
+    inlineMath: [['$','$'], ['\\(','\\)']],
+    processEscapes: true
+  }
+});
+</script>
+
+<script type="text/x-mathjax-config">
+  MathJax.Hub.Config({
+    tex2jax: {
+      skipTags: ['script', 'noscript', 'style', 'textarea', 'pre', 'code']
+    }
+  });
+
+</script>
+    <div class="container">
+      <article role="article" class="post">
+
+  <div class="card">
+    <header class="post-header">
+      <h1 class="post-title">CoreML一瞥</h1>
+      <p class="post-meta">Oct 24, 2021 •
+        huailiang</p>
+    </header>
+
+    <div class="post-content">
+      <blockquote>
+  <p>在这篇博文中，我们将快速了解 Core ML 模型的内部结构，以及运行模型时设备和 GPU 上发生的情况。了解 Core ML 在幕后的工作原理还可以更轻松地解决您在使模型工作时可能遇到的任何问题。</p>
+</blockquote>
+
+<h3 id="mlmodel-文件中有什么">.mlmodel 文件中有什么？</h3>
+
+<p>要在 Core ML 中使用机器学习模型，它需要采用mlmodel格式。您可以使用coremltools Python 包将经过训练的模型转换为这种格式。但是这样的.mlmodel文件究竟是什么？</p>
+
+<p>mlmodel 文件格式基于protobuf。您可以在此处下载 <a href="https://docs-assets.developer.apple.com/coreml/documentation/mlmodel_specification.zip">mlmodel规范</a>。当解压缩此文件夹时，它包含一堆.proto文件。主要的一个是Model.proto，它包括所有其他的。</p>
+
+<p><img src="/img/post-ml/ml1.jpg" alt="" /></p>
+
+<p>您可以使用文本编辑器打开这些文件并查看内部。这是摘录：</p>
+
+<div class="language-c++ highlighter-rouge"><pre class="highlight"><code><span class="n">message</span> <span class="n">Model</span> <span class="p">{</span>
+    <span class="n">int32</span> <span class="n">specificationVersion</span> <span class="o">=</span> <span class="mi">1</span><span class="p">;</span>
+    <span class="n">ModelDescription</span> <span class="n">description</span> <span class="o">=</span> <span class="mi">2</span><span class="p">;</span>
+
+    <span class="c1">// start at 200 here
+</span>    <span class="c1">// model specific parameters:
+</span>    <span class="n">oneof</span> <span class="n">Type</span> <span class="p">{</span>
+        <span class="c1">// pipeline starts at 200
+</span>        <span class="n">PipelineClassifier</span> <span class="n">pipelineClassifier</span> <span class="o">=</span> <span class="mi">200</span><span class="p">;</span>
+        <span class="n">PipelineRegressor</span> <span class="n">pipelineRegressor</span> <span class="o">=</span> <span class="mi">201</span><span class="p">;</span>
+        <span class="n">Pipeline</span> <span class="n">pipeline</span> <span class="o">=</span> <span class="mi">202</span><span class="p">;</span>
+
+        <span class="c1">// regressors start at 300
+</span>        <span class="n">GLMRegressor</span> <span class="n">glmRegressor</span> <span class="o">=</span> <span class="mi">300</span><span class="p">;</span>
+</code></pre>
+</div>
+
+<p>Core ML 支持的所有内容都由这些 proto 文件描述。 如所有神经网络层描述配置在 NeuralNetwork.proto。</p>
+
+<p>虽然这些 proto 文件对于理解 CoreML 的可能性和局限性很有用，但我们也可以使用它们来查看 mlmodel 文件的内部。毕竟，mlmodel 文件只不过是这种 protobuf 格式的二进制文件。先使用brew或者pip来安装 protobuf:</p>
+
+<div class="language-sh highlighter-rouge"><pre class="highlight"><code>brew update
+brew install protobuf
+<span class="c"># ....</span>
+pip3 install -U protobuf
+</code></pre>
+</div>
+
+<p>现在进入 <a href="https://docs-assets.developer.apple.com/coreml/documentation/mlmodel_specification.zip">mlmodel_specification</a> 文件夹（包含 proto 文件的文件夹）并运行以下命令：</p>
+
+<div class="highlighter-rouge"><pre class="highlight"><code>$ protoc --python_out=. *.proto
+</code></pre>
+</div>
+
+<p>这将为每个 proto 文件创建一个_pb2.py文件。protobuf 编译器将 proto 文件中的每个定义转换为可以在 Python 中使用的对象。</p>
+
+<p><img src="/img/post-ml/core2.jpg" alt="" /></p>
+
+<p>使用以下内容创建一个新的 Python 脚本：</p>
+
+<div class="language-py highlighter-rouge"><pre class="highlight"><code><span class="kn">import</span> <span class="nn">os</span>
+<span class="kn">import</span> <span class="nn">sys</span>
+<span class="kn">import</span> <span class="nn">Model_pb2</span>
+
+<span class="n">model</span> <span class="o">=</span> <span class="n">Model_pb2</span><span class="o">.</span><span class="n">Model</span><span class="p">()</span>
+
+<span class="k">with</span> <span class="nb">open</span><span class="p">(</span><span class="s">"Inceptionv3.mlmodel"</span><span class="p">,</span> <span class="s">"rb"</span><span class="p">)</span> <span class="k">as</span> <span class="n">f</span><span class="p">:</span>
+    <span class="n">model</span><span class="o">.</span><span class="n">ParseFromString</span><span class="p">(</span><span class="n">f</span><span class="o">.</span><span class="n">read</span><span class="p">())</span>
+</code></pre>
+</div>
+
+<p>该行import Model_pb2加载我们刚刚从 Model.proto 生成的文件（依次导入所有其他文件）。该Model_pb2模块包含一个Model可用于加载 mlmodel 文件的类，在本例中为来自<a href="https://github.com/hollance/Inception-CoreML/blob/master/Inception/Inceptionv3.mlmodel">developer.apple.com/machine-learning/ 的Inceptionv3.mlmodel</a>。</p>
+
+<p>protobuf 的好处在于它隐藏了所有的解析逻辑。要读取 mlmodel 文件，您只需使用与 proto 文件中的定义看起来完全相同的本机对象。</p>
+
+<p>Model.proto 包含一个Model带有description属性的定义。要打印出此属性的值，您只需将此行添加到脚本中：</p>
+
+<div class="language-py highlighter-rouge"><pre class="highlight"><code><span class="k">print</span><span class="p">(</span><span class="n">model</span><span class="o">.</span><span class="n">description</span><span class="p">)</span>
+</code></pre>
+</div>
+
+<div class="highlighter-rouge"><pre class="highlight"><code>input {
+  name: "image"
+  shortDescription: "Input image to be classified"
+  type {
+    imageType {
+      width: 299
+      height: 299
+      colorSpace: RGB
+    }
+  }
+}
+output {
+  name: "classLabelProbs"
+  shortDescription: "Probability of each category"
+  type {
+    dictionaryType {
+      stringKeyType {
+      }
+    }
+  }
+}
+output {
+  name: "classLabel"
+  shortDescription: "Most likely image category"
+  type {
+    stringType {
+    }
+  }
+}
+predictedFeatureName: "classLabel"
+predictedProbabilitiesName: "classLabelProbs"
+metadata {
+  shortDescription: "Detects the dominant objects present in an image from a set of 1000 categories such as trees, animals, food, vehicles, person etc. The top-5 error from the original publication is 5.6%."
+  author: "Original Paper: Christian Szegedy, Vincent Vanhoucke, Sergey Ioffe, Jonathon Shlens, Zbigniew Wojna. Keras Implementation: Fran\303\247ois Chollet"
+  license: "MIT License. More information available at https://github.com/fchollet/keras/blob/master/LICENSE"
+}
+</code></pre>
+</div>
+
+<p>这个打印结果和xcode里是一致的：</p>
+
+<p><img src="/img/post-ml/core3.jpg" alt="" /></p>
+
+<p>使用这个接口还可以打印所有的layer:</p>
+
+<div class="language-py highlighter-rouge"><pre class="highlight"><code><span class="k">for</span> <span class="n">layer</span> <span class="ow">in</span> <span class="n">model</span><span class="o">.</span><span class="n">neuralNetworkClassifier</span><span class="o">.</span><span class="n">layers</span><span class="p">:</span>
+    <span class="k">print</span><span class="p">(</span><span class="n">layer</span><span class="o">.</span><span class="n">name</span><span class="p">)</span>
+    <span class="k">if</span> <span class="n">layer</span><span class="o">.</span><span class="n">HasField</span><span class="p">(</span><span class="s">"convolution"</span><span class="p">):</span>
+        <span class="k">print</span><span class="p">(</span><span class="s">"</span><span class="se">\t</span><span class="s">is convolution"</span><span class="p">)</span>
+        <span class="k">print</span><span class="p">(</span><span class="s">"</span><span class="se">\t</span><span class="s">kernel size:"</span><span class="p">,</span> <span class="n">layer</span><span class="o">.</span><span class="n">convolution</span><span class="o">.</span><span class="n">kernelSize</span><span class="p">)</span>
+        <span class="k">print</span><span class="p">(</span><span class="s">"</span><span class="se">\t</span><span class="s">input channels"</span><span class="p">,</span> <span class="n">layer</span><span class="o">.</span><span class="n">convolution</span><span class="o">.</span><span class="n">kernelChannels</span><span class="p">)</span>
+        <span class="k">print</span><span class="p">(</span><span class="s">"</span><span class="se">\t</span><span class="s">output channels"</span><span class="p">,</span> <span class="n">layer</span><span class="o">.</span><span class="n">convolution</span><span class="o">.</span><span class="n">outputChannels</span><span class="p">)</span>
+</code></pre>
+</div>
+
+<p>运行结果：</p>
+
+<div class="highlighter-rouge"><pre class="highlight"><code>convolution2d_1
+	is convolution
+	kernel size: [3, 3]
+	input channels 3
+	output channels 32
+convolution2d_1__activation__
+batchnormalization_1
+convolution2d_2
+	is convolution
+	kernel size: [3, 3]
+	input channels 32
+	output channels 32
+convolution2d_2__activation__
+. . .
+batchnormalization_94
+mixed10
+avg_pool
+flatten
+predictions
+predictions__activation__
+</code></pre>
+</div>
+
+<p>编写这样的脚本有助于准确检查 coremltools 转换过程所做的工作，并验证它是否确实包含所有层。</p>
+
+<p>CoreML 的一件重要事情是，对于拍摄图像的模型，输入图像被转换为模型期望的格式。要验证您的模型进行了什么样的预处理，您可以编写：</p>
+
+<div class="language-py highlighter-rouge"><pre class="highlight"><code><span class="k">print</span><span class="p">(</span><span class="n">model</span><span class="o">.</span><span class="n">neuralNetworkClassifier</span><span class="o">.</span><span class="n">preprocessing</span><span class="p">)</span>
+</code></pre>
+</div>
+
+<div class="highlighter-rouge"><pre class="highlight"><code>[scaler {
+  channelScale: 0.007843137718737125
+  blueBias: -1.0
+  greenBias: -1.0
+  redBias: -1.0
+}
+]
+</code></pre>
+</div>
+
+<p>这意味着 Core ML 首先将每个像素与0.007843（恰好是）相乘1/127.5，然后1.0从每个颜色通道中减去。如此有效地将像素从范围 [0, 255] 缩放到范围 [-1, 1]。</p>
+
+<h2 id="模型">模型</h2>
+
+<p>在您为创建 mlmodel 文件所做的所有努力之后，当您将它发送到 App Store 时，该文件实际上并未包含在您的应用程序包中。相反，Xcode 在 mlmodel 文件上运行一个编译器来生成一个.mlmodelc。</p>
+
+<p>当将 Inceptionv3.mlmodel 添加到您的项目并构建应用程序时，Xcode 执行以下构建步骤：</p>
+
+<div class="highlighter-rouge"><pre class="highlight"><code>/Applications/Xcode.app/Contents/Developer/usr/bin/coremlc generate 
+/path/to/Inceptionv3.mlmodel ... --language Swift --swift-version 4.0
+
+/Applications/Xcode.app/Contents/Developer/usr/bin/coremlc compile 
+/path/to/Inceptionv3.mlmodel ... 
+</code></pre>
+</div>
+
+<p>构建时首先生成Inceptionv3.swift包含源文件MLModel包装类，然后将其编译mlmodel文件到mlmodelc文件夹，并把它添加到应用程序包。</p>
+
+<p>查看模型编译步骤的输出（在 Xcode 报告导航器中），因为它显示了层的名称和大小：</p>
+
+<p><img src="/img/post-ml/core4.jpg" alt="" /></p>
+
+<p>除了xcode构建时生成.mlmodelc, 还可以通过一下接口生成：</p>
+
+<div class="language-sh highlighter-rouge"><pre class="highlight"><code>mkdir output
+xcrun coremlc compile Inceptionv3.mlmodel output
+xcrun coremlc generate Inceptionv3.mlmodel output
+</code></pre>
+</div>
+
+<p><img src="/img/post-ml/core7.jpg" alt="" /></p>
+
+<p>其中.mlmodelc是 compile 生成的， <em>.h, *.m 是generate的wrap接口， 因此如果有算法上云的部分，只能提前将编译生成的</em>.mlmodelc 放在服务器等在下载， 而将脚本.m 需要编译到包体里去。  直接上传.bundle跳过构建应用阶段编译是无法生效的。</p>
+
+<p>当打开 mlmodelc 文件夹。如果您在 Finder 中打开 .app 文件并选择“显示包内容”，它将显示您的应用程序包中的内容：</p>
+
+<p><img src="/img/post-ml/core5.png" alt="" /></p>
+
+<p>Inceptionv3.mlmodelc 文件夹包含以下文件：</p>
+
+<div class="highlighter-rouge"><pre class="highlight"><code>coremldata.bin: 模型的元数据（作者姓名等）和分类标签
+model.espresso.net: 描述模型的网络结构
+model.espresso.shape: 神经网络中层的输出大小（与您在上面构建步骤的输出中看到的相同）
+model.espresso.weights: 模型的学习参数（这通常是一个大文件，对于 Inception-v3 为 96MB）
+coremldata.bin: 用于运行神经网络的 CoreML 部分的内部名称。
+</code></pre>
+</div>
+
+<p>model.espresso.net, 这是一个普通的文本文件:</p>
+
+<div class="language-sh highlighter-rouge"><pre class="highlight"><code><span class="o">{</span>
+  <span class="s2">"storage"</span> : <span class="s2">"model.espresso.weights"</span>,
+  <span class="s2">"properties"</span> : <span class="o">{</span>
+
+  <span class="o">}</span>,
+  <span class="s2">"format_version"</span> : 200,
+  <span class="s2">"layers"</span> : <span class="o">[</span>
+    <span class="o">{</span>
+      <span class="s2">"pad_r"</span> : 0,
+      <span class="s2">"fused_relu"</span> : 1,
+      <span class="s2">"fused_tanh"</span> : 0,
+      <span class="s2">"pad_fill_mode"</span> : 0,
+      <span class="s2">"pad_b"</span> : 0,
+      <span class="s2">"pad_l"</span> : 0,
+      <span class="s2">"top"</span> : <span class="s2">"convolution2d_1__activation___output"</span>,
+      <span class="s2">"blob_weights"</span> : 3,
+      <span class="s2">"K"</span> : 3,
+      <span class="s2">"blob_biases"</span> : 1,
+      <span class="s2">"stride_x"</span> : 2,
+      <span class="s2">"name"</span> : <span class="s2">"convolution2d_1"</span>,
+      <span class="s2">"has_batch_norm"</span> : 0,
+      <span class="s2">"type"</span> : <span class="s2">"convolution"</span>,
+</code></pre>
+</div>
+
+<p>它再次列出了所有模型的层，但这次以 JSON 格式而不是 protobuf 格式存储。</p>
+
+<p>为什么同一件事有两种不同的格式？我认为 mlmodel 应该是一种开放的标准文件格式，以便其他工具也可以加载 mlmodel 文件（例如，允许您在 Android 或 Linux 上使用您的 mlmodel 文件）另一方面，mlmodelc 是一种专有格式它针对 Apple 设备进行了优化，并且特定于 iOS。</p>
+
+<p>将 mlmodel 编译为私有格式的另一个原因是通常可以进行优化——例如将不同的层融合在一起——以减少推理时间。例如，如果 mlmodel 指定一个卷积层后跟一个缩放层，那么 CoreML 编译器可以删除该缩放层，而是使卷积层的权重更大或更小。结果是相同的，但它节省了一个计算步骤。</p>
+
+<h2 id="运行模型时会发生什么">运行模型时会发生什么？</h2>
+
+<p>让我们稍微窥探一下 Core ML，看看当您使用该模型进行预测时它会做什么。当然，我们没有 Core ML 的源代码，但我们仍然可以查看堆栈跟踪以找到有关其工作原理的一些线索。</p>
+
+<p>我使用了我的Inception+CoreML项目并predict(pixelBuffer)在ViewController.swift 中的以下行上设置了一个断点：</p>
+
+<p><img src="/img/post-ml/core8.jpg" alt="" /></p>
+
+<p>关闭优化，构建应用程序，然后运行。应用程序将在调用 时暂停handler.perform([request])。按几次调试器工具栏中的Step Into按钮，您将获得如下堆栈跟踪：</p>
+
+<p><img src="/img/post-ml/core9.png" alt="" /></p>
+
+<h4 id="这里有几个类和方法名值得注意">这里有几个类和方法名值得注意：</h4>
+
+<p>[VNCoreMLTransformer processWithOptions:regionOfInterest: warningRecorder:error:] 这可能就是将我们的图像缩放到 Inception 输入大小 299×299 像素的方法。</p>
+
+<p>[VNCoreMLModel predictWithCVPixelBuffer:options:error]这似乎是一个私有方法VNCoreMLModel；你不应该自己调用它。（事实上​​，stacktrace 中的很多东西似乎都是私有的。）</p>
+
+<p>[MLNeuralNetworkEngine predictionFromFeatures:options:error:] 这看起来像实际运行神经网络的类。</p>
+
+<p>Espresso::abstract_context::compute_batch_sync又是浓缩咖啡。这是 C++ 代码。Espresso 似乎是围绕低级 Metal <br />
+Performance Shaders 的 Core ML 包装器。</p>
+
+<p>首先 Vision 调整图像大小，然后将其交给MLNeuralNetworkEngine，用于Espresso从 model.espresso.net 文件中读取神经网络定义，最后 MPS 执行在 GPU 上运行神经网络的实际工作。</p>
+
+<p>CoreML 可以在 CPU 或 GPU 上运行模型。对于某些模型，使用 CPU 更有意义，但对于（深度）神经网络，GPU 是首选工具。Xcode 带有一个GPU Frame Capture按钮，让我们可以检查 GPU 正在做什么，我们可以使用它来监视 CoreML。</p>
+
+<p>要在 CoreML 应用程序中启用 GPU 帧捕获，您需要添加几行代码（例如，在mainViewController内）：</p>
+
+<div class="language-swift highlighter-rouge"><pre class="highlight"><code><span class="kd">import</span> <span class="kt">Metal</span>
+
+<span class="k">var</span> <span class="nv">device</span><span class="p">:</span> <span class="kt">MTLDevice</span><span class="o">!</span>
+<span class="k">var</span> <span class="nv">commandQueue</span><span class="p">:</span> <span class="kt">MTLCommandQueue</span><span class="o">!</span>
+
+<span class="c1">// in viewDidLoad():</span>
+<span class="n">device</span> <span class="o">=</span> <span class="kt">MTLCreateSystemDefaultDevice</span><span class="p">()</span>
+<span class="n">commandQueue</span> <span class="o">=</span> <span class="n">device</span><span class="o">.</span><span class="nf">makeCommandQueue</span><span class="p">()</span>
+</code></pre>
+</div>
+
+<p><img src="/img/post-ml/core6.png" alt="" /></p>
+
+<p>运行应用程序，按下 GPU Frame Capture 按钮开始捕捉，等待一秒左右，再次按下按钮停止。当然，您实际上需要在捕获发生时进行 Core ML 预测（在我的应用程序中，它对每个视频帧进行预测，所以我们很好）。</p>
+
+<p>现在 Xcode 将显示 GPU 在捕获期间正在做什么：</p>
+
+<p><img src="/img/post-ml/core10.png" alt="" /></p>
+
+<p>在上面的截图中，很明显，卷积层的 Conv 块占用了大部分时间。</p>
+
+<p><img src="/img/post-ml/core11.png" alt="" /></p>
+
+<p>该计算内核从包含输入图像的 355 KB 内存缓冲区（缓冲区 0）读取并写入 299×299 像素的纹理（纹理 0）。回想一下，此时必须已经调整了输入图像的大小——很容易验证这一点：299×299 像素乘以每像素 4 个字节需要 355 KB 的存储空间，这确实是输入缓冲区的大小。</p>
+
+<h2 id="卷积核">卷积核</h2>
+
+<p>现在让我们将注意力转向Conv命令编码器。它们具有具有奇特名称的内核函数，例如cnnConvArray_3xIn_16xOut_1_3和cnnConvArray_8xIn_8xOut_1_2。我不确定这些数字的确切含义，但很明显 MPS 有几个不同的计算内核来进行卷积，每个内核都针对特定情况量身定制。</p>
+
+<p><img src="/img/post-ml/core12.png" alt="" /></p>
+
+<p>卷积核从纹理读取并写入新纹理。它还需要三个缓冲区：缓冲区 1 包含内核大小、步长、激活函数值等（双击缓冲区查看）；缓冲区 2 包含卷积权重；缓冲区 3 包含偏差项。</p>
+
+<p>在 Xcode 调试窗格中，您可以找到有关此计算内核及其绑定资源的更多信息。特别是，函数部分很有趣</p>
+
+<p><img src="/img/post-ml/core13.png" alt="" /></p>
+
+<p>展开此项以显示函数常量下的其他参数。对于这个计算内核，nType 的值为 1。经过一些实验，我发现 nType 代表“神经元类型”，1 代表 ReLU。所以这个 nType 值告诉你这个层的激活函数是什么。</p>
+
+<p>由此我们可以得出结论，在 MPS 中，激活函数被“融合”到了卷积核中，这样两个操作——卷积和激活——都可以在一个步骤中完成，这比单独进行要高效得多。很高兴知道！</p>
+
+<h2 id="多少线程">多少线程？</h2>
+
+<p>另一个有趣的事情是这个计算内核的线程组的大小（在调试导航器窗格中）：</p>
+
+<p><img src="/img/post-ml/core14.png" alt="" /></p>
+
+<p>将 GPU 用于此类作业的全部意义在于 GPU 是大规模并行的：相同的计算内核将由许多线程并行执行，每个线程处理一小部分问题。在卷积层的情况下，每个线程计算输出纹理中的一个像素。线程由 GPU 分组调度。</p>
+
+<p>在这种情况下，每个线程组包含 1×2×2 = 4 个线程，并且有 35×9×2 = 630 个组。所以总共有 630 × 4 = 2520 个线程启动来执行这个特定的卷积。这些数字从何而来？您必须询问编写这些 MPS 内核的 Apple 工程师，但大概选择他们是因为它们在此特定设备（10.5 英寸 iPad Pro）上在这种尺寸的问题上提供了最佳性能。</p>
+
+<p>正如我所提到的，MPS 有多个计算内核用于在各种情况下执行卷积，并且这些内核已经过调整以在不同的硬件和不同的图像大小上尽可能快地运行。（您很可能会在您的设备上看到此计算内核的不同线程组大小。）</p>
+
+<p>不过，我们可以猜测这些数字可能意味着什么。线程组的大小以三个维度给出，因此我们有 35×1 线程处理图像的宽度，9×2 线程用于高度，2×2 线程用于深度。在这种情况下，输入纹理为 35×35 像素，具有 48×4 = 192 个通道。输出纹理也是 35×35，但只有 32 个通道。</p>
+
+<p>将所有这些数字放在一起意味着每个线程水平处理一个像素（宽度为 35，我们有 35 个线程在该维度上工作）和两个像素垂直处理（高度也是 35，但我们只有 9×2 = 18 个线程在该维度上工作，因此 18 个线程执行 2 个像素，每个线程覆盖这 35 个像素）。每个线程写入 32 / 2×2 = 8 个输出通道的结果。</p>
+
+<h2 id="归一化和层融合">归一化和层融合</h2>
+
+<p>列表中还有其他 ComputeCommandEncoders。卷积层后面的那些被命名为TARR_batchnorm_inference_kernel。这是有道理的，因为 Inceptionv3 在每个卷积层之后使用批归一化。</p>
+
+<p>然而，我觉得有趣的是 CoreML 没有优化这些层。当批归一化发生在激活函数之前时，可以将批归一化层“折叠”到前面的卷积层中。Inceptionv3.mlmodel 所基于的Keras 模型确实在 ReLU 激活之前应用了批处理规范。但出于某种原因，这种TARR_batchnorm_inference_kernel情况发生在ReLU 之后。好奇的…</p>
+
+<p>当我在另一个应用批处理规范化的<a href="https://github.com/hollance/MobileNet-CoreML">模型</a>上运行 GPU 帧捕获时，捕获中没有显示批处理规范层。对于该模型，CoreML 能够将它们优化掉，那么为什么不用于 Inceptionv3？</p>
+
+<p>这个难题的答案在于我们之前所做的 .mlmodel 转储。请注意，激活函数也发生在批处理规范之前：</p>
+
+<div class="highlighter-rouge"><pre class="highlight"><code>convolution2d_1
+convolution2d_1__activation__
+batchnormalization_1
+</code></pre>
+</div>
+
+<p>事实证明，inception_v3.py的GitHub 历史表明，该模型的早期版本确实在 ReLU 之后放置了批规范，但从那时起他们已经改变了它。所以这就解释了：Apple 使用了该脚本的先前版本，而不是当前版本。</p>
+
+<p>我希望这是一个有用的演示，说明为什么有时查看模型在运行时发生的情况是有意义的。</p>
+
+<p>在这种情况下，使用更新版本可以使 Inceptionv3.mlmodel 更快，以便可以折叠批规范层，从而节省一些推理时间。Inceptionv3 有大约 90 个卷积层，如果批处理规范平均需要 150 微秒（取决于层的大小），那么每帧节省大约 14 毫秒。</p>
+
+
+    </div>
+  </div>
+
+  <style>
+  .post-nav {
+    overflow: hidden;
+    /* margin-top: 60px; */
+    padding: 12px;
+    white-space: nowrap;
+    /* border-top: 1px solid #eee; */
+  }
+
+  .post-nav-item {
+    display: inline-block;
+    width: 50%;
+    white-space: normal;
+  }
+
+  .post-nav-item a {
+    position: relative;
+    display: inline-block;
+    line-height: 25px;
+    font-size: 14px;
+    color: #555;
+    border-bottom: none;
+  }
+
+  .post-nav-item a:hover {
+    color: #222;
+    font-weight: bold;
+    border-bottom: none;
+  }
+
+  .post-nav-item a:active {
+    top: 2px;
+  }
+
+  .post-nav-item a:before,
+  .post-nav-item a:after {
+    display: inline-block;
+    width: 16px;
+    height: 25px;
+    vertical-align: top;
+    opacity: 0.4;
+    background-size: 16px;
+  }
+
+  .post-nav-none a:none {
+    content: ' ';
+    background-size: 8px;
+  }
+
+  .post-nav-none a:hover:none {
+    opacity: 1;
+  }
+
+  .post-nav-prev a:before {
+    content: ' ';
+    background: url("data:image/svg+xml;base64,PD94bWwgdmVyc2lvbj0iMS4wIiA/PjxzdmcgaGVpZ2h0PSIxMnB4IiB2ZXJzaW9uPSIxLjEiIHZpZXdCb3g9IjAgMCA5IDEyIiB3aWR0aD0iOXB4IiB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHhtbG5zOnNrZXRjaD0iaHR0cDovL3d3dy5ib2hlbWlhbmNvZGluZy5jb20vc2tldGNoL25zIiB4bWxuczp4bGluaz0iaHR0cDovL3d3dy53My5vcmcvMTk5OS94bGluayI+PHRpdGxlLz48ZGVzYy8+PGRlZnMvPjxnIGZpbGw9Im5vbmUiIGZpbGwtcnVsZT0iZXZlbm9kZCIgaWQ9IlBhZ2UtMSIgc3Ryb2tlPSJub25lIiBzdHJva2Utd2lkdGg9IjEiPjxnIGZpbGw9IiMwMDAwMDAiIGlkPSJDb3JlIiB0cmFuc2Zvcm09InRyYW5zbGF0ZSgtMjE4LjAwMDAwMCwgLTkwLjAwMDAwMCkiPjxnIGlkPSJjaGV2cm9uLWxlZnQiIHRyYW5zZm9ybT0idHJhbnNsYXRlKDIxOC41MDAwMDAsIDkwLjAwMDAwMCkiPjxwYXRoIGQ9Ik03LjQsMS40IEw2LDAgTC04Ljg4MTc4NDJlLTE2LDYgTDYsMTIgTDcuNCwxMC42IEwyLjgsNiBMNy40LDEuNCBaIiBpZD0iU2hhcGUiLz48L2c+PC9nPjwvZz48L3N2Zz4=") no-repeat 0 50%;
+    background-size: 8px;
+  }
+
+  .post-nav-prev a:hover:before {
+    opacity: 1;
+  }
+
+  .post-nav-next {
+    text-align: right;
+  }
+
+  .post-nav-next a:after {
+    content: ' ';
+    background: url("data:image/svg+xml;base64,PD94bWwgdmVyc2lvbj0iMS4wIiA/PjxzdmcgaGVpZ2h0PSIxMnB4IiB2ZXJzaW9uPSIxLjEiIHZpZXdCb3g9IjAgMCA5IDEyIiB3aWR0aD0iOXB4IiB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHhtbG5zOnNrZXRjaD0iaHR0cDovL3d3dy5ib2hlbWlhbmNvZGluZy5jb20vc2tldGNoL25zIiB4bWxuczp4bGluaz0iaHR0cDovL3d3dy53My5vcmcvMTk5OS94bGluayI+PHRpdGxlLz48ZGVzYy8+PGRlZnMvPjxnIGZpbGw9Im5vbmUiIGZpbGwtcnVsZT0iZXZlbm9kZCIgaWQ9IlBhZ2UtMSIgc3Ryb2tlPSJub25lIiBzdHJva2Utd2lkdGg9IjEiPjxnIGZpbGw9IiMwMDAwMDAiIGlkPSJDb3JlIiB0cmFuc2Zvcm09InRyYW5zbGF0ZSgtMjYwLjAwMDAwMCwgLTkwLjAwMDAwMCkiPjxnIGlkPSJjaGV2cm9uLXJpZ2h0IiB0cmFuc2Zvcm09InRyYW5zbGF0ZSgyNjAuNTAwMDAwLCA5MC4wMDAwMDApIj48cGF0aCBkPSJNMSwwIEwtMC40LDEuNCBMNC4yLDYgTC0wLjQsMTAuNiBMMSwxMiBMNyw2IEwxLDAgWiIgaWQ9IlNoYXBlIi8+PC9nPjwvZz48L2c+PC9zdmc+") no-repeat 100% 50%;
+    background-size: 8px;
+  }
+
+  .post-nav-next a:hover:after {
+    opacity: 1;
+  }
+</style>
+
+
+
+<div class="post-nav">
+
+  
+  <div class="post-nav-none post-nav-item">
+    <a href=""> </a>
+  </div>
+  
+
+  
+  <div class="post-nav-next post-nav-item">
+    
+    <a href="/blog/2021/adb/"> AREngine远程同步调试</a>
+  </div>
+  
+
+</div>
+
+</article>
+    </div>
+
+    <footer class="site-footer">
+  <div class="container">
+    <ul class="social">
+  <li><a href="https://twitter.com/penghuailiang" target="_blank"><i class="icon icon-twitter"></i></a></li>
+  <li><a href="https://www.zhihu.com/people/huailiangpenguin" target="_blank"><i class="icon icon-zhihu"></i></a></li>
+  <li><a href="https://www.facebook.com/profile.php?id=100004290725320" target="_blank"><i class="icon icon-facebook"></i></a></li>
+  <li><a href="https://weibo.com/6212299692/profile?topnav=1&wvr=6" target="_blank"><i class="icon icon-sina"></i></a></li>
+  <li><a href="https://www.linkedin.com/in/penghuailiang/" target="_blank"><i class="icon icon-linkedin"></i></a></li>
+  <li><a href="https://github.com/huailiang" target="_blank"><i class="icon icon-github"></i></a></li>
+</ul>
+    <p class="txt-medium-gray">
+      <small>&copy;2021 All rights reserved. </small>
+    </p>
+  </div>
+</footer>
+    <a href="https://github.com/huailiang" target="_blank" class="github-corner"><svg width="80" height="80" viewBox="0 0 250 250" style="fill:#337ab7; color:#fff; position: absolute; top: 0; border: 0; right: 0;"><path d="M0,0 L115,115 L130,115 L142,142 L250,250 L250,0 Z"></path><path d="M128.3,109.0 C113.8,99.7 119.0,89.6 119.0,89.6 C122.0,82.7 120.5,78.6 120.5,78.6 C119.2,72.0 123.4,76.3 123.4,76.3 C127.3,80.9 125.5,87.3 125.5,87.3 C122.9,97.6 130.6,101.9 134.4,103.2" fill="currentColor" style="transform-origin: 130px 106px;" class="octo-arm"></path><path d="M115.0,115.0 C114.9,115.1 118.7,116.5 119.8,115.4 L133.7,101.6 C136.9,99.2 139.9,98.4 142.2,98.6 C133.8,88.0 127.5,74.4 143.8,58.0 C148.5,53.4 154.0,51.2 159.7,51.0 C160.3,49.4 163.2,43.6 171.4,40.1 C171.4,40.1 176.1,42.5 178.8,56.2 C183.1,58.6 187.2,61.8 190.9,65.4 C194.5,69.0 197.7,73.2 200.1,77.6 C213.8,80.2 216.3,84.9 216.3,84.9 C212.7,93.1 206.9,96.0 205.4,96.6 C205.1,102.4 203.0,107.8 198.3,112.5 C181.9,128.9 168.3,122.5 157.7,114.1 C157.9,116.9 156.7,120.9 152.7,124.9 L141.0,136.5 C139.8,137.7 141.6,141.9 141.8,141.8 Z" fill="currentColor" class="octo-body"></path></svg></a>
+
+
+    <script src="//code.jquery.com/jquery-1.11.3.min.js"></script>
+    <script>
+      $(document).ready(function () {
+        $('.sliding-panel-button,.sliding-panel-fade-screen,.sliding-panel-close').on('click touchstart', function (e) {
+          $('.sliding-panel-content,.sliding-panel-fade-screen').toggleClass('is-visible');
+          e.preventDefault();
+        });
+      });
+    </script>
+  </main>
+</body>
+
+</html>

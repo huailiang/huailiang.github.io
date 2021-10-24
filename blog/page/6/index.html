@@ -68,6 +68,21 @@ MathJax.Hub.Config({
     <article class="post">
   <header class="post-header">
     <h1 class="post-title2">
+      <a class="post-link" href="/blog/2019/nnstyle/">游戏风格转换</a>
+    </h1>
+    <div class="post-meta">
+      <time>May 2, 2019</time>
+    </div>
+  </header>
+
+  <p><a href="/blog/2019/nnstyle/" title="Permalink to: 游戏风格转换"
+      class="read-more">
+  如今人工智能大行其道， 其中在图像、影音处理中方法颇多。 本文介绍一种游戏中图像风格转换的例子，训练采用Tensorflow-GAN的方式，运行时在Unity引擎使用compute shader实现了跟tensorflow中一样的前向传播的网络来生成转换后的风格。对应Tensorflow环境中的Generator。 对应到github地址点击这里, 实现的效果如下图, 转换风格的图像我...</a></p>
+</article>
+  
+    <article class="post">
+  <header class="post-header">
+    <h1 class="post-title2">
       <a class="post-link" href="/blog/2019/inout/">CG中修饰符in out inout的使用</a>
     </h1>
     <div class="post-meta">
@@ -190,28 +205,6 @@ Unity 大地形研究
   <p><a href="/blog/2018/protobuf/" title="Permalink to: Unity 植入 c++版protobuf"
       class="read-more">
   现在使用Unity引擎开发游戏使用的脚本语言越来越灵活了。就拿《王者荣耀》来说吧，战斗的核心都采取 c++的语言来实现，外围系统都是采用 csharp的开发的。使用 c++指针操作不断有更高的执行效率，作为 native 语言也不会有 mono 内存的开销。使用 csharp 语言语法简单，对面向对象的支持也比较好，适合快速开发和版本迭代。还有使用 lua 脚本来做游戏的热更新。这样问...</a></p>
-</article>
-  
-    <article class="post">
-  <header class="post-header">
-    <h1 class="post-title2">
-      <a class="post-link" href="/blog/2018/hud/">Batch 合并Drawcall绘制HUD</a>
-    </h1>
-    <div class="post-meta">
-      <time>May 10, 2018</time>
-    </div>
-  </header>
-
-  <p><a href="/blog/2018/hud/" title="Permalink to: Batch 合并Drawcall绘制HUD"
-      class="read-more">
-  hud是游戏中大量使用的元素，一个血条往往只需要很少的表现。在Unity中常用的UI大都是nGUI或者uGUI,因为图文层级交错或者Depth重叠，往往带来不少的Drawcall开销，从而导致游戏性能的开销。这里我们建议使用3D mesh的方式去绘制HUD，从而去优化性能。
-
-
-本文对应的源码已经公开到github,点击地址可以查阅。
-
-绘制血条
-
-我们使用c#代码-Hud.cs动态创...</a></p>
 </article>
   
 
