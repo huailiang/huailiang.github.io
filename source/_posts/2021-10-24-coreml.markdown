@@ -15,14 +15,15 @@ tags:
 
 ### .mlmodel 文件中有什么？
 
-
 要在 Core ML 中使用机器学习模型，它需要采用mlmodel格式。您可以使用coremltools Python 包将经过训练的模型转换为这种格式。但是这样的.mlmodel文件究竟是什么？
 
-mlmodel 文件格式基于protobuf。您可以在此处下载 mlmodel 规范。当您解压缩此文件夹时，它包含一堆.proto文件。主要的一个是Model.proto，它包括所有其他的。
+mlmodel 文件格式基于protobuf。您可以在此处下载 [mlmodel规范][i1]。当解压缩此文件夹时，它包含一堆.proto文件。主要的一个是Model.proto，它包括所有其他的。
+
+![](/img/post-ml/ml1.jpg)
 
 您可以使用文本编辑器打开这些文件并查看内部。这是摘录：
 
-```sh
+```c++
 message Model {
     int32 specificationVersion = 1;
     ModelDescription description = 2;
@@ -37,38 +38,30 @@ message Model {
 
         // regressors start at 300
         GLMRegressor glmRegressor = 300;
-        . . .
 ```
 
 
-Core ML 支持的所有内容都由这些 proto 文件描述。如果它不在这里，Core ML 不支持它。
+Core ML 支持的所有内容都由这些 proto 文件描述。 如所有神经网络层描述配置在 NeuralNetwork.proto。
 
-我建议通读这些 proto 文件，有很多注释解释了一切是如何工作的。例如，如果您对使用 Core ML 进行深度学习感兴趣，请查看NeuralNetwork.proto以查看您可以使用的所有神经网络层。
-
-虽然这些 proto 文件对于理解 Core ML 的可能性和局限性很有用，但我们也可以使用它们来查看 mlmodel 文件的内部。毕竟，mlmodel 文件只不过是这种 protobuf 格式的二进制文件（protobuf 类似于 JSON，但更具表现力、更小、更快）。
-
-我们首先必须编译 proto 文件。如果你还没有，首先安装 protobuf 编译器（我用的是自制软件）：
-
+虽然这些 proto 文件对于理解 CoreML 的可能性和局限性很有用，但我们也可以使用它们来查看 mlmodel 文件的内部。毕竟，mlmodel 文件只不过是这种 protobuf 格式的二进制文件。先使用brew或者pip来安装 protobuf:
 
 
 ```sh
-$ brew update
-$ brew install protobuf
+brew update
+brew install protobuf
+# ....
+pip3 install -U protobuf
 ```
 
-我将使用 Python 来加载和检查 mlmodel 文件，因此我们还需要为 Python 安装 protobuf 库：
-
-```sh
-$ pip3 install -U protobuf
-```
-
-现在进入mlmodel_specification文件夹（包含 proto 文件的文件夹）并运行以下命令：
+现在进入 [mlmodel_specification][i1] 文件夹（包含 proto 文件的文件夹）并运行以下命令：
 
 ```
 $ protoc --python_out=. *.proto
 ```
 
 这将为每个 proto 文件创建一个_pb2.py文件。protobuf 编译器将 proto 文件中的每个定义转换为可以在 Python 中使用的对象。
+
+![](/img/post-ml/core2.jpg)
 
 使用以下内容创建一个新的 Python 脚本：
 
@@ -84,14 +77,213 @@ with open("Inceptionv3.mlmodel", "rb") as f:
     model.ParseFromString(f.read())
 ```
 
-该行import Model_pb2加载我们刚刚从 Model.proto 生成的文件（依次导入所有其他文件）。该Model_pb2模块包含一个Model可用于加载 mlmodel 文件的类，在本例中为来自developer.apple.com/machine-learning/ 的Inceptionv3.mlmodel。
+该行import Model_pb2加载我们刚刚从 Model.proto 生成的文件（依次导入所有其他文件）。该Model_pb2模块包含一个Model可用于加载 mlmodel 文件的类，在本例中为来自[developer.apple.com/machine-learning/ 的Inceptionv3.mlmodel][i2]。
 
 protobuf 的好处在于它隐藏了所有的解析逻辑。要读取 mlmodel 文件，您只需使用与 proto 文件中的定义看起来完全相同的本机对象。
 
 Model.proto 包含一个Model带有description属性的定义。要打印出此属性的值，您只需将此行添加到脚本中：
 
+```py
+print(model.description)
+```
 
-[i1]: https://blog.csdn.net/u013553529/article/details/80036227
-[i2]: https://www.jianshu.com/p/fabaad5486bf
-[i3]: https://github.com/huailiang/adb-connect
-[i4]: https://developer.huawei.com/consumer/cn/hms/huawei-arengine/
+```
+input {
+  name: "image"
+  shortDescription: "Input image to be classified"
+  type {
+    imageType {
+      width: 299
+      height: 299
+      colorSpace: RGB
+    }
+  }
+}
+output {
+  name: "classLabelProbs"
+  shortDescription: "Probability of each category"
+  type {
+    dictionaryType {
+      stringKeyType {
+      }
+    }
+  }
+}
+output {
+  name: "classLabel"
+  shortDescription: "Most likely image category"
+  type {
+    stringType {
+    }
+  }
+}
+predictedFeatureName: "classLabel"
+predictedProbabilitiesName: "classLabelProbs"
+metadata {
+  shortDescription: "Detects the dominant objects present in an image from a set of 1000 categories such as trees, animals, food, vehicles, person etc. The top-5 error from the original publication is 5.6%."
+  author: "Original Paper: Christian Szegedy, Vincent Vanhoucke, Sergey Ioffe, Jonathon Shlens, Zbigniew Wojna. Keras Implementation: Fran\303\247ois Chollet"
+  license: "MIT License. More information available at https://github.com/fchollet/keras/blob/master/LICENSE"
+}
+```
+
+这个打印结果和xcode里是一致的：
+
+![](/img/post-ml/core3.jpg)
+
+
+使用这个接口还可以打印所有的layer:
+
+```py
+for layer in model.neuralNetworkClassifier.layers:
+    print(layer.name)
+    if layer.HasField("convolution"):
+        print("\tis convolution")
+        print("\tkernel size:", layer.convolution.kernelSize)
+        print("\tinput channels", layer.convolution.kernelChannels)
+        print("\toutput channels", layer.convolution.outputChannels)
+```
+
+
+运行结果：
+
+```
+convolution2d_1
+	is convolution
+	kernel size: [3, 3]
+	input channels 3
+	output channels 32
+convolution2d_1__activation__
+batchnormalization_1
+convolution2d_2
+	is convolution
+	kernel size: [3, 3]
+	input channels 32
+	output channels 32
+convolution2d_2__activation__
+. . .
+batchnormalization_94
+mixed10
+avg_pool
+flatten
+predictions
+predictions__activation__
+```
+
+
+编写这样的脚本有助于准确检查 coremltools 转换过程所做的工作，并验证它是否确实包含所有层。
+
+
+CoreML 的一件重要事情是，对于拍摄图像的模型，输入图像被转换为模型期望的格式。要验证您的模型进行了什么样的预处理，您可以编写：
+
+```py
+print(model.neuralNetworkClassifier.preprocessing)
+```
+
+```
+[scaler {
+  channelScale: 0.007843137718737125
+  blueBias: -1.0
+  greenBias: -1.0
+  redBias: -1.0
+}
+]
+```
+
+这意味着 Core ML 首先将每个像素与0.007843（恰好是）相乘1/127.5，然后1.0从每个颜色通道中减去。如此有效地将像素从范围 [0, 255] 缩放到范围 [-1, 1]。
+
+
+## 模型
+
+在您为创建 mlmodel 文件所做的所有努力之后，当您将它发送到 App Store 时，该文件实际上并未包含在您的应用程序包中。相反，Xcode 在 mlmodel 文件上运行一个编译器来创建一个.mlmodelc文件夹——这就是你的应用程序包中的内容。
+
+让我们再次使用 Inceptionv3。当您将 Inceptionv3.mlmodel 添加到您的项目并构建应用程序时，Xcode 执行以下构建步骤：
+
+```
+/Applications/Xcode.app/Contents/Developer/usr/bin/coremlc generate 
+/path/to/Inceptionv3.mlmodel ... --language Swift --swift-version 4.0
+
+/Applications/Xcode.app/Contents/Developer/usr/bin/coremlc compile 
+/path/to/Inceptionv3.mlmodel ... 
+```
+
+构建时首先生成Inceptionv3.swift包含源文件MLModel包装类，然后将其编译mlmodel文件到mlmodelc文件夹，并把它添加到应用程序包。
+
+查看模型编译步骤的输出（在 Xcode 报告导航器中），因为它显示了层的名称和大小：
+
+![](/img/post-ml/core4.jpg)
+
+除了xcode构建时生成.mlmodelc, 还可以通过一下接口生成：
+
+
+```sh
+mkdir output
+xcrun coremlc compile Inceptionv3.mlmodel output
+xcrun coremlc generate Inceptionv3.mlmodel output
+```
+
+
+当打开 mlmodelc 文件夹。如果您在 Finder 中打开 .app 文件并选择“显示包内容”，它将显示您的应用程序包中的内容：
+
+![](/img/post-ml/core5.png)
+
+
+Inceptionv3.mlmodelc 文件夹包含以下文件：
+
+    coremldata.bin：这似乎是模型的元数据（作者姓名等）和分类标签
+    model.espresso.net：描述模型的结构，即它使用哪些层以及它们如何相互连接
+    model.espresso.shape：神经网络中层的输出大小（与您在上面构建步骤的输出中看到的相同）
+    model.espresso.weights：模型的学习参数（这通常是一个大文件，对于 Inception-v3 为 96MB）
+    coremldata.bin: ？“Espresso”显然是 Apple 用于运行神经网络的 Core ML 部分的内部名称。
+
+
+model.espresso.net, 这是一个普通的文本文件:
+
+```sh
+{
+  "storage" : "model.espresso.weights",
+  "properties" : {
+
+  },
+  "format_version" : 200,
+  "layers" : [
+    {
+      "pad_r" : 0,
+      "fused_relu" : 1,
+      "fused_tanh" : 0,
+      "pad_fill_mode" : 0,
+      "pad_b" : 0,
+      "pad_l" : 0,
+      "top" : "convolution2d_1__activation___output",
+      "blob_weights" : 3,
+      "K" : 3,
+      "blob_biases" : 1,
+      "stride_x" : 2,
+      "name" : "convolution2d_1",
+      "has_batch_norm" : 0,
+      "type" : "convolution",
+```
+
+等等......它再次列出了所有模型的层，但这次以 JSON 格式而不是 protobuf 格式存储。
+
+为什么同一件事有两种不同的格式？我认为 mlmodel 应该是一种开放的标准文件格式，以便其他工具也可以加载 mlmodel 文件（例如，允许您在 Android 或 Linux 上使用您的 mlmodel 文件。）另一方面，mlmodelc 是一种专有格式它针对 Apple 设备进行了优化，并且特定于 iOS。
+
+
+将 mlmodel 编译为私有格式的另一个原因是通常可以进行优化——例如将不同的层“融合”在一起——以减少推理时间。例如，如果 mlmodel 指定一个卷积层后跟一个缩放层，那么 CoreML 编译器可以删除该缩放层，而是使卷积层的权重更大或更小。结果是相同的，但它节省了一个计算步骤。
+
+
+## 运行模型时会发生什么？
+
+让我们稍微窥探一下 Core ML，看看当您使用该模型进行预测时它会做什么。当然，我们没有 Core ML 的源代码，但我们仍然可以查看堆栈跟踪以找到有关其工作原理的一些线索。
+
+我使用了我的Inception+CoreML项目并predict(pixelBuffer)在ViewController.swift 中的以下行上设置了一个断点：
+
+
+![](/img/post-ml/core6.png)
+
+运行应用程序，按下 GPU Frame Capture 按钮开始捕捉，等待一秒左右，再次按下按钮停止。当然，您实际上需要在捕获发生时进行 Core ML 预测（在我的应用程序中，它对每个视频帧进行预测，所以我们很好）。
+
+
+
+
+[i1]: https://docs-assets.developer.apple.com/coreml/documentation/mlmodel_specification.zip
+[i2]: https://github.com/hollance/Inception-CoreML/blob/master/Inception/Inceptionv3.mlmodel
