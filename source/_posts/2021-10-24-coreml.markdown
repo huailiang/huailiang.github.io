@@ -225,6 +225,14 @@ xcrun coremlc generate Inceptionv3.mlmodel output
 其中.mlmodelc是 compile 生成的， *.h, *.m 是generate的wrap接口， 因此如果有算法上云的部分，只能提前将编译生成的*.mlmodelc 放在服务器等在下载， 而将脚本.m 需要编译到包体里去。  直接上传.bundle跳过构建应用阶段编译是无法生效的。
 
 
+但是coreML提供了运行时编译mlmodel的接口，能实现动态编译：
+
+```swift
+//编译模型文件并通过编译版本创建MLModel实例。
+let compiledUrl = try MLModel.compileModel(at: modelUrl)
+let model = try MLModel(contentsOf: compiledUrl)
+```
+
 当打开 mlmodelc 文件夹。如果您在 Finder 中打开 .app 文件并选择“显示包内容”，它将显示您的应用程序包中的内容：
 
 ![](/img/post-ml/core5.png)
