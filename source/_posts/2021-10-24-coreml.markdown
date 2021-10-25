@@ -284,17 +284,13 @@ model.espresso.net, 这是一个普通的文本文件:
 
 ## 运行模型时会发生什么？
 
-让我们稍微窥探一下 Core ML，看看当您使用该模型进行预测时它会做什么。当然，我们没有 Core ML 的源代码，但我们仍然可以查看堆栈跟踪以找到有关其工作原理的一些线索。
-
-我使用了我的Inception+CoreML项目并predict(pixelBuffer)在ViewController.swift 中的以下行上设置了一个断点：
-
-
+使用了我的Inception+CoreML项目并predict(pixelBuffer)在ViewController.swift 中的以下行上设置了一个断点：
 
 
 ![](/img/post-ml/core8.jpg)
 
 
-关闭优化，构建应用程序，然后运行。应用程序将在调用 时暂停handler.perform([request])。按几次调试器工具栏中的Step Into按钮，您将获得如下堆栈跟踪：
+关闭xcode中的编译优化选项(xcode-> build settings -> Optimization Level)，重新构建应用程序，然后运行。应用程序将在调用 时暂停handler.perform([request])。按几次调试器工具栏中的Step Into按钮，您将获得如下堆栈跟踪：
 
 ![](/img/post-ml/core9.png)
 
@@ -306,8 +302,7 @@ model.espresso.net, 这是一个普通的文本文件:
 
 [MLNeuralNetworkEngine predictionFromFeatures:options:error:] 这看起来像实际运行神经网络的类。
 
-Espresso::abstract_context::compute_batch_sync又是浓缩咖啡。这是 C++ 代码。Espresso 似乎是围绕低级 Metal 
-Performance Shaders 的 Core ML 包装器。
+Espresso::abstract_context::compute_batch_sync 是 C++ 代码， 实现对底层 Metal Performance Shaders 的 CorML 包装。
 
 
 
@@ -373,11 +368,11 @@ commandQueue = device.makeCommandQueue()
 ![](/img/post-ml/core14.png)
 
 
-将 GPU 用于此类作业的全部意义在于 GPU 是大规模并行的：相同的计算内核将由许多线程并行执行，每个线程处理一小部分问题。在卷积层的情况下，每个线程计算输出纹理中的一个像素。线程由 GPU 分组调度。
+GPU 是大规模并行的：相同的计算内核将由许多线程并行执行，每个线程处理一小部分问题。在卷积层的情况下，每个线程计算输出纹理中的一个像素。线程由 GPU 分组调度。
 
 在这种情况下，每个线程组包含 1×2×2 = 4 个线程，并且有 35×9×2 = 630 个组。所以总共有 630 × 4 = 2520 个线程启动来执行这个特定的卷积。这些数字从何而来？您必须询问编写这些 MPS 内核的 Apple 工程师，但大概选择他们是因为它们在此特定设备（10.5 英寸 iPad Pro）上在这种尺寸的问题上提供了最佳性能。
 
-正如我所提到的，MPS 有多个计算内核用于在各种情况下执行卷积，并且这些内核已经过调整以在不同的硬件和不同的图像大小上尽可能快地运行。（您很可能会在您的设备上看到此计算内核的不同线程组大小。）
+正如我所提到的，MPS有多个计算内核用于在各种情况下执行卷积，并且这些内核已经过调整以在不同的硬件和不同的图像大小上尽可能快地运行。（您很可能会在您的设备上看到此计算内核的不同线程组大小。）
 
 不过，我们可以猜测这些数字可能意味着什么。线程组的大小以三个维度给出，因此我们有 35×1 线程处理图像的宽度，9×2 线程用于高度，2×2 线程用于深度。在这种情况下，输入纹理为 35×35 像素，具有 48×4 = 192 个通道。输出纹理也是 35×35，但只有 32 个通道。
 
