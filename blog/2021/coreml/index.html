@@ -7,7 +7,7 @@
 
   <title>CoreML一瞥</title>
   <meta name="description"
-    content="  在这篇博文中，我们将快速了解 Core ML 模型的内部结构，以及运行模型时设备和 GPU 上发生的情况。了解 Core ML 在幕后的工作原理还可以更轻松地解决您在使模型工作时可能遇到的任何问题。">
+    content="  在这篇博文中，我们将快速了解 CoreML 模型的内部结构，以及运行模型时设备和 GPU 上发生的情况。了解 CoreML 背后的工作原理和更轻松地解决在使模型工作时可能遇到的任何问题。">
 
   <link rel="shortcut icon" href="/img/favicon.ico">
   <link rel="stylesheet" href="/css/main.css">
@@ -74,14 +74,14 @@ MathJax.Hub.Config({
 
     <div class="post-content">
       <blockquote>
-  <p>在这篇博文中，我们将快速了解 Core ML 模型的内部结构，以及运行模型时设备和 GPU 上发生的情况。了解 Core ML 在幕后的工作原理还可以更轻松地解决您在使模型工作时可能遇到的任何问题。</p>
+  <p>在这篇博文中，我们将快速了解 CoreML 模型的内部结构，以及运行模型时设备和 GPU 上发生的情况。了解 CoreML 背后的工作原理和更轻松地解决在使模型工作时可能遇到的任何问题。</p>
 </blockquote>
 
 <h3 id="mlmodel-文件中有什么">.mlmodel 文件中有什么？</h3>
 
-<p>要在 Core ML 中使用机器学习模型，它需要采用mlmodel格式。您可以使用coremltools Python 包将经过训练的模型转换为这种格式。但是这样的.mlmodel文件究竟是什么？</p>
+<p>要在 Core ML 中使用机器学习模型，它需要采用mlmodel格式。使用coremltools Python包将经过训练的模型转换为这种格式。但是这样的.mlmodel文件究竟是什么？</p>
 
-<p>mlmodel 文件格式基于protobuf。您可以在此处下载 <a href="https://docs-assets.developer.apple.com/coreml/documentation/mlmodel_specification.zip">mlmodel规范</a>。当解压缩此文件夹时，它包含一堆.proto文件。主要的一个是Model.proto，它包括所有其他的。</p>
+<p>mlmodel 文件格式基于protobuf。您可以在此处下载 <a href="https://docs-assets.developer.apple.com/coreml/documentation/mlmodel_specification.zip">mlmodel规范</a>。当解压缩此文件夹时，它包含一堆.proto文件,主要的一个是Model.proto，它包括所有其他的。</p>
 
 <p><img src="/img/post-ml/ml1.jpg" alt="" /></p>
 
@@ -104,9 +104,9 @@ MathJax.Hub.Config({
 </code></pre>
 </div>
 
-<p>Core ML 支持的所有内容都由这些 proto 文件描述。 如所有神经网络层描述配置在 NeuralNetwork.proto。</p>
+<p>CoreML所有内容都由这些.proto描述, 如神经网络层描述配置在 NeuralNetwork.proto。</p>
 
-<p>虽然这些 proto 文件对于理解 CoreML 的可能性和局限性很有用，但我们也可以使用它们来查看 mlmodel 文件的内部。毕竟，mlmodel 文件只不过是这种 protobuf 格式的二进制文件。先使用brew或者pip来安装 protobuf:</p>
+<p>虽然这些 proto 文件对于理解 CoreML 的可能性和局限性很有用，但我们仍可以使用它们来查看 mlmodel 文件的内部。毕竟，mlmodel 文件只不过是这种 protobuf 格式的二进制文件。先使用brew或者pip来安装 protobuf:</p>
 
 <div class="language-sh highlighter-rouge"><pre class="highlight"><code>brew update
 brew install protobuf
@@ -140,14 +140,14 @@ pip3 install -U protobuf
 
 <p>该行import Model_pb2加载我们刚刚从 Model.proto 生成的文件（依次导入所有其他文件）。该Model_pb2模块包含一个Model可用于加载 mlmodel 文件的类，在本例中为来自<a href="https://github.com/hollance/Inception-CoreML/blob/master/Inception/Inceptionv3.mlmodel">developer.apple.com/machine-learning/ 的Inceptionv3.mlmodel</a>。</p>
 
-<p>protobuf 的好处在于它隐藏了所有的解析逻辑。要读取 mlmodel 文件，您只需使用与 proto 文件中的定义看起来完全相同的本机对象。</p>
+<p>protobuf 的好处在于它隐藏了所有的解析逻辑。要读取 mlmodel 文件，只需使用与.proto中的定义看起来完全相同的本机对象。</p>
 
 <p>Model.proto 包含一个Model带有description属性的定义。要打印出此属性的值，您只需将此行添加到脚本中：</p>
 
 <div class="language-py highlighter-rouge"><pre class="highlight"><code><span class="k">print</span><span class="p">(</span><span class="n">model</span><span class="o">.</span><span class="n">description</span><span class="p">)</span>
 </code></pre>
 </div>
-
+<p>结果：</p>
 <div class="highlighter-rouge"><pre class="highlight"><code>input {
   name: "image"
   shortDescription: "Input image to be classified"
@@ -228,9 +228,9 @@ predictions__activation__
 </code></pre>
 </div>
 
-<p>编写这样的脚本有助于准确检查 coremltools 转换过程所做的工作，并验证它是否确实包含所有层。</p>
+<p>编写这样的脚本有助于检查 coremltools 转换过程所做的工作，并验证它所包含的层。</p>
 
-<p>CoreML 的一件重要事情是，对于拍摄图像的模型，输入图像被转换为模型期望的格式。要验证您的模型进行了什么样的预处理，您可以编写：</p>
+<p>CoreML对于拍摄图像的模型，输入图像能转换成模型所期望的Shape。要验证模型进行了什么样的预处理，可以编写：</p>
 
 <div class="language-py highlighter-rouge"><pre class="highlight"><code><span class="k">print</span><span class="p">(</span><span class="n">model</span><span class="o">.</span><span class="n">neuralNetworkClassifier</span><span class="o">.</span><span class="n">preprocessing</span><span class="p">)</span>
 </code></pre>
@@ -246,11 +246,11 @@ predictions__activation__
 </code></pre>
 </div>
 
-<p>这意味着 Core ML 首先将每个像素与0.007843（恰好是）相乘1/127.5，然后1.0从每个颜色通道中减去。如此有效地将像素从范围 [0, 255] 缩放到范围 [-1, 1]。</p>
+<p>这意味着 CoreML 首先将每个像素与0.007843（恰好是）相乘1/127.5，然后1.0从每个颜色通道中减去。如此有效地将像素从范围 [0, 255] 缩放到范围 [-1, 1]。</p>
 
 <h2 id="模型">模型</h2>
 
-<p>在您为创建 mlmodel 文件所做的所有努力之后，当您将它发送到 App Store 时，该文件实际上并未包含在您的应用程序包中。相反，Xcode 在 mlmodel 文件上运行一个编译器来生成一个.mlmodelc。</p>
+<p>在创建好 .mlmodel，当将它发送到 App Store 时，该文件实际上并未包含在您的应用程序包中。相反，Xcode将.mlmodel编译成.mlmodelc。</p>
 
 <p>当将 Inceptionv3.mlmodel 添加到您的项目并构建应用程序时，Xcode 执行以下构建步骤：</p>
 
@@ -280,6 +280,14 @@ xcrun coremlc generate Inceptionv3.mlmodel output
 
 <p>其中.mlmodelc是 compile 生成的， <em>.h, *.m 是generate的wrap接口， 因此如果有算法上云的部分，只能提前将编译生成的</em>.mlmodelc 放在服务器等在下载， 而将脚本.m 需要编译到包体里去。  直接上传.bundle跳过构建应用阶段编译是无法生效的。</p>
 
+<p>但是coreML提供了运行时编译mlmodel的接口，能实现动态编译：</p>
+
+<div class="language-swift highlighter-rouge"><pre class="highlight"><code><span class="c1">//编译模型文件并通过编译版本创建MLModel实例。</span>
+<span class="k">let</span> <span class="nv">compiledUrl</span> <span class="o">=</span> <span class="k">try</span> <span class="kt">MLModel</span><span class="o">.</span><span class="nf">compileModel</span><span class="p">(</span><span class="nv">at</span><span class="p">:</span> <span class="n">modelUrl</span><span class="p">)</span>
+<span class="k">let</span> <span class="nv">model</span> <span class="o">=</span> <span class="k">try</span> <span class="kt">MLModel</span><span class="p">(</span><span class="nv">contentsOf</span><span class="p">:</span> <span class="n">compiledUrl</span><span class="p">)</span>
+</code></pre>
+</div>
+
 <p>当打开 mlmodelc 文件夹。如果您在 Finder 中打开 .app 文件并选择“显示包内容”，它将显示您的应用程序包中的内容：</p>
 
 <p><img src="/img/post-ml/core5.png" alt="" /></p>
@@ -299,7 +307,6 @@ coremldata.bin: 用于运行神经网络的 CoreML 部分的内部名称。
 <div class="language-sh highlighter-rouge"><pre class="highlight"><code><span class="o">{</span>
   <span class="s2">"storage"</span> : <span class="s2">"model.espresso.weights"</span>,
   <span class="s2">"properties"</span> : <span class="o">{</span>
-
   <span class="o">}</span>,
   <span class="s2">"format_version"</span> : 200,
   <span class="s2">"layers"</span> : <span class="o">[</span>
@@ -321,21 +328,17 @@ coremldata.bin: 用于运行神经网络的 CoreML 部分的内部名称。
 </code></pre>
 </div>
 
-<p>它再次列出了所有模型的层，但这次以 JSON 格式而不是 protobuf 格式存储。</p>
-
-<p>为什么同一件事有两种不同的格式？我认为 mlmodel 应该是一种开放的标准文件格式，以便其他工具也可以加载 mlmodel 文件（例如，允许您在 Android 或 Linux 上使用您的 mlmodel 文件）另一方面，mlmodelc 是一种专有格式它针对 Apple 设备进行了优化，并且特定于 iOS。</p>
+<p>其列出了所有模型的层，但这次以JSON格式而不是protobuf。为什么同一件事有两种不同的格式？我认为 mlmodel 应该是一种开放的标准文件格式，以便其他工具也可以加载 mlmodel 文件（例如，允许您在 Android 或 Linux 上使用您的 mlmodel 文件）另一方面，mlmodelc 是一种专有格式它针对 Apple 设备进行了优化，并且特定于iOS。</p>
 
 <p>将 mlmodel 编译为私有格式的另一个原因是通常可以进行优化——例如将不同的层融合在一起——以减少推理时间。例如，如果 mlmodel 指定一个卷积层后跟一个缩放层，那么 CoreML 编译器可以删除该缩放层，而是使卷积层的权重更大或更小。结果是相同的，但它节省了一个计算步骤。</p>
 
 <h2 id="运行模型时会发生什么">运行模型时会发生什么？</h2>
 
-<p>让我们稍微窥探一下 Core ML，看看当您使用该模型进行预测时它会做什么。当然，我们没有 Core ML 的源代码，但我们仍然可以查看堆栈跟踪以找到有关其工作原理的一些线索。</p>
-
-<p>我使用了我的Inception+CoreML项目并predict(pixelBuffer)在ViewController.swift 中的以下行上设置了一个断点：</p>
+<p>当我们在MLModel的predict()方法上设置了一个断点：</p>
 
 <p><img src="/img/post-ml/core8.jpg" alt="" /></p>
 
-<p>关闭优化，构建应用程序，然后运行。应用程序将在调用 时暂停handler.perform([request])。按几次调试器工具栏中的Step Into按钮，您将获得如下堆栈跟踪：</p>
+<p>关闭xcode中的编译优化选项(xcode-&gt; build settings -&gt; Optimization Level)，重新构建应用程序，然后运行。应用程序将在调用 时暂停handler.perform([request])。按几次调试器工具栏中的Step Into按钮，您将获得如下堆栈跟踪：</p>
 
 <p><img src="/img/post-ml/core9.png" alt="" /></p>
 
@@ -347,10 +350,9 @@ coremldata.bin: 用于运行神经网络的 CoreML 部分的内部名称。
 
 <p>[MLNeuralNetworkEngine predictionFromFeatures:options:error:] 这看起来像实际运行神经网络的类。</p>
 
-<p>Espresso::abstract_context::compute_batch_sync又是浓缩咖啡。这是 C++ 代码。Espresso 似乎是围绕低级 Metal <br />
-Performance Shaders 的 Core ML 包装器。</p>
+<p>Espresso::abstract_context::compute_batch_sync 是 C++ 代码， 实现对底层 Metal Performance Shaders 的 CorML 包装。</p>
 
-<p>首先 Vision 调整图像大小，然后将其交给MLNeuralNetworkEngine，用于Espresso从 model.espresso.net 文件中读取神经网络定义，最后 MPS 执行在 GPU 上运行神经网络的实际工作。</p>
+<p>这个过程可以总结为：首先调整图像大小，然后将其交给MLNeuralNetworkEngine，用于Espresso从 model.espresso.net 文件中读取神经网络定义，最后 MPS 执行在 GPU 上运行神经网络的实际工作。</p>
 
 <p>CoreML 可以在 CPU 或 GPU 上运行模型。对于某些模型，使用 CPU 更有意义，但对于（深度）神经网络，GPU 是首选工具。Xcode 带有一个GPU Frame Capture按钮，让我们可以检查 GPU 正在做什么，我们可以使用它来监视 CoreML。</p>
 
@@ -369,27 +371,27 @@ Performance Shaders 的 Core ML 包装器。</p>
 
 <p><img src="/img/post-ml/core6.png" alt="" /></p>
 
-<p>运行应用程序，按下 GPU Frame Capture 按钮开始捕捉，等待一秒左右，再次按下按钮停止。当然，您实际上需要在捕获发生时进行 Core ML 预测（在我的应用程序中，它对每个视频帧进行预测，所以我们很好）。</p>
+<p>运行应用程序，按下 GPU Frame Capture 按钮开始捕捉，等待一秒左右，再次按下按钮停止。当然，您实际上需要在捕获发生时进行 CoreML 预测。</p>
 
 <p>现在 Xcode 将显示 GPU 在捕获期间正在做什么：</p>
 
 <p><img src="/img/post-ml/core10.png" alt="" /></p>
 
-<p>在上面的截图中，很明显，卷积层的 Conv 块占用了大部分时间。</p>
+<p>在上面的截图中，很明显卷积层的Conv占用了大部分时间。</p>
 
 <p><img src="/img/post-ml/core11.png" alt="" /></p>
 
-<p>该计算内核从包含输入图像的 355 KB 内存缓冲区（缓冲区 0）读取并写入 299×299 像素的纹理（纹理 0）。回想一下，此时必须已经调整了输入图像的大小——很容易验证这一点：299×299 像素乘以每像素 4 个字节需要 355 KB 的存储空间，这确实是输入缓冲区的大小。</p>
+<p>计算内核从包含输入图像的 355 KB 内存缓冲区（Buffer0）读取并写入 299×299 像素的纹理（Texture0）。回想一下，此时必须已经调整了输入图像的大小——很容易验证这一点：299×299 像素乘以每像素 4 个字节需要 355 KB 的存储空间，这确实是输入缓冲区的大小。</p>
 
 <h2 id="卷积核">卷积核</h2>
 
-<p>现在让我们将注意力转向Conv命令编码器。它们具有具有奇特名称的内核函数，例如cnnConvArray_3xIn_16xOut_1_3和cnnConvArray_8xIn_8xOut_1_2。我不确定这些数字的确切含义，但很明显 MPS 有几个不同的计算内核来进行卷积，每个内核都针对特定情况量身定制。</p>
+<p>现在让我们将注意力转向Conv命令编码器。它们具有具有特定名称的内核函数，例如cnnConvArray_3xIn_16xOut_1_3和cnnConvArray_8xIn_8xOut_1_2。很明显MPS有几个不同的计算内核来进行卷积，每个内核都针对特定情况定制的。</p>
 
 <p><img src="/img/post-ml/core12.png" alt="" /></p>
 
-<p>卷积核从纹理读取并写入新纹理。它还需要三个缓冲区：缓冲区 1 包含内核大小、步长、激活函数值等（双击缓冲区查看）；缓冲区 2 包含卷积权重；缓冲区 3 包含偏差项。</p>
+<p>卷积核从纹理读取并写入新纹理。它需要三个缓冲区：Buffer1 包含内核大小、步长、激活函数值等（双击缓冲区查看）；Buffer2 包含卷积权重；Buffer3 包含偏差项。</p>
 
-<p>在 Xcode 调试窗格中，您可以找到有关此计算内核及其绑定资源的更多信息。特别是，函数部分很有趣</p>
+<p>在 Xcode 调试窗格中，您可以找到有关此计算内核及其绑定资源的更多信息。</p>
 
 <p><img src="/img/post-ml/core13.png" alt="" /></p>
 
@@ -403,37 +405,13 @@ Performance Shaders 的 Core ML 包装器。</p>
 
 <p><img src="/img/post-ml/core14.png" alt="" /></p>
 
-<p>将 GPU 用于此类作业的全部意义在于 GPU 是大规模并行的：相同的计算内核将由许多线程并行执行，每个线程处理一小部分问题。在卷积层的情况下，每个线程计算输出纹理中的一个像素。线程由 GPU 分组调度。</p>
+<p>GPU 是大规模并行的：相同的计算内核将由许多线程并行执行，每个线程处理一小部分问题。在卷积层的情况下，每个线程计算输出纹理中的一个像素。线程由 GPU 分组调度。</p>
 
 <p>在这种情况下，每个线程组包含 1×2×2 = 4 个线程，并且有 35×9×2 = 630 个组。所以总共有 630 × 4 = 2520 个线程启动来执行这个特定的卷积。这些数字从何而来？您必须询问编写这些 MPS 内核的 Apple 工程师，但大概选择他们是因为它们在此特定设备（10.5 英寸 iPad Pro）上在这种尺寸的问题上提供了最佳性能。</p>
 
-<p>正如我所提到的，MPS 有多个计算内核用于在各种情况下执行卷积，并且这些内核已经过调整以在不同的硬件和不同的图像大小上尽可能快地运行。（您很可能会在您的设备上看到此计算内核的不同线程组大小。）</p>
-
-<p>不过，我们可以猜测这些数字可能意味着什么。线程组的大小以三个维度给出，因此我们有 35×1 线程处理图像的宽度，9×2 线程用于高度，2×2 线程用于深度。在这种情况下，输入纹理为 35×35 像素，具有 48×4 = 192 个通道。输出纹理也是 35×35，但只有 32 个通道。</p>
+<p>MPS有多个计算内核用于在各种情况下执行卷积，并且这些内核已经过调整以在不同的硬件和不同的图像大小上尽可能快地运行。线程组的大小以三个维度给出，因此我们有 35×1 线程处理图像的宽度，9×2 线程用于高度，2×2 线程用于深度。在这种情况下，输入纹理为 35×35 像素，具有 48×4 = 192 个通道。输出纹理也是 35×35，但只有 32 个通道。</p>
 
 <p>将所有这些数字放在一起意味着每个线程水平处理一个像素（宽度为 35，我们有 35 个线程在该维度上工作）和两个像素垂直处理（高度也是 35，但我们只有 9×2 = 18 个线程在该维度上工作，因此 18 个线程执行 2 个像素，每个线程覆盖这 35 个像素）。每个线程写入 32 / 2×2 = 8 个输出通道的结果。</p>
-
-<h2 id="归一化和层融合">归一化和层融合</h2>
-
-<p>列表中还有其他 ComputeCommandEncoders。卷积层后面的那些被命名为TARR_batchnorm_inference_kernel。这是有道理的，因为 Inceptionv3 在每个卷积层之后使用批归一化。</p>
-
-<p>然而，我觉得有趣的是 CoreML 没有优化这些层。当批归一化发生在激活函数之前时，可以将批归一化层“折叠”到前面的卷积层中。Inceptionv3.mlmodel 所基于的Keras 模型确实在 ReLU 激活之前应用了批处理规范。但出于某种原因，这种TARR_batchnorm_inference_kernel情况发生在ReLU 之后。好奇的…</p>
-
-<p>当我在另一个应用批处理规范化的<a href="https://github.com/hollance/MobileNet-CoreML">模型</a>上运行 GPU 帧捕获时，捕获中没有显示批处理规范层。对于该模型，CoreML 能够将它们优化掉，那么为什么不用于 Inceptionv3？</p>
-
-<p>这个难题的答案在于我们之前所做的 .mlmodel 转储。请注意，激活函数也发生在批处理规范之前：</p>
-
-<div class="highlighter-rouge"><pre class="highlight"><code>convolution2d_1
-convolution2d_1__activation__
-batchnormalization_1
-</code></pre>
-</div>
-
-<p>事实证明，inception_v3.py的GitHub 历史表明，该模型的早期版本确实在 ReLU 之后放置了批规范，但从那时起他们已经改变了它。所以这就解释了：Apple 使用了该脚本的先前版本，而不是当前版本。</p>
-
-<p>我希望这是一个有用的演示，说明为什么有时查看模型在运行时发生的情况是有意义的。</p>
-
-<p>在这种情况下，使用更新版本可以使 Inceptionv3.mlmodel 更快，以便可以折叠批规范层，从而节省一些推理时间。Inceptionv3 有大约 90 个卷积层，如果批处理规范平均需要 150 微秒（取决于层的大小），那么每帧节省大约 14 毫秒。</p>
 
 
     </div>
