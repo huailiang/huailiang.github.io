@@ -98,10 +98,16 @@ Camera2 的 API 模型被设计成一个 Pipeline（管道），它按顺序处�
 
 整个拍摄流程如下：
 
+```
+
 1. 创建一个用于从 Pipeline 获取图片的 CaptureRequest。
+
 2. 修改 CaptureRequest 的闪光灯配置，让闪光灯在拍照过程中亮起来。
+
 3. 创建两个不同尺寸的 Surface 用于接收图片数据，并且将它们添加到 CaptureRequest 中。
+
 4. 发送配置好的 CaptureRequest 到 Pipeline 中等待它返回拍照结果。
+```
 
 一个新的 CaptureRequest 会被放入一个被称作 Pending Request Queue 的队列中等待被执行，当 In-Flight Capture Queue 队列空闲的时候就会从 Pending Request Queue 获取若干个待处理的 CaptureRequest，并且根据每一个 CaptureRequest 的配置进行 Capture 操作。最后我们从不同尺寸的 Surface 中获取图片数据并且还会得到一个包含了很多与本次拍照相关的信息的 CaptureResult，流程结束。 更多的关于 [Camera2][i1] 的详细介绍， 点击这里的 [链接][i1]。
 
