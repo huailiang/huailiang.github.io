@@ -1,0 +1,80 @@
+---
+layout:     post
+title:      "Docker Unity"
+date:       2022-01-29 02:00:00
+author:     "huailiang"
+tags:
+    - Unity
+---
+
+
+
+>unity中部署docker， 把一些服务部署到server上去， 用来处理线上资源。 
+
+
+## 导出发布版Linux Unity
+
+需要对应下载unity对应版本的linux standanle component， 安装之后， 你的unity就在导出的时候就有linux的选项了。
+
+![](/img/post-unity/docker1.jpg)
+
+
+Target Platform 选择linux， Server Build一定要勾上， 这样在无图形界面才能运行的起来。
+
+导出一个volume的文件夹， 然后docker run的时候以外挂盘的形式运行。
+
+这里docker 镜像与外部的交互方式还是 http的方式， 因此需要在镜像里部署一个webserver， 以接收来自外部的请求， webserver接收到 get/post的数据之后进行解析， 然后发起unity， unity读取外部传递的参数, 类似下面的代码：
+
+
+```csharp
+string[] args = Environment.GetCommandLineArgs();
+Debug.Log("args len: " + args.Length);
+for (int i = 0; i < args.Length; i++)
+{
+    Debug.Log("arg " + i + ": " + args[i]);
+    if (args[i].StartsWith("--path"))
+    {
+        path = args[i].Replace("--path=", string.Empty).Trim();
+        break;
+    }
+    if (args[i].StartsWith("--args"))
+    {
+        param = args[i].Replace("--args=", string.Empty).Trim();
+    }
+}
+```
+
+
+
+外部传递参数可以是路径的方式加参数的方式， 如在python里可以这样写：
+
+
+```py
+def run(self, process_path):
+    print("launch unity: " + self.launch_string)
+    if os.path.exists(self.launch_string):
+        print("process path: ", process_path)
+        path = self.launch_string + ' --path=' + process_path
+        os.system(path)
+    else:
+        print("not find unity " + self.launch_string)
+```
+
+
+在shell 里直接：
+
+```sh
+<unity-launch-path> --pth=***.jpg
+```
+
+
+
+## Linux Unity Editor
+
+Linux版本的unity激活 真是一个麻烦事， 因为都是命令行的，非图形界面不能像在Unityhub中来界面上直接激活。
+
+
+
+[i1]: https://www.jianshu.com/p/9a2e66916fcb
+[i3]: https://forum.unity.com/threads/webcamtexture-on-android-focus-mode-fix.327956/
+[i4]: https://github.com/huailiang/WebCam
