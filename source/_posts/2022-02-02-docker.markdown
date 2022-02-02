@@ -1,0 +1,117 @@
+---
+layout:     post
+title:      "Docker Unity"
+date:       2022-02-02 02:00:00
+author:     "huailiang"
+tags:
+    - Unity
+---
+
+
+
+>最近项目的开发中，遇到不少用户上传的视频、图片资源。 这些资源需要下载到端侧， 然后渲染出来。 由于Unity不能离线处理处理这些资源， 所以很多图片资源在显存直接展开成RGBA(png)或者RGB（jpg）， 由于没有压缩，所以带来很大的显存开销。于是就想把unity中部署docker中， 在一些资源部署到server上去之前， 把图片压缩成ETC、ASTC、PVRTC这些支持GPU格式的纹理，从而达到降内存的目的。 此外在docker中除了部署unity的环境， 还可以部署python环境，python丰富的package可以处理音频、视频，从而形成一个完整的在线资源处理服务。
+
+
+## 导出发布版Linux Unity
+
+需要对应下载unity对应版本的linux standanle component， 安装之后， 你的unity就在导出的时候就有linux的选项了。
+
+![](/img/post-unity/docker1.jpg)
+
+
+Target Platform 选择linux， Server Build一定要勾上， 这样在无图形界面才能运行的起来。
+
+导出一个volume的文件夹， 然后docker run的时候以外挂盘的形式运行。
+
+这里docker 镜像与外部的交互方式还是 http的方式， 因此需要在镜像里部署一个webserver， 以接收来自外部的请求， webserver接收到 get/post的数据之后进行解析， 然后发起unity， unity读取外部传递的参数, 类似下面的代码：
+
+
+```csharp
+string[] args = Environment.GetCommandLineArgs();
+Debug.Log("args len: " + args.Length);
+for (int i = 0; i < args.Length; i++)
+{
+    Debug.Log("arg " + i + ": " + args[i]);
+    if (args[i].StartsWith("--path"))
+    {
+        path = args[i].Replace("--path=", string.Empty).Trim();
+        break;
+    }
+    if (args[i].StartsWith("--args"))
+    {
+        param = args[i].Replace("--args=", string.Empty).Trim();
+    }
+}
+```
+
+外部传递参数可以是路径的方式加参数的方式， 如在python里可以这样写：
+
+
+```py
+def run(self, process_path):
+    print("launch unity: " + self.launch_string)
+    if os.path.exists(self.launch_string):
+        print("process path: ", process_path)
+        path = self.launch_string + ' --path=' + process_path
+        os.system(path)
+    else:
+        print("not find unity " + self.launch_string)
+```
+
+
+在 shell 里直接：
+
+```sh
+<unity-launch-path> --pth=***.jpg
+```
+
+这样调用之后， unity测就会自动读取到传过来的参数了， 然后根据参数就可以分发不同的逻辑了。  由于这样的unity是导出的， 所以python里的启动unity速度很快， unity官方的 ml-agent 进行ai 训练就是使用的这样的方式。  然而这样的方式缺点也是很明显， 由于发布版本unity没有了 UnityEditor, 所以像AssetBundle、 TextureImporter这些东西都不能使用了。  
+
+
+## Linux Unity Editor
+
+Linux版本的unity激活 真是一个麻烦事， 因为都是命令行的，非图形界面不能像在Unityhub中来界面上直接激活。Unity提供了一种命令行的[激活方式][i2], 不过只针对是pro/plus版本的unity。  搜遍网络， 找到一位博主[激活][i1]的unity版本docker镜像， 不过这里内置的unity是2017版本的， 其他版本的只好咨询博主了。
+
+
+![](/img/post-unity/docker2.jpg)
+
+直接在docker里集成一个unity， 这里会导致镜像的容量会非常大， 此外此种方式unity的启动速度也会非常的慢， 因为unity在启动的时候， 会首先去server上验证一下license, 网上的很多使用此种方式来打包之类的ci。  作者在docker启动的时候外挂一个unity工程的虚拟盘来处理在线资源。
+
+```sh
+# 编译镜像
+docker build -t hola.unity.v0.1 .
+
+# 进入到本地目录， 把 Unity-volume 做 虚拟盘 映射到 镜像中
+docker run -it --name Hola-Unity-Container --mount type=bind,source="$(pwd)"/unity-volume,target=/unity-volume hola.unity.v0.1:latest
+
+# 进入到镜像， 以 batchmode 的方式处理资源
+# DockerMain 是一个 Editor 类， Process 是无参静态方法
+/opt/Unity/Editor/Unity -quit -batchmode -nographics -silent-crashes -logFile /dev/stdout -projectPath "/unity-volume" -executeMethod "DockerMain.Process"
+```
+
+## 写在最后
+
+如果在 ubuntu 的系统中， 不能直接通过  xvfb 的方式 启动unity， 必须通过 -nographics  方式：
+
+```sh
+/opt/Unity/Editor/Unity -batchmode -nographics
+```
+
+
+
+## 参考
+
+[Unity 使用命令行激活][i2]
+
+[在linux下用 docker 的方式编译 Unity 并和CI进行集成][i1]
+
+[Github上RPGGameProject使用序列号激活Linux unity的例子][i4]
+
+[Running Unity 2020.1 in Docker][i6]
+
+[i1]: https://blog.csdn.net/kunyus/article/details/104617073
+[i2]: https://docs.unity3d.com/2018.4/Documentation/Manual/OnlineActivationGuide.html
+[i3]: https://hub.docker.com/layers/ssoor/unity3d/2017.4.8f1-android/images/sha256-199e88bc1796ad80177ec46fbf9e71d6f6eea52a023a0f931813291721682dce?context=explore
+[i4]: https://github.com/Jacket28/RPGGameProject/blob/0728f7654d9760b9bc81e4864e64dc8980cd8822/.github/workflows/main.yml
+[i5]: https://hub.docker.com/layers/ssoor/unity3d/2017.4.8f1-android/images/sha256-199e88bc1796ad80177ec46fbf9e71d6f6eea52a023a0f931813291721682dce?context=explore
+[i6]: https://johnaustin.io/articles/2020/running-unity-20201-in-docker
