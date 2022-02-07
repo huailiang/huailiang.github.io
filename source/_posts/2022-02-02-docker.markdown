@@ -97,7 +97,23 @@ docker run -it --name Hola-Unity-Container --mount type=bind,source="$(pwd)"/uni
 /opt/Unity/Editor/Unity -batchmode -nographics
 ```
 
+在镜像部署到目标机上时， 目标机不一定有当前主机上的环境， 比如说 apt-get 访问不到，因此这里需要将本地build完整的镜像导出， 然后放到目标机上：
 
+```sh
+docker save [OPTIONS] IMAGE [IMAGE...]
+```
+
+-o :输出到的文件。 如：
+```
+docker save -o my_ubuntu_v3.tar runoob/ubuntu:v3
+```
+
+再新的dockerfile里可以 在 使用From 加载进来。
+
+清理docker 残留等：
+```
+docker system prune -a
+```
 
 ## 参考
 
