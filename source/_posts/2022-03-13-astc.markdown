@@ -207,6 +207,23 @@ decoded_dim = dim[0] + (dim[1] << 8) + (dim[2] << 16);
 ```
 
 
+##  转换ASTC图片
+
+使用 [astc-encoder][i2] 不仅可以将 jpg、png、tga 这些 LDR 的图片转换成 atsc，还支持了 HDR， 比如说： .exr .hdr等格式的图片
+
+下载 astc-encoder好之后， 按照说明文档编译好之后， 就可以以命令行的形式来生成不通压缩块和质量的图片了。
+
+
+```sh
+astcenc -tl example.png example.tga 5x5 -thorough
+```
+
+除此之外， 还有界面话的工具 [Mali_Texture_Compression_Tool][i3] 也支持进行转换， 比如说 ARM 官方开发了一款 gui 的工具， 不仅支持图片转换， 还支持动态的和原图进行 逐像素 对比。
+
+
+![](/img/post-engine/astc2.jpg)
 
 
 [i1]: https://github.com/ARM-software/astc-encoder/blob/main/Docs/FormatOverview.md
+[i2]: https://github.com/ARM-software/astc-encoder/
+[i3]: https://developer.arm.com/tools-and-software/graphics-and-gaming/mali-texture-compression-tool
