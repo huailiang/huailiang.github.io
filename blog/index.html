@@ -68,6 +68,36 @@ MathJax.Hub.Config({
     <article class="post">
   <header class="post-header">
     <h1 class="post-title2">
+      <a class="post-link" href="/blog/2022/astc/">ASTC</a>
+    </h1>
+    <div class="post-meta">
+      <time>Mar 13, 2022</time>
+    </div>
+  </header>
+
+  <p><a href="/blog/2022/astc/" title="Permalink to: ASTC"
+      class="read-more">
+  Adaptive Scalable Texture Compression (ASTC)是Arm和AMD共同研发的一种纹理压缩格式，不同于ETC和ETC2的固定块尺寸（4x4），ASTC支持可变块大小的压缩，从而获得灵活的更大压缩率的纹理数据，降低GPU的带宽和能耗。 ASTC虽然尚未成为OpenGL的标准格式，只是以扩展的形式存在，但目前已经广泛地被主流GPU支持，可谓不是标准的的标...</a></p>
+</article>
+  
+    <article class="post">
+  <header class="post-header">
+    <h1 class="post-title2">
+      <a class="post-link" href="/blog/2022/docker/">Docker Unity</a>
+    </h1>
+    <div class="post-meta">
+      <time>Feb 2, 2022</time>
+    </div>
+  </header>
+
+  <p><a href="/blog/2022/docker/" title="Permalink to: Docker Unity"
+      class="read-more">
+  最近项目的开发中，遇到不少用户上传的视频、图片资源。 这些资源需要下载到端侧， 然后渲染出来。 由于Unity不能离线处理处理这些资源， 所以很多图片资源在显存直接展开成RGBA(png)或者RGB（jpg）， 由于没有压缩，所以带来很大的显存开销。于是就想把unity中部署docker中， 在一些资源部署到server上去之前， 把图片压缩成ETC、ASTC、PVRTC这些支持GPU...</a></p>
+</article>
+  
+    <article class="post">
+  <header class="post-header">
+    <h1 class="post-title2">
       <a class="post-link" href="/blog/2021/camera/">Unity访问 Camera2 能力</a>
     </h1>
     <div class="post-meta">
@@ -77,7 +107,12 @@ MathJax.Hub.Config({
 
   <p><a href="/blog/2021/camera/" title="Permalink to: Unity访问 Camera2 能力"
       class="read-more">
-  获取物理相机的预览流是AR开发的基础能力， 在 ARFoundation 和 AREngine 都是使用 CommandBuffer 来绘制预览流。 如果使用WebCameraTexture获取的预览流受限制比较多， 比如说去调整变焦(ZoomRatio)、 曝光补偿（AE）、相机感光度（ISO)、快门/曝光时间等。 这些参数更多的还是去原生层去拿， 而Camera2里的CameraC...</a></p>
+  获取物理相机的预览流是AR开发的基础能力， 在 ARFoundation 和 AREngine 都是使用 CommandBuffer 来绘制预览流。 如果使用WebCameraTexture获取的预览流受限制比较多， 比如说去调整变焦、曝光度这些东西更多的还是去原生层去拿。
+
+
+WebCameraTexture
+
+unity中获取camera的图像一般都是去通过WenCameraTex...</a></p>
 </article>
   
     <article class="post">
@@ -194,48 +229,6 @@ Android平台中，目标文件对应的是SO文件。Deb...</a></p>
 maven-release-aar.gradle 就是用...</a></p>
 </article>
   
-    <article class="post">
-  <header class="post-header">
-    <h1 class="post-title2">
-      <a class="post-link" href="/blog/2021/noise/">图形噪声</a>
-    </h1>
-    <div class="post-meta">
-      <time>Apr 9, 2021</time>
-    </div>
-  </header>
-
-  <p><a href="/blog/2021/noise/" title="Permalink to: 图形噪声"
-      class="read-more">
-  大自然蕴含着各式各样的纹理，小到细胞菌落分布，大到宇宙星球表面。运用图形噪声，我们可以在3d场景中模拟它们，本文就带大家一起走进万能的图形噪声。 图形噪声，是计算机图形学中一类随机算法，经常用来模拟自然界中的各种纹理材质，如下图的云、山脉等，都是通过噪声算法模拟出来的​。
-
-
-
-
-通过不同的噪声算法，作用在物体纹理和材质细节，我们可以模拟不同类型的材质。
-
-
-
-基础噪声算法
-
-一个基础...</a></p>
-</article>
-  
-    <article class="post">
-  <header class="post-header">
-    <h1 class="post-title2">
-      <a class="post-link" href="/blog/2021/shadertoy/">ShaderToy</a>
-    </h1>
-    <div class="post-meta">
-      <time>Apr 8, 2021</time>
-    </div>
-  </header>
-
-  <p><a href="/blog/2021/shadertoy/" title="Permalink to: ShaderToy"
-      class="read-more">如果你还没听过ShaderToy，那你就真的错过了一个很好的shader学习网站。我是在群里有一次听到小伙伴们提到这个网站的。点进去就会发现里面有很多很绚丽的shader展示。
-
-说简单点，这个网站是专门让人们分享和编写GLSL的pixel shaders的。 换句话说，里面那些绚丽的效果仅仅依靠pixel shaders就可以完成了（当然还有纹理的配合），是不是很强大？里面的强人很多，就像...</a></p>
-</article>
-  
 
   
 <nav class="pagination" role="pagination">
@@ -267,7 +260,7 @@ maven-release-aar.gradle 就是用...</a></p>
   <li><a href="https://github.com/huailiang" target="_blank"><i class="icon icon-github"></i></a></li>
 </ul>
     <p class="txt-medium-gray">
-      <small>&copy;2021 All rights reserved. </small>
+      <small>&copy;2022 All rights reserved. </small>
     </p>
   </div>
 </footer>

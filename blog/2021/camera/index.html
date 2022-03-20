@@ -7,7 +7,7 @@
 
   <title>Unity访问 Camera2 能力</title>
   <meta name="description"
-    content="  获取物理相机的预览流是AR开发的基础能力， 在 ARFoundation 和 AREngine 都是使用 CommandBuffer 来绘制预览流。 如果使用WebCameraTexture获取的预览流受限制比较多， 比如说去调整变焦(ZoomRatio)、 曝光补偿（AE）、相机感光度（ISO)、快门/曝光...">
+    content="  获取物理相机的预览流是AR开发的基础能力， 在 ARFoundation 和 AREngine 都是使用 CommandBuffer 来绘制预览流。 如果使用WebCameraTexture获取的预览流受限制比较多， 比如说去调整变焦、曝光度这些东西更多的还是去原生层去拿。">
 
   <link rel="shortcut icon" href="/img/favicon.ico">
   <link rel="stylesheet" href="/css/main.css">
@@ -74,7 +74,7 @@ MathJax.Hub.Config({
 
     <div class="post-content">
       <blockquote>
-  <p>获取物理相机的预览流是AR开发的基础能力， 在 ARFoundation 和 AREngine 都是使用 CommandBuffer 来绘制预览流。 如果使用WebCameraTexture获取的预览流受限制比较多， 比如说去调整变焦(ZoomRatio)、 曝光补偿（<a href="https://baike.baidu.com/item/AE模式">AE</a>）、相机感光度（<a href="https://baike.baidu.com/item/iso/5397601#viewPageContent">ISO</a>)、快门/曝光时间等。 这些参数更多的还是去原生层去拿， 而Camera2里的CameraCharacteristics 提供了一个便捷的接口去访问这些数据。</p>
+  <p>获取物理相机的预览流是AR开发的基础能力， 在 ARFoundation 和 AREngine 都是使用 CommandBuffer 来绘制预览流。 如果使用WebCameraTexture获取的预览流受限制比较多， 比如说去调整变焦、曝光度这些东西更多的还是去原生层去拿。</p>
 </blockquote>
 
 <h3 id="webcameratexture">WebCameraTexture</h3>
@@ -294,12 +294,7 @@ MathJax.Hub.Config({
 </code></pre>
 </div>
 
-<p>大致思路就是如此了， 需要注意的是 逆向 classes.jar, 每个版本的unity里的变量名都是一致的， 最好还是去安装包去看下实际的变量名， 然后在获取传递到原生层去。 另外需要注意的是， 更改的CaptureRequest.Builder的设置选项之后， 不会立即生效。  Unity侧需要 WebCameraTexture Pause之后，更改设置， 然后调用Playing之后才会生效。项目的代码我已经上传到 <a href="https://github.com/huailiang/WebCam">github</a>了。</p>
-
-<center>
-<iframe src="//player.bilibili.com/player.html?bvid=BV13R4y137e9&amp;cid=469323842&amp;page=1&amp;share_source=copy_web" width="400" height="600" scrolling="no" border="0" frameborder="no" framespacing="0" allowfullscreen="true"></iframe>
-</center>
-<p><br /></p>
+<p>大致思路就是如此了， 需要注意的是 逆向 classes.jar, 每个版本的unity里的变量名都是一致的， 最好还是去安装包去看下实际的变量名， 然后在获取传递到原生层去。 项目的代码我已经上传到 <a href="https://github.com/huailiang/WebCam">github</a>了。</p>
 
 
     </div>
@@ -388,8 +383,9 @@ MathJax.Hub.Config({
 <div class="post-nav">
 
   
-  <div class="post-nav-none post-nav-item">
-    <a href=""> </a>
+  <div class="post-nav-prev post-nav-item">
+    
+    <a href="/blog/2022/docker/"> Docker Unity</a>
   </div>
   
 
@@ -416,7 +412,7 @@ MathJax.Hub.Config({
   <li><a href="https://github.com/huailiang" target="_blank"><i class="icon icon-github"></i></a></li>
 </ul>
     <p class="txt-medium-gray">
-      <small>&copy;2021 All rights reserved. </small>
+      <small>&copy;2022 All rights reserved. </small>
     </p>
   </div>
 </footer>

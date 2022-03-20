@@ -1,0 +1,324 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <meta http-equiv="X-UA-Compatible" content="IE=edge">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+
+  <title>Docker Unity</title>
+  <meta name="description"
+    content="  最近项目的开发中，遇到不少用户上传的视频、图片资源。 这些资源需要下载到端侧， 然后渲染出来。 由于Unity不能离线处理处理这些资源， 所以很多图片资源在显存直接展开成RGBA(png)或者RGB（jpg）， 由于没有压缩，所以带来很大的显存开销。于是就想把unity中部署docker中， 在一些资源部署到...">
+
+  <link rel="shortcut icon" href="/img/favicon.ico">
+  <link rel="stylesheet" href="/css/main.css">
+  <link rel="canonical" href="https://huailiang.github.io/blog/2022/docker/">
+
+</head>
+
+<body>
+  <main>
+    <header class="site-header">
+  <div class="container">
+    <h1><a href="/">Hom<span>e</span></a></h1>
+
+    <button type="button" class="sliding-panel-button">
+      <span></span>
+      <span></span>
+      <span></span>
+    </button>
+
+    <nav class="navbar sliding-panel-content">
+      <ul>
+        
+        <li><a href="/about" title="About">About</a>
+        </li>
+        
+        <li><a href="/blog" title="Blog">Blog</a>
+        </li>
+        
+       <li><a href="/category/" target="_blank"><i class="icon icon-feed"></i></a></li>
+      </ul>
+    </nav>
+  </div>
+</header>
+
+<div class="sliding-panel-fade-screen"></div>
+    <script type="text/javascript" src="/js/MathJax.js?config=TeX-AMS-MML_HTMLorMML"></script>
+
+<script type="text/x-mathjax-config">
+MathJax.Hub.Config({
+  tex2jax: {
+    inlineMath: [['$','$'], ['\\(','\\)']],
+    processEscapes: true
+  }
+});
+</script>
+
+<script type="text/x-mathjax-config">
+  MathJax.Hub.Config({
+    tex2jax: {
+      skipTags: ['script', 'noscript', 'style', 'textarea', 'pre', 'code']
+    }
+  });
+
+</script>
+    <div class="container">
+      <article role="article" class="post">
+
+  <div class="card">
+    <header class="post-header">
+      <h1 class="post-title">Docker Unity</h1>
+      <p class="post-meta">Feb 2, 2022 •
+        huailiang</p>
+    </header>
+
+    <div class="post-content">
+      <blockquote>
+  <p>最近项目的开发中，遇到不少用户上传的视频、图片资源。 这些资源需要下载到端侧， 然后渲染出来。 由于Unity不能离线处理处理这些资源， 所以很多图片资源在显存直接展开成RGBA(png)或者RGB（jpg）， 由于没有压缩，所以带来很大的显存开销。于是就想把unity中部署docker中， 在一些资源部署到server上去之前， 把图片压缩成ETC、ASTC、PVRTC这些支持GPU格式的纹理，从而达到降内存的目的。 此外在docker中除了部署unity的环境， 还可以部署python环境，python丰富的package可以处理音频、视频，从而形成一个完整的在线资源处理服务。</p>
+</blockquote>
+
+<h2 id="导出发布版linux-unity">导出发布版Linux Unity</h2>
+
+<p>需要对应下载unity对应版本的linux standanle component， 安装之后， 你的unity就在导出的时候就有linux的选项了。</p>
+
+<p><img src="/img/post-unity/docker1.jpg" alt="" /></p>
+
+<p>Target Platform 选择linux， Server Build一定要勾上， 这样在无图形界面才能运行的起来。</p>
+
+<p>导出一个volume的文件夹， 然后docker run的时候以外挂盘的形式运行。</p>
+
+<p>这里docker 镜像与外部的交互方式还是 http的方式， 因此需要在镜像里部署一个webserver， 以接收来自外部的请求， webserver接收到 get/post的数据之后进行解析， 然后发起unity， unity读取外部传递的参数, 类似下面的代码：</p>
+
+<div class="language-csharp highlighter-rouge"><pre class="highlight"><code><span class="kt">string</span><span class="p">[]</span> <span class="n">args</span> <span class="p">=</span> <span class="n">Environment</span><span class="p">.</span><span class="nf">GetCommandLineArgs</span><span class="p">();</span>
+<span class="n">Debug</span><span class="p">.</span><span class="nf">Log</span><span class="p">(</span><span class="s">"args len: "</span> <span class="p">+</span> <span class="n">args</span><span class="p">.</span><span class="n">Length</span><span class="p">);</span>
+<span class="k">for</span> <span class="p">(</span><span class="kt">int</span> <span class="n">i</span> <span class="p">=</span> <span class="m">0</span><span class="p">;</span> <span class="n">i</span> <span class="p">&lt;</span> <span class="n">args</span><span class="p">.</span><span class="n">Length</span><span class="p">;</span> <span class="n">i</span><span class="p">++)</span>
+<span class="p">{</span>
+    <span class="n">Debug</span><span class="p">.</span><span class="nf">Log</span><span class="p">(</span><span class="s">"arg "</span> <span class="p">+</span> <span class="n">i</span> <span class="p">+</span> <span class="s">": "</span> <span class="p">+</span> <span class="n">args</span><span class="p">[</span><span class="n">i</span><span class="p">]);</span>
+    <span class="k">if</span> <span class="p">(</span><span class="n">args</span><span class="p">[</span><span class="n">i</span><span class="p">].</span><span class="nf">StartsWith</span><span class="p">(</span><span class="s">"--path"</span><span class="p">))</span>
+    <span class="p">{</span>
+        <span class="n">path</span> <span class="p">=</span> <span class="n">args</span><span class="p">[</span><span class="n">i</span><span class="p">].</span><span class="nf">Replace</span><span class="p">(</span><span class="s">"--path="</span><span class="p">,</span> <span class="kt">string</span><span class="p">.</span><span class="n">Empty</span><span class="p">).</span><span class="nf">Trim</span><span class="p">();</span>
+        <span class="k">break</span><span class="p">;</span>
+    <span class="p">}</span>
+    <span class="k">if</span> <span class="p">(</span><span class="n">args</span><span class="p">[</span><span class="n">i</span><span class="p">].</span><span class="nf">StartsWith</span><span class="p">(</span><span class="s">"--args"</span><span class="p">))</span>
+    <span class="p">{</span>
+        <span class="n">param</span> <span class="p">=</span> <span class="n">args</span><span class="p">[</span><span class="n">i</span><span class="p">].</span><span class="nf">Replace</span><span class="p">(</span><span class="s">"--args="</span><span class="p">,</span> <span class="kt">string</span><span class="p">.</span><span class="n">Empty</span><span class="p">).</span><span class="nf">Trim</span><span class="p">();</span>
+    <span class="p">}</span>
+<span class="p">}</span>
+</code></pre>
+</div>
+
+<p>外部传递参数可以是路径的方式加参数的方式， 如在python里可以这样写：</p>
+
+<div class="language-py highlighter-rouge"><pre class="highlight"><code><span class="k">def</span> <span class="nf">run</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">process_path</span><span class="p">):</span>
+    <span class="k">print</span><span class="p">(</span><span class="s">"launch unity: "</span> <span class="o">+</span> <span class="bp">self</span><span class="o">.</span><span class="n">launch_string</span><span class="p">)</span>
+    <span class="k">if</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">exists</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">launch_string</span><span class="p">):</span>
+        <span class="k">print</span><span class="p">(</span><span class="s">"process path: "</span><span class="p">,</span> <span class="n">process_path</span><span class="p">)</span>
+        <span class="n">path</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">launch_string</span> <span class="o">+</span> <span class="s">' --path='</span> <span class="o">+</span> <span class="n">process_path</span>
+        <span class="n">os</span><span class="o">.</span><span class="n">system</span><span class="p">(</span><span class="n">path</span><span class="p">)</span>
+    <span class="k">else</span><span class="p">:</span>
+        <span class="k">print</span><span class="p">(</span><span class="s">"not find unity "</span> <span class="o">+</span> <span class="bp">self</span><span class="o">.</span><span class="n">launch_string</span><span class="p">)</span>
+</code></pre>
+</div>
+
+<p>在 shell 里直接：</p>
+
+<div class="language-sh highlighter-rouge"><pre class="highlight"><code><span class="gp">&lt;unity-launch-path&gt; </span>--pth<span class="o">=</span><span class="k">***</span>.jpg
+</code></pre>
+</div>
+
+<p>这样调用之后， unity测就会自动读取到传过来的参数了， 然后根据参数就可以分发不同的逻辑了。  由于这样的unity是导出的， 所以python里的启动unity速度很快， unity官方的 ml-agent 进行ai 训练就是使用的这样的方式。  然而这样的方式缺点也是很明显， 由于发布版本unity没有了 UnityEditor, 所以像AssetBundle、 TextureImporter这些东西都不能使用了。</p>
+
+<h2 id="linux-unity-editor">Linux Unity Editor</h2>
+
+<p>Linux版本的unity激活 真是一个麻烦事， 因为都是命令行的，非图形界面不能像在Unityhub中来界面上直接激活。Unity提供了一种命令行的<a href="https://docs.unity3d.com/2018.4/Documentation/Manual/OnlineActivationGuide.html">激活方式</a>, 不过只针对是pro/plus版本的unity。  搜遍网络， 找到一位博主<a href="https://blog.csdn.net/kunyus/article/details/104617073">激活</a>的unity版本docker镜像， 不过这里内置的unity是2017版本的， 其他版本的只好咨询博主了。</p>
+
+<p><img src="/img/post-unity/docker2.jpg" alt="" /></p>
+
+<p>直接在docker里集成一个unity， 这里会导致镜像的容量会非常大， 此外此种方式unity的启动速度也会非常的慢， 因为unity在启动的时候， 会首先去server上验证一下license, 网上的很多使用此种方式来打包之类的ci。  作者在docker启动的时候外挂一个unity工程的虚拟盘来处理在线资源。</p>
+
+<div class="language-sh highlighter-rouge"><pre class="highlight"><code><span class="c"># 编译镜像</span>
+docker build -t hola.unity.v0.1 .
+
+<span class="c"># 进入到本地目录， 把 Unity-volume 做 虚拟盘 映射到 镜像中</span>
+docker run -it --name Hola-Unity-Container --mount <span class="nb">type</span><span class="o">=</span><span class="nb">bind</span>,source<span class="o">=</span><span class="s2">"</span><span class="k">$(</span><span class="nb">pwd</span><span class="k">)</span><span class="s2">"</span>/unity-volume,target<span class="o">=</span>/unity-volume hola.unity.v0.1:latest
+
+<span class="c"># 进入到镜像， 以 batchmode 的方式处理资源</span>
+<span class="c"># DockerMain 是一个 Editor 类， Process 是无参静态方法</span>
+/opt/Unity/Editor/Unity -quit -batchmode -nographics -silent-crashes -logFile /dev/stdout -projectPath <span class="s2">"/unity-volume"</span> -executeMethod <span class="s2">"DockerMain.Process"</span>
+</code></pre>
+</div>
+
+<h2 id="写在最后">写在最后</h2>
+
+<p>如果在 ubuntu 的系统中， 不能直接通过  xvfb 的方式 启动unity， 必须通过 -nographics  方式：</p>
+
+<div class="language-sh highlighter-rouge"><pre class="highlight"><code>/opt/Unity/Editor/Unity -batchmode -nographics
+</code></pre>
+</div>
+
+<p>在镜像部署到目标机上时， 目标机不一定有当前主机上的环境， 比如说 apt-get 访问不到，因此这里需要将本地build完整的镜像导出， 然后放到目标机上：</p>
+
+<div class="language-sh highlighter-rouge"><pre class="highlight"><code>docker save <span class="o">[</span>OPTIONS] IMAGE <span class="o">[</span>IMAGE...]
+</code></pre>
+</div>
+
+<p>-o :输出到的文件。 如：</p>
+<div class="highlighter-rouge"><pre class="highlight"><code>docker save -o my_ubuntu_v3.tar runoob/ubuntu:v3
+</code></pre>
+</div>
+
+<p>再新的dockerfile里可以 在 使用From 加载进来。</p>
+
+<p>清理docker 残留等：</p>
+<div class="highlighter-rouge"><pre class="highlight"><code>docker system prune -a
+</code></pre>
+</div>
+
+<h2 id="参考">参考</h2>
+
+<p><a href="https://docs.unity3d.com/2018.4/Documentation/Manual/OnlineActivationGuide.html">Unity 使用命令行激活</a></p>
+
+<p><a href="https://blog.csdn.net/kunyus/article/details/104617073">在linux下用 docker 的方式编译 Unity 并和CI进行集成</a></p>
+
+<p><a href="https://github.com/Jacket28/RPGGameProject/blob/0728f7654d9760b9bc81e4864e64dc8980cd8822/.github/workflows/main.yml">Github上RPGGameProject使用序列号激活Linux unity的例子</a></p>
+
+<p><a href="https://johnaustin.io/articles/2020/running-unity-20201-in-docker">Running Unity 2020.1 in Docker</a></p>
+
+<p><a href="https://unity.cn/release-notes/full/2020/2020.2.5">Unity Linux Component Download</a></p>
+
+
+    </div>
+  </div>
+
+  <style>
+  .post-nav {
+    overflow: hidden;
+    /* margin-top: 60px; */
+    padding: 12px;
+    white-space: nowrap;
+    /* border-top: 1px solid #eee; */
+  }
+
+  .post-nav-item {
+    display: inline-block;
+    width: 50%;
+    white-space: normal;
+  }
+
+  .post-nav-item a {
+    position: relative;
+    display: inline-block;
+    line-height: 25px;
+    font-size: 14px;
+    color: #555;
+    border-bottom: none;
+  }
+
+  .post-nav-item a:hover {
+    color: #222;
+    font-weight: bold;
+    border-bottom: none;
+  }
+
+  .post-nav-item a:active {
+    top: 2px;
+  }
+
+  .post-nav-item a:before,
+  .post-nav-item a:after {
+    display: inline-block;
+    width: 16px;
+    height: 25px;
+    vertical-align: top;
+    opacity: 0.4;
+    background-size: 16px;
+  }
+
+  .post-nav-none a:none {
+    content: ' ';
+    background-size: 8px;
+  }
+
+  .post-nav-none a:hover:none {
+    opacity: 1;
+  }
+
+  .post-nav-prev a:before {
+    content: ' ';
+    background: url("data:image/svg+xml;base64,PD94bWwgdmVyc2lvbj0iMS4wIiA/PjxzdmcgaGVpZ2h0PSIxMnB4IiB2ZXJzaW9uPSIxLjEiIHZpZXdCb3g9IjAgMCA5IDEyIiB3aWR0aD0iOXB4IiB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHhtbG5zOnNrZXRjaD0iaHR0cDovL3d3dy5ib2hlbWlhbmNvZGluZy5jb20vc2tldGNoL25zIiB4bWxuczp4bGluaz0iaHR0cDovL3d3dy53My5vcmcvMTk5OS94bGluayI+PHRpdGxlLz48ZGVzYy8+PGRlZnMvPjxnIGZpbGw9Im5vbmUiIGZpbGwtcnVsZT0iZXZlbm9kZCIgaWQ9IlBhZ2UtMSIgc3Ryb2tlPSJub25lIiBzdHJva2Utd2lkdGg9IjEiPjxnIGZpbGw9IiMwMDAwMDAiIGlkPSJDb3JlIiB0cmFuc2Zvcm09InRyYW5zbGF0ZSgtMjE4LjAwMDAwMCwgLTkwLjAwMDAwMCkiPjxnIGlkPSJjaGV2cm9uLWxlZnQiIHRyYW5zZm9ybT0idHJhbnNsYXRlKDIxOC41MDAwMDAsIDkwLjAwMDAwMCkiPjxwYXRoIGQ9Ik03LjQsMS40IEw2LDAgTC04Ljg4MTc4NDJlLTE2LDYgTDYsMTIgTDcuNCwxMC42IEwyLjgsNiBMNy40LDEuNCBaIiBpZD0iU2hhcGUiLz48L2c+PC9nPjwvZz48L3N2Zz4=") no-repeat 0 50%;
+    background-size: 8px;
+  }
+
+  .post-nav-prev a:hover:before {
+    opacity: 1;
+  }
+
+  .post-nav-next {
+    text-align: right;
+  }
+
+  .post-nav-next a:after {
+    content: ' ';
+    background: url("data:image/svg+xml;base64,PD94bWwgdmVyc2lvbj0iMS4wIiA/PjxzdmcgaGVpZ2h0PSIxMnB4IiB2ZXJzaW9uPSIxLjEiIHZpZXdCb3g9IjAgMCA5IDEyIiB3aWR0aD0iOXB4IiB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHhtbG5zOnNrZXRjaD0iaHR0cDovL3d3dy5ib2hlbWlhbmNvZGluZy5jb20vc2tldGNoL25zIiB4bWxuczp4bGluaz0iaHR0cDovL3d3dy53My5vcmcvMTk5OS94bGluayI+PHRpdGxlLz48ZGVzYy8+PGRlZnMvPjxnIGZpbGw9Im5vbmUiIGZpbGwtcnVsZT0iZXZlbm9kZCIgaWQ9IlBhZ2UtMSIgc3Ryb2tlPSJub25lIiBzdHJva2Utd2lkdGg9IjEiPjxnIGZpbGw9IiMwMDAwMDAiIGlkPSJDb3JlIiB0cmFuc2Zvcm09InRyYW5zbGF0ZSgtMjYwLjAwMDAwMCwgLTkwLjAwMDAwMCkiPjxnIGlkPSJjaGV2cm9uLXJpZ2h0IiB0cmFuc2Zvcm09InRyYW5zbGF0ZSgyNjAuNTAwMDAwLCA5MC4wMDAwMDApIj48cGF0aCBkPSJNMSwwIEwtMC40LDEuNCBMNC4yLDYgTC0wLjQsMTAuNiBMMSwxMiBMNyw2IEwxLDAgWiIgaWQ9IlNoYXBlIi8+PC9nPjwvZz48L2c+PC9zdmc+") no-repeat 100% 50%;
+    background-size: 8px;
+  }
+
+  .post-nav-next a:hover:after {
+    opacity: 1;
+  }
+</style>
+
+
+
+<div class="post-nav">
+
+  
+  <div class="post-nav-prev post-nav-item">
+    
+    <a href="/blog/2022/astc/"> ASTC</a>
+  </div>
+  
+
+  
+  <div class="post-nav-next post-nav-item">
+    
+    <a href="/blog/2021/camera/"> Unity访问 Camera2 能力</a>
+  </div>
+  
+
+</div>
+
+</article>
+    </div>
+
+    <footer class="site-footer">
+  <div class="container">
+    <ul class="social">
+  <li><a href="https://twitter.com/penghuailiang" target="_blank"><i class="icon icon-twitter"></i></a></li>
+  <li><a href="https://www.zhihu.com/people/huailiangpenguin" target="_blank"><i class="icon icon-zhihu"></i></a></li>
+  <li><a href="https://www.facebook.com/profile.php?id=100004290725320" target="_blank"><i class="icon icon-facebook"></i></a></li>
+  <li><a href="https://weibo.com/6212299692/profile?topnav=1&wvr=6" target="_blank"><i class="icon icon-sina"></i></a></li>
+  <li><a href="https://www.linkedin.com/in/penghuailiang/" target="_blank"><i class="icon icon-linkedin"></i></a></li>
+  <li><a href="https://github.com/huailiang" target="_blank"><i class="icon icon-github"></i></a></li>
+</ul>
+    <p class="txt-medium-gray">
+      <small>&copy;2022 All rights reserved. </small>
+    </p>
+  </div>
+</footer>
+    <a href="https://github.com/huailiang" target="_blank" class="github-corner"><svg width="80" height="80" viewBox="0 0 250 250" style="fill:#337ab7; color:#fff; position: absolute; top: 0; border: 0; right: 0;"><path d="M0,0 L115,115 L130,115 L142,142 L250,250 L250,0 Z"></path><path d="M128.3,109.0 C113.8,99.7 119.0,89.6 119.0,89.6 C122.0,82.7 120.5,78.6 120.5,78.6 C119.2,72.0 123.4,76.3 123.4,76.3 C127.3,80.9 125.5,87.3 125.5,87.3 C122.9,97.6 130.6,101.9 134.4,103.2" fill="currentColor" style="transform-origin: 130px 106px;" class="octo-arm"></path><path d="M115.0,115.0 C114.9,115.1 118.7,116.5 119.8,115.4 L133.7,101.6 C136.9,99.2 139.9,98.4 142.2,98.6 C133.8,88.0 127.5,74.4 143.8,58.0 C148.5,53.4 154.0,51.2 159.7,51.0 C160.3,49.4 163.2,43.6 171.4,40.1 C171.4,40.1 176.1,42.5 178.8,56.2 C183.1,58.6 187.2,61.8 190.9,65.4 C194.5,69.0 197.7,73.2 200.1,77.6 C213.8,80.2 216.3,84.9 216.3,84.9 C212.7,93.1 206.9,96.0 205.4,96.6 C205.1,102.4 203.0,107.8 198.3,112.5 C181.9,128.9 168.3,122.5 157.7,114.1 C157.9,116.9 156.7,120.9 152.7,124.9 L141.0,136.5 C139.8,137.7 141.6,141.9 141.8,141.8 Z" fill="currentColor" class="octo-body"></path></svg></a>
+
+
+    <script src="//code.jquery.com/jquery-1.11.3.min.js"></script>
+    <script>
+      $(document).ready(function () {
+        $('.sliding-panel-button,.sliding-panel-fade-screen,.sliding-panel-close').on('click touchstart', function (e) {
+          $('.sliding-panel-content,.sliding-panel-fade-screen').toggleClass('is-visible');
+          e.preventDefault();
+        });
+      });
+    </script>
+  </main>
+</body>
+
+</html>
