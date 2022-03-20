@@ -109,9 +109,12 @@ docker run -it --name Hola-Unity-Container --mount type=bind,source="$(pwd)"/uni
 
 [Running Unity 2020.1 in Docker][i6]
 
+[Unity Linux Component Download][i7]
+
 [i1]: https://blog.csdn.net/kunyus/article/details/104617073
 [i2]: https://docs.unity3d.com/2018.4/Documentation/Manual/OnlineActivationGuide.html
 [i3]: https://hub.docker.com/layers/ssoor/unity3d/2017.4.8f1-android/images/sha256-199e88bc1796ad80177ec46fbf9e71d6f6eea52a023a0f931813291721682dce?context=explore
 [i4]: https://github.com/Jacket28/RPGGameProject/blob/0728f7654d9760b9bc81e4864e64dc8980cd8822/.github/workflows/main.yml
 [i5]: https://hub.docker.com/layers/ssoor/unity3d/2017.4.8f1-android/images/sha256-199e88bc1796ad80177ec46fbf9e71d6f6eea52a023a0f931813291721682dce?context=explore
 [i6]: https://johnaustin.io/articles/2020/running-unity-20201-in-docker
+[i7]: https://unity.cn/release-notes/full/2020/2020.2.5
