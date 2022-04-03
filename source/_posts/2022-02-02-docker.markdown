@@ -89,6 +89,83 @@ docker run -it --name Hola-Unity-Container --mount type=bind,source="$(pwd)"/uni
 /opt/Unity/Editor/Unity -quit -batchmode -nographics -silent-crashes -logFile /dev/stdout -projectPath "/unity-volume" -executeMethod "DockerMain.Process"
 ```
 
+
+## 渲染
+
+unity 如果server build（headless）的版本, 是不支持渲染， 只支持一些运算相关的操作， 否则导出之后， 日志输出会提示Shader相关的报错， 即使内置最简单的FallBack "Diffuse"也不行。pyrender 支持以EGL和 mesa的两种方式运行， 其中Egl是默认的方式， 默认EGl使用的opengl的图像接口使用GPU加速运算的。 如果集群上跑渲染以headless方式， 没有GPU的话， 还是OSMesa 的方式进行， 其能保证在cpu上渲染出来相同的效果。
+
+安装步骤是通过pip命令：
+
+```
+pip install pyrender
+```
+
+安装osmesa
+
+```shell
+sudo apt update
+sudo wget https://github.com/mmatl/travis_debs/raw/master/xenial/mesa_18.3.3-0.deb
+sudo dpkg -i ./mesa_18.3.3-0.deb || true
+sudo apt install -f
+```
+
+也可以通过[源码][i9]的方式安装,  下载之后，先行解压
+
+```shell
+tar xfv mesa-18.3.3.tar.gz
+cd mesa-18.3.3
+```
+
+然后配置项, PREFIX是安装路径， 默认是/usr/local
+
+```shell
+./configure --prefix=PREFIX                                   \
+            --enable-opengl --disable-gles1 --disable-gles2   \
+            --disable-va --disable-xvmc --disable-vdpau       \
+            --enable-shared-glapi                             \
+            --disable-texture-float                           \
+            --enable-gallium-llvm --enable-llvm-shared-libs   \
+            --with-gallium-drivers=swrast,swr                 \
+            --disable-dri --with-dri-drivers=                 \
+            --disable-egl --with-egl-platforms= --disable-gbm \
+            --disable-glx                                     \
+            --disable-osmesa --enable-gallium-osmesa          \
+            ac_cv_path_LLVM_CONFIG=llvm-config-6.0
+```
+
+最后通过make命令进行编译和安装
+
+```shell
+make -j8
+make install
+```
+
+最后使用api之前先配置相关的环境变量：
+
+```shell
+MESA_HOME=/path/to/your/mesa/installation
+export LIBRARY_PATH=$LIBRARY_PATH:$MESA_HOME/lib
+export LD_LIBRARY_PATH=$LD_LIBRARY_PATH:$MESA_HOME/lib
+export C_INCLUDE_PATH=$C_INCLUDE_PATH:$MESA_HOME/include/
+export CPLUS_INCLUDE_PATH=$CPLUS_INCLUDE_PATH:$MESA_HOME/include/
+```
+
+
+安装PyOpenGL：
+
+```shell
+git clone https://github.com/mmatl/pyopengl.git
+pip install ./pyopengl
+````
+
+注意， 笔者测试法线这里一定要源码安装pyopengl, 如果之前通过pip从server发布版本的方式方式，会报错。
+
+如pyrender 会依赖于pyopengl.  一定先卸载了。
+
+```
+pip intall pyrender
+```
+
 ## 写在最后
 
 如果在 ubuntu 的系统中， 不能直接通过  xvfb 的方式 启动unity， 必须通过 -nographics  方式：
@@ -134,3 +211,5 @@ docker system prune -a
 [i5]: https://hub.docker.com/layers/ssoor/unity3d/2017.4.8f1-android/images/sha256-199e88bc1796ad80177ec46fbf9e71d6f6eea52a023a0f931813291721682dce?context=explore
 [i6]: https://johnaustin.io/articles/2020/running-unity-20201-in-docker
 [i7]: https://unity.cn/release-notes/full/2020/2020.2.5
+[i8]: https://pyrender.readthedocs.io/en/latest/
+[i9]: https://archive.mesa3d.org/mesa-18.3.3.tar.gz
