@@ -206,15 +206,49 @@ block_* 是压缩快的大小， 对于一个2D图片来说， block_z 这个值
 decoded_dim = dim[0] + (dim[1] << 8) + (dim[2] << 16);
 ```
 
+## 和 Unity 兼容性
 
-
-不过 Unity里的 astc的图片头信息， 是记录在.meta 文件里的， 即通过 Asset Importer导入之后， 打包或者生成 Assetbundle 是 strip 掉16 位头信息的。  因此， 对于 Assets文件夹里的.astc资源 你可以通过Resources.Load<Texture2D>("path") 或者 AssetDatabase.LoadAssetAtPath<Texture2D>("path")能够正确的加载 .astc 图片。  但是如果你的.astc图片是有云侧/服务器（比如 docker）生成的， 如果你通过 Texture2D.LoadRowTextureData 得到的图片就会显示左侧有像素偏差。如下图所示：
+可以确定的是 Unity 里的 astc的图片头信息， 是记录在.meta 文件里的， 即通过 Asset Importer导入之后， 打包或者生成 Assetbundle 是 strip 掉16 位头信息的。  因此， 对于 Assets文件夹里的.astc资源 你可以通过Resources.Load<Texture2D>("path") 或者 AssetDatabase.LoadAssetAtPath<Texture2D>("path")能够正确的加载 .astc 图片。  但是如果你的.astc图片是有云侧/服务器（比如 docker）生成的， 如果你通过 Texture2D.LoadRowTextureData 得到的图片就会显示左侧有像素偏差。如下图所示：
 
 
   ![](/img/post-engine/astc12.jpg)
 
 
-因此要正确显示astc的图片， 需要在LoadRowTextureData的时候裁剪调16位头信息， 这也是unity 处理astc时候与原生图片的差异的地方。
+因此要正确显示astc的图片， 需要在LoadRowTextureData的时候裁剪调16位头信息， 这也是unity 处理astc时候与原生图片的差异的地方。 如果不考虑效率（）， 可以参考如下代码：
+
+```cs
+private byte[] ReadBuf(string path)
+{
+    var bs = File.ReadAllBytes(path);
+    int len = bs.Length - 16;
+    var b2 = new byte[len];
+    Array.Copy(bs, 16, b2, 0, len);
+    return b2;
+}
+
+if (GUILayout.Button("load", GUILayout.MinWidth(120)))
+{
+    var tex = new Texture2D(479, 320, TextureFormat.ASTC_8x8, false); 
+    tex.LoadRawTextureData(ReadBuf("Assets/Scenes/hdr.astc"));
+    tex.Apply();
+    raw.texture = tex;
+}
+```
+
+通过 asset impoter 导入的 astc 图片， 默认是不解析 hdr的图片， 即 hdr图片也是按照 ldr的图片来解析的， 因此hdr-astc图片导入之后显示肯定是不正确的， 比如上图的美女就变成这样的球样：
+
+![](/img/post-engine/astc13.jpg)
+
+因此， 通过AssetDatabase.LoadAssetAtPath、Resources.Load、AssetBundle.Load 等相关的接口都是拿不到正确的结果的， 这些都是以 ldr的方式读取的。
+
+不过倒是可以 自己IO 并指定 format 为ASTC_HDR_8x8 的方式来正确加载：
+
+```cs
+var tex = new Texture2D(479, 320, TextureFormat.ASTC_HDR_8x8, false); 
+tex.LoadRawTextureData(ReadBuf("Assets/Scenes/hdr.astc"));
+tex.Apply();
+```
+
 
 
 ##  转换ASTC图片
