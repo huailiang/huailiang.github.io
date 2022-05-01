@@ -277,11 +277,46 @@ magic[3] = 0x5C;
 </code></pre>
 </div>
 
-<p>不过 Unity里的 astc的图片头信息， 是记录在.meta 文件里的， 即通过 Asset Importer导入之后， 打包或者生成 Assetbundle 是 strip 掉16 位头信息的。  因此， 对于 Assets文件夹里的.astc资源 你可以通过Resources.Load<Texture2D>("path") 或者 AssetDatabase.LoadAssetAtPath<Texture2D>("path")能够正确的加载 .astc 图片。  但是如果你的.astc图片是有云侧/服务器（比如 docker）生成的， 如果你通过 Texture2D.LoadRowTextureData 得到的图片就会显示左侧有像素偏差。如下图所示：</Texture2D></Texture2D></p>
+<h2 id="和-unity-兼容性">和 Unity 兼容性</h2>
+
+<p>可以确定的是 Unity 里的 astc的图片头信息， 是记录在.meta 文件里的， 即通过 Asset Importer导入之后， 打包或者生成 Assetbundle 是 strip 掉16 位头信息的。  因此， 对于 Assets文件夹里的.astc资源 你可以通过Resources.Load<Texture2D>("path") 或者 AssetDatabase.LoadAssetAtPath<Texture2D>("path")能够正确的加载 .astc 图片。  但是如果你的.astc图片是有云侧/服务器（比如 docker）生成的， 如果你通过 Texture2D.LoadRowTextureData 得到的图片就会显示左侧有像素偏差。如下图所示：</Texture2D></Texture2D></p>
 
 <p><img src="/img/post-engine/astc12.jpg" alt="" /></p>
 
-<p>因此要正确显示astc的图片， 需要在LoadRowTextureData的时候裁剪调16位头信息， 这也是unity 处理astc时候与原生图片的差异的地方。</p>
+<p>因此要正确显示astc的图片， 需要在LoadRowTextureData的时候裁剪调16位头信息， 这也是unity 处理astc时候与原生图片的差异的地方。 如果不考虑效率（）， 可以参考如下代码：</p>
+
+<div class="language-cs highlighter-rouge"><pre class="highlight"><code><span class="k">private</span> <span class="kt">byte</span><span class="p">[]</span> <span class="nf">ReadBuf</span><span class="p">(</span><span class="kt">string</span> <span class="n">path</span><span class="p">)</span>
+<span class="p">{</span>
+    <span class="kt">var</span> <span class="n">bs</span> <span class="p">=</span> <span class="n">File</span><span class="p">.</span><span class="nf">ReadAllBytes</span><span class="p">(</span><span class="n">path</span><span class="p">);</span>
+    <span class="kt">int</span> <span class="n">len</span> <span class="p">=</span> <span class="n">bs</span><span class="p">.</span><span class="n">Length</span> <span class="p">-</span> <span class="m">16</span><span class="p">;</span>
+    <span class="kt">var</span> <span class="n">b2</span> <span class="p">=</span> <span class="k">new</span> <span class="kt">byte</span><span class="p">[</span><span class="n">len</span><span class="p">];</span>
+    <span class="n">Array</span><span class="p">.</span><span class="nf">Copy</span><span class="p">(</span><span class="n">bs</span><span class="p">,</span> <span class="m">16</span><span class="p">,</span> <span class="n">b2</span><span class="p">,</span> <span class="m">0</span><span class="p">,</span> <span class="n">len</span><span class="p">);</span>
+    <span class="k">return</span> <span class="n">b2</span><span class="p">;</span>
+<span class="p">}</span>
+
+<span class="k">if</span> <span class="p">(</span><span class="n">GUILayout</span><span class="p">.</span><span class="nf">Button</span><span class="p">(</span><span class="s">"load"</span><span class="p">,</span> <span class="n">GUILayout</span><span class="p">.</span><span class="nf">MinWidth</span><span class="p">(</span><span class="m">120</span><span class="p">)))</span>
+<span class="p">{</span>
+    <span class="kt">var</span> <span class="n">tex</span> <span class="p">=</span> <span class="k">new</span> <span class="nf">Texture2D</span><span class="p">(</span><span class="m">479</span><span class="p">,</span> <span class="m">320</span><span class="p">,</span> <span class="n">TextureFormat</span><span class="p">.</span><span class="n">ASTC_8x8</span><span class="p">,</span> <span class="k">false</span><span class="p">);</span> 
+    <span class="n">tex</span><span class="p">.</span><span class="nf">LoadRawTextureData</span><span class="p">(</span><span class="nf">ReadBuf</span><span class="p">(</span><span class="s">"Assets/Scenes/hdr.astc"</span><span class="p">));</span>
+    <span class="n">tex</span><span class="p">.</span><span class="nf">Apply</span><span class="p">();</span>
+    <span class="n">raw</span><span class="p">.</span><span class="n">texture</span> <span class="p">=</span> <span class="n">tex</span><span class="p">;</span>
+<span class="p">}</span>
+</code></pre>
+</div>
+
+<p>通过 asset impoter 导入的 astc 图片， 默认是不解析 hdr的图片， 即 hdr图片也是按照 ldr的图片来解析的， 因此hdr-astc图片导入之后显示肯定是不正确的， 比如上图的美女就变成这样的球样：</p>
+
+<p><img src="/img/post-engine/astc13.jpg" alt="" /></p>
+
+<p>因此， 通过AssetDatabase.LoadAssetAtPath、Resources.Load、AssetBundle.Load 等相关的接口都是拿不到正确的结果的， 这些都是以 ldr的方式读取的。</p>
+
+<p>不过倒是可以 自己IO 并指定 format 为ASTC_HDR_8x8 的方式来正确加载：</p>
+
+<div class="language-cs highlighter-rouge"><pre class="highlight"><code><span class="kt">var</span> <span class="n">tex</span> <span class="p">=</span> <span class="k">new</span> <span class="nf">Texture2D</span><span class="p">(</span><span class="m">479</span><span class="p">,</span> <span class="m">320</span><span class="p">,</span> <span class="n">TextureFormat</span><span class="p">.</span><span class="n">ASTC_HDR_8x8</span><span class="p">,</span> <span class="k">false</span><span class="p">);</span> 
+<span class="n">tex</span><span class="p">.</span><span class="nf">LoadRawTextureData</span><span class="p">(</span><span class="nf">ReadBuf</span><span class="p">(</span><span class="s">"Assets/Scenes/hdr.astc"</span><span class="p">));</span>
+<span class="n">tex</span><span class="p">.</span><span class="nf">Apply</span><span class="p">();</span>
+</code></pre>
+</div>
 
 <h2 id="转换astc图片">转换ASTC图片</h2>
 
