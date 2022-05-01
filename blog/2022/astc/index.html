@@ -277,6 +277,12 @@ magic[3] = 0x5C;
 </code></pre>
 </div>
 
+<p>不过 Unity里的 astc的图片头信息， 是记录在.meta 文件里的， 即通过 Asset Importer导入之后， 打包或者生成 Assetbundle 是 strip 掉16 位头信息的。  因此， 对于 Assets文件夹里的.astc资源 你可以通过Resources.Load<Texture2D>("path") 或者 AssetDatabase.LoadAssetAtPath<Texture2D>("path")能够正确的加载 .astc 图片。  但是如果你的.astc图片是有云侧/服务器（比如 docker）生成的， 如果你通过 Texture2D.LoadRowTextureData 得到的图片就会显示左侧有像素偏差。如下图所示：</Texture2D></Texture2D></p>
+
+<p><img src="/img/post-engine/astc12.jpg" alt="" /></p>
+
+<p>因此要正确显示astc的图片， 需要在LoadRowTextureData的时候裁剪调16位头信息， 这也是unity 处理astc时候与原生图片的差异的地方。</p>
+
 <h2 id="转换astc图片">转换ASTC图片</h2>
 
 <p>使用 <a href="https://github.com/ARM-software/astc-encoder/">astc-encoder</a> 不仅可以将 jpg、png、tga 这些 LDR 的图片转换成 atsc，还支持了 HDR， 比如说： .exr .hdr等格式的图片</p>
@@ -284,6 +290,12 @@ magic[3] = 0x5C;
 <p>下载 astc-encoder好之后， 按照说明文档编译好之后， 就可以以命令行的形式来生成不通压缩块和质量的图片了。</p>
 
 <div class="language-sh highlighter-rouge"><pre class="highlight"><code>astcenc -tl example.png example.tga 5x5 -thorough
+</code></pre>
+</div>
+
+<p>默认的话， astcenc 生成的图片y 方向是反着的， 因此需要在生成的时候需要进行额外的翻转， 可以再加一个参数来做翻转</p>
+
+<div class="language-sh highlighter-rouge"><pre class="highlight"><code>astcenc -tl example.png example.tga 5x5 -thorough -yflip
 </code></pre>
 </div>
 
