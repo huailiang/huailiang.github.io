@@ -318,6 +318,14 @@ magic[3] = 0x5C;
 </code></pre>
 </div>
 
+<p>这里注意一下LoadRawTextureData 的方式内存开销， 因为传过去的bytes并不是io读取所有的buf, 这里需要裁减掉16位头信息剩余的bytes。 由于 unity engine 没有提供 类似于下面的接口：</p>
+
+<div class="language-cs highlighter-rouge"><pre class="highlight"><code><span class="n">tex</span><span class="p">.</span><span class="nf">LoadRawTextureData</span><span class="p">(</span><span class="kt">byte</span><span class="p">[]</span> <span class="n">buf</span><span class="p">,</span> <span class="kt">int</span> <span class="n">offset</span><span class="p">,</span> <span class="kt">int</span> <span class="n">size</span><span class="p">);</span>
+</code></pre>
+</div>
+
+<p>因此事先需要使用 类似 Array.Copy 这类的函数复制一个很大的buf, 此时不仅会有一个很大内存的开销， 而且还很有可能触发GC， 最好的方式在c++处理掉offset, 然后直接将计算好偏移的地址传递给c#, 具体的实现可以参考我的一个测试 <a href="https://github.com/huailiang/Astc">demo工程</a>。</p>
+
 <h2 id="转换astc图片">转换ASTC图片</h2>
 
 <p>使用 <a href="https://github.com/ARM-software/astc-encoder/">astc-encoder</a> 不仅可以将 jpg、png、tga 这些 LDR 的图片转换成 atsc，还支持了 HDR， 比如说： .exr .hdr等格式的图片</p>
