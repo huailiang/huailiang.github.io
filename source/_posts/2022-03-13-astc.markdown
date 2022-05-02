@@ -258,7 +258,7 @@ tex.Apply();
 tex.LoadRawTextureData(byte[] buf, int offset, int size);
 ```
 
-因此事先需要使用 类似 Array.Copy 这类的函数复制一个很大的buf, 此时不仅会有一个很大内存的开销， 而且还很有可能处罚GC， 最好的方式在c++处理掉offset, 然后直接将计算好偏移的地址传递给c#, 具体的实现可以参考我的一个测试 [demo工程][i4]。
+因此事先需要使用 类似 Array.Copy 这类的函数复制一个很大的buf, 此时不仅会有一个很大内存的开销， 而且还很有可能触发GC， 最好的方式在c++处理掉offset, 然后直接将计算好偏移的地址传递给c#, 具体的实现可以参考我的一个测试 [demo工程][i4]。
 
 
 
