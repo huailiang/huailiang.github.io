@@ -12,6 +12,9 @@ tags:
 > Adaptive Scalable Texture Compression (ASTC)是Arm和AMD共同研发的一种纹理压缩格式，不同于ETC和ETC2的固定块尺寸（4x4），ASTC支持可变块大小的压缩，从而获得灵活的更大压缩率的纹理数据，降低GPU的带宽和能耗。 ASTC虽然尚未成为OpenGL的标准格式，只是以扩展的形式存在，但目前已经广泛地被主流GPU支持，可谓不是标准的的标准扩展。但在Vulkan中，ASTC已经是标准的特性了。
 
 
+
+
+
 ## 特性
 
 * 格式灵活。ASTC可以压缩1到4个通道之间的数据，包括一个非相关通道，如RGB+A(相关RGB，非相关alpha)。并且块大小可变，如4x4、5x4、6x5、10X5等。
@@ -249,6 +252,14 @@ tex.LoadRawTextureData(ReadBuf("Assets/Scenes/hdr.astc"));
 tex.Apply();
 ```
 
+这里注意一下LoadRawTextureData 的方式内存开销， 因为传过去的bytes并不是io读取所有的buf, 这里需要裁减掉16位头信息剩余的bytes。 由于 unity engine 没有提供 类似于下面的接口：
+
+```cs
+tex.LoadRawTextureData(byte[] buf, int offset, int size);
+```
+
+因此事先需要使用 类似 Array.Copy 这类的函数复制一个很大的buf, 此时不仅会有一个很大内存的开销， 而且还很有可能处罚GC， 最好的方式在c++处理掉offset, 然后直接将计算好偏移的地址传递给c#, 具体的实现可以参考我的一个测试 [demo工程][i4]。
+
 
 
 ##  转换ASTC图片
@@ -280,3 +291,4 @@ astcenc -tl example.png example.tga 5x5 -thorough -yflip
 [i1]: https://github.com/ARM-software/astc-encoder/blob/main/Docs/FormatOverview.md
 [i2]: https://github.com/ARM-software/astc-encoder/
 [i3]: https://developer.arm.com/tools-and-software/graphics-and-gaming/mali-texture-compression-tool
+[i4]: https://github.com/huailiang/Astc
