@@ -77,7 +77,7 @@ MathJax.Hub.Config({
 
   <p><a href="/blog/2022/astc/" title="Permalink to: ASTC"
       class="read-more">
-  Adaptive Scalable Texture Compression (ASTC)是Arm和AMD共同研发的一种纹理压缩格式，不同于ETC和ETC2的固定块尺寸（4x4），ASTC支持可变块大小的压缩，从而获得灵活的更大压缩率的纹理数据，降低GPU的带宽和能耗。 ASTC虽然尚未成为OpenGL的标准格式，只是以扩展的形式存在，但目前已经广泛地被主流GPU支持，可谓不是标准的的标...</a></p>
+  在大多数情况下，纹理是用二维图像表示的。然而，标准的压缩算法(RLE, LZW, Deflate)和流行的压缩图像格式(JPEG, PNG, TIFF)并不适合纹理。传统压缩算法的主要问题是无法实现对内存中整个纹理的其中一块Texel随机访问——不解压整个纹理，就不可能解压一个特定的texel。纹理访问模式是高度随机的：渲染时只使用需要的部分纹理，并且访问的顺序无法提前预知。因此，图形...</a></p>
 </article>
   
     <article class="post">
