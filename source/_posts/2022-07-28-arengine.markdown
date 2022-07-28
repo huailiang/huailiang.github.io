@@ -1,0 +1,132 @@
+---
+layout:     post
+title:      "URP渲染管线下的 huawei AREngine预览流绘制"
+date:       2022-07-28 02:00:00
+author:     "huailiang"
+tags:
+    - Unity
+---
+
+
+
+> huawei AREngine 默认的 builtin 的渲染管线绘制预览流， 在如今行业普遍使用的自定义渲染管线有点儿过时。  看 ARFoundation 的实现， 已经默认支持builtin和urp的无缝切换，  于是就想着把 AREngine 的预览流绘制使用urp来实现一遍。
+
+
+## builtin的预览流实现：
+
+首先预览流信息直接由GPU端直传到 glsl(shader)里了， 这个不需要经过cpu， 比如说转yuv这些格式， 这个效率是非常高了， 像官方c#里的代码的实现很多都是冗余的代码， 完全没有必要且可以删减。
+
+![AREngine渲染预览流](https://img-blog.csdnimg.cn/54f153ac735546f797966b7f0327ae0c.jpeg#pic_center)
+
+
+真正传递camera信息过来是在glsl里使用了特使的标记 samplerExternalOES：
+
+```glsl
+ uniform samplerExternalOES _MainTex;
+ ```
+
+ 关于Android是如何获取预览流并绑定纹理具体可以参考[链接][i1]。
+
+
+
+在使用 samplerExternalOES 纹理前， 需要开启camera, 这个步骤既可以通过 AREngine的 SesssionComponent 组件， 也可以使用 unity 自带的 WebCamera来实现。 获取到纹理之后， 如何显示在屏幕上呢？
+
+
+AREngine 使用的 CommandBuffer Blit，  这点跟 ARCore是一致的， 且绑定了 BeforeForwardOpaque、BeforeGBuffer 两个Event， 分别对应 前向渲染 和延时渲染。
+
+```csharp
+m_VideoCommandBuffer = new CommandBuffer();
+m_VideoCommandBuffer.Blit(BackGroundMaterial.mainTexture, BuiltinRenderTextureType.CurrentActive,
+    BackGroundMaterial);
+m_Camera.AddCommandBuffer(CameraEvent.BeforeForwardOpaque, m_VideoCommandBuffer);
+m_Camera.AddCommandBuffer(CameraEvent.BeforeGBuffer, m_VideoCommandBuffer);
+```
+
+
+
+##  urp 渲染实现预览流
+
+如果在urp管线中再想上述代码一样实现, 把BackGroundRenderer.cs 挂载在 scene 里就行不通了。   urp Renderer Feature可让我们向URP Renderer添加额外的渲染通道，支持我们进行Asset资产配置来重写从而可以自定义渲染的顺序、渲染的对象、材质等等。  关于详细的 Render Feature 详细的介绍， 参考unity官方的[课程][i2]。
+
+
+这里就新建立个 ARBackgroundRenderFeature 的 RenderFeature，  并配置在 Render的管线中：
+
+![在这里插入图片描述](https://img-blog.csdnimg.cn/72127c321c1d4105b104910507993b17.jpeg#pic_center)
+
+
+
+在 相应的 RenderPass里传入 ARBackground的材质， 由于只有前向渲染， 这里的renderPassEvent选取的是BeforeRenderingOpaques。  在执行函数Execute里 封装一个 CommandBuffer 专门用来绘制 预览流。具体的实现参考：
+
+
+```c#
+public class ARBackgroundRenderPassFeature : ScriptableRendererFeature
+{
+    
+    [System.Serializable]
+    public class Settings
+    {
+        public Material material;
+        public RenderPassEvent Event = RenderPassEvent.AfterRenderingOpaques;
+    }
+
+    class CustomRenderPass : ScriptableRenderPass
+    {
+        private Settings _settings;
+
+        public CustomRenderPass(Settings sts)
+        {
+            _settings = sts;
+            renderPassEvent = sts.Event;
+        }
+
+        // Here you can implement the rendering logic.
+        // Use <c>ScriptableRenderContext</c> to issue drawing commands or execute command buffers
+        // https://docs.unity3d.com/ScriptReference/Rendering.ScriptableRenderContext.html
+        // You don't have to call ScriptableRenderContext.submit, the render pipeline will call it at specific points in the pipeline.
+        public override void Execute(ScriptableRenderContext context, ref RenderingData renderingData)
+        {
+            if (_settings.material != null)
+            {
+                CommandBuffer cmd = CommandBufferPool.Get();
+                cmd.Blit(_settings.material.mainTexture, BuiltinRenderTextureType.CurrentActive, _settings.material);
+                context.ExecuteCommandBuffer(cmd);
+                cmd.Clear();
+                CommandBufferPool.Release(cmd);
+            }
+        }
+
+        // Cleanup any allocated resources that were created during the execution of this render pass.
+        public override void OnCameraCleanup(CommandBuffer cmd)
+        {
+        }
+    }
+}
+```
+
+
+ 由于我们使用glsl shader里指定的平台是 gles3, 所以这里正确执行在会在Android手机侧能保证正确， 在PC平台得到的结果是紫色的。
+
+
+```c
+#ifdef SHADER_API_GLES3
+#pragma only_renderers gles3
+#extension GL_OES_EGL_image_external_essl3 : require
+#endif
+```
+
+不过倒是可以额外使用一个shader 用来仿真手机的运行的结果， 在pc平台只显示一张图片来代替手机上的预览流， 作者已经 [EditorBackground.shader][i3] 做好上传到 [github][i4]， 读者根据自己的使用需求处理就可以了。  为了更接近手机上的结果， 使用的shader还是 使用的是glsl语言， 并不是更常用的 cg 或者 hlsl， 因此pc运行的时候也需要切换到 OpenGL 平台， 只需要在 EditorSetting 如下图处理即可：
+
+![在这里插入图片描述](https://img-blog.csdnimg.cn/dc74ef6e712b461599b95b90c2a56029.jpeg#pic_center)
+
+
+Graphic Setting 切换完毕置换后， 注意重启unity。
+
+## 结语
+
+AREngine 项目完全切换到 URP 渲染管线， 不单单是预览流的处理， 参与渲染的其他部分也需要做出相应的更改， 读者根据自己的实际项目需求进行调整， 也期望在使用urp过程中遇到或者解决相关的问题心得跟作者沟通。
+
+
+ [i1]: https://www.jianshu.com/p/317ee9355974
+ [i2]: https://zhuanlan.zhihu.com/p/348500968
+ [i3]: https://github.com/huailiang/AREngineDemo/blob/urp/Assets/Universal%20RP/EditorBackground.shader
+ [i4]: https://github.com/huailiang/AREngineDemo
