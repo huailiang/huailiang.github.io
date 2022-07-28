@@ -1,0 +1,314 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <meta http-equiv="X-UA-Compatible" content="IE=edge">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+
+  <title>URP渲染管线下的 huawei AREngine预览流绘制</title>
+  <meta name="description"
+    content="  huawei AREngine 默认的 builtin 的渲染管线绘制预览流， 在如今行业普遍使用的自定义渲染管线有点儿过时。  看 ARFoundation 的实现， 已经默认支持builtin和urp的无缝切换，  于是就想着把 AREngine 的预览流绘制使用urp来实现一遍。">
+
+  <link rel="shortcut icon" href="/img/favicon.ico">
+  <link rel="stylesheet" href="/css/main.css">
+  <link rel="canonical" href="https://huailiang.github.io/blog/2022/arengine/">
+
+</head>
+
+<body>
+  <main>
+    <header class="site-header">
+  <div class="container">
+    <h1><a href="/">Hom<span>e</span></a></h1>
+
+    <button type="button" class="sliding-panel-button">
+      <span></span>
+      <span></span>
+      <span></span>
+    </button>
+
+    <nav class="navbar sliding-panel-content">
+      <ul>
+        
+        <li><a href="/about" title="About">About</a>
+        </li>
+        
+        <li><a href="/blog" title="Blog">Blog</a>
+        </li>
+        
+       <li><a href="/category/" target="_blank"><i class="icon icon-feed"></i></a></li>
+      </ul>
+    </nav>
+  </div>
+</header>
+
+<div class="sliding-panel-fade-screen"></div>
+    <script type="text/javascript" src="/js/MathJax.js?config=TeX-AMS-MML_HTMLorMML"></script>
+
+<script type="text/x-mathjax-config">
+MathJax.Hub.Config({
+  tex2jax: {
+    inlineMath: [['$','$'], ['\\(','\\)']],
+    processEscapes: true
+  }
+});
+</script>
+
+<script type="text/x-mathjax-config">
+  MathJax.Hub.Config({
+    tex2jax: {
+      skipTags: ['script', 'noscript', 'style', 'textarea', 'pre', 'code']
+    }
+  });
+
+</script>
+    <div class="container">
+      <article role="article" class="post">
+
+  <div class="card">
+    <header class="post-header">
+      <h1 class="post-title">URP渲染管线下的 huawei AREngine预览流绘制</h1>
+      <p class="post-meta">Jul 28, 2022 •
+        huailiang</p>
+    </header>
+
+    <div class="post-content">
+      <blockquote>
+  <p>huawei AREngine 默认的 builtin 的渲染管线绘制预览流， 在如今行业普遍使用的自定义渲染管线有点儿过时。  看 ARFoundation 的实现， 已经默认支持builtin和urp的无缝切换，  于是就想着把 AREngine 的预览流绘制使用urp来实现一遍。</p>
+</blockquote>
+
+<h2 id="builtin的预览流实现">builtin的预览流实现：</h2>
+
+<p>首先预览流信息直接由GPU端直传到 glsl(shader)里了， 这个不需要经过cpu， 比如说转yuv这些格式， 这个效率是非常高了， 像官方c#里的代码的实现很多都是冗余的代码， 完全没有必要且可以删减。</p>
+
+<p><img src="https://img-blog.csdnimg.cn/54f153ac735546f797966b7f0327ae0c.jpeg#pic_center" alt="AREngine渲染预览流" /></p>
+
+<p>真正传递camera信息过来是在glsl里使用了特使的标记 samplerExternalOES：</p>
+
+<div class="language-glsl highlighter-rouge"><pre class="highlight"><code> <span class="k">uniform</span> <span class="n">samplerExternalOES</span> <span class="n">_MainTex</span><span class="p">;</span>
+</code></pre>
+</div>
+
+<p>关于Android是如何获取预览流并绑定纹理具体可以参考<a href="https://www.jianshu.com/p/317ee9355974">链接</a>。</p>
+
+<p>在使用 samplerExternalOES 纹理前， 需要开启camera, 这个步骤既可以通过 AREngine的 SesssionComponent 组件， 也可以使用 unity 自带的 WebCamera来实现。 获取到纹理之后， 如何显示在屏幕上呢？</p>
+
+<p>AREngine 使用的 CommandBuffer Blit，  这点跟 ARCore是一致的， 且绑定了 BeforeForwardOpaque、BeforeGBuffer 两个Event， 分别对应 前向渲染 和延时渲染。</p>
+
+<div class="language-csharp highlighter-rouge"><pre class="highlight"><code><span class="n">m_VideoCommandBuffer</span> <span class="p">=</span> <span class="k">new</span> <span class="nf">CommandBuffer</span><span class="p">();</span>
+<span class="n">m_VideoCommandBuffer</span><span class="p">.</span><span class="nf">Blit</span><span class="p">(</span><span class="n">BackGroundMaterial</span><span class="p">.</span><span class="n">mainTexture</span><span class="p">,</span> <span class="n">BuiltinRenderTextureType</span><span class="p">.</span><span class="n">CurrentActive</span><span class="p">,</span>
+    <span class="n">BackGroundMaterial</span><span class="p">);</span>
+<span class="n">m_Camera</span><span class="p">.</span><span class="nf">AddCommandBuffer</span><span class="p">(</span><span class="n">CameraEvent</span><span class="p">.</span><span class="n">BeforeForwardOpaque</span><span class="p">,</span> <span class="n">m_VideoCommandBuffer</span><span class="p">);</span>
+<span class="n">m_Camera</span><span class="p">.</span><span class="nf">AddCommandBuffer</span><span class="p">(</span><span class="n">CameraEvent</span><span class="p">.</span><span class="n">BeforeGBuffer</span><span class="p">,</span> <span class="n">m_VideoCommandBuffer</span><span class="p">);</span>
+</code></pre>
+</div>
+
+<h2 id="urp-渲染实现预览流">urp 渲染实现预览流</h2>
+
+<p>如果在urp管线中再想上述代码一样实现, 把BackGroundRenderer.cs 挂载在 scene 里就行不通了。   urp Renderer Feature可让我们向URP Renderer添加额外的渲染通道，支持我们进行Asset资产配置来重写从而可以自定义渲染的顺序、渲染的对象、材质等等。  关于详细的 Render Feature 详细的介绍， 参考unity官方的<a href="https://zhuanlan.zhihu.com/p/348500968">课程</a>。</p>
+
+<p>这里就新建立个 ARBackgroundRenderFeature 的 RenderFeature，  并配置在 Render的管线中：</p>
+
+<p><img src="https://img-blog.csdnimg.cn/72127c321c1d4105b104910507993b17.jpeg#pic_center" alt="在这里插入图片描述" /></p>
+
+<p>在 相应的 RenderPass里传入 ARBackground的材质， 由于只有前向渲染， 这里的renderPassEvent选取的是BeforeRenderingOpaques。  在执行函数Execute里 封装一个 CommandBuffer 专门用来绘制 预览流。具体的实现参考：</p>
+
+<div class="language-c# highlighter-rouge"><pre class="highlight"><code><span class="k">public</span> <span class="k">class</span> <span class="nc">ARBackgroundRenderPassFeature</span> <span class="p">:</span> <span class="n">ScriptableRendererFeature</span>
+<span class="p">{</span>
+    
+    <span class="p">[</span><span class="n">System</span><span class="p">.</span><span class="n">Serializable</span><span class="p">]</span>
+    <span class="k">public</span> <span class="k">class</span> <span class="nc">Settings</span>
+    <span class="p">{</span>
+        <span class="k">public</span> <span class="n">Material</span> <span class="n">material</span><span class="p">;</span>
+        <span class="k">public</span> <span class="n">RenderPassEvent</span> <span class="n">Event</span> <span class="p">=</span> <span class="n">RenderPassEvent</span><span class="p">.</span><span class="n">AfterRenderingOpaques</span><span class="p">;</span>
+    <span class="p">}</span>
+
+    <span class="k">class</span> <span class="nc">CustomRenderPass</span> <span class="p">:</span> <span class="n">ScriptableRenderPass</span>
+    <span class="p">{</span>
+        <span class="k">private</span> <span class="n">Settings</span> <span class="n">_settings</span><span class="p">;</span>
+
+        <span class="k">public</span> <span class="nf">CustomRenderPass</span><span class="p">(</span><span class="n">Settings</span> <span class="n">sts</span><span class="p">)</span>
+        <span class="p">{</span>
+            <span class="n">_settings</span> <span class="p">=</span> <span class="n">sts</span><span class="p">;</span>
+            <span class="n">renderPassEvent</span> <span class="p">=</span> <span class="n">sts</span><span class="p">.</span><span class="n">Event</span><span class="p">;</span>
+        <span class="p">}</span>
+
+        <span class="c1">// Here you can implement the rendering logic.
+</span>        <span class="c1">// Use &lt;c&gt;ScriptableRenderContext&lt;/c&gt; to issue drawing commands or execute command buffers
+</span>        <span class="c1">// https://docs.unity3d.com/ScriptReference/Rendering.ScriptableRenderContext.html
+</span>        <span class="c1">// You don't have to call ScriptableRenderContext.submit, the render pipeline will call it at specific points in the pipeline.
+</span>        <span class="k">public</span> <span class="k">override</span> <span class="k">void</span> <span class="nf">Execute</span><span class="p">(</span><span class="n">ScriptableRenderContext</span> <span class="n">context</span><span class="p">,</span> <span class="k">ref</span> <span class="n">RenderingData</span> <span class="n">renderingData</span><span class="p">)</span>
+        <span class="p">{</span>
+            <span class="k">if</span> <span class="p">(</span><span class="n">_settings</span><span class="p">.</span><span class="n">material</span> <span class="p">!=</span> <span class="k">null</span><span class="p">)</span>
+            <span class="p">{</span>
+                <span class="n">CommandBuffer</span> <span class="n">cmd</span> <span class="p">=</span> <span class="n">CommandBufferPool</span><span class="p">.</span><span class="nf">Get</span><span class="p">();</span>
+                <span class="n">cmd</span><span class="p">.</span><span class="nf">Blit</span><span class="p">(</span><span class="n">_settings</span><span class="p">.</span><span class="n">material</span><span class="p">.</span><span class="n">mainTexture</span><span class="p">,</span> <span class="n">BuiltinRenderTextureType</span><span class="p">.</span><span class="n">CurrentActive</span><span class="p">,</span> <span class="n">_settings</span><span class="p">.</span><span class="n">material</span><span class="p">);</span>
+                <span class="n">context</span><span class="p">.</span><span class="nf">ExecuteCommandBuffer</span><span class="p">(</span><span class="n">cmd</span><span class="p">);</span>
+                <span class="n">cmd</span><span class="p">.</span><span class="nf">Clear</span><span class="p">();</span>
+                <span class="n">CommandBufferPool</span><span class="p">.</span><span class="nf">Release</span><span class="p">(</span><span class="n">cmd</span><span class="p">);</span>
+            <span class="p">}</span>
+        <span class="p">}</span>
+
+        <span class="c1">// Cleanup any allocated resources that were created during the execution of this render pass.
+</span>        <span class="k">public</span> <span class="k">override</span> <span class="k">void</span> <span class="nf">OnCameraCleanup</span><span class="p">(</span><span class="n">CommandBuffer</span> <span class="n">cmd</span><span class="p">)</span>
+        <span class="p">{</span>
+        <span class="p">}</span>
+    <span class="p">}</span>
+<span class="p">}</span>
+</code></pre>
+</div>
+
+<p>由于我们使用glsl shader里指定的平台是 gles3, 所以这里正确执行在会在Android手机侧能保证正确， 在PC平台得到的结果是紫色的。</p>
+
+<div class="language-c highlighter-rouge"><pre class="highlight"><code><span class="cp">#ifdef SHADER_API_GLES3
+#pragma only_renderers gles3
+#extension GL_OES_EGL_image_external_essl3 : require
+#endif
+</span></code></pre>
+</div>
+
+<p>不过倒是可以额外使用一个shader 用来仿真手机的运行的结果， 在pc平台只显示一张图片来代替手机上的预览流， 作者已经 <a href="https://github.com/huailiang/AREngineDemo/blob/urp/Assets/Universal%20RP/EditorBackground.shader">EditorBackground.shader</a> 做好上传到 <a href="https://github.com/huailiang/AREngineDemo">github</a>， 读者根据自己的使用需求处理就可以了。  为了更接近手机上的结果， 使用的shader还是 使用的是glsl语言， 并不是更常用的 cg 或者 hlsl， 因此pc运行的时候也需要切换到 OpenGL 平台， 只需要在 EditorSetting 如下图处理即可：</p>
+
+<p><img src="https://img-blog.csdnimg.cn/dc74ef6e712b461599b95b90c2a56029.jpeg#pic_center" alt="在这里插入图片描述" /></p>
+
+<p>Graphic Setting 切换完毕置换后， 注意重启unity。</p>
+
+<h2 id="结语">结语</h2>
+
+<p>AREngine 项目完全切换到 URP 渲染管线， 不单单是预览流的处理， 参与渲染的其他部分也需要做出相应的更改， 读者根据自己的实际项目需求进行调整， 也期望在使用urp过程中遇到或者解决相关的问题心得跟作者沟通。</p>
+
+
+    </div>
+  </div>
+
+  <style>
+  .post-nav {
+    overflow: hidden;
+    /* margin-top: 60px; */
+    padding: 12px;
+    white-space: nowrap;
+    /* border-top: 1px solid #eee; */
+  }
+
+  .post-nav-item {
+    display: inline-block;
+    width: 50%;
+    white-space: normal;
+  }
+
+  .post-nav-item a {
+    position: relative;
+    display: inline-block;
+    line-height: 25px;
+    font-size: 14px;
+    color: #555;
+    border-bottom: none;
+  }
+
+  .post-nav-item a:hover {
+    color: #222;
+    font-weight: bold;
+    border-bottom: none;
+  }
+
+  .post-nav-item a:active {
+    top: 2px;
+  }
+
+  .post-nav-item a:before,
+  .post-nav-item a:after {
+    display: inline-block;
+    width: 16px;
+    height: 25px;
+    vertical-align: top;
+    opacity: 0.4;
+    background-size: 16px;
+  }
+
+  .post-nav-none a:none {
+    content: ' ';
+    background-size: 8px;
+  }
+
+  .post-nav-none a:hover:none {
+    opacity: 1;
+  }
+
+  .post-nav-prev a:before {
+    content: ' ';
+    background: url("data:image/svg+xml;base64,PD94bWwgdmVyc2lvbj0iMS4wIiA/PjxzdmcgaGVpZ2h0PSIxMnB4IiB2ZXJzaW9uPSIxLjEiIHZpZXdCb3g9IjAgMCA5IDEyIiB3aWR0aD0iOXB4IiB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHhtbG5zOnNrZXRjaD0iaHR0cDovL3d3dy5ib2hlbWlhbmNvZGluZy5jb20vc2tldGNoL25zIiB4bWxuczp4bGluaz0iaHR0cDovL3d3dy53My5vcmcvMTk5OS94bGluayI+PHRpdGxlLz48ZGVzYy8+PGRlZnMvPjxnIGZpbGw9Im5vbmUiIGZpbGwtcnVsZT0iZXZlbm9kZCIgaWQ9IlBhZ2UtMSIgc3Ryb2tlPSJub25lIiBzdHJva2Utd2lkdGg9IjEiPjxnIGZpbGw9IiMwMDAwMDAiIGlkPSJDb3JlIiB0cmFuc2Zvcm09InRyYW5zbGF0ZSgtMjE4LjAwMDAwMCwgLTkwLjAwMDAwMCkiPjxnIGlkPSJjaGV2cm9uLWxlZnQiIHRyYW5zZm9ybT0idHJhbnNsYXRlKDIxOC41MDAwMDAsIDkwLjAwMDAwMCkiPjxwYXRoIGQ9Ik03LjQsMS40IEw2LDAgTC04Ljg4MTc4NDJlLTE2LDYgTDYsMTIgTDcuNCwxMC42IEwyLjgsNiBMNy40LDEuNCBaIiBpZD0iU2hhcGUiLz48L2c+PC9nPjwvZz48L3N2Zz4=") no-repeat 0 50%;
+    background-size: 8px;
+  }
+
+  .post-nav-prev a:hover:before {
+    opacity: 1;
+  }
+
+  .post-nav-next {
+    text-align: right;
+  }
+
+  .post-nav-next a:after {
+    content: ' ';
+    background: url("data:image/svg+xml;base64,PD94bWwgdmVyc2lvbj0iMS4wIiA/PjxzdmcgaGVpZ2h0PSIxMnB4IiB2ZXJzaW9uPSIxLjEiIHZpZXdCb3g9IjAgMCA5IDEyIiB3aWR0aD0iOXB4IiB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHhtbG5zOnNrZXRjaD0iaHR0cDovL3d3dy5ib2hlbWlhbmNvZGluZy5jb20vc2tldGNoL25zIiB4bWxuczp4bGluaz0iaHR0cDovL3d3dy53My5vcmcvMTk5OS94bGluayI+PHRpdGxlLz48ZGVzYy8+PGRlZnMvPjxnIGZpbGw9Im5vbmUiIGZpbGwtcnVsZT0iZXZlbm9kZCIgaWQ9IlBhZ2UtMSIgc3Ryb2tlPSJub25lIiBzdHJva2Utd2lkdGg9IjEiPjxnIGZpbGw9IiMwMDAwMDAiIGlkPSJDb3JlIiB0cmFuc2Zvcm09InRyYW5zbGF0ZSgtMjYwLjAwMDAwMCwgLTkwLjAwMDAwMCkiPjxnIGlkPSJjaGV2cm9uLXJpZ2h0IiB0cmFuc2Zvcm09InRyYW5zbGF0ZSgyNjAuNTAwMDAwLCA5MC4wMDAwMDApIj48cGF0aCBkPSJNMSwwIEwtMC40LDEuNCBMNC4yLDYgTC0wLjQsMTAuNiBMMSwxMiBMNyw2IEwxLDAgWiIgaWQ9IlNoYXBlIi8+PC9nPjwvZz48L2c+PC9zdmc+") no-repeat 100% 50%;
+    background-size: 8px;
+  }
+
+  .post-nav-next a:hover:after {
+    opacity: 1;
+  }
+</style>
+
+
+
+<div class="post-nav">
+
+  
+  <div class="post-nav-none post-nav-item">
+    <a href=""> </a>
+  </div>
+  
+
+  
+  <div class="post-nav-next post-nav-item">
+    
+    <a href="/blog/2022/astc/"> ASTC</a>
+  </div>
+  
+
+</div>
+
+</article>
+    </div>
+
+    <footer class="site-footer">
+  <div class="container">
+    <ul class="social">
+  <li><a href="https://twitter.com/penghuailiang" target="_blank"><i class="icon icon-twitter"></i></a></li>
+  <li><a href="https://www.zhihu.com/people/huailiangpenguin" target="_blank"><i class="icon icon-zhihu"></i></a></li>
+  <li><a href="https://www.facebook.com/profile.php?id=100004290725320" target="_blank"><i class="icon icon-facebook"></i></a></li>
+  <li><a href="https://weibo.com/6212299692/profile?topnav=1&wvr=6" target="_blank"><i class="icon icon-sina"></i></a></li>
+  <li><a href="https://www.linkedin.com/in/penghuailiang/" target="_blank"><i class="icon icon-linkedin"></i></a></li>
+  <li><a href="https://github.com/huailiang" target="_blank"><i class="icon icon-github"></i></a></li>
+</ul>
+    <p class="txt-medium-gray">
+      <small>&copy;2022 All rights reserved. </small>
+    </p>
+  </div>
+</footer>
+    <a href="https://github.com/huailiang" target="_blank" class="github-corner"><svg width="80" height="80" viewBox="0 0 250 250" style="fill:#337ab7; color:#fff; position: absolute; top: 0; border: 0; right: 0;"><path d="M0,0 L115,115 L130,115 L142,142 L250,250 L250,0 Z"></path><path d="M128.3,109.0 C113.8,99.7 119.0,89.6 119.0,89.6 C122.0,82.7 120.5,78.6 120.5,78.6 C119.2,72.0 123.4,76.3 123.4,76.3 C127.3,80.9 125.5,87.3 125.5,87.3 C122.9,97.6 130.6,101.9 134.4,103.2" fill="currentColor" style="transform-origin: 130px 106px;" class="octo-arm"></path><path d="M115.0,115.0 C114.9,115.1 118.7,116.5 119.8,115.4 L133.7,101.6 C136.9,99.2 139.9,98.4 142.2,98.6 C133.8,88.0 127.5,74.4 143.8,58.0 C148.5,53.4 154.0,51.2 159.7,51.0 C160.3,49.4 163.2,43.6 171.4,40.1 C171.4,40.1 176.1,42.5 178.8,56.2 C183.1,58.6 187.2,61.8 190.9,65.4 C194.5,69.0 197.7,73.2 200.1,77.6 C213.8,80.2 216.3,84.9 216.3,84.9 C212.7,93.1 206.9,96.0 205.4,96.6 C205.1,102.4 203.0,107.8 198.3,112.5 C181.9,128.9 168.3,122.5 157.7,114.1 C157.9,116.9 156.7,120.9 152.7,124.9 L141.0,136.5 C139.8,137.7 141.6,141.9 141.8,141.8 Z" fill="currentColor" class="octo-body"></path></svg></a>
+
+
+    <script src="//code.jquery.com/jquery-1.11.3.min.js"></script>
+    <script>
+      $(document).ready(function () {
+        $('.sliding-panel-button,.sliding-panel-fade-screen,.sliding-panel-close').on('click touchstart', function (e) {
+          $('.sliding-panel-content,.sliding-panel-fade-screen').toggleClass('is-visible');
+          e.preventDefault();
+        });
+      });
+    </script>
+  </main>
+</body>
+
+</html>
