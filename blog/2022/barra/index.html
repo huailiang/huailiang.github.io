@@ -1,0 +1,760 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <meta http-equiv="X-UA-Compatible" content="IE=edge">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+
+  <title>Barracuda AI网络推理</title>
+  <meta name="description"
+    content="  Unity实验室致力于改进一项最先进的研究，并开发出一个高效的神经系统推理引擎——Barracuda。深度学习长期以来一直局被限于超级计算机和离线计算之中，但由于计算能力的不断提高，它们在消费者级硬件上的实时可用性也在快速提升。有了Barracuda，Unity实验室希望Barracuda能快速的进入到创作者...">
+
+  <link rel="shortcut icon" href="/img/favicon.ico">
+  <link rel="stylesheet" href="/css/main.css">
+  <link rel="canonical" href="https://huailiang.github.io/blog/2022/barra/">
+
+</head>
+
+<body>
+  <main>
+    <header class="site-header">
+  <div class="container">
+    <h1><a href="/">Hom<span>e</span></a></h1>
+
+    <button type="button" class="sliding-panel-button">
+      <span></span>
+      <span></span>
+      <span></span>
+    </button>
+
+    <nav class="navbar sliding-panel-content">
+      <ul>
+        
+        <li><a href="/about" title="About">About</a>
+        </li>
+        
+        <li><a href="/blog" title="Blog">Blog</a>
+        </li>
+        
+       <li><a href="/category/" target="_blank"><i class="icon icon-feed"></i></a></li>
+      </ul>
+    </nav>
+  </div>
+</header>
+
+<div class="sliding-panel-fade-screen"></div>
+    <script type="text/javascript" src="/js/MathJax.js?config=TeX-AMS-MML_HTMLorMML"></script>
+
+<script type="text/x-mathjax-config">
+MathJax.Hub.Config({
+  tex2jax: {
+    inlineMath: [['$','$'], ['\\(','\\)']],
+    processEscapes: true
+  }
+});
+</script>
+
+<script type="text/x-mathjax-config">
+  MathJax.Hub.Config({
+    tex2jax: {
+      skipTags: ['script', 'noscript', 'style', 'textarea', 'pre', 'code']
+    }
+  });
+
+</script>
+    <div class="container">
+      <article role="article" class="post">
+
+  <div class="card">
+    <header class="post-header">
+      <h1 class="post-title">Barracuda AI网络推理</h1>
+      <p class="post-meta">Oct 3, 2022 •
+        huailiang</p>
+    </header>
+
+    <div class="post-content">
+      <blockquote>
+  <p>Unity实验室致力于改进一项最先进的研究，并开发出一个高效的神经系统推理引擎——Barracuda。深度学习长期以来一直局被限于超级计算机和离线计算之中，但由于计算能力的不断提高，它们在消费者级硬件上的实时可用性也在快速提升。有了Barracuda，Unity实验室希望Barracuda能快速的进入到创作者手中。得益于ML-Agents，神经网络已经被用于一些游戏开发中的人工智能应用中，但还有许多应用需要在实时游戏引擎中演示。比如：深度学习超采样，环境遮挡，全局光照，风格变换等等。</p>
+</blockquote>
+
+<p>目前网络上看到基于 Barracuda 实现的效果有 画面风格迁移（类似后处理), 人脸识别， 面部捕捉，手势识别等， 更多相关的案例参考<a href="https://zhuanlan.zhihu.com/p/373636593">网页</a>。</p>
+
+<p><br /></p>
+
+<h2 id="1-onnx">1. ONNX</h2>
+
+<h3 id="11-简介">1.1 简介</h3>
+
+<p>Open Neural Network Exchange（ONNX，开放神经网络交换）格式，是一个用于表示深度学习模型的标准，可使模型在不同框架之间进行转移。</p>
+
+<p><a href="https://github.com/onnx/onnx">ONNX</a>是一种针对机器学习所设计的开放式的文件格式，用于存储训练好的模型。它使得不同的人工智能框架（如Pytorch, MXNet）可以采用相同格式存储模型数据并交互。 ONNX的规范及代码主要由微软，亚马逊 ，Facebook 和 IBM 等公司共同开发，以开放源代码的方式托管在Github上。</p>
+
+<p>目前官方支持加载ONNX模型并进行推理的深度学习框架有： Caffe2, PyTorch, MXNet，ML.NET，TensorRT 和 Microsoft CNTK，并且 TensorFlow 也非官方的支持ONNX。例如 Pytorch 导出onnx:</p>
+
+<div class="language-py highlighter-rouge"><pre class="highlight"><code><span class="n">torch</span><span class="o">.</span><span class="n">onnx</span><span class="o">.</span><span class="n">export</span><span class="p">(</span>
+    <span class="n">model</span><span class="p">,</span>
+    <span class="p">(</span><span class="n">input1</span><span class="p">,</span><span class="n">input2</span><span class="p">),</span>
+    <span class="s">"./trynet.onnx"</span><span class="p">,</span>
+    <span class="n">verbose</span><span class="o">=</span><span class="bp">True</span><span class="p">,</span>
+    <span class="n">input_names</span><span class="o">=</span><span class="n">input_names</span><span class="p">,</span>
+    <span class="n">output_names</span><span class="o">=</span><span class="n">output_names</span>
+<span class="p">)</span>
+</code></pre>
+</div>
+
+<p>ONNX中的一些信息都被可视化展示了出来，例如文件格式ONNX v7，该文件的导出方pytorch1.10等等，这些信息都保存在ONNX格式的文件中。 如下面是使用 <a href="https://netron.app/">Netron</a> 打开模型：</p>
+
+<p><img src="/img/post-ml/nn1.jpg" alt="" /></p>
+
+<p>ONNX 文件内部是以Protobuf记录<a href="https://blog.csdn.net/u013947807/article/details/125372385">节点信息</a>的， 当加载了一个ONNX之后，我们获得的就是一个ModelProto，它包含了一些版本信息，生产者信息和一个GraphProto。在GraphProto里面又包含了四个repeated数组，它们分别是node(NodeProto类型)，input(ValueInfoProto类型)，output(ValueInfoProto类型)和initializer(TensorProto类型)，其中node中存放了模型中所有的计算节点，input存放了模型的输入节点，output存放了模型中所有的输出节点，initializer存放了模型的所有权重参数。</p>
+
+<ul>
+  <li>ModelProto</li>
+  <li>GraphProto</li>
+  <li>NodeProto</li>
+  <li>ValueInfoProto</li>
+  <li>TensorProto</li>
+  <li>AttributeProto</li>
+</ul>
+
+<h3 id="21-barracuda-处理-onnx">2.1 Barracuda 处理 onnx</h3>
+
+<p>Barracuda 内置了ONNX的解析， 并可以为之预览信息。 当在Unity中选中一个.onnx或者.nn后缀的一个模型文件之后， 会首先调用onnx convert的接口解析出onnx的内部结构， 然后在 ONNXModelImporterEditor 类里进行EditorGUI的绘制。</p>
+
+<p><img src="/img/post-ml/nn2.jpg" alt="" /></p>
+
+<p>此界面可以清晰看出网络的输入、输出、版本以及内存开销等信息。</p>
+
+<h2 id="算子扩展">算子扩展</h2>
+
+<p>遍历 Barracuda对算子的支持， 像主流的 Dense, Conv, Upsample, MaxPool,  Normalization, LSTM都得到了支持。 详细的支持列表如下：</p>
+
+<div class="language-c# highlighter-rouge"><pre class="highlight"><code><span class="k">public</span> <span class="k">enum</span> <span class="n">Type</span>
+<span class="p">{</span>
+    <span class="c1">/// &lt;summary&gt;
+</span>    <span class="c1">/// Dense layer
+</span>    <span class="c1">/// &lt;/summary&gt;
+</span>    <span class="n">Dense</span> <span class="p">=</span> <span class="m">1</span><span class="p">,</span>
+
+    <span class="c1">/// &lt;summary&gt;
+</span>    <span class="c1">/// Matrix multiplication layer
+</span>    <span class="c1">/// &lt;/summary&gt;
+</span>    <span class="n">MatMul</span> <span class="p">=</span> <span class="m">2</span><span class="p">,</span>
+
+    <span class="c1">/// &lt;summary&gt;
+</span>    <span class="c1">/// Rank-3 Dense Layer
+</span>    <span class="c1">/// &lt;/summary&gt;
+</span>    <span class="n">Dense3</span> <span class="p">=</span> <span class="m">3</span><span class="p">,</span>
+
+    <span class="c1">/// &lt;summary&gt;
+</span>    <span class="c1">/// 2D Convolution layer
+</span>    <span class="c1">/// &lt;/summary&gt;
+</span>    <span class="n">Conv2D</span> <span class="p">=</span> <span class="m">20</span><span class="p">,</span>
+
+    <span class="c1">/// &lt;summary&gt;
+</span>    <span class="c1">/// Depthwise Convolution layer
+</span>    <span class="c1">/// &lt;/summary&gt;
+</span>    <span class="n">DepthwiseConv2D</span> <span class="p">=</span> <span class="m">21</span><span class="p">,</span>
+
+    <span class="c1">/// &lt;summary&gt;
+</span>    <span class="c1">/// Transpose 2D Convolution layer
+</span>    <span class="c1">/// &lt;/summary&gt;
+</span>    <span class="n">Conv2DTrans</span> <span class="p">=</span> <span class="m">22</span><span class="p">,</span>
+
+    <span class="c1">/// &lt;summary&gt;
+</span>    <span class="c1">/// Upsampling layer
+</span>    <span class="c1">/// &lt;/summary&gt;
+</span>    <span class="n">Upsample2D</span> <span class="p">=</span> <span class="m">23</span><span class="p">,</span>
+
+    <span class="c1">/// &lt;summary&gt;
+</span>    <span class="c1">/// Max Pool layer
+</span>    <span class="c1">/// &lt;/summary&gt;
+</span>    <span class="n">MaxPool2D</span> <span class="p">=</span> <span class="m">25</span><span class="p">,</span>
+
+    <span class="c1">/// &lt;summary&gt;
+</span>    <span class="c1">/// Average Pool layer
+</span>    <span class="c1">/// &lt;/summary&gt;
+</span>    <span class="n">AvgPool2D</span> <span class="p">=</span> <span class="m">26</span><span class="p">,</span>
+
+    <span class="c1">/// &lt;summary&gt;
+</span>    <span class="c1">/// Global Max Pool layer
+</span>    <span class="c1">/// &lt;/summary&gt;
+</span>    <span class="n">GlobalMaxPool2D</span> <span class="p">=</span> <span class="m">27</span><span class="p">,</span>
+
+    <span class="c1">/// &lt;summary&gt;
+</span>    <span class="c1">/// Global Average Pool layer
+</span>    <span class="c1">/// &lt;/summary&gt;
+</span>    <span class="n">GlobalAvgPool2D</span> <span class="p">=</span> <span class="m">28</span><span class="p">,</span>
+
+    <span class="c1">/// &lt;summary&gt;
+</span>    <span class="c1">/// Border / Padding layer
+</span>    <span class="c1">/// &lt;/summary&gt;
+</span>    <span class="n">Border2D</span> <span class="p">=</span> <span class="m">29</span><span class="p">,</span>
+
+    <span class="c1">/// &lt;summary&gt;
+</span>    <span class="c1">/// 3D Convolution layer
+</span>    <span class="c1">/// &lt;/summary&gt;
+</span>    <span class="n">Conv3D</span> <span class="p">=</span> <span class="m">30</span><span class="p">,</span>
+
+    <span class="c1">/// &lt;summary&gt;
+</span>    <span class="c1">/// Transpose 3D Convolution layer (not yet implemented)
+</span>    <span class="c1">/// &lt;/summary&gt;
+</span>    <span class="n">Conv3DTrans</span> <span class="p">=</span> <span class="m">32</span><span class="p">,</span>           <span class="c1">// TODO: NOT IMPLEMENTED
+</span>
+    <span class="c1">/// &lt;summary&gt;
+</span>    <span class="c1">/// 3D Upsampling layer
+</span>    <span class="c1">/// &lt;/summary&gt;
+</span>    <span class="n">Upsample3D</span> <span class="p">=</span> <span class="m">33</span><span class="p">,</span>
+
+    <span class="c1">/// &lt;summary&gt;
+</span>    <span class="c1">/// 3D Max Pool layer (not yet implemented)
+</span>    <span class="c1">/// &lt;/summary&gt;
+</span>    <span class="n">MaxPool3D</span> <span class="p">=</span> <span class="m">35</span><span class="p">,</span>             <span class="c1">// TODO: NOT IMPLEMENTED
+</span>
+    <span class="c1">/// &lt;summary&gt;
+</span>    <span class="c1">/// 3D Average Pool layer (not yet implemented)
+</span>    <span class="c1">/// &lt;/summary&gt;
+</span>    <span class="n">AvgPool3D</span> <span class="p">=</span> <span class="m">36</span><span class="p">,</span>             <span class="c1">// TODO: NOT IMPLEMENTED
+</span>
+    <span class="c1">/// &lt;summary&gt;
+</span>    <span class="c1">/// 3D Global Max Pool layer (not yet implemented)
+</span>    <span class="c1">/// &lt;/summary&gt;
+</span>    <span class="n">GlobalMaxPool3D</span> <span class="p">=</span> <span class="m">37</span><span class="p">,</span>       <span class="c1">// TODO: NOT IMPLEMENTED
+</span>
+    <span class="c1">/// &lt;summary&gt;
+</span>    <span class="c1">/// 3D Global Average Pool layer (not yet implemented)
+</span>    <span class="c1">/// &lt;/summary&gt;
+</span>    <span class="n">GlobalAvgPool3D</span> <span class="p">=</span> <span class="m">38</span><span class="p">,</span>       <span class="c1">// TODO: NOT IMPLEMENTED
+</span>
+    <span class="c1">/// &lt;summary&gt;
+</span>    <span class="c1">/// 3D Border / Padding layer
+</span>    <span class="c1">/// &lt;/summary&gt;
+</span>    <span class="n">Border3D</span> <span class="p">=</span> <span class="m">39</span><span class="p">,</span>
+
+    <span class="c1">/// &lt;summary&gt;
+</span>    <span class="c1">/// Activation layer, see `Activation` enum for activation types
+</span>    <span class="c1">/// &lt;/summary&gt;
+</span>    <span class="n">Activation</span> <span class="p">=</span> <span class="m">50</span><span class="p">,</span>
+
+    <span class="c1">/// &lt;summary&gt;
+</span>    <span class="c1">/// Scale + Bias layer
+</span>    <span class="c1">/// &lt;/summary&gt;
+</span>    <span class="n">ScaleBias</span> <span class="p">=</span> <span class="m">51</span><span class="p">,</span>
+
+    <span class="c1">/// &lt;summary&gt;
+</span>    <span class="c1">/// Normalization layer
+</span>    <span class="c1">/// &lt;/summary&gt;
+</span>    <span class="n">Normalization</span> <span class="p">=</span> <span class="m">52</span><span class="p">,</span>
+
+    <span class="c1">/// &lt;summary&gt;
+</span>    <span class="c1">/// LRN (Local Response Normalization) layer
+</span>    <span class="c1">/// &lt;/summary&gt;
+</span>    <span class="n">LRN</span> <span class="p">=</span> <span class="m">53</span><span class="p">,</span>
+
+    <span class="c1">/// &lt;summary&gt;
+</span>    <span class="c1">/// Dropout layer (does nothing in inference)
+</span>    <span class="c1">/// &lt;/summary&gt;
+</span>    <span class="n">Dropout</span> <span class="p">=</span> <span class="m">60</span><span class="p">,</span>
+
+    <span class="c1">/// &lt;summary&gt;
+</span>    <span class="c1">/// Random sampling from normal distribution layer
+</span>    <span class="c1">/// &lt;/summary&gt;
+</span>    <span class="n">RandomNormal</span> <span class="p">=</span> <span class="m">64</span><span class="p">,</span>
+
+    <span class="c1">/// &lt;summary&gt;
+</span>    <span class="c1">/// Random sampling from uniform distribution layer
+</span>    <span class="c1">/// &lt;/summary&gt;
+</span>    <span class="n">RandomUniform</span> <span class="p">=</span> <span class="m">65</span><span class="p">,</span>
+
+    <span class="c1">/// &lt;summary&gt;
+</span>    <span class="c1">/// Random sampling from multinomial distribution layer
+</span>    <span class="c1">/// &lt;/summary&gt;
+</span>    <span class="n">Multinomial</span> <span class="p">=</span> <span class="m">66</span><span class="p">,</span>
+
+    <span class="c1">/// &lt;summary&gt;
+</span>    <span class="c1">/// OneHot layer
+</span>    <span class="c1">/// &lt;/summary&gt;
+</span>    <span class="n">OneHot</span> <span class="p">=</span> <span class="m">67</span><span class="p">,</span>
+
+    <span class="c1">/// &lt;summary&gt;
+</span>    <span class="c1">/// TopK indices layer
+</span>    <span class="c1">/// &lt;/summary&gt;
+</span>    <span class="n">TopKIndices</span> <span class="p">=</span> <span class="m">68</span><span class="p">,</span>
+
+    <span class="c1">/// &lt;summary&gt;
+</span>    <span class="c1">/// TopK values layer
+</span>    <span class="c1">/// &lt;/summary&gt;
+</span>    <span class="n">TopKValues</span> <span class="p">=</span> <span class="m">69</span><span class="p">,</span>
+
+    <span class="c1">/// &lt;summary&gt;
+</span>    <span class="c1">/// NonZero layer
+</span>    <span class="c1">/// &lt;/summary&gt;
+</span>    <span class="n">NonZero</span> <span class="p">=</span> <span class="m">70</span><span class="p">,</span>
+
+    <span class="c1">/// &lt;summary&gt;
+</span>    <span class="c1">/// Range layer
+</span>    <span class="c1">/// &lt;/summary&gt;
+</span>    <span class="n">Range</span> <span class="p">=</span> <span class="m">71</span><span class="p">,</span>
+
+    <span class="c1">/// &lt;summary&gt;
+</span>    <span class="c1">/// Addition layer
+</span>    <span class="c1">/// &lt;/summary&gt;
+</span>    <span class="n">Add</span> <span class="p">=</span> <span class="m">100</span><span class="p">,</span>
+
+    <span class="c1">/// &lt;summary&gt;
+</span>    <span class="c1">/// Subtraction layer
+</span>    <span class="c1">/// &lt;/summary&gt;
+</span>    <span class="n">Sub</span> <span class="p">=</span> <span class="m">101</span><span class="p">,</span>
+
+    <span class="c1">/// &lt;summary&gt;
+</span>    <span class="c1">/// Multiplication layer
+</span>    <span class="c1">/// &lt;/summary&gt;
+</span>    <span class="n">Mul</span> <span class="p">=</span> <span class="m">102</span><span class="p">,</span>
+
+    <span class="c1">/// &lt;summary&gt;
+</span>    <span class="c1">/// Division layer
+</span>    <span class="c1">/// &lt;/summary&gt;
+</span>    <span class="n">Div</span> <span class="p">=</span> <span class="m">103</span><span class="p">,</span>
+
+    <span class="c1">/// &lt;summary&gt;
+</span>    <span class="c1">/// Power layer
+</span>    <span class="c1">/// &lt;/summary&gt;
+</span>    <span class="n">Pow</span> <span class="p">=</span> <span class="m">104</span><span class="p">,</span>
+
+    <span class="c1">/// &lt;summary&gt;
+</span>    <span class="c1">/// Min layer
+</span>    <span class="c1">/// &lt;/summary&gt;
+</span>    <span class="n">Min</span> <span class="p">=</span> <span class="m">110</span><span class="p">,</span>
+
+    <span class="c1">/// &lt;summary&gt;
+</span>    <span class="c1">/// Max layer
+</span>    <span class="c1">/// &lt;/summary&gt;
+</span>    <span class="n">Max</span> <span class="p">=</span> <span class="m">111</span><span class="p">,</span>
+
+    <span class="c1">/// &lt;summary&gt;
+</span>    <span class="c1">/// Mean layer
+</span>    <span class="c1">/// &lt;/summary&gt;
+</span>    <span class="n">Mean</span> <span class="p">=</span> <span class="m">112</span><span class="p">,</span>
+
+    <span class="c1">/// &lt;summary&gt;
+</span>    <span class="c1">/// Reduce L1 layer (not yet implemented)
+</span>    <span class="c1">/// &lt;/summary&gt;
+</span>    <span class="n">ReduceL1</span> <span class="p">=</span> <span class="m">120</span><span class="p">,</span>             <span class="c1">// TODO: NOT IMPLEMENTED
+</span>
+    <span class="c1">/// &lt;summary&gt;
+</span>    <span class="c1">/// Reduce L2 layer (not yet implemented)
+</span>    <span class="c1">/// &lt;/summary&gt;
+</span>    <span class="n">ReduceL2</span> <span class="p">=</span> <span class="m">121</span><span class="p">,</span>             <span class="c1">// TODO: NOT IMPLEMENTED
+</span>
+    <span class="c1">/// &lt;summary&gt;
+</span>    <span class="c1">/// Reduce LogSum layer (not yet implemented)
+</span>    <span class="c1">/// &lt;/summary&gt;
+</span>    <span class="n">ReduceLogSum</span> <span class="p">=</span> <span class="m">122</span><span class="p">,</span>         <span class="c1">// TODO: NOT IMPLEMENTED
+</span>
+    <span class="c1">/// &lt;summary&gt;
+</span>    <span class="c1">/// Reduce LogSumExp layer (not yet implemented)
+</span>    <span class="c1">/// &lt;/summary&gt;
+</span>    <span class="n">ReduceLogSumExp</span> <span class="p">=</span> <span class="m">123</span><span class="p">,</span>      <span class="c1">// TODO: NOT IMPLEMENTED
+</span>
+    <span class="c1">/// &lt;summary&gt;
+</span>    <span class="c1">/// Reduce with Max layer
+</span>    <span class="c1">/// &lt;/summary&gt;
+</span>    <span class="n">ReduceMax</span> <span class="p">=</span> <span class="m">124</span><span class="p">,</span>
+
+    <span class="c1">/// &lt;summary&gt;
+</span>    <span class="c1">/// Reduce with Mean layer
+</span>    <span class="c1">/// &lt;/summary&gt;
+</span>    <span class="n">ReduceMean</span> <span class="p">=</span> <span class="m">125</span><span class="p">,</span>
+
+    <span class="c1">/// &lt;summary&gt;
+</span>    <span class="c1">/// Reduce with Min layer
+</span>    <span class="c1">/// &lt;/summary&gt;
+</span>    <span class="n">ReduceMin</span> <span class="p">=</span> <span class="m">126</span><span class="p">,</span>
+
+    <span class="c1">/// &lt;summary&gt;
+</span>    <span class="c1">/// Reduce with Prod layer
+</span>    <span class="c1">/// &lt;/summary&gt;
+</span>    <span class="n">ReduceProd</span> <span class="p">=</span> <span class="m">127</span><span class="p">,</span>
+
+    <span class="c1">/// &lt;summary&gt;
+</span>    <span class="c1">/// Reduce with Sum layer
+</span>    <span class="c1">/// &lt;/summary&gt;
+</span>    <span class="n">ReduceSum</span> <span class="p">=</span> <span class="m">128</span><span class="p">,</span>
+
+    <span class="c1">/// &lt;summary&gt;
+</span>    <span class="c1">/// Reduce with SumSquare layer (not yet implemented)
+</span>    <span class="c1">/// &lt;/summary&gt;
+</span>    <span class="n">ReduceSumSquare</span> <span class="p">=</span> <span class="m">129</span><span class="p">,</span>      <span class="c1">// TODO: NOT IMPLEMENTED
+</span>
+    <span class="c1">/// &lt;summary&gt;
+</span>    <span class="c1">/// Logic operation: Greater layer
+</span>    <span class="c1">/// &lt;/summary&gt;
+</span>    <span class="n">Greater</span> <span class="p">=</span> <span class="m">140</span><span class="p">,</span>
+
+    <span class="c1">/// &lt;summary&gt;
+</span>    <span class="c1">/// Logic operation: GreaterEqual layer
+</span>    <span class="c1">/// &lt;/summary&gt;
+</span>    <span class="n">GreaterEqual</span> <span class="p">=</span> <span class="m">141</span><span class="p">,</span>
+
+    <span class="c1">/// &lt;summary&gt;
+</span>    <span class="c1">/// Logic operation: Less layer
+</span>    <span class="c1">/// &lt;/summary&gt;
+</span>    <span class="n">Less</span> <span class="p">=</span> <span class="m">142</span><span class="p">,</span>
+
+    <span class="c1">/// &lt;summary&gt;
+</span>    <span class="c1">/// Logic operation: LessEqual layer
+</span>    <span class="c1">/// &lt;/summary&gt;
+</span>    <span class="n">LessEqual</span> <span class="p">=</span> <span class="m">143</span><span class="p">,</span>
+
+    <span class="c1">/// &lt;summary&gt;
+</span>    <span class="c1">/// Logic operation: Equal layer
+</span>    <span class="c1">/// &lt;/summary&gt;
+</span>    <span class="n">Equal</span> <span class="p">=</span> <span class="m">144</span><span class="p">,</span>
+
+    <span class="c1">/// &lt;summary&gt;
+</span>    <span class="c1">/// Logic operation: LogicalOr layer
+</span>    <span class="c1">/// &lt;/summary&gt;
+</span>    <span class="n">LogicalOr</span> <span class="p">=</span> <span class="m">145</span><span class="p">,</span>
+
+    <span class="c1">/// &lt;summary&gt;
+</span>    <span class="c1">/// Logic operation: LogicalAnd layer
+</span>    <span class="c1">/// &lt;/summary&gt;
+</span>    <span class="n">LogicalAnd</span> <span class="p">=</span> <span class="m">146</span><span class="p">,</span>
+
+    <span class="c1">/// &lt;summary&gt;
+</span>    <span class="c1">/// Logic operation: LogicalNot layer
+</span>    <span class="c1">/// &lt;/summary&gt;
+</span>    <span class="n">LogicalNot</span> <span class="p">=</span> <span class="m">147</span><span class="p">,</span>
+
+    <span class="c1">/// &lt;summary&gt;
+</span>    <span class="c1">/// Logic operation: LogicalXor layer
+</span>    <span class="c1">/// &lt;/summary&gt;
+</span>    <span class="n">LogicalXor</span> <span class="p">=</span> <span class="m">148</span><span class="p">,</span>
+
+    <span class="c1">/// &lt;summary&gt;
+</span>    <span class="c1">/// Logic operation: Where layer
+</span>    <span class="c1">/// &lt;/summary&gt;
+</span>    <span class="n">Where</span> <span class="p">=</span> <span class="m">149</span><span class="p">,</span>
+
+    <span class="c1">/// &lt;summary&gt;
+</span>    <span class="c1">/// Logic operation: Sign layer
+</span>    <span class="c1">/// &lt;/summary&gt;
+</span>    <span class="n">Sign</span> <span class="p">=</span> <span class="m">150</span><span class="p">,</span>
+
+    <span class="c1">/// &lt;summary&gt;
+</span>    <span class="c1">/// Reflection padding layer
+</span>    <span class="c1">/// &lt;/summary&gt;
+</span>    <span class="n">Pad2DReflect</span> <span class="p">=</span> <span class="m">160</span><span class="p">,</span>
+
+    <span class="c1">/// &lt;summary&gt;
+</span>    <span class="c1">/// Symmetric padding layer
+</span>    <span class="c1">/// &lt;/summary&gt;
+</span>    <span class="n">Pad2DSymmetric</span> <span class="p">=</span> <span class="m">161</span><span class="p">,</span>
+
+    <span class="c1">/// &lt;summary&gt;
+</span>    <span class="c1">/// Edge padding layer
+</span>    <span class="c1">/// &lt;/summary&gt;
+</span>    <span class="n">Pad2DEdge</span> <span class="p">=</span> <span class="m">162</span><span class="p">,</span>
+
+    <span class="c1">/// &lt;summary&gt;
+</span>    <span class="c1">/// ArgMax layer
+</span>    <span class="c1">/// &lt;/summary&gt;
+</span>    <span class="n">ArgMax</span> <span class="p">=</span> <span class="m">163</span><span class="p">,</span>
+
+    <span class="c1">/// &lt;summary&gt;
+</span>    <span class="c1">/// ArgMin layer
+</span>    <span class="c1">/// &lt;/summary&gt;
+</span>    <span class="n">ArgMin</span> <span class="p">=</span> <span class="m">164</span><span class="p">,</span>
+
+    <span class="c1">/// &lt;summary&gt;
+</span>    <span class="c1">/// ConstantOfShape layer
+</span>    <span class="c1">/// &lt;/summary&gt;
+</span>    <span class="n">ConstantOfShape</span> <span class="p">=</span> <span class="m">199</span><span class="p">,</span>
+
+    <span class="c1">/// &lt;summary&gt;
+</span>    <span class="c1">/// Flatten layer
+</span>    <span class="c1">/// &lt;/summary&gt;
+</span>    <span class="n">Flatten</span> <span class="p">=</span> <span class="m">200</span><span class="p">,</span>
+
+    <span class="c1">/// &lt;summary&gt;
+</span>    <span class="c1">/// Reshape layer
+</span>    <span class="c1">/// &lt;/summary&gt;
+</span>    <span class="n">Reshape</span> <span class="p">=</span> <span class="m">201</span><span class="p">,</span>
+
+    <span class="c1">/// &lt;summary&gt;
+</span>    <span class="c1">/// Transpose layer
+</span>    <span class="c1">/// &lt;/summary&gt;
+</span>    <span class="n">Transpose</span> <span class="p">=</span> <span class="m">202</span><span class="p">,</span>
+
+    <span class="c1">/// &lt;summary&gt;
+</span>    <span class="c1">/// Squeeze layer (not fully supported)
+</span>    <span class="c1">/// &lt;/summary&gt;
+</span>    <span class="n">Squeeze</span> <span class="p">=</span> <span class="m">203</span><span class="p">,</span>              <span class="c1">// TODO: NOT IMPLEMENTED
+</span>
+    <span class="c1">/// &lt;summary&gt;
+</span>    <span class="c1">/// Unsqueeze layer (not fully supported)
+</span>    <span class="c1">/// &lt;/summary&gt;
+</span>    <span class="n">Unsqueeze</span> <span class="p">=</span> <span class="m">204</span><span class="p">,</span>            <span class="c1">// TODO: NOT IMPLEMENTED
+</span>
+    <span class="c1">/// &lt;summary&gt;
+</span>    <span class="c1">/// Gather layer
+</span>    <span class="c1">/// &lt;/summary&gt;
+</span>    <span class="n">Gather</span> <span class="p">=</span> <span class="m">205</span><span class="p">,</span>
+
+    <span class="c1">/// &lt;summary&gt;
+</span>    <span class="c1">/// Depth to space layer
+</span>    <span class="c1">/// &lt;/summary&gt;
+</span>    <span class="n">DepthToSpace</span> <span class="p">=</span> <span class="m">206</span><span class="p">,</span>
+
+    <span class="c1">/// &lt;summary&gt;
+</span>    <span class="c1">/// Space to depth layer
+</span>    <span class="c1">/// &lt;/summary&gt;
+</span>    <span class="n">SpaceToDepth</span> <span class="p">=</span> <span class="m">207</span><span class="p">,</span>
+
+    <span class="c1">/// &lt;summary&gt;
+</span>    <span class="c1">/// Expand layer
+</span>    <span class="c1">/// &lt;/summary&gt;
+</span>    <span class="n">Expand</span> <span class="p">=</span> <span class="m">208</span><span class="p">,</span>
+
+    <span class="c1">/// &lt;summary&gt;
+</span>    <span class="c1">/// 2D Resample layer
+</span>    <span class="c1">/// &lt;/summary&gt;
+</span>    <span class="n">Resample2D</span> <span class="p">=</span> <span class="m">209</span><span class="p">,</span>
+
+    <span class="c1">/// &lt;summary&gt;
+</span>    <span class="c1">/// Concat layer
+</span>    <span class="c1">/// &lt;/summary&gt;
+</span>    <span class="n">Concat</span> <span class="p">=</span> <span class="m">210</span><span class="p">,</span>
+
+    <span class="c1">/// &lt;summary&gt;
+</span>    <span class="c1">/// Strided slice layer
+</span>    <span class="c1">/// &lt;/summary&gt;
+</span>    <span class="n">StridedSlice</span> <span class="p">=</span> <span class="m">211</span><span class="p">,</span>
+
+    <span class="c1">/// &lt;summary&gt;
+</span>    <span class="c1">/// Tile layer
+</span>    <span class="c1">/// &lt;/summary&gt;
+</span>    <span class="n">Tile</span> <span class="p">=</span> <span class="m">212</span><span class="p">,</span>
+
+    <span class="c1">/// &lt;summary&gt;
+</span>    <span class="c1">/// Shape layer
+</span>    <span class="c1">/// &lt;/summary&gt;
+</span>    <span class="n">Shape</span> <span class="p">=</span> <span class="m">213</span><span class="p">,</span>
+
+    <span class="c1">/// &lt;summary&gt;
+</span>    <span class="c1">/// Non max suppression layer
+</span>    <span class="c1">/// &lt;/summary&gt;
+</span>    <span class="n">NonMaxSuppression</span> <span class="p">=</span> <span class="m">214</span><span class="p">,</span>
+
+    <span class="c1">/// &lt;summary&gt;
+</span>    <span class="c1">/// LSTM
+</span>    <span class="c1">/// &lt;/summary&gt;
+</span>    <span class="n">LSTM</span> <span class="p">=</span> <span class="m">215</span><span class="p">,</span>
+
+    <span class="c1">/// &lt;summary&gt;
+</span>    <span class="c1">/// Constant load layer (for internal use)
+</span>    <span class="c1">/// &lt;/summary&gt;
+</span>    <span class="n">Load</span> <span class="p">=</span> <span class="m">255</span>
+<span class="p">}</span>
+</code></pre>
+</div>
+
+<p>Barracuda 对每个算子提供了不同版本的实现， 有的基于 CPU 也有基于GPU的， cpu还有基于 Burst的版本， Gpu 基于 Compute Shader去实现。 比如说 Conv2D 这个算子， 这里可以看到一共九种实现方式：</p>
+
+<p><img src="/img/post-ml/nn3.jpg" alt="" /></p>
+
+<blockquote>
+  <p>注意： VerboseOps并不是实现， 里面只是打印Layer的信息， 比如说  Weights/权重 和 bias/偏移 这些参数。 也许为了更好的调式<打印>吧。</打印></p>
+</blockquote>
+
+<p>枚举值里也并不是所有的都实现了， 比如说： ReduceL1, ReduceL2, ReduceLogSum等</p>
+
+<div class="language-c# highlighter-rouge"><pre class="highlight"><code><span class="k">if</span> <span class="p">(</span><span class="n">l</span><span class="p">.</span><span class="n">type</span> <span class="p">==</span> <span class="n">Layer</span><span class="p">.</span><span class="n">Type</span><span class="p">.</span><span class="n">ReduceL1</span> <span class="p">||</span>
+    <span class="n">l</span><span class="p">.</span><span class="n">type</span> <span class="p">==</span> <span class="n">Layer</span><span class="p">.</span><span class="n">Type</span><span class="p">.</span><span class="n">ReduceL2</span> <span class="p">||</span>
+    <span class="n">l</span><span class="p">.</span><span class="n">type</span> <span class="p">==</span> <span class="n">Layer</span><span class="p">.</span><span class="n">Type</span><span class="p">.</span><span class="n">ReduceLogSum</span> <span class="p">||</span>
+    <span class="n">l</span><span class="p">.</span><span class="n">type</span> <span class="p">==</span> <span class="n">Layer</span><span class="p">.</span><span class="n">Type</span><span class="p">.</span><span class="n">ReduceLogSumExp</span> <span class="p">||</span>
+    <span class="n">l</span><span class="p">.</span><span class="n">type</span> <span class="p">==</span> <span class="n">Layer</span><span class="p">.</span><span class="n">Type</span><span class="p">.</span><span class="n">ReduceSumSquare</span><span class="p">)</span>
+<span class="p">{</span>
+    <span class="k">throw</span> <span class="k">new</span> <span class="nf">NotImplementedException</span><span class="p">(</span><span class="s">"This reduction operation is not implemented yet!"</span><span class="p">);</span>
+<span class="p">}</span>
+</code></pre>
+</div>
+
+<p>如果想要扩展想要的算子， 可以在IOps.cs 定义相关的接口， 然后在不同的类中实现，比如使用Burst， 就在 bURSTCPUOps类中实现该接口， 如果在GPU上运行，就不妨再 ComputeOps 类中实现。 然后添加对应的枚举值， 在GenericWorker类中根据对应的枚举值， 创建对应算子的Layer。</p>
+
+<h2 id="网络模型">网络模型</h2>
+
+<p>Barracuda 更擅长处理的图像， 模型的输入一般 RenderTexture 或者 RenderTextureArray，barracuda提供了一个接口 去实现RT和Tensor之间的相互转换。</p>
+
+<p><img src="/img/post-ml/nn4.jpg" alt="" /></p>
+
+<p><strong>网络的执行</strong></p>
+
+<p>使用WorkerFactory创建一个网络， 调用 Execute 执行就可以了。</p>
+
+<div class="language-c# highlighter-rouge"><pre class="highlight"><code><span class="n">model</span><span class="p">.</span><span class="n">layers</span> <span class="p">=</span> <span class="n">layerList</span><span class="p">;</span>
+<span class="n">Model</span><span class="p">.</span><span class="n">Input</span> <span class="n">input</span> <span class="p">=</span> <span class="n">model</span><span class="p">.</span><span class="n">inputs</span><span class="p">[</span><span class="m">1</span><span class="p">];</span>
+<span class="n">input</span><span class="p">.</span><span class="n">shape</span><span class="p">[</span><span class="m">0</span><span class="p">]</span> <span class="p">=</span> <span class="m">0</span><span class="p">;</span>
+<span class="n">input</span><span class="p">.</span><span class="n">shape</span><span class="p">[</span><span class="m">1</span><span class="p">]</span> <span class="p">=</span> <span class="m">1080</span><span class="p">;</span><span class="c1">//TODO get framebuffer size rather than hardcoded value
+</span><span class="n">input</span><span class="p">.</span><span class="n">shape</span><span class="p">[</span><span class="m">2</span><span class="p">]</span> <span class="p">=</span> <span class="m">1920</span><span class="p">;</span>
+<span class="n">input</span><span class="p">.</span><span class="n">shape</span><span class="p">[</span><span class="m">3</span><span class="p">]</span> <span class="p">=</span> <span class="m">3</span><span class="p">;</span>
+<span class="n">model</span><span class="p">.</span><span class="n">inputs</span> <span class="p">=</span> <span class="k">new</span> <span class="n">List</span><span class="p">&lt;</span><span class="n">Model</span><span class="p">.</span><span class="n">Input</span><span class="p">&gt;</span> <span class="p">{</span> <span class="n">model</span><span class="p">.</span><span class="n">inputs</span><span class="p">[</span><span class="m">1</span><span class="p">]</span> <span class="p">};</span>
+<span class="c1">// 创建网络， model里包含了所有Layer参数
+</span><span class="n">worker</span> <span class="p">=</span> <span class="n">WorkerFactory</span><span class="p">.</span><span class="nf">CreateWorker</span><span class="p">(</span><span class="n">WorkerFactory</span><span class="p">.</span><span class="nf">ValidateType</span><span class="p">(</span><span class="n">internalSetup</span><span class="p">.</span><span class="n">workerType</span><span class="p">),</span> <span class="n">model</span><span class="p">,</span> <span class="n">verbose</span><span class="p">);</span>
+<span class="n">Dictionary</span><span class="p">&lt;</span><span class="kt">string</span><span class="p">,</span> <span class="n">Tensor</span><span class="p">&gt;</span> <span class="n">temp</span> <span class="p">=</span> <span class="k">new</span> <span class="n">Dictionary</span><span class="p">&lt;</span><span class="kt">string</span><span class="p">,</span> <span class="n">Tensor</span><span class="p">&gt;();</span>
+<span class="kt">var</span> <span class="n">inputTensor</span> <span class="p">=</span> <span class="k">new</span> <span class="nf">Tensor</span><span class="p">(</span><span class="n">input</span><span class="p">.</span><span class="n">shape</span><span class="p">,</span> <span class="n">input</span><span class="p">.</span><span class="n">name</span><span class="p">);</span>
+<span class="n">temp</span><span class="p">.</span><span class="nf">Add</span><span class="p">(</span><span class="s">"frame"</span><span class="p">,</span> <span class="n">inputTensor</span><span class="p">);</span>
+<span class="c1">// 执行
+</span><span class="n">worker</span><span class="p">.</span><span class="nf">Execute</span><span class="p">(</span><span class="n">temp</span><span class="p">);</span>
+</code></pre>
+</div>
+
+<p><strong>获取结果：</strong></p>
+
+<p>如果知道layer的名字的话， 每个Layer执行的结果都可以获取到， 这也包含了网络的最后一层的输出：</p>
+
+<div class="language-c# highlighter-rouge"><pre class="highlight"><code><span class="kt">var</span> <span class="n">tensors</span> <span class="p">=</span> <span class="n">worker</span><span class="p">.</span><span class="nf">PeekConstants</span><span class="p">(</span><span class="n">layerNameToPatch</span><span class="p">[</span><span class="n">i</span><span class="p">]);</span>
+</code></pre>
+</div>
+
+<p>这里拿到的是Tensor类型， 如果用来显示获取计算的话， 还需要转换成Texture/RT。</p>
+
+<h2 id="结语">结语</h2>
+
+<p>Barracuda可以看成unity版本的 Tensorflow, Pytorch 框架， 并且由于unity引擎的跨平台特性， 所以天生对多个平台的支持， 特别是手机（Android\IOS)平台。 但与其他tensorflow等不同的是， tf维护一个session， 直接在gpu上跑整个网络， 不像barracuda这样每个layer 都存在cpu和gpu交互， 一定程度降低了运行效率。</p>
+
+
+    </div>
+  </div>
+
+  <style>
+  .post-nav {
+    overflow: hidden;
+    /* margin-top: 60px; */
+    padding: 12px;
+    white-space: nowrap;
+    /* border-top: 1px solid #eee; */
+  }
+
+  .post-nav-item {
+    display: inline-block;
+    width: 50%;
+    white-space: normal;
+  }
+
+  .post-nav-item a {
+    position: relative;
+    display: inline-block;
+    line-height: 25px;
+    font-size: 14px;
+    color: #555;
+    border-bottom: none;
+  }
+
+  .post-nav-item a:hover {
+    color: #222;
+    font-weight: bold;
+    border-bottom: none;
+  }
+
+  .post-nav-item a:active {
+    top: 2px;
+  }
+
+  .post-nav-item a:before,
+  .post-nav-item a:after {
+    display: inline-block;
+    width: 16px;
+    height: 25px;
+    vertical-align: top;
+    opacity: 0.4;
+    background-size: 16px;
+  }
+
+  .post-nav-none a:none {
+    content: ' ';
+    background-size: 8px;
+  }
+
+  .post-nav-none a:hover:none {
+    opacity: 1;
+  }
+
+  .post-nav-prev a:before {
+    content: ' ';
+    background: url("data:image/svg+xml;base64,PD94bWwgdmVyc2lvbj0iMS4wIiA/PjxzdmcgaGVpZ2h0PSIxMnB4IiB2ZXJzaW9uPSIxLjEiIHZpZXdCb3g9IjAgMCA5IDEyIiB3aWR0aD0iOXB4IiB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHhtbG5zOnNrZXRjaD0iaHR0cDovL3d3dy5ib2hlbWlhbmNvZGluZy5jb20vc2tldGNoL25zIiB4bWxuczp4bGluaz0iaHR0cDovL3d3dy53My5vcmcvMTk5OS94bGluayI+PHRpdGxlLz48ZGVzYy8+PGRlZnMvPjxnIGZpbGw9Im5vbmUiIGZpbGwtcnVsZT0iZXZlbm9kZCIgaWQ9IlBhZ2UtMSIgc3Ryb2tlPSJub25lIiBzdHJva2Utd2lkdGg9IjEiPjxnIGZpbGw9IiMwMDAwMDAiIGlkPSJDb3JlIiB0cmFuc2Zvcm09InRyYW5zbGF0ZSgtMjE4LjAwMDAwMCwgLTkwLjAwMDAwMCkiPjxnIGlkPSJjaGV2cm9uLWxlZnQiIHRyYW5zZm9ybT0idHJhbnNsYXRlKDIxOC41MDAwMDAsIDkwLjAwMDAwMCkiPjxwYXRoIGQ9Ik03LjQsMS40IEw2LDAgTC04Ljg4MTc4NDJlLTE2LDYgTDYsMTIgTDcuNCwxMC42IEwyLjgsNiBMNy40LDEuNCBaIiBpZD0iU2hhcGUiLz48L2c+PC9nPjwvZz48L3N2Zz4=") no-repeat 0 50%;
+    background-size: 8px;
+  }
+
+  .post-nav-prev a:hover:before {
+    opacity: 1;
+  }
+
+  .post-nav-next {
+    text-align: right;
+  }
+
+  .post-nav-next a:after {
+    content: ' ';
+    background: url("data:image/svg+xml;base64,PD94bWwgdmVyc2lvbj0iMS4wIiA/PjxzdmcgaGVpZ2h0PSIxMnB4IiB2ZXJzaW9uPSIxLjEiIHZpZXdCb3g9IjAgMCA5IDEyIiB3aWR0aD0iOXB4IiB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHhtbG5zOnNrZXRjaD0iaHR0cDovL3d3dy5ib2hlbWlhbmNvZGluZy5jb20vc2tldGNoL25zIiB4bWxuczp4bGluaz0iaHR0cDovL3d3dy53My5vcmcvMTk5OS94bGluayI+PHRpdGxlLz48ZGVzYy8+PGRlZnMvPjxnIGZpbGw9Im5vbmUiIGZpbGwtcnVsZT0iZXZlbm9kZCIgaWQ9IlBhZ2UtMSIgc3Ryb2tlPSJub25lIiBzdHJva2Utd2lkdGg9IjEiPjxnIGZpbGw9IiMwMDAwMDAiIGlkPSJDb3JlIiB0cmFuc2Zvcm09InRyYW5zbGF0ZSgtMjYwLjAwMDAwMCwgLTkwLjAwMDAwMCkiPjxnIGlkPSJjaGV2cm9uLXJpZ2h0IiB0cmFuc2Zvcm09InRyYW5zbGF0ZSgyNjAuNTAwMDAwLCA5MC4wMDAwMDApIj48cGF0aCBkPSJNMSwwIEwtMC40LDEuNCBMNC4yLDYgTC0wLjQsMTAuNiBMMSwxMiBMNyw2IEwxLDAgWiIgaWQ9IlNoYXBlIi8+PC9nPjwvZz48L2c+PC9zdmc+") no-repeat 100% 50%;
+    background-size: 8px;
+  }
+
+  .post-nav-next a:hover:after {
+    opacity: 1;
+  }
+</style>
+
+
+
+<div class="post-nav">
+
+  
+  <div class="post-nav-none post-nav-item">
+    <a href=""> </a>
+  </div>
+  
+
+  
+  <div class="post-nav-next post-nav-item">
+    
+    <a href="/blog/2022/arengine/"> URP渲染管线下的 huawei AREngine预览流绘制</a>
+  </div>
+  
+
+</div>
+
+</article>
+    </div>
+
+    <footer class="site-footer">
+  <div class="container">
+    <ul class="social">
+  <li><a href="https://twitter.com/penghuailiang" target="_blank"><i class="icon icon-twitter"></i></a></li>
+  <li><a href="https://www.zhihu.com/people/huailiangpenguin" target="_blank"><i class="icon icon-zhihu"></i></a></li>
+  <li><a href="https://www.facebook.com/profile.php?id=100004290725320" target="_blank"><i class="icon icon-facebook"></i></a></li>
+  <li><a href="https://weibo.com/6212299692/profile?topnav=1&wvr=6" target="_blank"><i class="icon icon-sina"></i></a></li>
+  <li><a href="https://www.linkedin.com/in/penghuailiang/" target="_blank"><i class="icon icon-linkedin"></i></a></li>
+  <li><a href="https://github.com/huailiang" target="_blank"><i class="icon icon-github"></i></a></li>
+</ul>
+    <p class="txt-medium-gray">
+      <small>&copy;2022 All rights reserved. </small>
+    </p>
+  </div>
+</footer>
+    <a href="https://github.com/huailiang" target="_blank" class="github-corner"><svg width="80" height="80" viewBox="0 0 250 250" style="fill:#337ab7; color:#fff; position: absolute; top: 0; border: 0; right: 0;"><path d="M0,0 L115,115 L130,115 L142,142 L250,250 L250,0 Z"></path><path d="M128.3,109.0 C113.8,99.7 119.0,89.6 119.0,89.6 C122.0,82.7 120.5,78.6 120.5,78.6 C119.2,72.0 123.4,76.3 123.4,76.3 C127.3,80.9 125.5,87.3 125.5,87.3 C122.9,97.6 130.6,101.9 134.4,103.2" fill="currentColor" style="transform-origin: 130px 106px;" class="octo-arm"></path><path d="M115.0,115.0 C114.9,115.1 118.7,116.5 119.8,115.4 L133.7,101.6 C136.9,99.2 139.9,98.4 142.2,98.6 C133.8,88.0 127.5,74.4 143.8,58.0 C148.5,53.4 154.0,51.2 159.7,51.0 C160.3,49.4 163.2,43.6 171.4,40.1 C171.4,40.1 176.1,42.5 178.8,56.2 C183.1,58.6 187.2,61.8 190.9,65.4 C194.5,69.0 197.7,73.2 200.1,77.6 C213.8,80.2 216.3,84.9 216.3,84.9 C212.7,93.1 206.9,96.0 205.4,96.6 C205.1,102.4 203.0,107.8 198.3,112.5 C181.9,128.9 168.3,122.5 157.7,114.1 C157.9,116.9 156.7,120.9 152.7,124.9 L141.0,136.5 C139.8,137.7 141.6,141.9 141.8,141.8 Z" fill="currentColor" class="octo-body"></path></svg></a>
+
+
+    <script src="//code.jquery.com/jquery-1.11.3.min.js"></script>
+    <script>
+      $(document).ready(function () {
+        $('.sliding-panel-button,.sliding-panel-fade-screen,.sliding-panel-close').on('click touchstart', function (e) {
+          $('.sliding-panel-content,.sliding-panel-fade-screen').toggleClass('is-visible');
+          e.preventDefault();
+        });
+      });
+    </script>
+  </main>
+</body>
+
+</html>
