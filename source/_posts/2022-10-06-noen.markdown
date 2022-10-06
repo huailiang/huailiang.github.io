@@ -1,0 +1,71 @@
+---
+layout:     post
+title:      "高性能加速计算-Neon"
+date:       2022-10-06 02:00:00
+author:     "huailiang"
+tags:
+    - Unity
+---
+
+
+>  最近在AR开发的时候， 使用需要将camera的预览流传递到算法（c++), 算法要求的图像结构是RGB24排列的图像。 由于Unity侧获取的
+
+<br>
+
+## 1. Burst
+
+
+
+Burst 缺少太多的指令集， 比如说图像处理的 所有交错加载多个128位寄存器的指令都没有：
+
+
+```c
+// 连续交错加载3个寄存器 int32_t
+vld3d_s32
+
+// 连续交错加载4个寄存器 uint8
+vld4q_u8
+
+vld3q_f32
+vld2q_f32
+```
+
+这些指令在图像处理，特别是分离RGBA通道单独计算非常重要， 却官方却没有实现， 这在平时运算的时候， 很多算法需要绕来绕去， 还不一定绕的过去。
+
+还有一些指令虽然只有声明， 却没有实现， 直接抛出一个异常：
+
+比如说 
+
+![](/img/post-ml/neon1.jpg)
+
+作者使用的Unity版本是2020， 默认使用的1.6.6版本， 却没有基础的存储指令， 升级了1.7.x之后， 才发现其中的实现。
+
+```c
+// 所有的 vst 存储都没有实现
+vst3q_u8
+
+vst4q_s32
+
+```
+
+
+
+
+
+
+## NDK 
+
+__获取结果：__
+
+
+如果知道layer的名字的话， 每个Layer执行的结果都可以获取到， 这也包含了网络的最后一层的输出：
+
+
+## 结语
+
+Barracuda可以看成unity版本的 Tensorflow, Pytorch 框架， 并且由于unity引擎的跨平台特性， 所以天生对多个平台的支持， 特别是手机（Android\IOS)平台。 但与其他tensorflow等不同的是， tf维护一个session， 直接在gpu上跑整个网络， 不像barracuda这样每个layer 都存在cpu和gpu交互， 一定程度降低了运行效率。
+
+ [i1]: https://github.com/onnx/onnx
+ [i2]: https://blog.csdn.net/u013947807/article/details/125372385
+ [i3]: https://netron.app/
+ [i4]: https://zhuanlan.zhihu.com/p/373636593
