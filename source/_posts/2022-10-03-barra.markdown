@@ -41,7 +41,7 @@ torch.onnx.export(
 
 ONNX中的一些信息都被可视化展示了出来，例如文件格式ONNX v7，该文件的导出方pytorch1.10等等，这些信息都保存在ONNX格式的文件中。 如下面是使用 [Netron][i3] 打开模型：
 
-![](../img/post-ml/nn1.jpg)
+![](/img/post-ml/nn1.jpg)
 
 
 ONNX 文件内部是以Protobuf记录[节点信息][i2]的， 当加载了一个ONNX之后，我们获得的就是一个ModelProto，它包含了一些版本信息，生产者信息和一个GraphProto。在GraphProto里面又包含了四个repeated数组，它们分别是node(NodeProto类型)，input(ValueInfoProto类型)，output(ValueInfoProto类型)和initializer(TensorProto类型)，其中node中存放了模型中所有的计算节点，input存放了模型的输入节点，output存放了模型中所有的输出节点，initializer存放了模型的所有权重参数。
@@ -61,7 +61,7 @@ ONNX 文件内部是以Protobuf记录[节点信息][i2]的， 当加载了一个
 Barracuda 内置了ONNX的解析， 并可以为之预览信息。 当在Unity中选中一个.onnx或者.nn后缀的一个模型文件之后， 会首先调用onnx convert的接口解析出onnx的内部结构， 然后在 ONNXModelImporterEditor 类里进行EditorGUI的绘制。
 
 
-![](../img/post-ml/nn2.jpg)
+![](/img/post-ml/nn2.jpg)
 
 
 此界面可以清晰看出网络的输入、输出、版本以及内存开销等信息。
@@ -504,7 +504,7 @@ public enum Type
 
 Barracuda 对每个算子提供了不同版本的实现， 有的基于 CPU 也有基于GPU的， cpu还有基于 Burst的版本， Gpu 基于 Compute Shader去实现。 比如说 Conv2D 这个算子， 这里可以看到一共九种实现方式：
 
-![](../img/post-ml/nn3.jpg)
+![](/img/post-ml/nn3.jpg)
 
 
 > 注意： VerboseOps并不是实现， 里面只是打印Layer的信息， 比如说  Weights/权重 和 bias/偏移 这些参数。 也许为了更好的调式<打印>吧。
@@ -530,7 +530,7 @@ if (l.type == Layer.Type.ReduceL1 ||
 
 Barracuda 更擅长处理的图像， 模型的输入一般 RenderTexture 或者 RenderTextureArray，barracuda提供了一个接口 去实现RT和Tensor之间的相互转换。
 
-![](../img/post-ml/nn4.jpg)
+![](/img/post-ml/nn4.jpg)
 
 __网络的执行__
 
