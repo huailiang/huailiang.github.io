@@ -68,6 +68,21 @@ MathJax.Hub.Config({
     <article class="post">
   <header class="post-header">
     <h1 class="post-title2">
+      <a class="post-link" href="/blog/2022/noen/">高性能加速计算-Neon</a>
+    </h1>
+    <div class="post-meta">
+      <time>Oct 6, 2022</time>
+    </div>
+  </header>
+
+  <p><a href="/blog/2022/noen/" title="Permalink to: 高性能加速计算-Neon"
+      class="read-more">
+  最近在AR开发的时候， 使用需要将camera的预览流传递到算法（c++), 算法要求的图像结构是RGB24排列的图像。 由于Unity侧获取的图像还是xy倒置的， 一开始的处理获取webcameratexture之后， 通过blit 一个材质， 材质在uv采样的时候进行翻转， 并离线输出到一张RGB24的RT上。 但由于每一帧都存在着一次这样额外的CPU和GPU切换， 在P30Pro...</a></p>
+</article>
+  
+    <article class="post">
+  <header class="post-header">
+    <h1 class="post-title2">
       <a class="post-link" href="/blog/2022/barra/">Barracuda AI网络推理</a>
     </h1>
     <div class="post-meta">
@@ -188,36 +203,6 @@ unity中获取camera的图像一般都是去通过WenCameraTex...</a></p>
 二. adb forward
 
 adb forward的功能...</a></p>
-</article>
-  
-    <article class="post">
-  <header class="post-header">
-    <h1 class="post-title2">
-      <a class="post-link" href="/blog/2021/symbol/">so符号表工具</a>
-    </h1>
-    <div class="post-meta">
-      <time>Aug 22, 2021</time>
-    </div>
-  </header>
-
-  <p><a href="/blog/2021/symbol/" title="Permalink to: so符号表工具"
-      class="read-more">一、概述
-
-什么是符号表？
-
-
-
-符号表是内存地址与函数名、文件名、行号的映射表。符号表元素如下所示：
-
-&lt;起始地址&gt; &lt;结束地址&gt; &lt;函数&gt; [&lt;文件名:行号&gt;]
-
-
-
-
-
-编译器带-g就会有调试信息。这是gcc相关的。默认其实android编译的就是带符号表的，只是在strip掉了。
-
-Android平台中，目标文件对应的是SO文件。Deb...</a></p>
 </article>
   
 
