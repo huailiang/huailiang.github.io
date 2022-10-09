@@ -83,9 +83,18 @@ MathJax.Hub.Config({
 
 <p><a href="https://baike.baidu.com/item/Neon/1940653?fr=aladdin">Neon</a>是适用于ARM Cortex-A系列处理器的一种128位SIMD(Single Instruction, Multiple Data,单指令、多数据)扩展结构。NEON技术与Cortex-A8和Cortex-A9处理器相结合，已经被许多领先企业广泛采用。越来越多的机构正在IP设计中采用NEON技术，或提供为NEON技术优化的软件，构成了NEON生态系统的一部分。NEON 技术可加速多媒体和信号处理算法（如视频编码/解码、2D/3D 图形、游戏、音频和语音处理、图像处理技术、电话和声音合成），其性能至少为 ARMv5 性能的3倍，为ARMv6 SIMD性能的2倍。</p>
 
+<p>Neon为什么速度快, 原因有以下几条：</p>
+
+<ul>
+  <li>Neon有32个128bit寄存器，能够输入多行的数据同时操作</li>
+  <li>CPU运算比加载数据快，速度瓶颈在加载数据这里。可以操作多种数据类型，包括浮点数</li>
+  <li>基于位和字节向量操作，避免了拆解字节的耗费</li>
+  <li>Neon基于SIMD，一条指令操作多个数据，对多个数据项同时执行相同的操作。这些数据项在较大的寄存器中打包为单独的通道</li>
+</ul>
+
 <h2 id="1-burst">1. Burst</h2>
 
-<p>Burst是一个编译器，它使用LLVM将IL / .NET字节码转换为高度优化的本机代码。它作为Unity包发布，并使用Unity Package Manager集成到Unity中。它既能与Unity DOTS一起生成高优化代码，又能作为单独的功能使用。最近发布的新版本 Unity Burst 1.5 重点添加了多条 Neon intrinsics 指令。Neon intrinsics 指令支持精确设定矢量命令，为 Arm CPU 的处理进程生成最为高效代码。新指令的效果立竿见影，其中一项优化甚至能让 Burst 代码比结构精巧的非 Burst 代码快 6 倍，让手动编写的 Neon 代码快 10 倍。Neon 指令集传统上只适用于 C/C++ 语言，而 Unity 目前已成功将其移植到了 C# 中。</p>
+<p>Burst是一个编译器，它使用LLVM将IL/.NET字节码转换为高度优化的本机代码。它作为Unity包发布，并使用Unity Package Manager集成到Unity中。它既能与Unity DOTS一起生成高优化代码，又能作为单独的功能使用。最近发布的新版本 Unity Burst 1.5 重点添加了多条 Neon intrinsics 指令。Neon intrinsics 指令支持精确设定矢量命令，为 Arm CPU 的处理进程生成最为高效代码。新指令的效果立竿见影，其中一项优化甚至能让 Burst 代码比结构精巧的非 Burst 代码快 6 倍，让手动编写的 Neon 代码快 10 倍。Neon 指令集传统上只适用于 C/C++ 语言，而 Unity 目前已成功将其移植到了 C# 中。</p>
 
 <p>Burst主要用于与Job系统高效协作, 通过使用属性[BurstCompile]装饰Job结构,从而在代码中简单地使用burst编译器</p>
 
@@ -147,10 +156,10 @@ MathJax.Hub.Config({
 3.在不同选项卡之间切换以显示详细信息：</p>
 
 <ul>
-  <li>选项卡程序集（Assembly ）提供了由burst生成的最终优化本机代码</li>
-  <li>选项卡<strong>.NET IL</strong>提供了从Job方法中提取的原始.NET IL的视图</li>
+  <li>选项卡程序集（Assembly）提供了由burst生成的最终优化本机代码</li>
+  <li>选项卡 .NET IL 提供了从Job方法中提取的原始.NET IL的视图</li>
   <li>选项卡LLVM（未优化）在优化之前提供内部LLVM IR的视图。</li>
-  <li>选项卡<strong>LLVM（优化）</strong>在优化后提供内部LLVM IR的视图。</li>
+  <li>选项卡 LLVM（优化）在优化后提供内部LLVM IR的视图。</li>
   <li>选项卡LLVM IR Optimization Diagnostics提供优化的详细LLVM诊断（即，如果它们成功或失败）。</li>
 </ul>
 
@@ -290,7 +299,7 @@ Burst支持固定数组字段。</p>
 
 <p>Burst里的数据结构也比较有限， 其使用了 v64, v128, v256代表了本来在c里面使用的 uint8x8, int32x2， uint8x4x2 之类的数据结构， 由于其没有实现 vld4q_u8 这样的指令， 所以也不会有类似的 uint8x16x4_t 这样数据, 在burst的 NEON_AArch64.cs 这个类中 没有一个方法有 v256 （等价于 uint8x16x4）的参数或者返回值。</p>
 
-<p>总体来说， Burst的 Neon intrinsics 还是一个比较低阶的实现， 绝大多数指令都没有相关的实现， 如果真的使用 Burst来写复杂的算法， 实现的实现会出现各种掣肘， 希望在之后的Burst的版本能快速的完善。 Unity之所以能做到支持Neon, 本质原因还是因为c#是支持JIT（ Just-in-Time ）， c# 代码不是一步到位编译成机器码。</p>
+<p>总体来说， Burst的 Neon intrinsics 还是一个比较低阶的实现， 绝大多数指令都没有相关的实现， 如果真的使用 Burst来写复杂的算法， 实现的实现会出现各种掣肘，估计unity跨平台的原因<具体已不可考> 希望在之后的Burst的版本能快速的完善。 Unity之所以能做到支持Neon, 本质原因还是因为c#是支持JIT（ Just-in-Time ）， c# 代码不是一步到位编译成机器码。 在c#里使用的好处就是 Unity帮处理了多个平台适配的情况, 具体有：X86_SSE2, X86_SSE3, X86_SSE4, AVX, AVX2, WASM32, ARMV7A_NEON32, ARMV8A_64, THUMB2_NEON32, ARMV8A_AARCH64_HALFFP等。</具体已不可考></p>
 
 <h2 id="ndk">NDK</h2>
 
@@ -330,6 +339,92 @@ Burst支持固定数组字段。</p>
 <p>vst3q_u8的函数原型为void vst3q_u8 (uint8_t * __a, uint8x16x3_t val)，作用为以步长为 3 交叉地存储数据到内存中。</p>
 
 <p>由于每一次迭代可以同时处理 16 个连续的像素。所以，变量stride_pixels的值为 16。</p>
+
+<h2 id="内联汇编">内联汇编</h2>
+
+<p>优点：在C代码中嵌入汇编，调用简单，无需手动存储寄存器；</p>
+
+<p>缺点：有较为复杂的格式需要事先学习，不好移植到其他语言环境。</p>
+
+<div class="language-c highlighter-rouge"><pre class="highlight"><code><span class="c1">//add for int array. assumed that count is multiple of 4  
+</span><span class="cp">#include&lt;arm_neon.h&gt;  
+</span><span class="c1">// C version void add_int_c(int* dst, int* src1, int* src2, int count)
+</span><span class="p">{</span>
+  <span class="kt">int</span> <span class="n">i</span><span class="p">;</span>
+  <span class="k">for</span> <span class="p">(</span><span class="n">i</span> <span class="o">=</span> <span class="mi">0</span><span class="p">;</span> <span class="n">i</span> <span class="o">&lt;</span> <span class="n">count</span><span class="p">;</span> <span class="n">i</span><span class="o">++</span><span class="p">)</span>
+    <span class="n">dst</span><span class="p">[</span><span class="n">i</span><span class="p">]</span> <span class="o">=</span> <span class="n">src1</span><span class="p">[</span><span class="n">i</span><span class="p">]</span> <span class="o">+</span> <span class="n">src2</span><span class="p">[</span><span class="n">i</span><span class="p">];</span>
+  <span class="p">}</span>
+<span class="p">}</span>
+ 
+<span class="c1">// NEON version void add_float_neon1(int* dst, int* src1, int* src2, int count)
+</span><span class="p">{</span>
+  <span class="kt">int</span> <span class="n">i</span><span class="p">;</span>
+  <span class="k">for</span> <span class="p">(</span><span class="n">i</span> <span class="o">=</span> <span class="mi">0</span><span class="p">;</span> <span class="n">i</span> <span class="o">&lt;</span> <span class="n">count</span><span class="p">;</span> <span class="n">i</span> <span class="o">+=</span> <span class="mi">4</span><span class="p">)</span>
+  <span class="p">{</span>
+    <span class="n">int32x4_t</span> <span class="n">in1</span><span class="p">,</span> <span class="n">in2</span><span class="p">,</span> <span class="n">out</span><span class="p">;</span>
+    <span class="n">in1</span> <span class="o">=</span> <span class="n">vld1q_s32</span><span class="p">(</span><span class="n">src1</span><span class="p">);</span>
+    <span class="n">src1</span> <span class="o">+=</span> <span class="mi">4</span><span class="p">;</span>
+    <span class="n">in2</span> <span class="o">=</span> <span class="n">vld1q_s32</span><span class="p">(</span><span class="n">src2</span><span class="p">);</span>
+    <span class="n">src2</span> <span class="o">+=</span> <span class="mi">4</span><span class="p">;</span>
+    <span class="n">out</span> <span class="o">=</span> <span class="n">vaddq_s32</span><span class="p">(</span><span class="n">in1</span><span class="p">,</span> <span class="n">in2</span><span class="p">);</span>
+    <span class="n">vst1q_s32</span><span class="p">(</span><span class="n">dst</span><span class="p">,</span> <span class="n">out</span><span class="p">);</span>
+    <span class="n">dst</span> <span class="o">+=</span> <span class="mi">4</span><span class="p">;</span>
+  <span class="p">}</span>
+<span class="p">}</span>
+</code></pre>
+</div>
+
+<p>比如上述intrinsics代码产生的汇编代码为：</p>
+
+<div class="language-c highlighter-rouge"><pre class="highlight"><code><span class="c1">// ARMv7-A/AArch32 
+</span><span class="kt">void</span> <span class="nf">add_float_neon2</span><span class="p">(</span><span class="kt">int</span><span class="o">*</span> <span class="n">dst</span><span class="p">,</span> <span class="kt">int</span><span class="o">*</span> <span class="n">src1</span><span class="p">,</span> <span class="kt">int</span><span class="o">*</span> <span class="n">src2</span><span class="p">,</span> <span class="kt">int</span> <span class="n">count</span><span class="p">)</span>
+<span class="p">{</span>
+  <span class="n">asm</span> <span class="k">volatile</span> <span class="p">(</span>
+    <span class="s">"1: </span><span class="se">\n</span><span class="s">"</span>
+    <span class="s">"vld1.32 {q0}, [%[src1]]! </span><span class="se">\n</span><span class="s">"</span>
+    <span class="s">"vld1.32 {q1}, [%[src2]]! </span><span class="se">\n</span><span class="s">"</span>
+    <span class="s">"vadd.f32 q0, q0, q1 </span><span class="se">\n</span><span class="s">"</span>
+    <span class="s">"subs %[count], %[count], #4 </span><span class="se">\n</span><span class="s">"</span>
+    <span class="s">"vst1.32 {q0}, [%[dst]]! </span><span class="se">\n</span><span class="s">"</span>
+    <span class="s">"bgt 1b </span><span class="se">\n</span><span class="s">"</span>
+    <span class="o">:</span> <span class="p">[</span><span class="n">dst</span><span class="p">]</span> <span class="s">"+r"</span> <span class="p">(</span><span class="n">dst</span><span class="p">)</span>
+    <span class="o">:</span> <span class="p">[</span><span class="n">src1</span><span class="p">]</span> <span class="s">"r"</span> <span class="p">(</span><span class="n">src1</span><span class="p">),</span> <span class="p">[</span><span class="n">src2</span><span class="p">]</span> <span class="s">"r"</span> <span class="p">(</span><span class="n">src2</span><span class="p">),</span> <span class="p">[</span><span class="n">count</span><span class="p">]</span> <span class="s">"r"</span> <span class="p">(</span><span class="n">count</span><span class="p">)</span>
+    <span class="o">:</span> <span class="s">"memory"</span><span class="p">,</span> <span class="s">"q0"</span><span class="p">,</span> <span class="s">"q1"</span>
+  <span class="p">);</span>
+<span class="p">}</span>
+</code></pre>
+</div>
+
+<p>运行时查看当前设备是否支持neon， 可以通过cpu-features里获取cpu信息，主要是获取cpu类型和相关的标识位：</p>
+
+<div class="language-c++ highlighter-rouge"><pre class="highlight"><code><span class="cp">#include &lt;cpu-features.h&gt;
+</span>
+<span class="kt">bool</span> <span class="nf">isSupportNeon</span><span class="p">()</span>
+<span class="p">{</span>
+    <span class="k">auto</span> <span class="n">family</span> <span class="o">=</span> <span class="n">android_getCpuFamily</span><span class="p">();</span>
+    <span class="k">return</span> <span class="p">(</span><span class="n">family</span> <span class="o">==</span> <span class="n">ANDROID_CPU_FAMILY_ARM</span>  <span class="o">||</span> <span class="n">family</span> <span class="o">==</span> <span class="n">ANDROID_CPU_FAMILY_ARM64</span><span class="p">)</span> <span class="o">&amp;&amp;</span>
+        <span class="p">(</span><span class="n">android_getCpuFeatures</span><span class="p">()</span> <span class="o">&amp;</span> <span class="n">ANDROID_CPU_ARM_FEATURE_NEON</span><span class="p">)</span> <span class="o">!=</span> <span class="mi">0</span><span class="p">;</span>
+<span class="p">}</span>
+</code></pre>
+</div>
+
+<p>为了使 cpu-features 生效， CMakeLists.txt需要做如下调整：</p>
+
+<div class="language-r highlighter-rouge"><pre class="highlight"><code><span class="n">add_library</span><span class="p">(</span><span class="w"> </span><span class="c1"># Sets the name of the library.
+</span><span class="w">             </span><span class="n">cam</span><span class="o">-</span><span class="n">turbo</span><span class="w">
+ 
+             </span><span class="c1"># Sets the library as a shared library.
+</span><span class="w">             </span><span class="n">SHARED</span><span class="w">
+ 
+            </span><span class="o">$</span><span class="p">{</span><span class="n">ANDROID_NDK</span><span class="p">}</span><span class="o">/</span><span class="n">sources</span><span class="o">/</span><span class="n">android</span><span class="o">/</span><span class="n">cpufeatures</span><span class="o">/</span><span class="n">cpu</span><span class="o">-</span><span class="n">features.c</span><span class="w">
+            </span><span class="n">img_neon.cpp</span><span class="w">
+            </span><span class="n">native</span><span class="o">-</span><span class="n">lib.cpp</span><span class="w"> </span><span class="p">)</span><span class="w">
+ 
+</span><span class="n">target_include_directories</span><span class="p">(</span><span class="n">cam</span><span class="o">-</span><span class="n">turbo</span><span class="w"> </span><span class="n">PRIVATE</span><span class="w"> </span><span class="o">$</span><span class="p">{</span><span class="n">ANDROID_NDK</span><span class="p">}</span><span class="o">/</span><span class="n">sources</span><span class="o">/</span><span class="n">android</span><span class="o">/</span><span class="n">cpufeatures</span><span class="p">)</span><span class="w">
+</span></code></pre>
+</div>
+
+<h2 id="编译">编译</h2>
 
 <p>编译的时候， 为模块(库)启用 NEON, 如果使用cmakelist编译， 可以这样配置：</p>
 
