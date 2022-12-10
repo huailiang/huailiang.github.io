@@ -68,6 +68,30 @@ MathJax.Hub.Config({
     <article class="post">
   <header class="post-header">
     <h1 class="post-title2">
+      <a class="post-link" href="/blog/2022/upython/">Unity 与 Python 交互调用</a>
+    </h1>
+    <div class="post-meta">
+      <time>Nov 6, 2022</time>
+    </div>
+  </header>
+
+  <p><a href="/blog/2022/upython/" title="Permalink to: Unity 与 Python 交互调用"
+      class="read-more">
+  篇前需要强调的是 直接使用python来跑一些算法用来做验证是可以的， 但是对外发布的版本建议还是转移成c++版本， 这样效率会更高。
+
+
+py 与 prd
+
+Python的脚本文件是开源的，量化策略的安全性没有保障。因此需要保护源码。那么要对Python代码进行混淆、加密保护。
+
+混淆代码，我准备使用pyminifier。而加密处理，就比较麻烦。
+
+Python有py、pyc、pyw...</a></p>
+</article>
+  
+    <article class="post">
+  <header class="post-header">
+    <h1 class="post-title2">
       <a class="post-link" href="/blog/2022/noen/">高性能加速计算-Neon</a>
     </h1>
     <div class="post-meta">
@@ -183,26 +207,6 @@ unity中获取camera的图像一般都是去通过WenCameraTex...</a></p>
 .mlmodel 文件中有什么？
 
 要在 Core ML 中使用机器学习模型，它需要采用mlmodel格式。使用coremltools Python包将经过训练的模型转换为这种格式。但是这样的.m...</a></p>
-</article>
-  
-    <article class="post">
-  <header class="post-header">
-    <h1 class="post-title2">
-      <a class="post-link" href="/blog/2021/adb/">AREngine远程同步调试</a>
-    </h1>
-    <div class="post-meta">
-      <time>Sep 28, 2021</time>
-    </div>
-  </header>
-
-  <p><a href="/blog/2021/adb/" title="Permalink to: AREngine远程同步调试"
-      class="read-more">一、概述
-
-由于目前开发的AR内容， 只能在手机上运行， 看不到代码的运行过程。 为了将运行过程中产生的中间数据传送到PC端，比如说预览流， 这里需要实现的一套信息传送机制， 能实现实时将数据从手机传递到PC。 这次实现基于Android端Java代码， PC端c#代码进行单向传递， 并最终在3D编辑器Unity实时显示的框架。
-
-二. adb forward
-
-adb forward的功能...</a></p>
 </article>
   
 
