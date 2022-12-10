@@ -1,0 +1,248 @@
+---
+layout:     post
+title:      "Unity 与 Python 交互调用"
+date:       2022-11-06 02:00:00
+author:     "huailiang"
+tags:
+    - Unity
+---
+
+
+> 篇前需要强调的是 直接使用python来跑一些算法用来做验证是可以的， 但是对外发布的版本建议还是转移成c++版本， 这样效率会更高。
+
+
+## py 与 prd
+
+Python的脚本文件是开源的，量化策略的安全性没有保障。因此需要保护源码。那么要对Python代码进行混淆、加密保护。
+
+混淆代码，我准备使用pyminifier。而加密处理，就比较麻烦。
+
+Python有py、pyc、pyw、pyo、pyd等文件格式。 其中，pyc是二进制文件。但很容易被反编译。 pyw也不行，只是隐藏命令行界面而已，可以作为入口脚本。pyo和pyc差不多，也容易被反编译。
+
+最后剩下pyd格式。pyd格式是D语言(C/C++综合进化版本)生成的二进制文件，实际也会是dll文件。该文件目前位置没找到可以被反编译的消息，只能被反汇编。Sublime text编辑器也是使用该格式。
+
+
+
+
+Python的py文件生成pyd文件步骤如下。
+
+#### 1. CPython
+
+安装cpython， 通过pip命令：
+
+```py
+pip install cython
+```
+
+也可以在安装vs的界面选择python开发
+
+<!-- ![](image/python1.JPG) -->
+![](/img/post-ml/python1.JPG)
+
+#### 2. 配置 setup.py
+
+setup.py主要配置如下， cythonize可以传进一个list， cpython根据list就可以编译:
+
+```py
+from distutils.core import setup
+from Cython.Build import cythonize
+
+setup(
+    name='Hello world app',
+    ext_modules=cythonize(["test.py", 'test2.py']),
+)
+```
+
+亦或是这样：
+
+```py
+from distutils.core import setup
+from Cython.Build import cythonize
+
+def main():
+    # 预处理
+    # ...
+    setup(
+        name='Hello world app',
+        ext_modules=cythonize(["test.py", 'test2.py']),
+    )
+    # 后处理
+    # ....
+
+if __name__ == '__main__':
+    main()
+```
+
+这样的话， 在执行setup之前， 还可以写一些预处理的东西, 比如临时文件路径调整之类的。
+
+
+#### 3. 编译运行
+
+终端进入工作目录， 执行下面命令：
+
+```py
+python setup.py build_ext --inplace
+ ```
+
+ 执行完毕之后， 就可以当前目录下生成的.c 和 .pyd 文件了， 还有build目录。
+
+
+## python.net
+
+ pythonnet最核心的就是python.Runtime.dll动态库，这个库是c#编写的实现了两种语言的交互。 这个dll可以通过vs的 NuGet 包管理器获取, 当然也可以去 [github][i2] 获取源码自行编译。
+
+ ```csharp
+using (Py.GIL())
+{
+    dynamic test = Py.Import("test");
+    Debug.Log("add: " + test.add(12, 22));
+    Debug.Log("sum:+ " + test.sum(new[] { 2.0f, 3 }));
+    byte[] bytes = { 0x01, 0xff, 0x32, 0x84 };
+    Debug.Log("bytes2sum: " + test.bytes2sum(bytes));
+    dynamic sys = Py.Import("sys");
+    Debug.Log(sys.path);
+}
+```
+
+
+python 中定义如下：
+
+```py
+def add(a, b):
+    print("a+b: ", (a + b))
+    return a + b
+
+
+def sum(arr):
+    return arr[0] + arr[1]
+
+def bytes2sum(buf):
+    print(buf[0], buf[1], buf[2])
+    return buf[1]
+```
+
+
+python 和 c# 之间支持 int, float, byte， array等数据格式交互。  如果代码中有在python中调用多线程的地方， 需要在c#中提前做如下声明：
+
+```csharp
+PythonEngine.BeginAllowThreads();
+```
+
+c#中描述所有的python类型都是 dynamic， 如c#里调用numpy：
+
+```csharp
+dynamic np = Py.Import("numpy");
+Console.WriteLine(np.cos(np.pi * 2));
+dynamic sin = np.sin;
+Console.WriteLine(sin(5));
+```
+
+#### python 中调用c#
+
+
+Python中 以clr包的方式调用 .net
+
+
+```py
+import clr
+from System import String
+from System.Collections import *
+```
+
+python 中默认在macOS和linux平台加载的是 Mono, 在Windows平台加载的是 .NET Framework(netfx), 自行安装的.net core 如果配置了环境变量PATH里去， 则会使用环境变量的版本, 更多详细的介绍参考[这里][i3].
+
+
+##  工作目录
+
+
+如果代码里获取ai模型的目录使用的是相对路径， 请确保文件夹的位置， 一般来说，我们使用的路径就是代码对应的目录， 即下面 os.getcwd() 打印出来的路径
+
+```py
+import os
+os.getcwd()
+```
+
+从Unity中启动时， 此时获取的工作路径是平时于Assets的目录， 如果想让ai模型能够正确读进内存， 需要把模型文件拷贝到Unity根目录下。
+
+
+
+## 多进程
+
+测试发现Unity中启动开启多进程， 会默认打开Unity hub， 即便是导出exe这样发布的版本， 多进程也会重新打开一次exe进程。 最开始的做法是把多进程改为多线程，因为GIL的存在，python的多线程虽然可以利用多核CPU，但并不能让多个核同时工作， 所以如果使用多线程替换多进程的话， 相比之前的多进程， 执行效率肯定存在下降的。
+
+一般的话， 使用  multiprocessing 来创建一个多进程， 如下：
+
+```py
+from multiprocessing import Process
+p = Process(target=test2) # test2是方法名
+p.start()
+```
+
+跟进到 Process 的 Start 方法内部， 看见其内部还是启动一个python.exe的进程， 这个进程默认是根据 python_exe 是通过 spwan.get_executable() 或者 sys.executable / sys._base_executable 来获取， 如下在代码 popen_spawn_win32.py 在 multiprocessing包内：
+
+
+```py
+python_exe = spawn.get_executable()
+
+# bpo-35797: When running in a venv, we bypass the redirect
+# executor and launch our base Python.
+if WINENV and _path_eq(python_exe, sys.executable):
+    python_exe = sys._base_executable
+    env = os.environ.copy()
+    env["__PYVENV_LAUNCHER__"] = sys.executable
+else:
+    env = None
+
+with open(wfd, 'wb', closefd=True) as to_child:
+    # start process
+    try:
+        hp, ht, pid, tid = _winapi.CreateProcess(
+            python_exe, cmd,
+            None, None, False, 0, env, None, None)
+        _winapi.CloseHandle(ht)
+    except:
+        _winapi.CloseHandle(rhandle)
+        raise
+```
+
+正常使用python启动的时候， sys.executable
+
+```
+import sys
+sys.executable = "D:\install\python37\python.exe"
+sys._base_executable = "D:\install\python37\python.exe"
+
+from multiprocessing import Process
+```
+
+如果没有设置sys.executable， 从unity启动的时候 打印此变量， 就可以看到此时的启动进程路径是：
+
+> 根据代码打印出的结果是：
+
+```py
+print(str(hasattr(sys, '_base_executable')))
+print(sys._base_executable)
+print(spawn.get_executable())
+```
+
+输出结果如下
+```
+True
+D:\install\Unity 2020.3.36f1c1\Editor\Unity.exe
+D:\install\Unity 2020.3.36f1c1\Editor\Unity.exe
+```
+
+因此在内部执行新的进程的时候就没有启动python进程， 而是变成了Unity.exe。 如果将Unity工程导出windows可以运行的exe, 若此时没有重新设置 sys.executable，  此时启动的进程exe即导出的exe。
+
+
+## 断点调试
+
+> [参考1][i4]
+
+> [参考2][i5]
+
+ [i1]: https://www.jianshu.com/p/317ee9355974
+ [i2]: https://github.com/pythonnet/pythonnet
+ [i3]: https://pythonnet.github.io/pythonnet/python.html
+ [i4]: https://github.com/pythonnet/pythonnet/issues/332
+ [i5]: https://github.com/pythonnet/pythonnet/wiki/Various-debugging-scenarios-of-embedded-CPython
