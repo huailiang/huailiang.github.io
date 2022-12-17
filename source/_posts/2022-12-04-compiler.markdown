@@ -1,0 +1,140 @@
+---
+layout:     post
+title:      "Unity Scripting Runtime"
+date:       2022-12-04 02:00:00
+author:     "huailiang"
+tags:
+    - Unity
+---
+
+
+> Unity支持的语言，有如 c#, UnityScript, Boo。  其中Boo 是 Python风格的面向对象的语言， 使用的用户很少， UnityScript 是 JavaScript风格的OOP语言， 面向初学者， 这两种语言目前已经被官方停止支持。 c#目前支持最完善， 游戏开发者最易接受 Java风格的开发者语言， 支持 JIT(Mono) 与 AOT(IL2CPP)。 在Unity 2019 有开始支持 HPC# （high performance c#）。 除了上述开发语言， 还有图形化的编程语言 [Visual Script][i1], 适合设计者来做简单的开发。
+
+![](/img/post-unity/sct1.jpg)
+
+
+## 编译-运行模式
+
+
+![](/img/post-unity/sct2.jpg)
+
+
+Mono和IL2CPP二选一
+
+* Mono是默认编译器(后端)
+
+GC是Incremental GC
+* 选择开启或不开启
+
+
+![](/img/post-unity/sct3.png)
+
+
+HPC#通过Annotation标注出代码
+
+* 本质上是形似C#的C++ (甚至比C++还要少一点能力)
+* 无GC、异常捕获等，使用struct（类似原始C++的OOP）
+
+
+
+```csharp
+[BurstCompile]
+public unsafe struct MallocTest : IJob
+{
+    [NativeDisableUnsafePtrRestriction] public IntPtr* ptr;
+    public void Execute()
+    {
+       ptr[0] = (IntPtr)UnsafeUtility.Malloc(8, 0, Allocator.Persistent);
+    }
+}
+```
+
+
+## 三个工具链的比较
+
+#### Mono：Open-source, .NET-compatible, led by Xamarin (subsidiary of Microsoft)
+* JIT compiler (输入为 CIL 字节码 aka. MSIL), Unity Runtime默认编译器
+* GC：Generational collector (Mono Default) vs. Boehm conservative GC (Unity)
+* Parser: Mono C# parser/compiler (和C#的兼容性有限制) vs. 微软开源 Roslyn C# 编译器
+
+#### IL2CPP：AOT compiler（CIL -> C++ translator）by Unity
+* 最早是为了解决iOS不支持JIT的问题，性能优于Mono
+* 翻译产生的C++代码比较底层
+    * 进一步编译成 可执行文件 或 DLL 
+* 与 Mono 共享 GC （Boehm）
+
+#### Burst: HPC# compiler
+* 以性能为目标，基于LLVM
+* No GC （可以进行malloc/free）
+* 没有异常捕获（catch）
+* 使用function pointer代替delegate
+* 默认所有数据分配到static
+* 使用shared static和C#共享（通信）数据
+
+
+![](/img/post-unity/sct4.jpg)
+
+
+整型计算对比（TL；DR）
+
+![](/img/post-unity/sct5.jpg)
+
+
+
+浮点计算对比（TL；DR）
+
+![](/img/post-unity/sct6.jpg)
+
+
+## IL2CPP的原生缺陷
+
+> Java、C#、Go这类托管语言通常支持静态编译（或AOT），但为什么一般不通过翻译为C/C++在使用GCC/LLVM等编译器来实现呢？
+
+
+### 1. C/C++编译器与GC配合不好
+
+ LLVM只有不稳定的GC支持, 目前LLVM的GC机制是Azul Falcon中支持Java过程中实现的，且目前也并不是很稳定
+
+LLVM GC支持方案不优
+
+* 编译器与运行时的配合本身是个trade-off，如果在编译器上工作做的不够，就需要运行时承担比较多
+    * 例如当编译器对stackmap中引用分析不精确时，需要运行时在运行过程中做更多的检查来保障安全
+* 目前gollvm（google的一个团队尝试用llvm对接go语言，目前还在开发中）的效果是，整体性能比较差，瓶颈也是与运行时的对接
+
+### 2. 托管语言语义下，有些优化不能使用
+
+* 未定义行为优化
+> LLVM 的各种优化Pass唯一满足的约束条件是C的语言规范，但C规范中有不少未定义行为，这会允许编译器进行各种激进优化。但高级语言规范中为了安全性，往往会对未定义行为进行约束，这样会导致LLVM的优化结果与高级语言规范不符
+
+* 高级语言特性优化
+> 有些高级语言特性的实现也与LLVM的优化不兼容，例如，异常处理回栈时需要依赖每个函数的epilogue进行回栈，但是LLVM在优化过程中对于有些函数会把epilogue删除，这个优化也与托管语言不兼容
+
+
+### 3. C编译器缺少托管语言需要的关键优化
+
+* Devirtualization
+> 高级语言大量使用对象（全是对象），且一般只有virtual函数。Devirtualization成为一个关键优化，但C++里虚函数并不构成性能瓶颈，所以并没有对应优化
+
+* 其他缺少的关键优化包括
+    * Range-check消除
+    * Escape analysis
+    * Speculative optimizations（含冷热分区）
+
+
+## 内存管理
+
+
+![](/img/post-unity/sct7.jpg)
+
+
+.NET 采用分代GC（3代compact）、Mono默认也采用分代GC, Unity采用（Conservative）Incremental Boehm GC
+无法避免内存泄漏 – 不适合长期运行的软件
+
+__原理：__
+
+* 将GC任务切成小块，分散执行（分散到帧渲染过程中）
+* 避免单次长时间停顿，避免帧率下降
+
+
+
+[i1]: https://unity.com/features/unity-visual-scripting
