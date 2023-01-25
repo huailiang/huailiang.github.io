@@ -36,35 +36,33 @@ GC是 Incremental GC
 > Mono 在2.10版本前都是使用了BOEHM的垃圾回收器。而在2.10后的版本中使用了一个叫SGen的垃圾回收器。而我们的Unity中Mono的版本一直停留在2.10版本之前，所以一直集成的是BOEHM的GC。BOEHM GC是一个开源的项目，在使用中只要替换分配内存函数就可以实现C/C++项目的内存自动管理。而Mono就是一个用C语言实现C#标准的东西。所以在C#中new一个对象最后就是在Mono中有C语言分配一个叫MonoObject的结构体。
 
 
-    * Non-generational（非分代式），即全都堆在一起，因为这样会很快。分代的话就是例如大内存，小内存，超小内存分在不同的内存区域来进行管理（SGen GC的设计思想）。
+1. Non-generational（非分代式），即全都堆在一起，因为这样会很快。分代的话就是例如大内存，小内存，超小内存分在不同的内存区域来进行管理（SGen GC的设计思想）。
 
-    * Non-Compacting（非压缩式），即当有内存被释放的时候，这块区域就空着。而压缩式的会重新排布，填充空白区域，使内存紧密排布。
+2. Non-Compacting（非压缩式），即当有内存被释放的时候，这块区域就空着。而压缩式的会重新排布，填充空白区域，使内存紧密排布。
 
-    上面的形式就会导致我们的内存碎片化，可能我们当前的内存并不大的时候，添加一块较大内存时，却没有任何的一个空间放得下（即使整体的空间足够），导致内存扩充很多。因此建议先操作大内存，然后操作小内存。
+上面的形式就会导致我们的内存碎片化，可能我们当前的内存并不大的时候，添加一块较大内存时，却没有任何的一个空间放得下（即使整体的空间足够），导致内存扩充很多。因此建议先操作大内存，然后操作小内存。
 
-    碎片化内存之间空出的内存可能就成为僵尸内存。这种情况实际上并不是内存泄露，因为这些内存并没有被泄露，泄露指这块内存没有任何人可以访问和管理，但实际上这块内存一直在内存池里。
+碎片化内存之间空出的内存可能就成为僵尸内存。这种情况实际上并不是内存泄露，因为这些内存并没有被泄露，泄露指这块内存没有任何人可以访问和管理，但实际上这块内存一直在内存池里。
 
-    IL2CPP GC机制是Unity重新写的，属于一种升级版的Boehm。
-
+IL2CPP GC机制是Unity重新写的，属于一种升级版的Boehm。
 
 
 HPC# 通过 Annotation 标注出代码
-
 * 本质上是形似C#的C++ (甚至比C++还要少一点能力)
-
 * 无GC、异常捕获等，使用struct（类似原始C++的OOP）
-
 
 
 ```csharp
 [BurstCompile]
-public unsafe struct MallocTest : IJob
+public unsafe struct MallocTest: IJob
 {
-    [NativeDisableUnsafePtrRestriction] public IntPtr* ptr;
-    public void Execute()
-    {
-       ptr[0] = (IntPtr)UnsafeUtility.Malloc(8, 0, Allocator.Persistent);
-    }
+    [NativeDisableUnsafePtrRestriction]
+    public IntPtr* ptr;
+    
+    public void Execute()
+    {
+        ptr[0]=(IntPtr)UnsafeUtility.Malloc(8, 0, Allocator.Persistent);
+    }
 }
 ```
 
@@ -74,18 +72,27 @@ Burst 将 HPC# 代码转换为 [LLVM IR][i4]，这是 LLVM编译器框架使用�
 
 ## 三个工具链的比较
 
-#### Mono：Open-source, .NET-compatible, led by Xamarin (subsidiary of Microsoft)
+#### Mono
+
+*Open-source, .NET-compatible, led by Xamarin (subsidiary of Microsoft)*
+
 * JIT compiler (输入为CIL字节码 aka. MSIL), Unity Runtime默认编译器
 * GC：Generational collector (Mono Default) vs. Boehm conservative GC (Unity)
 * Parser: Mono C# parser/compiler (和C#的兼容性有限制) vs. 微软开源 Roslyn C# 编译器
 
-#### IL2CPP：AOT compiler（CIL -> C++ translator）by Unity
+#### IL2CPP
+
+*AOT compiler（CIL -> C++ translator）by Unity*
+
 * 最早是为了解决iOS不支持JIT的问题，性能优于Mono
 * 翻译产生的C++代码比较底层
     * 进一步编译成 可执行文件 或 DLL 
 * 与 Mono 共享 GC （Boehm）
 
-#### Burst: HPC# compiler
+#### Burst
+
+*HPC# compiler*
+
 * 以性能为目标，基于LLVM
 * No GC （可以进行malloc/free）
 * 没有异常捕获（catch）
@@ -96,17 +103,15 @@ Burst 将 HPC# 代码转换为 [LLVM IR][i4]，这是 LLVM编译器框架使用�
 
 ![](/img/post-unity/sct4.jpg)
 
-
 整型计算对比
 
 ![](/img/post-unity/sct5.jpg)
-
-
 
 浮点计算对比
 
 ![](/img/post-unity/sct6.jpg)
 
+*上图数据来源于华为语言实验室*
 
 ## IL2CPP的原生缺陷
 
@@ -158,6 +163,8 @@ __原理：__
 * 避免单次长时间停顿，避免帧率下降
 
 ![](/img/post-unity/sct8.jpg)
+
+写在最后，除了Unity使用的 IL2CPP， 国内的cocos团队也在寻求js2CPP, 以提高其引擎性能。
 
 
 [i1]: https://unity.com/features/unity-visual-scripting
