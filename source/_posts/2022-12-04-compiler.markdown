@@ -13,7 +13,7 @@ tags:
 ![](/img/post-unity/sct1.jpg)
 
 
-## 编译-运行模式
+## 编译流程
 
 
 ![](/img/post-unity/sct2.jpg)
@@ -23,16 +23,35 @@ Mono和IL2CPP二选一
 
 * Mono是默认编译器(后端)
 
-GC是Incremental GC
+GC是 Incremental GC
 * 选择开启或不开启
-
 
 ![](/img/post-unity/sct3.png)
 
+    主要解决主线程卡顿的问题，现在进行一次GC主线程被迫要停下来，遍历所有的Memory Island，决定哪些要被GC掉，会造成一定时间的主线程卡顿。Incremental GC把前面暂停主线程的事分帧做了，这样主线程不会出现峰值。
 
-HPC#通过Annotation标注出代码
+    Unity用的[Boehm GC][i3]，简单粗暴，不分代。
+
+
+> Mono 在2.10版本前都是使用了BOEHM的垃圾回收器。而在2.10后的版本中使用了一个叫SGen的垃圾回收器。而我们的Unity中Mono的版本一直停留在2.10版本之前，所以一直集成的是BOEHM的GC。BOEHM GC是一个开源的项目，在使用中只要替换分配内存函数就可以实现C/C++项目的内存自动管理。而Mono就是一个用C语言实现C#标准的东西。所以在C#中new一个对象最后就是在Mono中有C语言分配一个叫MonoObject的结构体。
+
+
+    * Non-generational（非分代式），即全都堆在一起，因为这样会很快。分代的话就是例如大内存，小内存，超小内存分在不同的内存区域来进行管理（SGen GC的设计思想）。
+
+    * Non-Compacting（非压缩式），即当有内存被释放的时候，这块区域就空着。而压缩式的会重新排布，填充空白区域，使内存紧密排布。
+
+    上面的形式就会导致我们的内存碎片化，可能我们当前的内存并不大的时候，添加一块较大内存时，却没有任何的一个空间放得下（即使整体的空间足够），导致内存扩充很多。因此建议先操作大内存，然后操作小内存。
+
+    碎片化内存之间空出的内存可能就成为僵尸内存。这种情况实际上并不是内存泄露，因为这些内存并没有被泄露，泄露指这块内存没有任何人可以访问和管理，但实际上这块内存一直在内存池里。
+
+    IL2CPP GC机制是Unity重新写的，属于一种升级版的Boehm。
+
+
+
+HPC# 通过 Annotation 标注出代码
 
 * 本质上是形似C#的C++ (甚至比C++还要少一点能力)
+
 * 无GC、异常捕获等，使用struct（类似原始C++的OOP）
 
 
@@ -49,11 +68,14 @@ public unsafe struct MallocTest : IJob
 }
 ```
 
+Burst 将 HPC# 代码转换为 [LLVM IR][i4]，这是 LLVM编译器框架使用的一种中介语言。这允许编译器充分利用 LLVM 对 Arm架构代码生成的支持，从而生成围绕程序数据流优化的高效机器代码。此流程的图表如下所示：
+
+![](/img/post-unity/sct9.jpg)
 
 ## 三个工具链的比较
 
 #### Mono：Open-source, .NET-compatible, led by Xamarin (subsidiary of Microsoft)
-* JIT compiler (输入为 CIL 字节码 aka. MSIL), Unity Runtime默认编译器
+* JIT compiler (输入为CIL字节码 aka. MSIL), Unity Runtime默认编译器
 * GC：Generational collector (Mono Default) vs. Boehm conservative GC (Unity)
 * Parser: Mono C# parser/compiler (和C#的兼容性有限制) vs. 微软开源 Roslyn C# 编译器
 
@@ -75,13 +97,13 @@ public unsafe struct MallocTest : IJob
 ![](/img/post-unity/sct4.jpg)
 
 
-整型计算对比（TL；DR）
+整型计算对比
 
 ![](/img/post-unity/sct5.jpg)
 
 
 
-浮点计算对比（TL；DR）
+浮点计算对比
 
 ![](/img/post-unity/sct6.jpg)
 
@@ -135,6 +157,10 @@ __原理：__
 * 将GC任务切成小块，分散执行（分散到帧渲染过程中）
 * 避免单次长时间停顿，避免帧率下降
 
+![](/img/post-unity/sct8.jpg)
 
 
 [i1]: https://unity.com/features/unity-visual-scripting
+[i2]: https://www.imangodoc.com/127725.html
+[i3]: https://www.hboehm.info/gc/index.html
+[i4]: https://blog.csdn.net/evianzhang/category_10210126.html
