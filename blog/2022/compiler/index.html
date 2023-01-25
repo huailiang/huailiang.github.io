@@ -1,0 +1,404 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <meta http-equiv="X-UA-Compatible" content="IE=edge">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+
+  <title>Unity Scripting Runtime</title>
+  <meta name="description"
+    content="  Unity支持的语言，有如 c#, UnityScript, Boo。  其中Boo 是 Python风格的面向对象的语言， 使用的用户很少， UnityScript 是 JavaScript风格的OOP语言， 面向初学者， 这两种语言目前已经被官方停止支持。 c#目前支持最完善， 游戏开发者最易接受 Jav...">
+
+  <link rel="shortcut icon" href="/img/favicon.ico">
+  <link rel="stylesheet" href="/css/main.css">
+  <link rel="canonical" href="https://huailiang.github.io/blog/2022/compiler/">
+
+</head>
+
+<body>
+  <main>
+    <header class="site-header">
+  <div class="container">
+    <h1><a href="/">Hom<span>e</span></a></h1>
+
+    <button type="button" class="sliding-panel-button">
+      <span></span>
+      <span></span>
+      <span></span>
+    </button>
+
+    <nav class="navbar sliding-panel-content">
+      <ul>
+        
+        <li><a href="/about" title="About">About</a>
+        </li>
+        
+        <li><a href="/blog" title="Blog">Blog</a>
+        </li>
+        
+       <li><a href="/category/" target="_blank"><i class="icon icon-feed"></i></a></li>
+      </ul>
+    </nav>
+  </div>
+</header>
+
+<div class="sliding-panel-fade-screen"></div>
+    <script type="text/javascript" src="/js/MathJax.js?config=TeX-AMS-MML_HTMLorMML"></script>
+
+<script type="text/x-mathjax-config">
+MathJax.Hub.Config({
+  tex2jax: {
+    inlineMath: [['$','$'], ['\\(','\\)']],
+    processEscapes: true
+  }
+});
+</script>
+
+<script type="text/x-mathjax-config">
+  MathJax.Hub.Config({
+    tex2jax: {
+      skipTags: ['script', 'noscript', 'style', 'textarea', 'pre', 'code']
+    }
+  });
+
+</script>
+    <div class="container">
+      <article role="article" class="post">
+
+  <div class="card">
+    <header class="post-header">
+      <h1 class="post-title">Unity Scripting Runtime</h1>
+      <p class="post-meta">Dec 4, 2022 •
+        huailiang</p>
+    </header>
+
+    <div class="post-content">
+      <blockquote>
+  <p>Unity支持的语言，有如 c#, UnityScript, Boo。  其中Boo 是 Python风格的面向对象的语言， 使用的用户很少， UnityScript 是 JavaScript风格的OOP语言， 面向初学者， 这两种语言目前已经被官方停止支持。 c#目前支持最完善， 游戏开发者最易接受 Java风格的开发者语言， 支持 JIT(Mono) 与 AOT(IL2CPP)。 在Unity 2019 有开始支持 HPC# （high performance c#）。 除了上述开发语言， 还有图形化的编程语言 <a href="https://unity.com/features/unity-visual-scripting">Visual Script</a>, 适合设计者来做简单的开发。</p>
+</blockquote>
+
+<p><img src="/img/post-unity/sct1.jpg" alt="" /></p>
+
+<h2 id="编译流程">编译流程</h2>
+
+<p><img src="/img/post-unity/sct2.jpg" alt="" /></p>
+
+<p>Mono和IL2CPP二选一</p>
+
+<ul>
+  <li>Mono是默认编译器(后端)</li>
+</ul>
+
+<p>GC是 Incremental GC</p>
+<ul>
+  <li>选择开启或不开启</li>
+</ul>
+
+<p><img src="/img/post-unity/sct3.png" alt="" /></p>
+
+<div class="highlighter-rouge"><pre class="highlight"><code>主要解决主线程卡顿的问题，现在进行一次GC主线程被迫要停下来，遍历所有的Memory Island，决定哪些要被GC掉，会造成一定时间的主线程卡顿。Incremental GC把前面暂停主线程的事分帧做了，这样主线程不会出现峰值。
+
+Unity用的[Boehm GC][i3]，简单粗暴，不分代。
+</code></pre>
+</div>
+
+<blockquote>
+  <p>Mono 在2.10版本前都是使用了BOEHM的垃圾回收器。而在2.10后的版本中使用了一个叫SGen的垃圾回收器。而我们的Unity中Mono的版本一直停留在2.10版本之前，所以一直集成的是BOEHM的GC。BOEHM GC是一个开源的项目，在使用中只要替换分配内存函数就可以实现C/C++项目的内存自动管理。而Mono就是一个用C语言实现C#标准的东西。所以在C#中new一个对象最后就是在Mono中有C语言分配一个叫MonoObject的结构体。</p>
+</blockquote>
+
+<ol>
+  <li>
+    <p>Non-generational（非分代式），即全都堆在一起，因为这样会很快。分代的话就是例如大内存，小内存，超小内存分在不同的内存区域来进行管理（SGen GC的设计思想）。</p>
+  </li>
+  <li>
+    <p>Non-Compacting（非压缩式），即当有内存被释放的时候，这块区域就空着。而压缩式的会重新排布，填充空白区域，使内存紧密排布。</p>
+  </li>
+</ol>
+
+<p>上面的形式就会导致我们的内存碎片化，可能我们当前的内存并不大的时候，添加一块较大内存时，却没有任何的一个空间放得下（即使整体的空间足够），导致内存扩充很多。因此建议先操作大内存，然后操作小内存。</p>
+
+<p>碎片化内存之间空出的内存可能就成为僵尸内存。这种情况实际上并不是内存泄露，因为这些内存并没有被泄露，泄露指这块内存没有任何人可以访问和管理，但实际上这块内存一直在内存池里。</p>
+
+<p>IL2CPP GC机制是Unity重新写的，属于一种升级版的Boehm。</p>
+
+<p>HPC# 通过 Annotation 标注出代码</p>
+<ul>
+  <li>本质上是形似C#的C++ (甚至比C++还要少一点能力)</li>
+  <li>无GC、异常捕获等，使用struct（类似原始C++的OOP）</li>
+</ul>
+
+<div class="language-csharp highlighter-rouge"><pre class="highlight"><code><span class="na">[BurstCompile]</span>
+<span class="k">public</span> <span class="k">unsafe</span> <span class="k">struct</span> <span class="nc">MallocTest</span><span class="p">:</span> <span class="n">IJob</span>
+<span class="p">{</span>
+    <span class="p">[</span><span class="n">NativeDisableUnsafePtrRestriction</span><span class="p">]</span>
+    <span class="k">public</span> <span class="n">IntPtr</span><span class="p">*</span> <span class="n">ptr</span><span class="p">;</span>
+    
+    <span class="k">public</span> <span class="k">void</span> <span class="nf">Execute</span><span class="p">()</span>
+    <span class="p">{</span>
+        <span class="n">ptr</span><span class="p">[</span><span class="m">0</span><span class="p">]=(</span><span class="n">IntPtr</span><span class="p">)</span><span class="n">UnsafeUtility</span><span class="p">.</span><span class="nf">Malloc</span><span class="p">(</span><span class="m">8</span><span class="p">,</span> <span class="m">0</span><span class="p">,</span> <span class="n">Allocator</span><span class="p">.</span><span class="n">Persistent</span><span class="p">);</span>
+    <span class="p">}</span>
+<span class="p">}</span>
+</code></pre>
+</div>
+
+<p>Burst 将 HPC# 代码转换为 <a href="https://blog.csdn.net/evianzhang/category_10210126.html">LLVM IR</a>，这是 LLVM编译器框架使用的一种中介语言。这允许编译器充分利用 LLVM 对 Arm架构代码生成的支持，从而生成围绕程序数据流优化的高效机器代码。此流程的图表如下所示：</p>
+
+<p><img src="/img/post-unity/sct9.jpg" alt="" /></p>
+
+<h2 id="三个工具链的比较">三个工具链的比较</h2>
+
+<h4 id="mono">Mono</h4>
+
+<p><em>Open-source, .NET-compatible, led by Xamarin (subsidiary of Microsoft)</em></p>
+
+<ul>
+  <li>JIT compiler (输入为CIL字节码 aka. MSIL), Unity Runtime默认编译器</li>
+  <li>GC：Generational collector (Mono Default) vs. Boehm conservative GC (Unity)</li>
+  <li>Parser: Mono C# parser/compiler (和C#的兼容性有限制) vs. 微软开源 Roslyn C# 编译器</li>
+</ul>
+
+<h4 id="il2cpp">IL2CPP</h4>
+
+<p><em>AOT compiler（CIL -&gt; C++ translator）by Unity</em></p>
+
+<ul>
+  <li>最早是为了解决iOS不支持JIT的问题，性能优于Mono</li>
+  <li>翻译产生的C++代码比较底层
+    <ul>
+      <li>进一步编译成 可执行文件 或 DLL</li>
+    </ul>
+  </li>
+  <li>与 Mono 共享 GC （Boehm）</li>
+</ul>
+
+<h4 id="burst">Burst</h4>
+
+<p><em>HPC# compiler</em></p>
+
+<ul>
+  <li>以性能为目标，基于LLVM</li>
+  <li>No GC （可以进行malloc/free）</li>
+  <li>没有异常捕获（catch）</li>
+  <li>使用function pointer代替delegate</li>
+  <li>默认所有数据分配到static</li>
+  <li>使用shared static和C#共享（通信）数据</li>
+</ul>
+
+<p><img src="/img/post-unity/sct4.jpg" alt="" /></p>
+
+<p>整型计算对比</p>
+
+<p><img src="/img/post-unity/sct5.jpg" alt="" /></p>
+
+<p>浮点计算对比</p>
+
+<p><img src="/img/post-unity/sct6.jpg" alt="" /></p>
+
+<p><em>上图数据来源于华为语言实验室</em></p>
+
+<h2 id="il2cpp的原生缺陷">IL2CPP的原生缺陷</h2>
+
+<blockquote>
+  <p>Java、C#、Go这类托管语言通常支持静态编译（或AOT），但为什么一般不通过翻译为C/C++在使用GCC/LLVM等编译器来实现呢？</p>
+</blockquote>
+
+<h3 id="1-cc编译器与gc配合不好">1. C/C++编译器与GC配合不好</h3>
+
+<p>LLVM只有不稳定的GC支持, 目前LLVM的GC机制是Azul Falcon中支持Java过程中实现的，且目前也并不是很稳定</p>
+
+<p>LLVM GC支持方案不优</p>
+
+<ul>
+  <li>编译器与运行时的配合本身是个trade-off，如果在编译器上工作做的不够，就需要运行时承担比较多
+    <ul>
+      <li>例如当编译器对stackmap中引用分析不精确时，需要运行时在运行过程中做更多的检查来保障安全</li>
+    </ul>
+  </li>
+  <li>目前gollvm（google的一个团队尝试用llvm对接go语言，目前还在开发中）的效果是，整体性能比较差，瓶颈也是与运行时的对接</li>
+</ul>
+
+<h3 id="2-托管语言语义下有些优化不能使用">2. 托管语言语义下，有些优化不能使用</h3>
+
+<ul>
+  <li>未定义行为优化
+    <blockquote>
+      <p>LLVM 的各种优化Pass唯一满足的约束条件是C的语言规范，但C规范中有不少未定义行为，这会允许编译器进行各种激进优化。但高级语言规范中为了安全性，往往会对未定义行为进行约束，这样会导致LLVM的优化结果与高级语言规范不符</p>
+    </blockquote>
+  </li>
+  <li>高级语言特性优化
+    <blockquote>
+      <p>有些高级语言特性的实现也与LLVM的优化不兼容，例如，异常处理回栈时需要依赖每个函数的epilogue进行回栈，但是LLVM在优化过程中对于有些函数会把epilogue删除，这个优化也与托管语言不兼容</p>
+    </blockquote>
+  </li>
+</ul>
+
+<h3 id="3-c编译器缺少托管语言需要的关键优化">3. C编译器缺少托管语言需要的关键优化</h3>
+
+<ul>
+  <li>Devirtualization
+    <blockquote>
+      <p>高级语言大量使用对象（全是对象），且一般只有virtual函数。Devirtualization成为一个关键优化，但C++里虚函数并不构成性能瓶颈，所以并没有对应优化</p>
+    </blockquote>
+  </li>
+  <li>其他缺少的关键优化包括
+    <ul>
+      <li>Range-check消除</li>
+      <li>Escape analysis</li>
+      <li>Speculative optimizations（含冷热分区）</li>
+    </ul>
+  </li>
+</ul>
+
+<h2 id="内存管理">内存管理</h2>
+
+<p><img src="/img/post-unity/sct7.jpg" alt="" /></p>
+
+<p>.NET 采用分代GC（3代compact）、Mono默认也采用分代GC, Unity采用（Conservative）Incremental Boehm GC<br />
+无法避免内存泄漏 – 不适合长期运行的软件</p>
+
+<p><strong>原理：</strong></p>
+
+<ul>
+  <li>将GC任务切成小块，分散执行（分散到帧渲染过程中）</li>
+  <li>避免单次长时间停顿，避免帧率下降</li>
+</ul>
+
+<p><img src="/img/post-unity/sct8.jpg" alt="" /></p>
+
+<p>写在最后，除了Unity使用的 IL2CPP， 国内的cocos团队也在寻求js2CPP, 以提高其引擎性能。</p>
+
+
+    </div>
+  </div>
+
+  <style>
+  .post-nav {
+    overflow: hidden;
+    /* margin-top: 60px; */
+    padding: 12px;
+    white-space: nowrap;
+    /* border-top: 1px solid #eee; */
+  }
+
+  .post-nav-item {
+    display: inline-block;
+    width: 50%;
+    white-space: normal;
+  }
+
+  .post-nav-item a {
+    position: relative;
+    display: inline-block;
+    line-height: 25px;
+    font-size: 14px;
+    color: #555;
+    border-bottom: none;
+  }
+
+  .post-nav-item a:hover {
+    color: #222;
+    font-weight: bold;
+    border-bottom: none;
+  }
+
+  .post-nav-item a:active {
+    top: 2px;
+  }
+
+  .post-nav-item a:before,
+  .post-nav-item a:after {
+    display: inline-block;
+    width: 16px;
+    height: 25px;
+    vertical-align: top;
+    opacity: 0.4;
+    background-size: 16px;
+  }
+
+  .post-nav-none a:none {
+    content: ' ';
+    background-size: 8px;
+  }
+
+  .post-nav-none a:hover:none {
+    opacity: 1;
+  }
+
+  .post-nav-prev a:before {
+    content: ' ';
+    background: url("data:image/svg+xml;base64,PD94bWwgdmVyc2lvbj0iMS4wIiA/PjxzdmcgaGVpZ2h0PSIxMnB4IiB2ZXJzaW9uPSIxLjEiIHZpZXdCb3g9IjAgMCA5IDEyIiB3aWR0aD0iOXB4IiB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHhtbG5zOnNrZXRjaD0iaHR0cDovL3d3dy5ib2hlbWlhbmNvZGluZy5jb20vc2tldGNoL25zIiB4bWxuczp4bGluaz0iaHR0cDovL3d3dy53My5vcmcvMTk5OS94bGluayI+PHRpdGxlLz48ZGVzYy8+PGRlZnMvPjxnIGZpbGw9Im5vbmUiIGZpbGwtcnVsZT0iZXZlbm9kZCIgaWQ9IlBhZ2UtMSIgc3Ryb2tlPSJub25lIiBzdHJva2Utd2lkdGg9IjEiPjxnIGZpbGw9IiMwMDAwMDAiIGlkPSJDb3JlIiB0cmFuc2Zvcm09InRyYW5zbGF0ZSgtMjE4LjAwMDAwMCwgLTkwLjAwMDAwMCkiPjxnIGlkPSJjaGV2cm9uLWxlZnQiIHRyYW5zZm9ybT0idHJhbnNsYXRlKDIxOC41MDAwMDAsIDkwLjAwMDAwMCkiPjxwYXRoIGQ9Ik03LjQsMS40IEw2LDAgTC04Ljg4MTc4NDJlLTE2LDYgTDYsMTIgTDcuNCwxMC42IEwyLjgsNiBMNy40LDEuNCBaIiBpZD0iU2hhcGUiLz48L2c+PC9nPjwvZz48L3N2Zz4=") no-repeat 0 50%;
+    background-size: 8px;
+  }
+
+  .post-nav-prev a:hover:before {
+    opacity: 1;
+  }
+
+  .post-nav-next {
+    text-align: right;
+  }
+
+  .post-nav-next a:after {
+    content: ' ';
+    background: url("data:image/svg+xml;base64,PD94bWwgdmVyc2lvbj0iMS4wIiA/PjxzdmcgaGVpZ2h0PSIxMnB4IiB2ZXJzaW9uPSIxLjEiIHZpZXdCb3g9IjAgMCA5IDEyIiB3aWR0aD0iOXB4IiB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHhtbG5zOnNrZXRjaD0iaHR0cDovL3d3dy5ib2hlbWlhbmNvZGluZy5jb20vc2tldGNoL25zIiB4bWxuczp4bGluaz0iaHR0cDovL3d3dy53My5vcmcvMTk5OS94bGluayI+PHRpdGxlLz48ZGVzYy8+PGRlZnMvPjxnIGZpbGw9Im5vbmUiIGZpbGwtcnVsZT0iZXZlbm9kZCIgaWQ9IlBhZ2UtMSIgc3Ryb2tlPSJub25lIiBzdHJva2Utd2lkdGg9IjEiPjxnIGZpbGw9IiMwMDAwMDAiIGlkPSJDb3JlIiB0cmFuc2Zvcm09InRyYW5zbGF0ZSgtMjYwLjAwMDAwMCwgLTkwLjAwMDAwMCkiPjxnIGlkPSJjaGV2cm9uLXJpZ2h0IiB0cmFuc2Zvcm09InRyYW5zbGF0ZSgyNjAuNTAwMDAwLCA5MC4wMDAwMDApIj48cGF0aCBkPSJNMSwwIEwtMC40LDEuNCBMNC4yLDYgTC0wLjQsMTAuNiBMMSwxMiBMNyw2IEwxLDAgWiIgaWQ9IlNoYXBlIi8+PC9nPjwvZz48L2c+PC9zdmc+") no-repeat 100% 50%;
+    background-size: 8px;
+  }
+
+  .post-nav-next a:hover:after {
+    opacity: 1;
+  }
+</style>
+
+
+
+<div class="post-nav">
+
+  
+  <div class="post-nav-none post-nav-item">
+    <a href=""> </a>
+  </div>
+  
+
+  
+  <div class="post-nav-next post-nav-item">
+    
+    <a href="/blog/2022/upython/"> Unity 与 Python 交互调用</a>
+  </div>
+  
+
+</div>
+
+</article>
+    </div>
+
+    <footer class="site-footer">
+  <div class="container">
+    <ul class="social">
+  <li><a href="https://twitter.com/penghuailiang" target="_blank"><i class="icon icon-twitter"></i></a></li>
+  <li><a href="https://www.zhihu.com/people/huailiangpenguin" target="_blank"><i class="icon icon-zhihu"></i></a></li>
+  <li><a href="https://www.facebook.com/profile.php?id=100004290725320" target="_blank"><i class="icon icon-facebook"></i></a></li>
+  <li><a href="https://weibo.com/6212299692/profile?topnav=1&wvr=6" target="_blank"><i class="icon icon-sina"></i></a></li>
+  <li><a href="https://www.linkedin.com/in/penghuailiang/" target="_blank"><i class="icon icon-linkedin"></i></a></li>
+  <li><a href="https://github.com/huailiang" target="_blank"><i class="icon icon-github"></i></a></li>
+</ul>
+    <p class="txt-medium-gray">
+      <small>&copy;2023 All rights reserved. </small>
+    </p>
+  </div>
+</footer>
+    <a href="https://github.com/huailiang" target="_blank" class="github-corner"><svg width="80" height="80" viewBox="0 0 250 250" style="fill:#337ab7; color:#fff; position: absolute; top: 0; border: 0; right: 0;"><path d="M0,0 L115,115 L130,115 L142,142 L250,250 L250,0 Z"></path><path d="M128.3,109.0 C113.8,99.7 119.0,89.6 119.0,89.6 C122.0,82.7 120.5,78.6 120.5,78.6 C119.2,72.0 123.4,76.3 123.4,76.3 C127.3,80.9 125.5,87.3 125.5,87.3 C122.9,97.6 130.6,101.9 134.4,103.2" fill="currentColor" style="transform-origin: 130px 106px;" class="octo-arm"></path><path d="M115.0,115.0 C114.9,115.1 118.7,116.5 119.8,115.4 L133.7,101.6 C136.9,99.2 139.9,98.4 142.2,98.6 C133.8,88.0 127.5,74.4 143.8,58.0 C148.5,53.4 154.0,51.2 159.7,51.0 C160.3,49.4 163.2,43.6 171.4,40.1 C171.4,40.1 176.1,42.5 178.8,56.2 C183.1,58.6 187.2,61.8 190.9,65.4 C194.5,69.0 197.7,73.2 200.1,77.6 C213.8,80.2 216.3,84.9 216.3,84.9 C212.7,93.1 206.9,96.0 205.4,96.6 C205.1,102.4 203.0,107.8 198.3,112.5 C181.9,128.9 168.3,122.5 157.7,114.1 C157.9,116.9 156.7,120.9 152.7,124.9 L141.0,136.5 C139.8,137.7 141.6,141.9 141.8,141.8 Z" fill="currentColor" class="octo-body"></path></svg></a>
+
+
+    <script src="//code.jquery.com/jquery-1.11.3.min.js"></script>
+    <script>
+      $(document).ready(function () {
+        $('.sliding-panel-button,.sliding-panel-fade-screen,.sliding-panel-close').on('click touchstart', function (e) {
+          $('.sliding-panel-content,.sliding-panel-fade-screen').toggleClass('is-visible');
+          e.preventDefault();
+        });
+      });
+    </script>
+  </main>
+</body>
+
+</html>

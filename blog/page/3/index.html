@@ -68,6 +68,32 @@ MathJax.Hub.Config({
     <article class="post">
   <header class="post-header">
     <h1 class="post-title2">
+      <a class="post-link" href="/blog/2021/cpp/">C++ 中struct/class的内存布局</a>
+    </h1>
+    <div class="post-meta">
+      <time>Jan 30, 2021</time>
+    </div>
+  </header>
+
+  <p><a href="/blog/2021/cpp/" title="Permalink to: C++ 中struct/class的内存布局"
+      class="read-more">struct 的内存布局：
+
+struct 的内存对齐和填充概念学过C 的都应该知道一点。其实只要记住一个概念和三个原则就可以了：
+
+一个概念：
+
+自然对齐：如果一个变量的内存地址正好位于它长度的整数倍，就被称做自然对齐。
+
+如果不自然对齐，会带来CPU存取数据时的性能损失。（PS：具体应该与CPU通过总线读写内存数据的细节相关，具体没有细究）
+
+三个原则：
+
+struct 的起始地址需要能...</a></p>
+</article>
+  
+    <article class="post">
+  <header class="post-header">
+    <h1 class="post-title2">
       <a class="post-link" href="/blog/2021/adb/">Android下的特殊文件夹</a>
     </h1>
     <div class="post-meta">
@@ -197,24 +223,6 @@ Blender中安装插件Add-ons, 打开Prefences(设置)， 如下图， 下载rem
 此文主要针对webview一些特性，提出一些优化建议。目前一般游戏引擎不会自带Webview, 需要开发者独自以Nativ...</a></p>
 </article>
   
-    <article class="post">
-  <header class="post-header">
-    <h1 class="post-title2">
-      <a class="post-link" href="/blog/2020/mouth/">游戏中口型动画合成系统</a>
-    </h1>
-    <div class="post-meta">
-      <time>Apr 2, 2020</time>
-    </div>
-  </header>
-
-  <p><a href="/blog/2020/mouth/" title="Permalink to: 游戏中口型动画合成系统"
-      class="read-more">
-  近年来， 基于语音驱动的人脸动画技术在虚拟主持人、数字娱乐、人机交互以及远程会议等方面有广泛的应用。如何快速、高效的实现语音驱动的唇形自动合成，以及优化语音与唇形面部表情之间的同步是此项技术的关键。表情动画作为语音驱动人脸动画的一部分，在增加人脸动画逼真性方面起着重要的作用，但已有的工作没 有定量分析人脸表情动 画与语音之间的关系.
-
-
-目前音视频模型主要集中在矢量量化的方法 (VQ)...</a></p>
-</article>
-  
 
   
 <nav class="pagination" role="pagination">
@@ -247,7 +255,7 @@ Blender中安装插件Add-ons, 打开Prefences(设置)， 如下图， 下载rem
   <li><a href="https://github.com/huailiang" target="_blank"><i class="icon icon-github"></i></a></li>
 </ul>
     <p class="txt-medium-gray">
-      <small>&copy;2022 All rights reserved. </small>
+      <small>&copy;2023 All rights reserved. </small>
     </p>
   </div>
 </footer>
