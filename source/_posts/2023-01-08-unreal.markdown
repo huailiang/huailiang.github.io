@@ -1,0 +1,315 @@
+---
+layout:     post
+title:      "unreal 集成第三方算法库"
+date:       2023-01-08 02:00:00
+author:     "huailiang"
+tags:
+    - Unreal
+---
+
+
+
+## 库工程设置
+
+vs创建一个动态链接库工程：
+
+![](/img/post-unreal/ue2.png)
+
+在属性面板里开启调试符号, 调试信息格式设置为用于“编辑并继续”的程序数据库
+
+![](/img/post-unreal/ue1.png)
+
+编译生成 .dll 和 .lib
+
+第二种方式就是通过 CMake， 去CMake 官网下载相关的编译软件， 然后编写CMakelist.txt
+
+```R
+cmake_minimum_required(VERSION 2.8)
+
+if ( WIN32 AND NOT CYGWIN AND NOT ( CMAKE_SYSTEM_NAME STREQUAL "WindowsStore" ) AND NOT ANDROID)
+ set(CMAKE_C_FLAGS_RELEASE "${CMAKE_C_FLAGS_RELEASE} /MT" CACHE STRING "")
+ set(CMAKE_C_FLAGS_DEBUG "${CMAKE_C_FLAGS_DEBUG} /MTd" CACHE STRING "")
+ set(CMAKE_CXX_FLAGS_RELEASE "${CMAKE_CXX_FLAGS_RELEASE} /MT" CACHE STRING "")
+ set(CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG} /MTd" CACHE STRING "")
+endif ()
+
+project(TestUE)
+if ( IOS )
+        set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fembed-bitcode")
+        set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -fembed-bitcode")
+endif ()
+option ( UINT_ESPECIALLY "using custom ulong" OFF )
+option ( GC64 "using gc64" OFF )
+find_path(TestUE_PROJECT_DIR NAMES SConstruct
+    PATHS 
+    ${CMAKE_SOURCE_DIR}
+    NO_DEFAULT_PATH
+    )
+MARK_AS_ADVANCED(TestUE_PROJECT_DIR)
+set(SRC_PATH TestUE)
+
+include_directories(
+    ${CMAKE_SOURCE_DIR}
+ ${SRC_PATH}
+)
+
+aux_source_directory(${SRC_PATH} SRC_CORE)
+
+source_group_by_dir(${CMAKE_CURRENT_SOURCE_DIR} SRC_CORE)
+
+if (APPLE)
+    if (IOS)
+        set(CMAKE_OSX_ARCHITECTURES "$(ARCHS_STANDARD)")
+        add_library(TestUE STATIC
+           ${SRC_CORE}
+        )
+  set_xcode_property (TestUE IPHONEOS_DEPLOYMENT_TARGET "7.0" "all")
+    else ()
+        if (BUILD_SILICON)
+           set(CMAKE_OSX_ARCHITECTURES arm64)
+
+            add_library(TestUE SHARED
+                ${SRC_CORE}
+            )
+        else ()
+            set(CMAKE_OSX_ARCHITECTURES "$(ARCHS_STANDARD_64_BIT)")
+            add_library(TestUE MODULE
+                ${SRC_CORE}
+            )
+            set_target_properties ( TestUE PROPERTIES BUNDLE TRUE )
+        endif ()
+    endif ()
+elseif ("${CMAKE_SYSTEM_NAME}" STREQUAL "Switch")
+    add_library(TestUE STATIC
+        ${SRC_CORE}
+    )
+    target_compile_options(TestUE PRIVATE -m64 -mcpu=cortex-a57+fp+simd+crypto+crc -fno-common -fno-short-enums -ffunction-sections -fdata-sections -fPIC -fms-extensions)
+else ( )
+    add_library(TestUE SHARED
+        ${SRC_CORE}
+    )
+endif ( )
+
+if ( WIN32 AND NOT CYGWIN )
+    target_compile_definitions (TestUE PRIVATE LUA_BUILD_AS_DLL)
+endif ( )
+
+if(UINT_ESPECIALLY)
+    ADD_DEFINITIONS(-DUINT_ESPECIALLY)
+endif()
+```
+
+在cmake里指定工程组织的结构， 相关编译的宏， link需要的flag, 然后通过shell或者bat生成的相关的工程或者库， 例如生成vs工程 可以使用如下build.bat. (需要安装vs2019)
+
+```bat
+mkdir build64 & pushd build64
+cmake -G "Visual Studio 16 2019" ..
+popd
+cmake --build build64 --config Release
+md Plugins\x86_64
+copy /Y build64\Release\TestUE.dll Plugins\x86_64\TestUE.dll
+copy /Y build64\Release\TestUE.lib Plugins\x86_64\TestUE.lib
+pause
+```
+
+在比如 编译 android 的so可以使用 build.sh 的shell脚本（Mac环境下， 需要本地下载了NDK）
+
+```sh
+if [ -n "$ANDROID_NDK" ]; then
+    export NDK=${ANDROID_NDK}
+elif [ -n "$ANDROID_NDK_HOME" ]; then
+    export NDK=${ANDROID_NDK_HOME}
+elif [ -n "$ANDROID_NDK_HOME" ]; then
+    export NDK=${ANDROID_NDK_HOME}
+else
+    export NDK=~/Documents/android-sdk/ndk
+fi
+
+if [ ! -d "$NDK" ]; then
+    echo "Please set ANDROID_NDK environment to the root of NDK."
+    exit 1
+fi
+
+function build() {
+    API=$1
+    ABI=$2
+    TOOLCHAIN_ANME=$3
+    BUILD_PATH=build.Android.${ABI}
+    cmake -H. -B${BUILD_PATH} -DANDROID_ABI=${ABI} -DCMAKE_BUILD_TYPE=Release -DCMAKE_TOOLCHAIN_FILE=${NDK}/build/cmake/android.toolchain.cmake -DANDROID_NATIVE_API_LEVEL=${API} -DANDROID_TOOLCHAIN=clang -DANDROID_TOOLCHAIN_NAME=${TOOLCHAIN_ANME}
+    cmake --build ${BUILD_PATH} --config Release
+    mkdir -p Plugins/Android/libs/${ABI}/
+    cp ${BUILD_PATH}/libTestUE.so Plugins/Android/libs/${ABI}/libTestUE.so
+}
+
+build android-16 armeabi-v7a arm-linux-androideabi-4.9
+build android-16 arm64-v8a  arm-linux-androideabi-clang
+```
+
+头文件处理,  在 vs 工程导出的时候， 函数名前需要加上 __declspec(dllexport)  （针对Windows上编译dll）
+
+```c
+#ifdef _API_IMPORTS
+#define DLL_API __declspec(dllexport)
+#else
+#define DLL_API 
+#endif // _API_IMPORTS
+
+DLL_API int AddNumbers(int a, int b);
+```
+
+当导入到Unreal， 配置 build.cs 关联进去， 相关的 需要改为 dllimport
+
+```c
+#ifdef _API_IMPORTS
+#define DLL_API __declspec(dllimport)
+#else
+#define DLL_API 
+#endif // _API_IMPORTS
+
+DLL_API int AddNumbers(int a, int b);
+```
+
+## 目录结构
+
+在工程根目录新建
+
+```
+- ThirdParty
+-- XXX(lib Name)
+--- android
+--- include 
+--- x64
+--- IOS
+```
+
+## Build.cs
+
+找到工程目录下 **.Build.cs,   添加 ThirdPartyPath 路径指定：
+
+```c#
+private string ThirdPartyPath
+{
+    get
+    {
+        return Path.GetFullPath(Path.Combine(ModuleDirectory, "../../ThirdParty"));
+    }
+}
+```
+
+在 Build的构造函数里指定 头文件路径， 库的搜索路径和相关引用的库名称。  还可以使用 Target.Platform 来区分不同的平台
+
+```c#
+//Type = ModuleType.External;
+string exPath = ThirdPartyPath + "/TestUE";
+PublicIncludePaths.Add(exPath + "/include/");
+
+if (Target.Platform == UnrealTargetPlatform.Win64)
+{
+    PublicDefinitions.AddRange(new string[] { "_API_IMPORTS" });
+    //PublicSystemLibraryPaths.Add(exPath + "/x64");
+    Console.WriteLine("File Exist: " + Directory.Exists(exPath + "/x64"));
+    PublicAdditionalLibraries.Add(exPath + "/x64/TestUE.lib");
+}
+else if (Target.Platform == UnrealTargetPlatform.Android)
+{
+    AdditionalPropertiesForReceipt.Add("AndroidPlugin", Path.Combine(exPath, "My_APL_armv7.xml"));
+    PublicSystemLibraryPaths.Add(Path.Combine(exPath, "android"));
+    PublicAdditionalLibraries.Add("TestUE");
+}
+else if (Target.Platform == UnrealTargetPlatform.IOS)
+{
+    PublicSystemLibraryPaths.Add(exPath + "/IOS");
+}
+```
+
+build.cs 支持 log输出， 在vs编译生成的时候， 输出选项栏里可以看到相关的提示：
+
+```c#
+Console.WriteLine("File Exist: " + Directory.Exists(exPath + "/include"));
+```
+
+如果是库工程， 可以指定 Type  为 External。
+
+```c#
+Type = ModuleType.External;
+```
+
+编写好 build.cs之后， 需要重新生成， 右键选择 uproject 文件， 重新生成 vs 工程文件。
+
+![](/img/post-unreal/ue3.png)
+
+## 导出
+
+Win64 导出， 需要手动copy动态链接库(.dll)， 到.exe 同目录下。  启动 xxx/Binaries/Win64 下的.exe文件
+
+Android的生成时， 需要配置 _armv7.xml。
+
+```xml
+<?xml version="1.0" encoding="utf-8"?>
+<!-- steps to add to build additions -->
+<root xmlns:android="http://schemas.android.com/apk/res/android">
+ <!-- init section is always evaluated once per architecture -->
+ <init>
+     <setBool result="bSupported" value="false"/>
+         <isArch arch="armeabi-v7a">
+             <setBool result="bSupported" value="true"/>
+         </isArch>
+ </init>
+ 
+ <!-- optional files or directories to copy to Intermediate/Android/APK -->
+ <resourceCopies>
+     <isArch arch="armeabi-v7a">
+         <copyFile src="$S(BuildDir)/../../../ThirdParty/TestUE/android/libTestUE.so"
+                   dst="$S(BuildDir)/libs/armeabi-v7a/libTestUE.so" />
+  </isArch>
+ </resourceCopies>
+ 
+ <!-- optional libraries to load in GameActivity.java before libUE4.so -->
+ <soLoadLibrary>
+     <if condition="bSupported">
+         <true>
+   <loadLibrary name="TestUE" failmsg="Failed to load myso library" />
+  </true>
+     </if>
+ </soLoadLibrary>
+</root>
+```
+
+它的作用是：
+
+（1）在打包Android应用时，将AndroidProject/ThirdParty/TestUE/android/libTestUE.so文件拷贝到AndroidProject/Intermediate/Android/APK/libs/armeabi-v7a/目录下。这样就不用手动拷贝了。
+
+（2）在AndroidProject\Intermediate\Android\APK\src\com\epicgames\ue4\GameActivity.java文件中生成加载TestUE库的代码：
+
+```java
+try
+{
+ System.loadLibrary("TestUE");
+}
+catch (java.lang.UnsatisfiedLinkError e)
+{
+ Log.debug(e.toString());
+ Log.debug("Failed to load TestUE library");
+}
+```
+
+Note:
+
+Android某些关联的插件可能会因为 墙 的原因而下载不了， 这里可以直接使用 Android Studio 直接打开生成的Android 工程， 在AS里设置好代理之后， 再进行编译运行。 Android生成路径一般在 Intermediate\Android\armv7\gradle目录下。
+
+
+
+
+## 断点调试
+
+在vs里 以 DebugGame Editor启动 UE （调试-> 开始执行(不调试)）, 
+
+![](/img/post-unreal/ue4.png)
+
+UE 启动之后， 然后使用vs 打开 dll 库工程， 选择 Debug -> Attach Process, 在弹出的进程 列表里选择 UE4 。
+
+![](/img/post-unreal/ue5.png)
+
+附加上去就可以命中断点了
+
+![](/img/post-unreal/ue6.png)
