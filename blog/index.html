@@ -68,6 +68,36 @@ MathJax.Hub.Config({
     <article class="post">
   <header class="post-header">
     <h1 class="post-title2">
+      <a class="post-link" href="/blog/2023/unreal/">unreal 集成第三方算法库</a>
+    </h1>
+    <div class="post-meta">
+      <time>Jan 8, 2023</time>
+    </div>
+  </header>
+
+  <p><a href="/blog/2023/unreal/" title="Permalink to: unreal 集成第三方算法库"
+      class="read-more">库工程设置
+
+vs创建一个动态链接库工程：
+
+
+
+在属性面板里开启调试符号, 调试信息格式设置为用于“编辑并继续”的程序数据库
+
+
+
+编译生成 .dll 和 .lib
+
+第二种方式就是通过 CMake， 去CMake 官网下载相关的编译软件， 然后编写CMakelist.txt
+
+cmake_minimum_required(VERSION 2.8)
+
+if ( WIN32 AND NOT ...</a></p>
+</article>
+  
+    <article class="post">
+  <header class="post-header">
+    <h1 class="post-title2">
       <a class="post-link" href="/blog/2022/compiler/">Unity Scripting Runtime</a>
     </h1>
     <div class="post-meta">
@@ -182,26 +212,6 @@ builtin的预览流实现：
   <p><a href="/blog/2022/docker/" title="Permalink to: Docker Unity"
       class="read-more">
   最近项目的开发中，遇到不少用户上传的视频、图片资源。 这些资源需要下载到端侧， 然后渲染出来。 由于Unity不能离线处理处理这些资源， 所以很多图片资源在显存直接展开成RGBA(png)或者RGB（jpg）， 由于没有压缩，所以带来很大的显存开销。于是就想把unity中部署docker中， 在一些资源部署到server上去之前， 把图片压缩成ETC、ASTC、PVRTC这些支持GPU...</a></p>
-</article>
-  
-    <article class="post">
-  <header class="post-header">
-    <h1 class="post-title2">
-      <a class="post-link" href="/blog/2021/camera/">Unity访问 Camera2 能力</a>
-    </h1>
-    <div class="post-meta">
-      <time>Dec 19, 2021</time>
-    </div>
-  </header>
-
-  <p><a href="/blog/2021/camera/" title="Permalink to: Unity访问 Camera2 能力"
-      class="read-more">
-  获取物理相机的预览流是AR开发的基础能力， 在 ARFoundation 和 AREngine 都是使用 CommandBuffer 来绘制预览流。 如果使用WebCameraTexture获取的预览流受限制比较多， 比如说去调整变焦、曝光度这些东西更多的还是去原生层去拿。
-
-
-WebCameraTexture
-
-unity中获取camera的图像一般都是去通过WenCameraTex...</a></p>
 </article>
   
 

@@ -1,0 +1,510 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <meta http-equiv="X-UA-Compatible" content="IE=edge">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+
+  <title>unreal 集成第三方算法库</title>
+  <meta name="description"
+    content="库工程设置">
+
+  <link rel="shortcut icon" href="/img/favicon.ico">
+  <link rel="stylesheet" href="/css/main.css">
+  <link rel="canonical" href="https://huailiang.github.io/blog/2023/unreal/">
+
+</head>
+
+<body>
+  <main>
+    <header class="site-header">
+  <div class="container">
+    <h1><a href="/">Hom<span>e</span></a></h1>
+
+    <button type="button" class="sliding-panel-button">
+      <span></span>
+      <span></span>
+      <span></span>
+    </button>
+
+    <nav class="navbar sliding-panel-content">
+      <ul>
+        
+        <li><a href="/about" title="About">About</a>
+        </li>
+        
+        <li><a href="/blog" title="Blog">Blog</a>
+        </li>
+        
+       <li><a href="/category/" target="_blank"><i class="icon icon-feed"></i></a></li>
+      </ul>
+    </nav>
+  </div>
+</header>
+
+<div class="sliding-panel-fade-screen"></div>
+    <script type="text/javascript" src="/js/MathJax.js?config=TeX-AMS-MML_HTMLorMML"></script>
+
+<script type="text/x-mathjax-config">
+MathJax.Hub.Config({
+  tex2jax: {
+    inlineMath: [['$','$'], ['\\(','\\)']],
+    processEscapes: true
+  }
+});
+</script>
+
+<script type="text/x-mathjax-config">
+  MathJax.Hub.Config({
+    tex2jax: {
+      skipTags: ['script', 'noscript', 'style', 'textarea', 'pre', 'code']
+    }
+  });
+
+</script>
+    <div class="container">
+      <article role="article" class="post">
+
+  <div class="card">
+    <header class="post-header">
+      <h1 class="post-title">unreal 集成第三方算法库</h1>
+      <p class="post-meta">Jan 8, 2023 •
+        huailiang</p>
+    </header>
+
+    <div class="post-content">
+      <h2 id="库工程设置">库工程设置</h2>
+
+<p>vs创建一个动态链接库工程：</p>
+
+<p><img src="/img/post-unreal/ue2.png" alt="" /></p>
+
+<p>在属性面板里开启调试符号, 调试信息格式设置为用于“编辑并继续”的程序数据库</p>
+
+<p><img src="/img/post-unreal/ue1.png" alt="" /></p>
+
+<p>编译生成 .dll 和 .lib</p>
+
+<p>第二种方式就是通过 CMake， 去CMake 官网下载相关的编译软件， 然后编写CMakelist.txt</p>
+
+<div class="language-R highlighter-rouge"><pre class="highlight"><code><span class="n">cmake_minimum_required</span><span class="p">(</span><span class="n">VERSION</span><span class="w"> </span><span class="m">2.8</span><span class="p">)</span><span class="w">
+
+</span><span class="k">if</span><span class="w"> </span><span class="p">(</span><span class="w"> </span><span class="n">WIN32</span><span class="w"> </span><span class="n">AND</span><span class="w"> </span><span class="n">NOT</span><span class="w"> </span><span class="n">CYGWIN</span><span class="w"> </span><span class="n">AND</span><span class="w"> </span><span class="n">NOT</span><span class="w"> </span><span class="p">(</span><span class="w"> </span><span class="n">CMAKE_SYSTEM_NAME</span><span class="w"> </span><span class="n">STREQUAL</span><span class="w"> </span><span class="s2">"WindowsStore"</span><span class="w"> </span><span class="p">)</span><span class="w"> </span><span class="n">AND</span><span class="w"> </span><span class="n">NOT</span><span class="w"> </span><span class="n">ANDROID</span><span class="p">)</span><span class="w">
+ </span><span class="n">set</span><span class="p">(</span><span class="n">CMAKE_C_FLAGS_RELEASE</span><span class="w"> </span><span class="s2">"${CMAKE_C_FLAGS_RELEASE} /MT"</span><span class="w"> </span><span class="n">CACHE</span><span class="w"> </span><span class="n">STRING</span><span class="w"> </span><span class="s2">""</span><span class="p">)</span><span class="w">
+ </span><span class="n">set</span><span class="p">(</span><span class="n">CMAKE_C_FLAGS_DEBUG</span><span class="w"> </span><span class="s2">"${CMAKE_C_FLAGS_DEBUG} /MTd"</span><span class="w"> </span><span class="n">CACHE</span><span class="w"> </span><span class="n">STRING</span><span class="w"> </span><span class="s2">""</span><span class="p">)</span><span class="w">
+ </span><span class="n">set</span><span class="p">(</span><span class="n">CMAKE_CXX_FLAGS_RELEASE</span><span class="w"> </span><span class="s2">"${CMAKE_CXX_FLAGS_RELEASE} /MT"</span><span class="w"> </span><span class="n">CACHE</span><span class="w"> </span><span class="n">STRING</span><span class="w"> </span><span class="s2">""</span><span class="p">)</span><span class="w">
+ </span><span class="n">set</span><span class="p">(</span><span class="n">CMAKE_CXX_FLAGS_DEBUG</span><span class="w"> </span><span class="s2">"${CMAKE_CXX_FLAGS_DEBUG} /MTd"</span><span class="w"> </span><span class="n">CACHE</span><span class="w"> </span><span class="n">STRING</span><span class="w"> </span><span class="s2">""</span><span class="p">)</span><span class="w">
+</span><span class="n">endif</span><span class="w"> </span><span class="p">()</span><span class="w">
+
+</span><span class="n">project</span><span class="p">(</span><span class="n">TestUE</span><span class="p">)</span><span class="w">
+</span><span class="k">if</span><span class="w"> </span><span class="p">(</span><span class="w"> </span><span class="n">IOS</span><span class="w"> </span><span class="p">)</span><span class="w">
+        </span><span class="n">set</span><span class="p">(</span><span class="n">CMAKE_CXX_FLAGS</span><span class="w"> </span><span class="s2">"${CMAKE_CXX_FLAGS} -fembed-bitcode"</span><span class="p">)</span><span class="w">
+        </span><span class="n">set</span><span class="p">(</span><span class="n">CMAKE_C_FLAGS</span><span class="w"> </span><span class="s2">"${CMAKE_C_FLAGS} -fembed-bitcode"</span><span class="p">)</span><span class="w">
+</span><span class="n">endif</span><span class="w"> </span><span class="p">()</span><span class="w">
+</span><span class="n">option</span><span class="w"> </span><span class="p">(</span><span class="w"> </span><span class="n">UINT_ESPECIALLY</span><span class="w"> </span><span class="s2">"using custom ulong"</span><span class="w"> </span><span class="n">OFF</span><span class="w"> </span><span class="p">)</span><span class="w">
+</span><span class="n">option</span><span class="w"> </span><span class="p">(</span><span class="w"> </span><span class="n">GC64</span><span class="w"> </span><span class="s2">"using gc64"</span><span class="w"> </span><span class="n">OFF</span><span class="w"> </span><span class="p">)</span><span class="w">
+</span><span class="n">find_path</span><span class="p">(</span><span class="n">TestUE_PROJECT_DIR</span><span class="w"> </span><span class="n">NAMES</span><span class="w"> </span><span class="n">SConstruct</span><span class="w">
+    </span><span class="n">PATHS</span><span class="w"> 
+    </span><span class="o">$</span><span class="p">{</span><span class="n">CMAKE_SOURCE_DIR</span><span class="p">}</span><span class="w">
+    </span><span class="n">NO_DEFAULT_PATH</span><span class="w">
+    </span><span class="p">)</span><span class="w">
+</span><span class="n">MARK_AS_ADVANCED</span><span class="p">(</span><span class="n">TestUE_PROJECT_DIR</span><span class="p">)</span><span class="w">
+</span><span class="n">set</span><span class="p">(</span><span class="n">SRC_PATH</span><span class="w"> </span><span class="n">TestUE</span><span class="p">)</span><span class="w">
+
+</span><span class="n">include_directories</span><span class="p">(</span><span class="w">
+    </span><span class="o">$</span><span class="p">{</span><span class="n">CMAKE_SOURCE_DIR</span><span class="p">}</span><span class="w">
+ </span><span class="o">$</span><span class="p">{</span><span class="n">SRC_PATH</span><span class="p">}</span><span class="w">
+</span><span class="p">)</span><span class="w">
+
+</span><span class="n">aux_source_directory</span><span class="p">(</span><span class="o">$</span><span class="p">{</span><span class="n">SRC_PATH</span><span class="p">}</span><span class="w"> </span><span class="n">SRC_CORE</span><span class="p">)</span><span class="w">
+
+</span><span class="n">source_group_by_dir</span><span class="p">(</span><span class="o">$</span><span class="p">{</span><span class="n">CMAKE_CURRENT_SOURCE_DIR</span><span class="p">}</span><span class="w"> </span><span class="n">SRC_CORE</span><span class="p">)</span><span class="w">
+
+</span><span class="k">if</span><span class="w"> </span><span class="p">(</span><span class="n">APPLE</span><span class="p">)</span><span class="w">
+    </span><span class="k">if</span><span class="w"> </span><span class="p">(</span><span class="n">IOS</span><span class="p">)</span><span class="w">
+        </span><span class="n">set</span><span class="p">(</span><span class="n">CMAKE_OSX_ARCHITECTURES</span><span class="w"> </span><span class="s2">"$(ARCHS_STANDARD)"</span><span class="p">)</span><span class="w">
+        </span><span class="n">add_library</span><span class="p">(</span><span class="n">TestUE</span><span class="w"> </span><span class="n">STATIC</span><span class="w">
+           </span><span class="o">$</span><span class="p">{</span><span class="n">SRC_CORE</span><span class="p">}</span><span class="w">
+        </span><span class="p">)</span><span class="w">
+  </span><span class="n">set_xcode_property</span><span class="w"> </span><span class="p">(</span><span class="n">TestUE</span><span class="w"> </span><span class="n">IPHONEOS_DEPLOYMENT_TARGET</span><span class="w"> </span><span class="s2">"7.0"</span><span class="w"> </span><span class="s2">"all"</span><span class="p">)</span><span class="w">
+    </span><span class="k">else</span><span class="w"> </span><span class="p">()</span><span class="w">
+        </span><span class="k">if</span><span class="w"> </span><span class="p">(</span><span class="n">BUILD_SILICON</span><span class="p">)</span><span class="w">
+           </span><span class="n">set</span><span class="p">(</span><span class="n">CMAKE_OSX_ARCHITECTURES</span><span class="w"> </span><span class="n">arm64</span><span class="p">)</span><span class="w">
+
+            </span><span class="n">add_library</span><span class="p">(</span><span class="n">TestUE</span><span class="w"> </span><span class="n">SHARED</span><span class="w">
+                </span><span class="o">$</span><span class="p">{</span><span class="n">SRC_CORE</span><span class="p">}</span><span class="w">
+            </span><span class="p">)</span><span class="w">
+        </span><span class="k">else</span><span class="w"> </span><span class="p">()</span><span class="w">
+            </span><span class="n">set</span><span class="p">(</span><span class="n">CMAKE_OSX_ARCHITECTURES</span><span class="w"> </span><span class="s2">"$(ARCHS_STANDARD_64_BIT)"</span><span class="p">)</span><span class="w">
+            </span><span class="n">add_library</span><span class="p">(</span><span class="n">TestUE</span><span class="w"> </span><span class="n">MODULE</span><span class="w">
+                </span><span class="o">$</span><span class="p">{</span><span class="n">SRC_CORE</span><span class="p">}</span><span class="w">
+            </span><span class="p">)</span><span class="w">
+            </span><span class="n">set_target_properties</span><span class="w"> </span><span class="p">(</span><span class="w"> </span><span class="n">TestUE</span><span class="w"> </span><span class="n">PROPERTIES</span><span class="w"> </span><span class="n">BUNDLE</span><span class="w"> </span><span class="kc">TRUE</span><span class="w"> </span><span class="p">)</span><span class="w">
+        </span><span class="n">endif</span><span class="w"> </span><span class="p">()</span><span class="w">
+    </span><span class="n">endif</span><span class="w"> </span><span class="p">()</span><span class="w">
+</span><span class="n">elseif</span><span class="w"> </span><span class="p">(</span><span class="s2">"${CMAKE_SYSTEM_NAME}"</span><span class="w"> </span><span class="n">STREQUAL</span><span class="w"> </span><span class="s2">"Switch"</span><span class="p">)</span><span class="w">
+    </span><span class="n">add_library</span><span class="p">(</span><span class="n">TestUE</span><span class="w"> </span><span class="n">STATIC</span><span class="w">
+        </span><span class="o">$</span><span class="p">{</span><span class="n">SRC_CORE</span><span class="p">}</span><span class="w">
+    </span><span class="p">)</span><span class="w">
+    </span><span class="n">target_compile_options</span><span class="p">(</span><span class="n">TestUE</span><span class="w"> </span><span class="n">PRIVATE</span><span class="w"> </span><span class="o">-</span><span class="n">m</span><span class="m">64</span><span class="w"> </span><span class="o">-</span><span class="n">mcpu</span><span class="o">=</span><span class="n">cortex</span><span class="o">-</span><span class="n">a</span><span class="m">57</span><span class="o">+</span><span class="n">fp</span><span class="o">+</span><span class="n">simd</span><span class="o">+</span><span class="n">crypto</span><span class="o">+</span><span class="n">crc</span><span class="w"> </span><span class="o">-</span><span class="n">fno</span><span class="o">-</span><span class="n">common</span><span class="w"> </span><span class="o">-</span><span class="n">fno</span><span class="o">-</span><span class="n">short</span><span class="o">-</span><span class="n">enums</span><span class="w"> </span><span class="o">-</span><span class="n">ffunction</span><span class="o">-</span><span class="n">sections</span><span class="w"> </span><span class="o">-</span><span class="n">fdata</span><span class="o">-</span><span class="n">sections</span><span class="w"> </span><span class="o">-</span><span class="n">fPIC</span><span class="w"> </span><span class="o">-</span><span class="n">fms</span><span class="o">-</span><span class="n">extensions</span><span class="p">)</span><span class="w">
+</span><span class="k">else</span><span class="w"> </span><span class="p">(</span><span class="w"> </span><span class="p">)</span><span class="w">
+    </span><span class="n">add_library</span><span class="p">(</span><span class="n">TestUE</span><span class="w"> </span><span class="n">SHARED</span><span class="w">
+        </span><span class="o">$</span><span class="p">{</span><span class="n">SRC_CORE</span><span class="p">}</span><span class="w">
+    </span><span class="p">)</span><span class="w">
+</span><span class="n">endif</span><span class="w"> </span><span class="p">(</span><span class="w"> </span><span class="p">)</span><span class="w">
+
+</span><span class="k">if</span><span class="w"> </span><span class="p">(</span><span class="w"> </span><span class="n">WIN32</span><span class="w"> </span><span class="n">AND</span><span class="w"> </span><span class="n">NOT</span><span class="w"> </span><span class="n">CYGWIN</span><span class="w"> </span><span class="p">)</span><span class="w">
+    </span><span class="n">target_compile_definitions</span><span class="w"> </span><span class="p">(</span><span class="n">TestUE</span><span class="w"> </span><span class="n">PRIVATE</span><span class="w"> </span><span class="n">LUA_BUILD_AS_DLL</span><span class="p">)</span><span class="w">
+</span><span class="n">endif</span><span class="w"> </span><span class="p">(</span><span class="w"> </span><span class="p">)</span><span class="w">
+
+</span><span class="k">if</span><span class="p">(</span><span class="n">UINT_ESPECIALLY</span><span class="p">)</span><span class="w">
+    </span><span class="n">ADD_DEFINITIONS</span><span class="p">(</span><span class="o">-</span><span class="n">DUINT_ESPECIALLY</span><span class="p">)</span><span class="w">
+</span><span class="n">endif</span><span class="p">()</span><span class="w">
+</span></code></pre>
+</div>
+
+<p>在cmake里指定工程组织的结构， 相关编译的宏， link需要的flag, 然后通过shell或者bat生成的相关的工程或者库， 例如生成vs工程 可以使用如下build.bat. (需要安装vs2019)</p>
+
+<pre><code class="language-bat">mkdir build64 &amp; pushd build64
+cmake -G "Visual Studio 16 2019" ..
+popd
+cmake --build build64 --config Release
+md Plugins\x86_64
+copy /Y build64\Release\TestUE.dll Plugins\x86_64\TestUE.dll
+copy /Y build64\Release\TestUE.lib Plugins\x86_64\TestUE.lib
+pause
+</code></pre>
+
+<p>在比如 编译 android 的so可以使用 build.sh 的shell脚本（Mac环境下， 需要本地下载了NDK）</p>
+
+<div class="language-sh highlighter-rouge"><pre class="highlight"><code><span class="k">if</span> <span class="o">[</span> -n <span class="s2">"</span><span class="nv">$ANDROID_NDK</span><span class="s2">"</span> <span class="o">]</span>; <span class="k">then
+    </span><span class="nb">export </span><span class="nv">NDK</span><span class="o">=</span><span class="k">${</span><span class="nv">ANDROID_NDK</span><span class="k">}</span>
+<span class="k">elif</span> <span class="o">[</span> -n <span class="s2">"</span><span class="nv">$ANDROID_NDK_HOME</span><span class="s2">"</span> <span class="o">]</span>; <span class="k">then
+    </span><span class="nb">export </span><span class="nv">NDK</span><span class="o">=</span><span class="k">${</span><span class="nv">ANDROID_NDK_HOME</span><span class="k">}</span>
+<span class="k">elif</span> <span class="o">[</span> -n <span class="s2">"</span><span class="nv">$ANDROID_NDK_HOME</span><span class="s2">"</span> <span class="o">]</span>; <span class="k">then
+    </span><span class="nb">export </span><span class="nv">NDK</span><span class="o">=</span><span class="k">${</span><span class="nv">ANDROID_NDK_HOME</span><span class="k">}</span>
+<span class="k">else
+    </span><span class="nb">export </span><span class="nv">NDK</span><span class="o">=</span>~/Documents/android-sdk/ndk
+<span class="k">fi
+
+if</span> <span class="o">[</span> ! -d <span class="s2">"</span><span class="nv">$NDK</span><span class="s2">"</span> <span class="o">]</span>; <span class="k">then
+    </span><span class="nb">echo</span> <span class="s2">"Please set ANDROID_NDK environment to the root of NDK."</span>
+    <span class="nb">exit </span>1
+<span class="k">fi
+
+function </span>build<span class="o">()</span> <span class="o">{</span>
+    <span class="nv">API</span><span class="o">=</span><span class="nv">$1</span>
+    <span class="nv">ABI</span><span class="o">=</span><span class="nv">$2</span>
+    <span class="nv">TOOLCHAIN_ANME</span><span class="o">=</span><span class="nv">$3</span>
+    <span class="nv">BUILD_PATH</span><span class="o">=</span>build.Android.<span class="k">${</span><span class="nv">ABI</span><span class="k">}</span>
+    cmake -H. -B<span class="k">${</span><span class="nv">BUILD_PATH</span><span class="k">}</span> -DANDROID_ABI<span class="o">=</span><span class="k">${</span><span class="nv">ABI</span><span class="k">}</span> -DCMAKE_BUILD_TYPE<span class="o">=</span>Release -DCMAKE_TOOLCHAIN_FILE<span class="o">=</span><span class="k">${</span><span class="nv">NDK</span><span class="k">}</span>/build/cmake/android.toolchain.cmake -DANDROID_NATIVE_API_LEVEL<span class="o">=</span><span class="k">${</span><span class="nv">API</span><span class="k">}</span> -DANDROID_TOOLCHAIN<span class="o">=</span>clang -DANDROID_TOOLCHAIN_NAME<span class="o">=</span><span class="k">${</span><span class="nv">TOOLCHAIN_ANME</span><span class="k">}</span>
+    cmake --build <span class="k">${</span><span class="nv">BUILD_PATH</span><span class="k">}</span> --config Release
+    mkdir -p Plugins/Android/libs/<span class="k">${</span><span class="nv">ABI</span><span class="k">}</span>/
+    cp <span class="k">${</span><span class="nv">BUILD_PATH</span><span class="k">}</span>/libTestUE.so Plugins/Android/libs/<span class="k">${</span><span class="nv">ABI</span><span class="k">}</span>/libTestUE.so
+<span class="o">}</span>
+
+build android-16 armeabi-v7a arm-linux-androideabi-4.9
+build android-16 arm64-v8a  arm-linux-androideabi-clang
+</code></pre>
+</div>
+
+<p>头文件处理,  在 vs 工程导出的时候， 函数名前需要加上 __declspec(dllexport)  （针对Windows上编译dll）</p>
+
+<div class="language-c highlighter-rouge"><pre class="highlight"><code><span class="cp">#ifdef _API_IMPORTS
+#define DLL_API __declspec(dllexport)
+#else
+#define DLL_API 
+#endif // _API_IMPORTS
+</span>
+<span class="n">DLL_API</span> <span class="kt">int</span> <span class="n">AddNumbers</span><span class="p">(</span><span class="kt">int</span> <span class="n">a</span><span class="p">,</span> <span class="kt">int</span> <span class="n">b</span><span class="p">);</span>
+</code></pre>
+</div>
+
+<p>当导入到Unreal， 配置 build.cs 关联进去， 相关的 需要改为 dllimport</p>
+
+<div class="language-c highlighter-rouge"><pre class="highlight"><code><span class="cp">#ifdef _API_IMPORTS
+#define DLL_API __declspec(dllimport)
+#else
+#define DLL_API 
+#endif // _API_IMPORTS
+</span>
+<span class="n">DLL_API</span> <span class="kt">int</span> <span class="n">AddNumbers</span><span class="p">(</span><span class="kt">int</span> <span class="n">a</span><span class="p">,</span> <span class="kt">int</span> <span class="n">b</span><span class="p">);</span>
+</code></pre>
+</div>
+
+<h2 id="目录结构">目录结构</h2>
+
+<p>在工程根目录新建</p>
+
+<div class="highlighter-rouge"><pre class="highlight"><code>- ThirdParty
+-- XXX(lib Name)
+--- android
+--- include 
+--- x64
+--- IOS
+</code></pre>
+</div>
+
+<h2 id="buildcs">Build.cs</h2>
+
+<p>找到工程目录下 **.Build.cs,   添加 ThirdPartyPath 路径指定：</p>
+
+<div class="language-c# highlighter-rouge"><pre class="highlight"><code><span class="k">private</span> <span class="kt">string</span> <span class="n">ThirdPartyPath</span>
+<span class="p">{</span>
+    <span class="k">get</span>
+    <span class="p">{</span>
+        <span class="k">return</span> <span class="n">Path</span><span class="p">.</span><span class="nf">GetFullPath</span><span class="p">(</span><span class="n">Path</span><span class="p">.</span><span class="nf">Combine</span><span class="p">(</span><span class="n">ModuleDirectory</span><span class="p">,</span> <span class="s">"../../ThirdParty"</span><span class="p">));</span>
+    <span class="p">}</span>
+<span class="p">}</span>
+</code></pre>
+</div>
+
+<p>在 Build的构造函数里指定 头文件路径， 库的搜索路径和相关引用的库名称。  还可以使用 Target.Platform 来区分不同的平台</p>
+
+<div class="language-c# highlighter-rouge"><pre class="highlight"><code><span class="c1">//Type = ModuleType.External;
+</span><span class="kt">string</span> <span class="n">exPath</span> <span class="p">=</span> <span class="n">ThirdPartyPath</span> <span class="p">+</span> <span class="s">"/TestUE"</span><span class="p">;</span>
+<span class="n">PublicIncludePaths</span><span class="p">.</span><span class="nf">Add</span><span class="p">(</span><span class="n">exPath</span> <span class="p">+</span> <span class="s">"/include/"</span><span class="p">);</span>
+
+<span class="k">if</span> <span class="p">(</span><span class="n">Target</span><span class="p">.</span><span class="n">Platform</span> <span class="p">==</span> <span class="n">UnrealTargetPlatform</span><span class="p">.</span><span class="n">Win64</span><span class="p">)</span>
+<span class="p">{</span>
+    <span class="n">PublicDefinitions</span><span class="p">.</span><span class="nf">AddRange</span><span class="p">(</span><span class="k">new</span> <span class="kt">string</span><span class="p">[]</span> <span class="p">{</span> <span class="s">"_API_IMPORTS"</span> <span class="p">});</span>
+    <span class="c1">//PublicSystemLibraryPaths.Add(exPath + "/x64");
+</span>    <span class="n">Console</span><span class="p">.</span><span class="nf">WriteLine</span><span class="p">(</span><span class="s">"File Exist: "</span> <span class="p">+</span> <span class="n">Directory</span><span class="p">.</span><span class="nf">Exists</span><span class="p">(</span><span class="n">exPath</span> <span class="p">+</span> <span class="s">"/x64"</span><span class="p">));</span>
+    <span class="n">PublicAdditionalLibraries</span><span class="p">.</span><span class="nf">Add</span><span class="p">(</span><span class="n">exPath</span> <span class="p">+</span> <span class="s">"/x64/TestUE.lib"</span><span class="p">);</span>
+<span class="p">}</span>
+<span class="k">else</span> <span class="k">if</span> <span class="p">(</span><span class="n">Target</span><span class="p">.</span><span class="n">Platform</span> <span class="p">==</span> <span class="n">UnrealTargetPlatform</span><span class="p">.</span><span class="n">Android</span><span class="p">)</span>
+<span class="p">{</span>
+    <span class="n">AdditionalPropertiesForReceipt</span><span class="p">.</span><span class="nf">Add</span><span class="p">(</span><span class="s">"AndroidPlugin"</span><span class="p">,</span> <span class="n">Path</span><span class="p">.</span><span class="nf">Combine</span><span class="p">(</span><span class="n">exPath</span><span class="p">,</span> <span class="s">"My_APL_armv7.xml"</span><span class="p">));</span>
+    <span class="n">PublicSystemLibraryPaths</span><span class="p">.</span><span class="nf">Add</span><span class="p">(</span><span class="n">Path</span><span class="p">.</span><span class="nf">Combine</span><span class="p">(</span><span class="n">exPath</span><span class="p">,</span> <span class="s">"android"</span><span class="p">));</span>
+    <span class="n">PublicAdditionalLibraries</span><span class="p">.</span><span class="nf">Add</span><span class="p">(</span><span class="s">"TestUE"</span><span class="p">);</span>
+<span class="p">}</span>
+<span class="k">else</span> <span class="k">if</span> <span class="p">(</span><span class="n">Target</span><span class="p">.</span><span class="n">Platform</span> <span class="p">==</span> <span class="n">UnrealTargetPlatform</span><span class="p">.</span><span class="n">IOS</span><span class="p">)</span>
+<span class="p">{</span>
+    <span class="n">PublicSystemLibraryPaths</span><span class="p">.</span><span class="nf">Add</span><span class="p">(</span><span class="n">exPath</span> <span class="p">+</span> <span class="s">"/IOS"</span><span class="p">);</span>
+<span class="p">}</span>
+</code></pre>
+</div>
+
+<p>build.cs 支持 log输出， 在vs编译生成的时候， 输出选项栏里可以看到相关的提示：</p>
+
+<div class="language-c# highlighter-rouge"><pre class="highlight"><code><span class="n">Console</span><span class="p">.</span><span class="nf">WriteLine</span><span class="p">(</span><span class="s">"File Exist: "</span> <span class="p">+</span> <span class="n">Directory</span><span class="p">.</span><span class="nf">Exists</span><span class="p">(</span><span class="n">exPath</span> <span class="p">+</span> <span class="s">"/include"</span><span class="p">));</span>
+</code></pre>
+</div>
+
+<p>如果是库工程， 可以指定 Type  为 External。</p>
+
+<div class="language-c# highlighter-rouge"><pre class="highlight"><code><span class="n">Type</span> <span class="p">=</span> <span class="n">ModuleType</span><span class="p">.</span><span class="n">External</span><span class="p">;</span>
+</code></pre>
+</div>
+
+<p>编写好 build.cs之后， 需要重新生成， 右键选择 uproject 文件， 重新生成 vs 工程文件。</p>
+
+<p><img src="/img/post-unreal/ue3.png" alt="" /></p>
+
+<h2 id="导出">导出</h2>
+
+<p>Win64 导出， 需要手动copy动态链接库(.dll)， 到.exe 同目录下。  启动 xxx/Binaries/Win64 下的.exe文件</p>
+
+<p>Android的生成时， 需要配置 _armv7.xml。</p>
+
+<div class="language-xml highlighter-rouge"><pre class="highlight"><code><span class="cp">&lt;?xml version="1.0" encoding="utf-8"?&gt;</span>
+<span class="c">&lt;!-- steps to add to build additions --&gt;</span>
+<span class="nt">&lt;root</span> <span class="na">xmlns:android=</span><span class="s">"http://schemas.android.com/apk/res/android"</span><span class="nt">&gt;</span>
+ <span class="c">&lt;!-- init section is always evaluated once per architecture --&gt;</span>
+ <span class="nt">&lt;init&gt;</span>
+     <span class="nt">&lt;setBool</span> <span class="na">result=</span><span class="s">"bSupported"</span> <span class="na">value=</span><span class="s">"false"</span><span class="nt">/&gt;</span>
+         <span class="nt">&lt;isArch</span> <span class="na">arch=</span><span class="s">"armeabi-v7a"</span><span class="nt">&gt;</span>
+             <span class="nt">&lt;setBool</span> <span class="na">result=</span><span class="s">"bSupported"</span> <span class="na">value=</span><span class="s">"true"</span><span class="nt">/&gt;</span>
+         <span class="nt">&lt;/isArch&gt;</span>
+ <span class="nt">&lt;/init&gt;</span>
+ 
+ <span class="c">&lt;!-- optional files or directories to copy to Intermediate/Android/APK --&gt;</span>
+ <span class="nt">&lt;resourceCopies&gt;</span>
+     <span class="nt">&lt;isArch</span> <span class="na">arch=</span><span class="s">"armeabi-v7a"</span><span class="nt">&gt;</span>
+         <span class="nt">&lt;copyFile</span> <span class="na">src=</span><span class="s">"$S(BuildDir)/../../../ThirdParty/TestUE/android/libTestUE.so"</span>
+                   <span class="na">dst=</span><span class="s">"$S(BuildDir)/libs/armeabi-v7a/libTestUE.so"</span> <span class="nt">/&gt;</span>
+  <span class="nt">&lt;/isArch&gt;</span>
+ <span class="nt">&lt;/resourceCopies&gt;</span>
+ 
+ <span class="c">&lt;!-- optional libraries to load in GameActivity.java before libUE4.so --&gt;</span>
+ <span class="nt">&lt;soLoadLibrary&gt;</span>
+     <span class="nt">&lt;if</span> <span class="na">condition=</span><span class="s">"bSupported"</span><span class="nt">&gt;</span>
+         <span class="nt">&lt;true&gt;</span>
+   <span class="nt">&lt;loadLibrary</span> <span class="na">name=</span><span class="s">"TestUE"</span> <span class="na">failmsg=</span><span class="s">"Failed to load myso library"</span> <span class="nt">/&gt;</span>
+  <span class="nt">&lt;/true&gt;</span>
+     <span class="nt">&lt;/if&gt;</span>
+ <span class="nt">&lt;/soLoadLibrary&gt;</span>
+<span class="nt">&lt;/root&gt;</span>
+</code></pre>
+</div>
+
+<p>它的作用是：</p>
+
+<p>（1）在打包Android应用时，将AndroidProject/ThirdParty/TestUE/android/libTestUE.so文件拷贝到AndroidProject/Intermediate/Android/APK/libs/armeabi-v7a/目录下。这样就不用手动拷贝了。</p>
+
+<p>（2）在AndroidProject\Intermediate\Android\APK\src\com\epicgames\ue4\GameActivity.java文件中生成加载TestUE库的代码：</p>
+
+<div class="language-java highlighter-rouge"><pre class="highlight"><code><span class="k">try</span>
+<span class="o">{</span>
+ <span class="n">System</span><span class="o">.</span><span class="na">loadLibrary</span><span class="o">(</span><span class="s">"TestUE"</span><span class="o">);</span>
+<span class="o">}</span>
+<span class="k">catch</span> <span class="o">(</span><span class="n">java</span><span class="o">.</span><span class="na">lang</span><span class="o">.</span><span class="na">UnsatisfiedLinkError</span> <span class="n">e</span><span class="o">)</span>
+<span class="o">{</span>
+ <span class="n">Log</span><span class="o">.</span><span class="na">debug</span><span class="o">(</span><span class="n">e</span><span class="o">.</span><span class="na">toString</span><span class="o">());</span>
+ <span class="n">Log</span><span class="o">.</span><span class="na">debug</span><span class="o">(</span><span class="s">"Failed to load TestUE library"</span><span class="o">);</span>
+<span class="o">}</span>
+</code></pre>
+</div>
+
+<p>Note:</p>
+
+<p>Android某些关联的插件可能会因为 墙 的原因而下载不了， 这里可以直接使用 Android Studio 直接打开生成的Android 工程， 在AS里设置好代理之后， 再进行编译运行。 Android生成路径一般在 Intermediate\Android\armv7\gradle目录下。</p>
+
+<h2 id="断点调试">断点调试</h2>
+
+<p>在vs里 以 DebugGame Editor启动 UE （调试-&gt; 开始执行(不调试)）,</p>
+
+<p><img src="/img/post-unreal/ue4.png" alt="" /></p>
+
+<p>UE 启动之后， 然后使用vs 打开 dll 库工程， 选择 Debug -&gt; Attach Process, 在弹出的进程 列表里选择 UE4 。</p>
+
+<p><img src="/img/post-unreal/ue5.png" alt="" /></p>
+
+<p>附加上去就可以命中断点了</p>
+
+<p><img src="/img/post-unreal/ue6.png" alt="" /></p>
+
+    </div>
+  </div>
+
+  <style>
+  .post-nav {
+    overflow: hidden;
+    /* margin-top: 60px; */
+    padding: 12px;
+    white-space: nowrap;
+    /* border-top: 1px solid #eee; */
+  }
+
+  .post-nav-item {
+    display: inline-block;
+    width: 50%;
+    white-space: normal;
+  }
+
+  .post-nav-item a {
+    position: relative;
+    display: inline-block;
+    line-height: 25px;
+    font-size: 14px;
+    color: #555;
+    border-bottom: none;
+  }
+
+  .post-nav-item a:hover {
+    color: #222;
+    font-weight: bold;
+    border-bottom: none;
+  }
+
+  .post-nav-item a:active {
+    top: 2px;
+  }
+
+  .post-nav-item a:before,
+  .post-nav-item a:after {
+    display: inline-block;
+    width: 16px;
+    height: 25px;
+    vertical-align: top;
+    opacity: 0.4;
+    background-size: 16px;
+  }
+
+  .post-nav-none a:none {
+    content: ' ';
+    background-size: 8px;
+  }
+
+  .post-nav-none a:hover:none {
+    opacity: 1;
+  }
+
+  .post-nav-prev a:before {
+    content: ' ';
+    background: url("data:image/svg+xml;base64,PD94bWwgdmVyc2lvbj0iMS4wIiA/PjxzdmcgaGVpZ2h0PSIxMnB4IiB2ZXJzaW9uPSIxLjEiIHZpZXdCb3g9IjAgMCA5IDEyIiB3aWR0aD0iOXB4IiB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHhtbG5zOnNrZXRjaD0iaHR0cDovL3d3dy5ib2hlbWlhbmNvZGluZy5jb20vc2tldGNoL25zIiB4bWxuczp4bGluaz0iaHR0cDovL3d3dy53My5vcmcvMTk5OS94bGluayI+PHRpdGxlLz48ZGVzYy8+PGRlZnMvPjxnIGZpbGw9Im5vbmUiIGZpbGwtcnVsZT0iZXZlbm9kZCIgaWQ9IlBhZ2UtMSIgc3Ryb2tlPSJub25lIiBzdHJva2Utd2lkdGg9IjEiPjxnIGZpbGw9IiMwMDAwMDAiIGlkPSJDb3JlIiB0cmFuc2Zvcm09InRyYW5zbGF0ZSgtMjE4LjAwMDAwMCwgLTkwLjAwMDAwMCkiPjxnIGlkPSJjaGV2cm9uLWxlZnQiIHRyYW5zZm9ybT0idHJhbnNsYXRlKDIxOC41MDAwMDAsIDkwLjAwMDAwMCkiPjxwYXRoIGQ9Ik03LjQsMS40IEw2LDAgTC04Ljg4MTc4NDJlLTE2LDYgTDYsMTIgTDcuNCwxMC42IEwyLjgsNiBMNy40LDEuNCBaIiBpZD0iU2hhcGUiLz48L2c+PC9nPjwvZz48L3N2Zz4=") no-repeat 0 50%;
+    background-size: 8px;
+  }
+
+  .post-nav-prev a:hover:before {
+    opacity: 1;
+  }
+
+  .post-nav-next {
+    text-align: right;
+  }
+
+  .post-nav-next a:after {
+    content: ' ';
+    background: url("data:image/svg+xml;base64,PD94bWwgdmVyc2lvbj0iMS4wIiA/PjxzdmcgaGVpZ2h0PSIxMnB4IiB2ZXJzaW9uPSIxLjEiIHZpZXdCb3g9IjAgMCA5IDEyIiB3aWR0aD0iOXB4IiB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHhtbG5zOnNrZXRjaD0iaHR0cDovL3d3dy5ib2hlbWlhbmNvZGluZy5jb20vc2tldGNoL25zIiB4bWxuczp4bGluaz0iaHR0cDovL3d3dy53My5vcmcvMTk5OS94bGluayI+PHRpdGxlLz48ZGVzYy8+PGRlZnMvPjxnIGZpbGw9Im5vbmUiIGZpbGwtcnVsZT0iZXZlbm9kZCIgaWQ9IlBhZ2UtMSIgc3Ryb2tlPSJub25lIiBzdHJva2Utd2lkdGg9IjEiPjxnIGZpbGw9IiMwMDAwMDAiIGlkPSJDb3JlIiB0cmFuc2Zvcm09InRyYW5zbGF0ZSgtMjYwLjAwMDAwMCwgLTkwLjAwMDAwMCkiPjxnIGlkPSJjaGV2cm9uLXJpZ2h0IiB0cmFuc2Zvcm09InRyYW5zbGF0ZSgyNjAuNTAwMDAwLCA5MC4wMDAwMDApIj48cGF0aCBkPSJNMSwwIEwtMC40LDEuNCBMNC4yLDYgTC0wLjQsMTAuNiBMMSwxMiBMNyw2IEwxLDAgWiIgaWQ9IlNoYXBlIi8+PC9nPjwvZz48L2c+PC9zdmc+") no-repeat 100% 50%;
+    background-size: 8px;
+  }
+
+  .post-nav-next a:hover:after {
+    opacity: 1;
+  }
+</style>
+
+
+
+<div class="post-nav">
+
+  
+  <div class="post-nav-none post-nav-item">
+    <a href=""> </a>
+  </div>
+  
+
+  
+  <div class="post-nav-next post-nav-item">
+    
+    <a href="/blog/2022/compiler/"> Unity Scripting Runtime</a>
+  </div>
+  
+
+</div>
+
+</article>
+    </div>
+
+    <footer class="site-footer">
+  <div class="container">
+    <ul class="social">
+  <li><a href="https://twitter.com/penghuailiang" target="_blank"><i class="icon icon-twitter"></i></a></li>
+  <li><a href="https://www.zhihu.com/people/huailiangpenguin" target="_blank"><i class="icon icon-zhihu"></i></a></li>
+  <li><a href="https://www.facebook.com/profile.php?id=100004290725320" target="_blank"><i class="icon icon-facebook"></i></a></li>
+  <li><a href="https://weibo.com/6212299692/profile?topnav=1&wvr=6" target="_blank"><i class="icon icon-sina"></i></a></li>
+  <li><a href="https://www.linkedin.com/in/penghuailiang/" target="_blank"><i class="icon icon-linkedin"></i></a></li>
+  <li><a href="https://github.com/huailiang" target="_blank"><i class="icon icon-github"></i></a></li>
+</ul>
+    <p class="txt-medium-gray">
+      <small>&copy;2023 All rights reserved. </small>
+    </p>
+  </div>
+</footer>
+    <a href="https://github.com/huailiang" target="_blank" class="github-corner"><svg width="80" height="80" viewBox="0 0 250 250" style="fill:#337ab7; color:#fff; position: absolute; top: 0; border: 0; right: 0;"><path d="M0,0 L115,115 L130,115 L142,142 L250,250 L250,0 Z"></path><path d="M128.3,109.0 C113.8,99.7 119.0,89.6 119.0,89.6 C122.0,82.7 120.5,78.6 120.5,78.6 C119.2,72.0 123.4,76.3 123.4,76.3 C127.3,80.9 125.5,87.3 125.5,87.3 C122.9,97.6 130.6,101.9 134.4,103.2" fill="currentColor" style="transform-origin: 130px 106px;" class="octo-arm"></path><path d="M115.0,115.0 C114.9,115.1 118.7,116.5 119.8,115.4 L133.7,101.6 C136.9,99.2 139.9,98.4 142.2,98.6 C133.8,88.0 127.5,74.4 143.8,58.0 C148.5,53.4 154.0,51.2 159.7,51.0 C160.3,49.4 163.2,43.6 171.4,40.1 C171.4,40.1 176.1,42.5 178.8,56.2 C183.1,58.6 187.2,61.8 190.9,65.4 C194.5,69.0 197.7,73.2 200.1,77.6 C213.8,80.2 216.3,84.9 216.3,84.9 C212.7,93.1 206.9,96.0 205.4,96.6 C205.1,102.4 203.0,107.8 198.3,112.5 C181.9,128.9 168.3,122.5 157.7,114.1 C157.9,116.9 156.7,120.9 152.7,124.9 L141.0,136.5 C139.8,137.7 141.6,141.9 141.8,141.8 Z" fill="currentColor" class="octo-body"></path></svg></a>
+
+
+    <script src="//code.jquery.com/jquery-1.11.3.min.js"></script>
+    <script>
+      $(document).ready(function () {
+        $('.sliding-panel-button,.sliding-panel-fade-screen,.sliding-panel-close').on('click touchstart', function (e) {
+          $('.sliding-panel-content,.sliding-panel-fade-screen').toggleClass('is-visible');
+          e.preventDefault();
+        });
+      });
+    </script>
+  </main>
+</body>
+
+</html>
