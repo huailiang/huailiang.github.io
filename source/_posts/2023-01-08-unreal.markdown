@@ -13,11 +13,11 @@ tags:
 
 vs创建一个动态链接库工程：
 
-![](/img/post-unreal/ue2.png)
+![](/img/post-unreal/ue2.PNG)
 
 在属性面板里开启调试符号, 调试信息格式设置为用于“编辑并继续”的程序数据库
 
-![](/img/post-unreal/ue1.png)
+![](/img/post-unreal/ue1.PNG)
 
 编译生成 .dll 和 .lib
 
@@ -236,7 +236,7 @@ Type = ModuleType.External;
 
 编写好 build.cs之后， 需要重新生成， 右键选择 uproject 文件， 重新生成 vs 工程文件。
 
-![](/img/post-unreal/ue3.png)
+![](/img/post-unreal/ue3.PNG)
 
 ## 导出
 
@@ -304,12 +304,12 @@ Android某些关联的插件可能会因为 墙 的原因而下载不了， 这�
 
 在vs里 以 DebugGame Editor启动 UE （调试-> 开始执行(不调试)）, 
 
-![](/img/post-unreal/ue4.png)
+![](/img/post-unreal/ue4.PNG)
 
 UE 启动之后， 然后使用vs 打开 dll 库工程， 选择 Debug -> Attach Process, 在弹出的进程 列表里选择 UE4 。
 
-![](/img/post-unreal/ue5.png)
+![](/img/post-unreal/ue5.PNG)
 
 附加上去就可以命中断点了
 
-![](/img/post-unreal/ue6.png)
+![](/img/post-unreal/ue6.PNG)
