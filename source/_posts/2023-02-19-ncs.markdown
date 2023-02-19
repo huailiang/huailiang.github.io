@@ -31,6 +31,12 @@ tags:
 
 # PBD
 
+$$
+F=−k⋅Δ_x
+$$
+
+
+$Δ_x$是两个长度的差值。如果 $\Delta_x$越大，那么力也就越大。从公式可以看出，如果我们单纯从一个方向看，那么质点所受到的力是相反方向。
 
 # 基于无监督的布料模拟
 
@@ -77,4 +83,6 @@ $$
 $$
 L_{gravity} = −Mx_𝑡 g.
 $$
+
+
 [i1]: https://udraper.com/zh/blogs/tutorials/preparing-collider-mesh
