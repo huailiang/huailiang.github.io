@@ -1,0 +1,80 @@
+---
+layout:     post
+title:      "AI布料模拟"
+date:       2023-02-19 02:00:00
+author:     "huailiang"
+tags:
+    - Unreal
+---
+
+
+
+
+
+## MagicCloth
+
+
+
+
+# uProper
+
+
+#### APEX Cloth
+
+从4.16版的虚幻引擎中，APEX Cloth 已被 NVIDIA的NvCloth解算器取代。这是一个轻巧的服装布料解算器，负责运行布料服装的模拟。该服装布料模拟器集成轻巧且非常可扩展，因为我们现在可以直接访问此数据。与APEX Clothing不同的是，APEX Clothing是一个复杂的SDK，可以一站式地进行服装模拟，同时处理模拟和渲染。
+
+
+#### uPraper
+
+[uDraper][i1]虚幻引擎实时布料模拟插件是由三镜团队根据我们在实时布料模拟、3D服装设计、材质和虚幻引擎开发方面的丰富知识和经验而创建的。
+
+
+# PBD
+
+
+# 基于无监督的布料模拟
+
+
+#### 曲度损失函数
+
+$$
+L_{blending} = k_b  \frac {l^2}{8\alpha}  (\phi_t - \phi^R)^2
+$$
+
+$k_b$为弯曲刚度，l为公共边长度，$\alpha$为两面面积之和，$\phi_t$为二面角，$\phi^R$为其余服装中的二面角。
+
+
+#### 碰撞损失函数
+
+
+$$
+L_{collisiion} = k_c \min (d(x_t; \theta_t) - \epsilon, 0)^2
+$$
+
+
+$k_c$为平衡因子，$d( · ; θ)$为与θ参数化的体网格的符号距离，内部为负值，$\epsilon$为小阈值以保证鲁棒性。
+
+#### 惯性函数  Inertia Loss
+
+
+$$
+x^{proj}_𝑡 = x_{𝑡−1} + v_{𝑡−1} \Delta_t = 2x_{𝑡−1} − x_{t−2}
+$$
+
+$$
+ℎ(x_𝑡) = \frac{1}{2} (x_𝑡 − x^{proj}_𝑡 )^𝑇 M(x_𝑡 − x^{proj}_𝑡 ) + Δ_𝑡^2𝐸 (x_𝑡 )
+$$
+
+M表示为质量矩阵，$Δ_t$为模拟的时间步长，E ( · )为代表内外受力。
+
+$$
+L_{inertia} = \frac{1}{2Δ_𝑡^2} 𝑚(𝑥_𝑡 − 𝑥_{proj}^𝑡 )^2
+$$
+
+
+#### 重力损失
+
+$$
+L_{gravity} = −Mx_𝑡 g.
+$$
+[i1]: https://udraper.com/zh/blogs/tutorials/preparing-collider-mesh
