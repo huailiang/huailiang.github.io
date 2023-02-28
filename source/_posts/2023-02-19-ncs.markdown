@@ -194,6 +194,17 @@ $$
 
 此项将顶点按照重力方向运动， 其值的大小由质量和重量加权得到。
 
+
+## 运行结果
+
+作者代码实现时， 会做一些预处理， 比如在输入网格前， 现将网格使用拉普拉斯变换对顶点进行平滑处理。 代码最后将运行数据存在numpy里， 然后使用Blender的顶点修改器应用修改的数据， 如果想在引擎中实现效果， 最好讲顶点数据存在一张RenterTexture, 运行时通过uv偏移采样数据去修改定点位置。 
+
+
+![](/img/post-ml/ncs7.jpg)
+
+
+
+
 [i1]: https://udraper.com/zh/blogs/tutorials/preparing-collider-mesh
 [i2]: https://www.jianshu.com/p/7774ea4adc70?ivk_sa=1024320u
 [i3]: https://zhuanlan.zhihu.com/p/468001942
