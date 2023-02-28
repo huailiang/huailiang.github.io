@@ -68,6 +68,31 @@ MathJax.Hub.Config({
     <article class="post">
   <header class="post-header">
     <h1 class="post-title2">
+      <a class="post-link" href="/blog/2023/ncs/">AI布料模拟</a>
+    </h1>
+    <div class="post-meta">
+      <time>Feb 19, 2023</time>
+    </div>
+  </header>
+
+  <p><a href="/blog/2023/ncs/" title="Permalink to: AI布料模拟"
+      class="read-more">
+  传统在游戏中实现大多是插件的方式实现， 比如Unity的Magica Cloth, Unreal 里的 uDraper。大多基于AI的布料解算封装在插件中，
+
+
+Magica Cloth
+
+Magica Cloth 是一款Unity上的高速布料模拟器，完全使用自己的物理引擎，因此，它完全不会干扰Unity的物理系统。其代码实现基于job system 在CPU上多线程运行。
+
+
+
+
+ ...</a></p>
+</article>
+  
+    <article class="post">
+  <header class="post-header">
+    <h1 class="post-title2">
       <a class="post-link" href="/blog/2023/unreal/">unreal 集成第三方算法库</a>
     </h1>
     <div class="post-meta">
@@ -197,21 +222,6 @@ builtin的预览流实现：
   <p><a href="/blog/2022/astc/" title="Permalink to: ASTC"
       class="read-more">
   在大多数情况下，纹理是用二维图像表示的。然而，标准的压缩算法(RLE, LZW, Deflate)和流行的压缩图像格式(JPEG, PNG, TIFF)并不适合纹理。传统压缩算法的主要问题是无法实现对内存中整个纹理的其中一块Texel随机访问——不解压整个纹理，就不可能解压一个特定的texel。纹理访问模式是高度随机的：渲染时只使用需要的部分纹理，并且访问的顺序无法提前预知。因此，图形...</a></p>
-</article>
-  
-    <article class="post">
-  <header class="post-header">
-    <h1 class="post-title2">
-      <a class="post-link" href="/blog/2022/docker/">Docker Unity</a>
-    </h1>
-    <div class="post-meta">
-      <time>Feb 2, 2022</time>
-    </div>
-  </header>
-
-  <p><a href="/blog/2022/docker/" title="Permalink to: Docker Unity"
-      class="read-more">
-  最近项目的开发中，遇到不少用户上传的视频、图片资源。 这些资源需要下载到端侧， 然后渲染出来。 由于Unity不能离线处理处理这些资源， 所以很多图片资源在显存直接展开成RGBA(png)或者RGB（jpg）， 由于没有压缩，所以带来很大的显存开销。于是就想把unity中部署docker中， 在一些资源部署到server上去之前， 把图片压缩成ETC、ASTC、PVRTC这些支持GPU...</a></p>
 </article>
   
 
