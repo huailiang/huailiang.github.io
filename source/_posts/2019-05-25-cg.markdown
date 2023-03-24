@@ -204,7 +204,48 @@ q表示这是一个透视值，在进行纹理查找之前，它被用来除以�
 ### 偏导函数
 
 ddx(a) &nbsp;近似a关于屏幕空间x轴的偏导数ddy(a)近似a关于屏幕空间y轴的偏导数
- 
+
+### 指令优化
+
+mad是mul add的缩写，我们需要在代码中使用mul add的写法，因为这种写法会将计算使用一条mad指令来完成，否则可能就需要使用add和mul两条指令来完成；
+
+
+一个简单的例子：
+
+$$
+(x-0.3) * 2.5 = x*2.5 +(-0.75)
+$$
+
+左右两边在运算结果上并没有区别。但是编译后左边的代码需要用到两个指令，右边的代码只需要用到一个指令。如下图可知，Mad乘加操作是一条指令。
+
+
+![](/img/post-engine/cg.jpg)
+
+
+主要要有1.0/b，不要直接写成除法，那么就会生成div指令，而不是mad指令了；rcp，将除法转换为乘以除数的倒数，
+
+
+产生阴影时可以使用tex2DProj来利用硬件特性加速
+
+
+
+## 一些用于优化的属性
+HLSL中用于优化的指令，[branch],[flatten],[loop],[unroll]
+
+
+### if语句
+* branch
+添加了branch标签的if语句shader会根据判断语句只执行当前情况的代码，这样会产生跳转指令。
+* flatten
+添加了flatten标签的if语句shader会执行全部情况的分支代码，然后根据判断语句来决定使用哪个结果。
+### for语句
+* unroll
+添加了unroll标签的for循环是可以展开的，直到循环条件终止，代价是产生更多机器码
+* loop
+添加了loop标签的for循环不能展开，流式控制每次的循环迭代，for默认是loop
+
+
+
 ### 调试函数
 
 void debug(float4 x) &nbsp;如果在编译时设置了DEBUG，片段着 色程序中调用该函数可以将值x作为COLOR语义的最终输出；否则该函数什么也不做。
@@ -213,68 +254,85 @@ void debug(float4 x) &nbsp;如果在编译时设置了DEBUG，片段着 色程�
 
 ### HLSL函数和glsl映射
 
-<table border="1">
+
+<table>
  <tr>
     <th>HLSL</th>
     <th>GLSL</th>
+    <th>Desc</th>
 </tr>
 <tr>
     <td>ddx  </td>
     <td>dFdx</td>
+    <td>偏导函数</td>
 </tr>            
 <tr>
-    <td>atan2(y,x) </td>
+    <td>atan2(y,x)</td>
     <td>atan(x,y)</td>
+    <td>反正切函数</td>
 </tr>            
 <tr>
     <td>ddx_coarse</td>
     <td>dFdxCoarse</td>
+    <td>计算与屏幕空间 x 坐标相关的低精度部分</td>
 </tr>            
 <tr>
     <td>ddx_fine </td>
     <td>dFdxFine</td>
+    <td>计算与屏幕空间 x 坐标相关的高精度分部</td>
 </tr>            
 <tr>
     <td>ddy </td>
     <td>dFdy</td>
+    <td>偏导函数</td>
 </tr>            
 <tr>
     <td>ddy_coarse</td>
     <td>dFdyCoarse</td>
+    <td>计算与屏幕空间 y 坐标相关的低精度部分</td>
 </tr>            
 <tr>
     <td>ddy_fine </td>
     <td>dFdyFine</td>
+    <td>计算与屏幕空间 y 坐标相关的高精度分部</td>
 </tr>            
 <tr>
     <td>EvaluateAttributeAtCentroid </td>
     <td>interpolateAtCentroid</td>
+    <td> 评估像素质心</td>
 </tr>              
 <tr>
     <td>EvaluateAttributeAtSample </td>
     <td>interpolateAtSample</td>
+    <td>评估索引的取样位置</td>
 </tr>            
  <tr>
     <td>EvaluateAttributeSnapped </td>
     <td>interpolateAtOffset</td>
+    <td>评估在像素的质心与一个偏移量</td>
 </tr>                
   <tr>
     <td>frac </td>
     <td>fract</td>
+    <td>返回标量或每个矢量中各分量的小数部分</td>
 </tr>    
   <tr>
     <td>lerp </td>
     <td>mix</td>
+    <td>插值</td>
 </tr> 
  <tr>
     <td>mad  </td>
     <td>fma</td>
+    <td>相乘并求和</td>
 </tr>    
  <tr>
     <td>saturate </td>
     <td>clamp(x, 0.0, 1.0)</td>
+    <td>限制0-1之间</td>
 </tr>     
-</table>
+</table>          
+
 
 
 1. [glsl API手册][i1]
