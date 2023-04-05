@@ -362,6 +362,7 @@ void main() {
 6、[谈谈噪声][i1] 
 7、[基于ComputeShader生成Perlin Noise噪声图][i8]
 8、[Understanding Perlin Noise][i9]
+9. [WebGL进阶——走进图形噪声][i14]
 
 [i1]: http://blog.csdn.net/candycat1992/article/details/50346469
 [i2]: https://flafla2.github.io/2014/08/09/perlinnoise.html
@@ -376,3 +377,4 @@ void main() {
 [i11]: https://www.shadertoy.com/view/ssj3Wc
 [i12]: https://www.shadertoy.com/view/ss2GWc
 [I13]: https://www.shadertoy.com/view/ssfSWn
+[i14]: https://zhuanlan.zhihu.com/p/68507311
