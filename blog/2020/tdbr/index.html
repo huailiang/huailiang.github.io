@@ -155,10 +155,10 @@ MathJax.Hub.Config({
 <h5 id="几种常用storgemode的含义">几种常用storgeMode的含义：</h5>
 
 <ul>
-  <li>MTLStorageModeShared：表示资源保存在system memory，且CPU和GPU都可以访问；</li>
-  <li>MTLStorageModePrivate：表示资源只有GPU可以访问；</li>
-  <li>MTLStorageModeMemoryless：表示资源只有GPU可以访问，且生命周期只是临时存在于一个Pass期间；</li>
-  <li>MTLStorageModeManaged：表示CPU和GPU分别会维护一份资源的拷贝，并且资源具有“可见性”，即无论哪边对资源进行了更改，CPU和GPU都可见都会进行更新同步；</li>
+  <li>MTLStorageModeShared，CPU 填充更新，CPU 和 GPU 都可访，这也是默认的存储模式。</li>
+  <li>MTLStorageModePrivate，仅 GPU访问，常用于渲染目标，中间资源或纹理流。</li>
+  <li>MTLStorageModeShared，CPU填充一次，GPU频繁访问。使用这个模式资源填充内容，然后将资源内容通过 GPU 复制到使用 MTLStorageModePrivate 模式的另一个资源中。</li>
+  <li>MTLStorageModeMemoryless，仅由GPU访问，其内容是临时的（仅纹理），这种类型资源的数据不存储在系统内存中，而是存储在 GPU 内部的 Tile Memory 中（如上图所示），相比系统内存，Tile Memory 具有更高的带宽、更低的延迟和更低的功耗。比较适合创建在渲染过程中不需要 GPU/CPU 访问而使用的临时资源，比如 Depth/Stencil Target，可以节省大量的系统内存。</li>
 </ul>
 
 <div class="language-c highlighter-rouge"><pre class="highlight"><code><span class="cm">/*!
