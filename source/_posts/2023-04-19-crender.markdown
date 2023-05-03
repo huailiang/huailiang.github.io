@@ -1,0 +1,152 @@
+---
+layout:     post
+title:      "云渲染"
+date:       2023-04-19 02:00:00
+author:     "huailiang"
+tags:
+    - 人工智能
+---
+
+
+
+考虑将高负载的“渲染”放置到能力强大的后端，解放前端， 为此一些游戏引擎厂商提出了一种新的三维“云渲染”方案-基于WebRTC的视频流推送技术：
+* UE称之为 [PixelStreaming][i4]；
+* Unity称之为 [RenderStreaming][i5]；
+
+由于基本原理一致，就是将场景通过后端渲染，然后采用实时视频流推送到网页端，并且能够实现前端到后端的交互同步。通过 WebRTC 协 议将其发送给位于接收端的浏览器和设备。事实上，通过在高性能主机系统上运行渲染引擎，用户能在所有终 端设备上享受到与主机相同的画质，并且能体验到所有的渲染引擎功能。
+
+
+WebRTC(网页实时通信)是一种通过网页浏览器和移动应用程序进行实时通信的协议。该协议允许以直接链接 的方式传输音频和视频，用户无需下载任何插件或应用程序。通信命令通过 API 接口提交，前端只要声明一个 video 标签就可以实现视频流的加载和交互。
+
+## Unreal
+
+UE5云渲染方案概述
+UE5云渲染方案叫[PixelStreaming](https://docs.unrealengine.com/5.1/en-US/pixel-streaming-in-unreal-engine/)
+
+
+
+## 启动
+- UE启用Pixel Streaming插件
+
+- 下载PixelStreamingInfrastucture源码，执行setup.bat下载依赖，本地会自动生成 nexe 和 coturn 文件夹。  node是nodejs本地执行环境， 如果不想在脚本下载， 可以直接copy过来， 注意版本号对齐， 默认是：v16.4.2
+
+![](/img/post-render/ue1.PNG)
+
+- 执行`Start_SignallingServer`启动服务器
+
+![](image/ue2.PNG)
+
+- 启动UE打包的客户端，启动参数传` -AudioMixer -PixelStreamingURL=ws://localhost:8888 -RenderOffScreen`
+
+- 连接服务器，网页输入127.0.0.1:8080测试, 
+
+
+当有客户端连接时， 会有如下提示：
+
+![](/img/post-render/ue3.PNG)
+
+
+配置文件位于**SignallingWebServer**的Config.json下，配置内容如下， 这里可以修改启动的服务器的端口：
+
+```json
+{
+	"UseFrontend": false,
+	"UseMatchmaker": false,
+	"UseHTTPS": false,
+	"UseAuthentication": false,
+	"LogToFile": true,
+	"LogVerbose": true,
+	"HomepageFile": "player.html",
+	"AdditionalRoutes": {},
+	"EnableWebserver": true,
+	"MatchmakerAddress": "",
+	"MatchmakerPort": "9999",
+	"PublicIp": "localhost",
+	"HttpPort": 8080,
+	"HttpsPort": 443,
+	"StreamerPort": 8888,
+	"SFUPort": 8889,
+	"MaxPlayerCount": -1
+}
+```
+
+浏览器启来之后效果如下：
+
+![](/img/post-render/ue4.PNG)
+
+
+## Unity
+
+
+![](/img/post-render/unity1.png)
+
+
+
+![](/img/post-render/unity2.png)
+
+
+编译webapp 执行如下：
+
+```sh
+cd WebApp
+npm install
+npm run build
+npm run start
+```
+
+使用 ts-node 运行server:
+
+```sh
+npm run dev
+```
+
+打包发布：
+
+```sh
+npm run pack
+```
+
+npm run之类的命令， 实际执行的 package.json里的配置， 比如 build 执行的是：
+
+```
+tsc -p tsconfig.build.json
+```
+
+start执行的是：
+
+```
+node ./build/index.js
+```
+
+
+## Typescript 环境
+
+
+Typescript 在webstorm 中调试环境配置
+
+
+大体上来看3大步：
+
+* 安装ts-node
+* 为ts-node创建一个自定义Node.js运行/调试配置
+
+
+
+安装 ts_node, 直接在终端上执行下面的命名
+
+```ts
+npm install ts-node
+```
+
+创建 运行调试配置：
+
+
+
+![](/img/post-render/ts1.PNG)
+
+
+[i1]: https://blog.csdn.net/qq_43303950/article/details/128878032
+[i2]: https://docs.unity3d.com/Packages/com.unity.renderstreaming@3.1/manual/customize-webapp.html
+[i3]: https://docs.unity3d.com/Packages/com.unity.renderstreaming@3.1/manual/customize-webapp.html
+[i4]: https://docs.unrealengine.com/5.1/en-US/pixel-streaming-sample-project-for-unreal-engine/
+[i5]: https://docs.unity3d.com/Packages/com.unity.renderstreaming@3.1/manual/overview.html
