@@ -7,7 +7,31 @@ tags:
     - 人工智能
 ---
 
+WebRTC 本身提供的是 1 对 1 的通信模型，在 STUN/TURN 的辅助下，如果能实现 NAT 穿越，那么两个浏览器是可以直接进行媒体数据交换的；如果不能实现 NAT 穿越，那么只能通过 TURN 服务器进行数据转发的方式实现通信。目前来看，Google 开源的用于学习和研究的项目基本都是基于 STUN/TURN 的 1 对 1 通信。
 
+__Mesh 方案__，即多个终端之间两两进行连接，形成一个网状结构。比如 A、B、C 三个终端进行多对多通信，当 A 想要共享媒体（比如音频、视频）时，它需要分别向 B 和 C 发送数据。同样的道理，B 想要共享媒体，就需要分别向 A、C 发送数据，依次类推。这种方案对各终端的带宽要求比较高。
+
+__MCU（Multipoint Conferencing Unit）方案__，该方案由一个服务器和多个终端组成一个星形结构。各终端将自己要共享的音视频流发送给服务器，服务器端会将在同一个房间中的所有终端的音视频流进行混合，最终生成一个混合后的音视频流再发给各个终端，这样各终端就可以看到 / 听到其他终端的音视频了。实际上服务器端就是一个音视频混合器，这种方案服务器的压力会非常大。
+
+
+__SFU（Selective Forwarding Unit）方案__，该方案也是由一个服务器和多个终端组成，但与 MCU 不同的是，SFU 不对音视频进行混流，收到某个终端共享的音视频流后，就直接将该音视频流转发给房间内的其他终端。它实际上就是一个音视频路由转发器。
+
+![](/img/post-render/rtc.png)
+
+那 MCU 的优势有哪些呢？大致可总结为如下几点：
+
+* 技术非常成熟，在硬件视频会议中应用非常广泛。
+* 作为音视频网关，通过解码、再编码可以屏蔽不同编解码设备的差异化，满足更多客户的集成需求，提升用户体验和产品竞争力。
+* 将多路视频混合成一路，所有参与人看到的是相同的画面，客户体验非常好。
+  
+
+同样，MCU 也有一些不足，主要表现为：
+
+* 重新解码、编码、混流，需要大量的运算，对 CPU 资源的消耗很大。
+* 重新解码、编码、混流还会带来延迟。
+* 由于机器资源耗费很大，所以 MCU 所提供的容量有限，一般十几路视频就是上限了。
+
+## 游戏领域云渲染
 
 考虑将高负载的“渲染”放置到能力强大的后端，解放前端， 为此一些游戏引擎厂商提出了一种新的三维“云渲染”方案-基于WebRTC的视频流推送技术：
 * UE称之为 [PixelStreaming][i4]；
@@ -20,12 +44,9 @@ WebRTC(网页实时通信)是一种通过网页浏览器和移动应用程序进
 
 ## Unreal
 
-UE5云渲染方案概述
 UE5云渲染方案叫[PixelStreaming](https://docs.unrealengine.com/5.1/en-US/pixel-streaming-in-unreal-engine/)
 
 
-
-## 启动
 - UE启用Pixel Streaming插件
 
 - 下载PixelStreamingInfrastucture源码，执行setup.bat下载依赖，本地会自动生成 nexe 和 coturn 文件夹。  node是nodejs本地执行环境， 如果不想在脚本下载， 可以直接copy过来， 注意版本号对齐， 默认是：v16.4.2
@@ -34,7 +55,7 @@ UE5云渲染方案叫[PixelStreaming](https://docs.unrealengine.com/5.1/en-US/pi
 
 - 执行`Start_SignallingServer`启动服务器
 
-![](image/ue2.PNG)
+![](/img/post-render/ue2.PNG)
 
 - 启动UE打包的客户端，启动参数传` -AudioMixer -PixelStreamingURL=ws://localhost:8888 -RenderOffScreen`
 
@@ -80,6 +101,8 @@ UE5云渲染方案叫[PixelStreaming](https://docs.unrealengine.com/5.1/en-US/pi
 
 ![](/img/post-render/unity1.png)
 
+
+具体的消息传递过程：
 
 
 ![](/img/post-render/unity2.png)
@@ -161,25 +184,25 @@ __这时候他可以进行编解码和传输了，这是对于调用者来说。
 
 所以在B没有准备好之前，他可以使用一个PRanswer，就是提前预定好的一个answer给这个A发过去，发过去之后呢，它就变成了这个have-remote-offer这个状态，这是一个中间状态，
 
-在这个状态下，双方的这个链路是可以协商好的，只是没有这个媒体数据，当那个B设置好他自己的媒体流之后，就是一切都准备好之后，然后再给他回一个最终的answer，当调用者收到它这个最终的answer之后，他又变成了stable状态，那双方就可以就真正协商好了。
+在这个状态下，双方的这个链路是可以协商好的，只是没有这个媒体数据，当那个B设置好他自己的媒体流之后，就是一切都准备好之后，然后再给他回一个最终的answer，当调用者收到它这个最终的answer之后，他又变成了stable状态，那双方就可以就真正协商好了。这时候，实际是减少了底层的这个网络流的这个握手，以及一些其他的逻辑处理工作，这样就节省了时间。但对于被调用者也是类似的，所以在他回这个真正的answer之前，它是处于这have-local-PRanswer的，当真正的这个最终的Answer，准备好之后呢，再重新设一下setLocalAnswer，他又变成了stable状态，这就是一个整个协商完整的一个状态变化。只有在整个协商完成之后，才能进行我们后边儿的真正的音视频数据的传输以及编解码。这就是协商状态的变化。
 
-这时候，实际是减少了底层的这个网络流的这个握手，以及一些其他的逻辑处理工作，这样就节省了时间。
+同时 ICE connection 和 ICE gathering 状态的变化：
 
-但对于被调用者也是类似的，所以在他回这个真正的answer之前，它是处于这have-local-PRanswer的，当真正的这个最终的Answer，准备好之后呢，再重新设一下setLocalAnswer，他又变成了stable状态，这就是一个整个协商完整的一个状态变化。
+```
+ICE gathering state: new -> gathering -> complete
 
-只有在整个协商完成之后，才能进行我们后边儿的真正的音视频数据的传输以及编解码。
-这就是协商状态的变化。
-
+ICE connection state: new -> checking -> connected -> disconnected
+```
 
 
 如果双方同时在本地生成了offer， 然后同时发给了对方， 肯定会协商失败
 
 
-A polite peer, 如果将要设置的信令与本身的信令状态有冲突， 就会使用回滚， 使用自身的信令状态变为stable后继续设置对方发来的信令
+* A polite peer, 如果将要设置的信令与本身的信令状态有冲突， 就会使用回滚， 使用自身的信令状态变为stable后继续设置对方发来的信令
 
-A impolite peer, 如果将设置的信令与本身信令状态有冲突， 就会放弃设置对方的信令（以我为准）
+* A impolite peer, 如果将设置的信令与本身信令状态有冲突， 就会放弃设置对方的信令（以我为准）
 
-双方谁是polite peer 和 impolite peer 没有限制， 是可以随机的。
+双方谁是 polite peer 和 impolite peer 没有限制， 是可以随机的。
 
 
 
@@ -239,9 +262,11 @@ npm install ts-node
 
 创建 运行调试配置：
 
-
-
 ![](/img/post-render/ts1.PNG)
+
+运行查看中间过程：
+
+![](/img/post-render/ts2.jpg)
 
 
 [i1]: https://blog.csdn.net/qq_43303950/article/details/128878032
