@@ -68,6 +68,30 @@ MathJax.Hub.Config({
     <article class="post">
   <header class="post-header">
     <h1 class="post-title2">
+      <a class="post-link" href="/blog/2019/vulkan/">Valkan 基础渲染流程</a>
+    </h1>
+    <div class="post-meta">
+      <time>Sep 8, 2019</time>
+    </div>
+  </header>
+
+  <p><a href="/blog/2019/vulkan/" title="Permalink to: Valkan 基础渲染流程"
+      class="read-more">Vulkan 中的重要组件以及它们的工作流程如下图所示，接下来的文章中会针对每个组件进行学习讲解并配上相关的示例代码，首先是Instance、Device和Queue组件。
+
+
+
+Instance 组件
+
+在开始创建Device等组件之前，需要创建一个VkInstance对象。
+
+通过vkCreateInstance方法创建VKInstance对象，以下是函数原型，在  头文件中。
+
+// ...</a></p>
+</article>
+  
+    <article class="post">
+  <header class="post-header">
+    <h1 class="post-title2">
       <a class="post-link" href="/blog/2019/texturearray/">TextureArray用法</a>
     </h1>
     <div class="post-meta">
@@ -197,32 +221,6 @@ AssetBundle文件的layout...</a></p>
       class="read-more">基于图像的光照(Image Based Lighting)
 
 在开始之前，我们先来了解下什么是基于图像的光照(IBL)。一个物体，不会单独的存在一个空空的环境里面，它的周围一定有其他的物体。当光源照射到其他物体上的时候，一定也会反射，其中就有很多反射的光线会反射到该物体上去。上一篇文章中我们模拟的是直接光照。对于直接光照系统，像上面那种其他物体反射过来的光，我们一般就只是使用一个Ambien...</a></p>
-</article>
-  
-    <article class="post">
-  <header class="post-header">
-    <h1 class="post-title2">
-      <a class="post-link" href="/blog/2019/texture/">各种移动GPU压缩纹理的使用方法</a>
-    </h1>
-    <div class="post-meta">
-      <time>Jun 19, 2019</time>
-    </div>
-  </header>
-
-  <p><a href="/blog/2019/texture/" title="Permalink to: 各种移动GPU压缩纹理的使用方法"
-      class="read-more">
-  介绍了各种移动设备所使用的GPU，以及各个GPU所支持的压缩纹理的格式和使用方法。
-
-
-1. 移动GPU大全
-
-目前移动市场的GPU主要有四大厂商系列：
-
-1）Imagination Technologies的PowerVR SGX系列
-
-
-
-代表型号：PowerVR SGX 535、PowerVR SGX 540、PowerVR SGX 543MP、PowerVR SGX 554MP...</a></p>
 </article>
   
 

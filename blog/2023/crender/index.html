@@ -1,0 +1,476 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <meta http-equiv="X-UA-Compatible" content="IE=edge">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+
+  <title>云渲染</title>
+  <meta name="description"
+    content="WebRTC 本身提供的是 1 对 1 的通信模型，在 STUN/TURN 的辅助下，如果能实现 NAT 穿越，那么两个浏览器是可以直接进行媒体数据交换的；如果不能实现 NAT 穿越，那么只能通过 TURN 服务器进行数据转发的方式实现通信。目前来看，Google 开源的用于学习和研究的项目基本都是基于 STUN...">
+
+  <link rel="shortcut icon" href="/img/favicon.ico">
+  <link rel="stylesheet" href="/css/main.css">
+  <link rel="canonical" href="https://huailiang.github.io/blog/2023/crender/">
+
+</head>
+
+<body>
+  <main>
+    <header class="site-header">
+  <div class="container">
+    <h1><a href="/">Hom<span>e</span></a></h1>
+
+    <button type="button" class="sliding-panel-button">
+      <span></span>
+      <span></span>
+      <span></span>
+    </button>
+
+    <nav class="navbar sliding-panel-content">
+      <ul>
+        
+        <li><a href="/about" title="About">About</a>
+        </li>
+        
+        <li><a href="/blog" title="Blog">Blog</a>
+        </li>
+        
+       <li><a href="/category/" target="_blank"><i class="icon icon-feed"></i></a></li>
+      </ul>
+    </nav>
+  </div>
+</header>
+
+<div class="sliding-panel-fade-screen"></div>
+    <script type="text/javascript" src="/js/MathJax.js?config=TeX-AMS-MML_HTMLorMML"></script>
+
+<script type="text/x-mathjax-config">
+MathJax.Hub.Config({
+  tex2jax: {
+    inlineMath: [['$','$'], ['\\(','\\)']],
+    processEscapes: true
+  }
+});
+</script>
+
+<script type="text/x-mathjax-config">
+  MathJax.Hub.Config({
+    tex2jax: {
+      skipTags: ['script', 'noscript', 'style', 'textarea', 'pre', 'code']
+    }
+  });
+
+</script>
+    <div class="container">
+      <article role="article" class="post">
+
+  <div class="card">
+    <header class="post-header">
+      <h1 class="post-title">云渲染</h1>
+      <p class="post-meta">Apr 19, 2023 •
+        huailiang</p>
+    </header>
+
+    <div class="post-content">
+      <p>WebRTC 本身提供的是 1 对 1 的通信模型，在 STUN/TURN 的辅助下，如果能实现 NAT 穿越，那么两个浏览器是可以直接进行媒体数据交换的；如果不能实现 NAT 穿越，那么只能通过 TURN 服务器进行数据转发的方式实现通信。目前来看，Google 开源的用于学习和研究的项目基本都是基于 STUN/TURN 的 1 对 1 通信。</p>
+
+<p><strong>Mesh 方案</strong>，即多个终端之间两两进行连接，形成一个网状结构。比如 A、B、C 三个终端进行多对多通信，当 A 想要共享媒体（比如音频、视频）时，它需要分别向 B 和 C 发送数据。同样的道理，B 想要共享媒体，就需要分别向 A、C 发送数据，依次类推。这种方案对各终端的带宽要求比较高。</p>
+
+<p><strong>MCU（Multipoint Conferencing Unit）方案</strong>，该方案由一个服务器和多个终端组成一个星形结构。各终端将自己要共享的音视频流发送给服务器，服务器端会将在同一个房间中的所有终端的音视频流进行混合，最终生成一个混合后的音视频流再发给各个终端，这样各终端就可以看到 / 听到其他终端的音视频了。实际上服务器端就是一个音视频混合器，这种方案服务器的压力会非常大。</p>
+
+<p><strong>SFU（Selective Forwarding Unit）方案</strong>，该方案也是由一个服务器和多个终端组成，但与 MCU 不同的是，SFU 不对音视频进行混流，收到某个终端共享的音视频流后，就直接将该音视频流转发给房间内的其他终端。它实际上就是一个音视频路由转发器。</p>
+
+<p><img src="/img/post-render/rtc.png" alt="" /></p>
+
+<p>那 MCU 的优势有哪些呢？大致可总结为如下几点：</p>
+
+<ul>
+  <li>技术非常成熟，在硬件视频会议中应用非常广泛。</li>
+  <li>作为音视频网关，通过解码、再编码可以屏蔽不同编解码设备的差异化，满足更多客户的集成需求，提升用户体验和产品竞争力。</li>
+  <li>将多路视频混合成一路，所有参与人看到的是相同的画面，客户体验非常好。</li>
+</ul>
+
+<p>同样，MCU 也有一些不足，主要表现为：</p>
+
+<ul>
+  <li>重新解码、编码、混流，需要大量的运算，对 CPU 资源的消耗很大。</li>
+  <li>重新解码、编码、混流还会带来延迟。</li>
+  <li>由于机器资源耗费很大，所以 MCU 所提供的容量有限，一般十几路视频就是上限了。</li>
+</ul>
+
+<h2 id="游戏领域云渲染">游戏领域云渲染</h2>
+
+<p>考虑将高负载的“渲染”放置到能力强大的后端，解放前端， 为此一些游戏引擎厂商提出了一种新的三维“云渲染”方案-基于WebRTC的视频流推送技术：</p>
+<ul>
+  <li>UE称之为 <a href="https://docs.unrealengine.com/5.1/en-US/pixel-streaming-sample-project-for-unreal-engine/">PixelStreaming</a>；</li>
+  <li>Unity称之为 <a href="https://docs.unity3d.com/Packages/com.unity.renderstreaming@3.1/manual/overview.html">RenderStreaming</a>；</li>
+</ul>
+
+<p>由于基本原理一致，就是将场景通过后端渲染，然后采用实时视频流推送到网页端，并且能够实现前端到后端的交互同步。通过 WebRTC 协 议将其发送给位于接收端的浏览器和设备。事实上，通过在高性能主机系统上运行渲染引擎，用户能在所有终 端设备上享受到与主机相同的画质，并且能体验到所有的渲染引擎功能。</p>
+
+<p>WebRTC(网页实时通信)是一种通过网页浏览器和移动应用程序进行实时通信的协议。该协议允许以直接链接 的方式传输音频和视频，用户无需下载任何插件或应用程序。通信命令通过 API 接口提交，前端只要声明一个 video 标签就可以实现视频流的加载和交互。</p>
+
+<h2 id="unreal">Unreal</h2>
+
+<p>UE5云渲染方案叫<a href="https://docs.unrealengine.com/5.1/en-US/pixel-streaming-in-unreal-engine/">PixelStreaming</a></p>
+
+<ul>
+  <li>
+    <p>UE启用Pixel Streaming插件</p>
+  </li>
+  <li>
+    <p>下载PixelStreamingInfrastucture源码，执行setup.bat下载依赖，本地会自动生成 nexe 和 coturn 文件夹。  node是nodejs本地执行环境， 如果不想在脚本下载， 可以直接copy过来， 注意版本号对齐， 默认是：v16.4.2</p>
+  </li>
+</ul>
+
+<p><img src="/img/post-render/ue1.PNG" alt="" /></p>
+
+<ul>
+  <li>执行<code class="highlighter-rouge">Start_SignallingServer</code>启动服务器</li>
+</ul>
+
+<p><img src="/img/post-render/ue2.PNG" alt="" /></p>
+
+<ul>
+  <li>
+    <p>启动UE打包的客户端，启动参数传<code class="highlighter-rouge"> -AudioMixer -PixelStreamingURL=ws://localhost:8888 -RenderOffScreen</code></p>
+  </li>
+  <li>
+    <p>连接服务器，网页输入127.0.0.1:8080测试,</p>
+  </li>
+</ul>
+
+<p>当有客户端连接时， 会有如下提示：</p>
+
+<p><img src="/img/post-render/ue3.PNG" alt="" /></p>
+
+<p>配置文件位于<strong>SignallingWebServer</strong>的Config.json下，配置内容如下， 这里可以修改启动的服务器的端口：</p>
+
+<div class="language-json highlighter-rouge"><pre class="highlight"><code><span class="p">{</span><span class="w">
+	</span><span class="nt">"UseFrontend"</span><span class="p">:</span><span class="w"> </span><span class="kc">false</span><span class="p">,</span><span class="w">
+	</span><span class="nt">"UseMatchmaker"</span><span class="p">:</span><span class="w"> </span><span class="kc">false</span><span class="p">,</span><span class="w">
+	</span><span class="nt">"UseHTTPS"</span><span class="p">:</span><span class="w"> </span><span class="kc">false</span><span class="p">,</span><span class="w">
+	</span><span class="nt">"UseAuthentication"</span><span class="p">:</span><span class="w"> </span><span class="kc">false</span><span class="p">,</span><span class="w">
+	</span><span class="nt">"LogToFile"</span><span class="p">:</span><span class="w"> </span><span class="kc">true</span><span class="p">,</span><span class="w">
+	</span><span class="nt">"LogVerbose"</span><span class="p">:</span><span class="w"> </span><span class="kc">true</span><span class="p">,</span><span class="w">
+	</span><span class="nt">"HomepageFile"</span><span class="p">:</span><span class="w"> </span><span class="s2">"player.html"</span><span class="p">,</span><span class="w">
+	</span><span class="nt">"AdditionalRoutes"</span><span class="p">:</span><span class="w"> </span><span class="p">{},</span><span class="w">
+	</span><span class="nt">"EnableWebserver"</span><span class="p">:</span><span class="w"> </span><span class="kc">true</span><span class="p">,</span><span class="w">
+	</span><span class="nt">"MatchmakerAddress"</span><span class="p">:</span><span class="w"> </span><span class="s2">""</span><span class="p">,</span><span class="w">
+	</span><span class="nt">"MatchmakerPort"</span><span class="p">:</span><span class="w"> </span><span class="s2">"9999"</span><span class="p">,</span><span class="w">
+	</span><span class="nt">"PublicIp"</span><span class="p">:</span><span class="w"> </span><span class="s2">"localhost"</span><span class="p">,</span><span class="w">
+	</span><span class="nt">"HttpPort"</span><span class="p">:</span><span class="w"> </span><span class="mi">8080</span><span class="p">,</span><span class="w">
+	</span><span class="nt">"HttpsPort"</span><span class="p">:</span><span class="w"> </span><span class="mi">443</span><span class="p">,</span><span class="w">
+	</span><span class="nt">"StreamerPort"</span><span class="p">:</span><span class="w"> </span><span class="mi">8888</span><span class="p">,</span><span class="w">
+	</span><span class="nt">"SFUPort"</span><span class="p">:</span><span class="w"> </span><span class="mi">8889</span><span class="p">,</span><span class="w">
+	</span><span class="nt">"MaxPlayerCount"</span><span class="p">:</span><span class="w"> </span><span class="mi">-1</span><span class="w">
+</span><span class="p">}</span><span class="w">
+</span></code></pre>
+</div>
+
+<p>浏览器启来之后效果如下：</p>
+
+<p><img src="/img/post-render/ue4.PNG" alt="" /></p>
+
+<h2 id="unity">Unity</h2>
+
+<p><img src="/img/post-render/unity1.png" alt="" /></p>
+
+<p>具体的消息传递过程：</p>
+
+<p><img src="/img/post-render/unity2.png" alt="" /></p>
+
+<p>其中offer的调用过程可以参考：</p>
+
+<p><img src="/img/post-render/offer.PNG" alt="" /></p>
+
+<p>发起方的信令变化：</p>
+
+<div class="highlighter-rouge"><pre class="highlight"><code>have-local-offer -&gt; stable
+</code></pre>
+</div>
+
+<p>被叫方的信令变化</p>
+
+<div class="highlighter-rouge"><pre class="highlight"><code>have-remote-offer -&gt; stable
+</code></pre>
+</div>
+
+<h3 id="singaling-状态">singaling 状态：</h3>
+
+<p>当我们一开始创建这个RTCPeerConnection的时候，它处于stable状态，就是处于一个稳定状态，这个时候实际connection就可以用了，但用的时候它是不能进行这个编解码的，为什么呢？</p>
+
+<p>因为他没有进行数据协商对吧，虽然我这个connection类是可以用，但是并没有进行数据协商，所以他没法儿进行数据的传输与编解码，怎么才能进行数据传输编解码呢?</p>
+
+<p>那就发生了一个状态的改变，就是比如对于调用者来说，首先创建了connection之后他要创建这个offer，创建offer之后, 通过调用那个setLocalDescription将这个offer设进去之后; 他就状态变化了，变成什么呢，变成have-local-offer,但是我设完这个之后, 如果对方没有给我回他的answer的时候, 那实际我的状态就一直处于have-local-offer,无论我在接受多少次这个setLocalDescription方法仍在处理这个状态，所以他自己对自己的一个循环对我仍然处于这个状态，那这个状态是不会变的，那什么时候才会变呢?</p>
+
+<p>只有在你远端的answer回来的时候，像我刚才讲的远端的answer创建好，然后通过消息传给这个调用者的时候，那它才会调用这个setRemoteDescription，那么将answer设进去之后，他又回到了stable状态，这个时候RTCpeerConnection又可以用了，而且是已经协商过的了。</p>
+
+<p><strong>这时候他可以进行编解码和传输了，这是对于调用者来说。</strong></p>
+
+<p>那么对于这个被调用者来说呢，同样道理，那当他收到这个offer之后呢，它要调用setRemote offer，这个时候，他从那个stable状态就变成了have-remote-offer，那同样的，当他自己创建了一个answer之后，并且调用了setLocalDescription这个方法将answer设置进去之后，他又从这个remote-offer变成了stable状态，那这个时候他又可以工作了。</p>
+
+<p><img src="/img/post-render/state.png" alt="" /></p>
+
+<p>如上图所示，媒体协商状态变化除了stable状态外，还有have-local-offer以及have-remote-offer：</p>
+
+<p>首先在创建offer之后呢，会调用setLocalDescription将这个offer设置进去，那他的状态呢，就变成了have-local-offer，那当他收到对端的这个answer之后呢，它会调用setRemoteDescription将这个offer设置进去，这样就完成了一个协商，所以他就从这个have-local-offer变为了stable状态，那他就可以继续下面的工作了，而对于被调用者，他首先呢是从信令服务器收到一个offer，那他首先调用setRemoteDescription这个offer，那它就变成了have-remote-offer状态，这个时候,他在调用自己的这个create answer, 创建完自己的这个answer之后, 它调用setLocalDescription answer就从这个have-remote-offer变为了stable状态，这样的被调用者他也就完成了自己的协商工作，可以继续下面的这个操作了，但是还是两种情况,会有一种中间的这个状态叫做PRanswer,就是提前应答,这个状态是什么时候会产生呢?</p>
+
+<p>就是在双方通讯的时候其中被调用者还没有准备好数据的时候，那可以先创建一个临时的这个answer，这个临时的answer有一个特点就是: 它没有媒体数据也就是说没有音频流和视频流，并且将这个发送的方向设置成send only</p>
+
+<p>对于B来说，他回的这个answer是一个什么样的answer呢 ?</p>
+
+<p>就是说，我的媒体流还没有准备好，所以就没有媒体流，但是我呢，只能发送，不能接受，当他发给对方A的时候，A收到这样一个send only，他就知道，对方还不能进入数据，所以这时候他们的通讯虽然是做了的协商，但是他们之间还不能进行通讯。</p>
+
+<p>因为第一个是对方没有媒体流，第二个是对方不接受我的数据。处于这样一个状态有什么好处呢？</p>
+
+<p>那就是可以提前建立这个链路的连接，也就是说包括ICE，包括这个DLS这些跟链路相关的这个协商其实都已经创建好了，对刚才我们已经介绍了，就是对于B来说，他已经提前准备好了一个answer，但这个answer里有没有媒体数据，但是实际是有网络数据的，我收集的各种各种候选者实际都已经有了。</p>
+
+<p>那么就可以提前交给这个A，那A与B之间，实际就是链路层已经协商好了，包括这个DLS还要进行这个握手，它因为是安全加密，加密所以要进行握手，握手的时间其实还是蛮长的，那在B准备好这个自己的流之前，将所有的链路都准备好，那一旦这个B向那个用户申请：说想开启音频和视频，当用户授权说可以，这个时候呢，他们拿到数据之后，只要将数据传进去，就可以进行这个通讯了。</p>
+
+<p>所以在B没有准备好之前，他可以使用一个PRanswer，就是提前预定好的一个answer给这个A发过去，发过去之后呢，它就变成了这个have-remote-offer这个状态，这是一个中间状态，</p>
+
+<p>在这个状态下，双方的这个链路是可以协商好的，只是没有这个媒体数据，当那个B设置好他自己的媒体流之后，就是一切都准备好之后，然后再给他回一个最终的answer，当调用者收到它这个最终的answer之后，他又变成了stable状态，那双方就可以就真正协商好了。这时候，实际是减少了底层的这个网络流的这个握手，以及一些其他的逻辑处理工作，这样就节省了时间。但对于被调用者也是类似的，所以在他回这个真正的answer之前，它是处于这have-local-PRanswer的，当真正的这个最终的Answer，准备好之后呢，再重新设一下setLocalAnswer，他又变成了stable状态，这就是一个整个协商完整的一个状态变化。只有在整个协商完成之后，才能进行我们后边儿的真正的音视频数据的传输以及编解码。这就是协商状态的变化。</p>
+
+<p>同时 ICE connection 和 ICE gathering 状态的变化：</p>
+
+<div class="highlighter-rouge"><pre class="highlight"><code>ICE gathering state: new -&gt; gathering -&gt; complete
+
+ICE connection state: new -&gt; checking -&gt; connected -&gt; disconnected
+</code></pre>
+</div>
+
+<p>如果双方同时在本地生成了offer， 然后同时发给了对方， 肯定会协商失败</p>
+
+<h2 id="unity-自行编译-server">Unity 自行编译 Server</h2>
+
+<p>编译webapp 执行如下：</p>
+
+<div class="language-sh highlighter-rouge"><pre class="highlight"><code><span class="nb">cd </span>WebApp
+npm install
+npm run build
+npm run start
+</code></pre>
+</div>
+
+<p>使用 ts-node 运行server:</p>
+
+<div class="language-sh highlighter-rouge"><pre class="highlight"><code>npm run dev
+</code></pre>
+</div>
+
+<p>打包发布：</p>
+
+<div class="language-sh highlighter-rouge"><pre class="highlight"><code>npm run pack
+</code></pre>
+</div>
+
+<p>npm run之类的命令， 实际执行的 package.json里的配置， 比如 build 执行的是：</p>
+
+<div class="highlighter-rouge"><pre class="highlight"><code>tsc -p tsconfig.build.json
+</code></pre>
+</div>
+
+<p>start执行的是：</p>
+
+<div class="highlighter-rouge"><pre class="highlight"><code>node ./build/index.js
+</code></pre>
+</div>
+
+<h2 id="typescript-环境">Typescript 环境</h2>
+
+<p>Typescript 在webstorm 中调试环境配置</p>
+
+<p>大体上来看3大步：</p>
+
+<ul>
+  <li>安装ts-node</li>
+  <li>为ts-node创建一个自定义Node.js运行/调试配置</li>
+</ul>
+
+<p>安装 ts_node, 直接在终端上执行下面的命名</p>
+
+<div class="language-ts highlighter-rouge"><pre class="highlight"><code><span class="nx">npm</span> <span class="nx">install</span> <span class="nx">ts</span><span class="o">-</span><span class="nx">node</span>
+</code></pre>
+</div>
+
+<p>创建 运行调试配置：</p>
+
+<p><img src="/img/post-render/ts1.PNG" alt="" /></p>
+
+<p>运行查看中间过程：</p>
+
+<p><img src="/img/post-render/ts2.jpg" alt="" /></p>
+
+<h2 id="qa">QA</h2>
+
+<h3 id="1-关于-polite-peer">1. 关于 polite peer</h3>
+
+<ul>
+  <li>
+    <p>A polite peer, 如果将要设置的信令与本身的信令状态有冲突， 就会使用回滚， 使用自身的信令状态变为stable后继续设置对方发来的信令</p>
+  </li>
+  <li>
+    <p>A impolite peer, 如果将设置的信令与本身信令状态有冲突， 就会放弃设置对方的信令（以我为准）</p>
+  </li>
+</ul>
+
+<p>双方谁是 polite peer 和 impolite peer 没有限制， 是可以随机的。</p>
+
+<h3 id="2-关于-connectionid">2. 关于 connectionId</h3>
+
+<p>connectionId 在 renderstreaming.js 的 createConnection 方法里， 使用 uuid4() 创建。</p>
+
+<div class="language-js highlighter-rouge"><pre class="highlight"><code><span class="kd">function</span> <span class="nx">uuid4</span><span class="p">()</span> <span class="p">{</span>
+  <span class="kd">var</span> <span class="nx">temp_url</span> <span class="o">=</span> <span class="nx">URL</span><span class="p">.</span><span class="nx">createObjectURL</span><span class="p">(</span><span class="k">new</span> <span class="nx">Blob</span><span class="p">());</span>
+  <span class="kd">var</span> <span class="nx">uuid</span> <span class="o">=</span> <span class="nx">temp_url</span><span class="p">.</span><span class="nx">toString</span><span class="p">();</span>
+  <span class="nx">URL</span><span class="p">.</span><span class="nx">revokeObjectURL</span><span class="p">(</span><span class="nx">temp_url</span><span class="p">);</span>
+  <span class="k">return</span> <span class="nx">uuid</span><span class="p">.</span><span class="nx">split</span><span class="p">(</span><span class="sr">/</span><span class="se">[</span><span class="sr">:</span><span class="se">/]</span><span class="sr">/g</span><span class="p">).</span><span class="nx">pop</span><span class="p">().</span><span class="nx">toLowerCase</span><span class="p">();</span> <span class="c1">// remove prefixes</span>
+<span class="p">}</span>
+</code></pre>
+</div>
+
+<h3 id="3-关于-candidate-的生成">3. 关于 candidate 的生成</h3>
+
+<p>candidate 信息（candidate、sdpMLineIndex、sdpMid） 是在 peer.js 里 RTCPeerConnection的onicecandidate 触发， 可以参考：https://developer.mozilla.org/zh-CN/docs/Web/API/RTCPeerConnection/icecandidate_event</p>
+
+<h3 id="4-unity的-multiplay-多人场景">4. unity的 multiPlay 多人场景</h3>
+
+<p>实现基于 一个scene里包含多个camera的方案， 每个链接对应一个camera， 各自渲染自己的画面和响应交互。 没有像MCU 那样需要单独的服务器给各个端进行混合。</p>
+
+
+    </div>
+  </div>
+
+  <style>
+  .post-nav {
+    overflow: hidden;
+    /* margin-top: 60px; */
+    padding: 12px;
+    white-space: nowrap;
+    /* border-top: 1px solid #eee; */
+  }
+
+  .post-nav-item {
+    display: inline-block;
+    width: 50%;
+    white-space: normal;
+  }
+
+  .post-nav-item a {
+    position: relative;
+    display: inline-block;
+    line-height: 25px;
+    font-size: 14px;
+    color: #555;
+    border-bottom: none;
+  }
+
+  .post-nav-item a:hover {
+    color: #222;
+    font-weight: bold;
+    border-bottom: none;
+  }
+
+  .post-nav-item a:active {
+    top: 2px;
+  }
+
+  .post-nav-item a:before,
+  .post-nav-item a:after {
+    display: inline-block;
+    width: 16px;
+    height: 25px;
+    vertical-align: top;
+    opacity: 0.4;
+    background-size: 16px;
+  }
+
+  .post-nav-none a:none {
+    content: ' ';
+    background-size: 8px;
+  }
+
+  .post-nav-none a:hover:none {
+    opacity: 1;
+  }
+
+  .post-nav-prev a:before {
+    content: ' ';
+    background: url("data:image/svg+xml;base64,PD94bWwgdmVyc2lvbj0iMS4wIiA/PjxzdmcgaGVpZ2h0PSIxMnB4IiB2ZXJzaW9uPSIxLjEiIHZpZXdCb3g9IjAgMCA5IDEyIiB3aWR0aD0iOXB4IiB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHhtbG5zOnNrZXRjaD0iaHR0cDovL3d3dy5ib2hlbWlhbmNvZGluZy5jb20vc2tldGNoL25zIiB4bWxuczp4bGluaz0iaHR0cDovL3d3dy53My5vcmcvMTk5OS94bGluayI+PHRpdGxlLz48ZGVzYy8+PGRlZnMvPjxnIGZpbGw9Im5vbmUiIGZpbGwtcnVsZT0iZXZlbm9kZCIgaWQ9IlBhZ2UtMSIgc3Ryb2tlPSJub25lIiBzdHJva2Utd2lkdGg9IjEiPjxnIGZpbGw9IiMwMDAwMDAiIGlkPSJDb3JlIiB0cmFuc2Zvcm09InRyYW5zbGF0ZSgtMjE4LjAwMDAwMCwgLTkwLjAwMDAwMCkiPjxnIGlkPSJjaGV2cm9uLWxlZnQiIHRyYW5zZm9ybT0idHJhbnNsYXRlKDIxOC41MDAwMDAsIDkwLjAwMDAwMCkiPjxwYXRoIGQ9Ik03LjQsMS40IEw2LDAgTC04Ljg4MTc4NDJlLTE2LDYgTDYsMTIgTDcuNCwxMC42IEwyLjgsNiBMNy40LDEuNCBaIiBpZD0iU2hhcGUiLz48L2c+PC9nPjwvZz48L3N2Zz4=") no-repeat 0 50%;
+    background-size: 8px;
+  }
+
+  .post-nav-prev a:hover:before {
+    opacity: 1;
+  }
+
+  .post-nav-next {
+    text-align: right;
+  }
+
+  .post-nav-next a:after {
+    content: ' ';
+    background: url("data:image/svg+xml;base64,PD94bWwgdmVyc2lvbj0iMS4wIiA/PjxzdmcgaGVpZ2h0PSIxMnB4IiB2ZXJzaW9uPSIxLjEiIHZpZXdCb3g9IjAgMCA5IDEyIiB3aWR0aD0iOXB4IiB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHhtbG5zOnNrZXRjaD0iaHR0cDovL3d3dy5ib2hlbWlhbmNvZGluZy5jb20vc2tldGNoL25zIiB4bWxuczp4bGluaz0iaHR0cDovL3d3dy53My5vcmcvMTk5OS94bGluayI+PHRpdGxlLz48ZGVzYy8+PGRlZnMvPjxnIGZpbGw9Im5vbmUiIGZpbGwtcnVsZT0iZXZlbm9kZCIgaWQ9IlBhZ2UtMSIgc3Ryb2tlPSJub25lIiBzdHJva2Utd2lkdGg9IjEiPjxnIGZpbGw9IiMwMDAwMDAiIGlkPSJDb3JlIiB0cmFuc2Zvcm09InRyYW5zbGF0ZSgtMjYwLjAwMDAwMCwgLTkwLjAwMDAwMCkiPjxnIGlkPSJjaGV2cm9uLXJpZ2h0IiB0cmFuc2Zvcm09InRyYW5zbGF0ZSgyNjAuNTAwMDAwLCA5MC4wMDAwMDApIj48cGF0aCBkPSJNMSwwIEwtMC40LDEuNCBMNC4yLDYgTC0wLjQsMTAuNiBMMSwxMiBMNyw2IEwxLDAgWiIgaWQ9IlNoYXBlIi8+PC9nPjwvZz48L2c+PC9zdmc+") no-repeat 100% 50%;
+    background-size: 8px;
+  }
+
+  .post-nav-next a:hover:after {
+    opacity: 1;
+  }
+</style>
+
+
+
+<div class="post-nav">
+
+  
+  <div class="post-nav-none post-nav-item">
+    <a href=""> </a>
+  </div>
+  
+
+  
+  <div class="post-nav-next post-nav-item">
+    
+    <a href="/blog/2023/ncs/"> AI布料模拟</a>
+  </div>
+  
+
+</div>
+
+</article>
+    </div>
+
+    <footer class="site-footer">
+  <div class="container">
+    <ul class="social">
+  <li><a href="https://twitter.com/penghuailiang" target="_blank"><i class="icon icon-twitter"></i></a></li>
+  <li><a href="https://www.zhihu.com/people/huailiangpenguin" target="_blank"><i class="icon icon-zhihu"></i></a></li>
+  <li><a href="https://www.facebook.com/profile.php?id=100004290725320" target="_blank"><i class="icon icon-facebook"></i></a></li>
+  <li><a href="https://weibo.com/6212299692/profile?topnav=1&wvr=6" target="_blank"><i class="icon icon-sina"></i></a></li>
+  <li><a href="https://www.linkedin.com/in/penghuailiang/" target="_blank"><i class="icon icon-linkedin"></i></a></li>
+  <li><a href="https://github.com/huailiang" target="_blank"><i class="icon icon-github"></i></a></li>
+</ul>
+    <p class="txt-medium-gray">
+      <small>&copy;2023 All rights reserved. </small>
+    </p>
+  </div>
+</footer>
+    <a href="https://github.com/huailiang" target="_blank" class="github-corner"><svg width="80" height="80" viewBox="0 0 250 250" style="fill:#337ab7; color:#fff; position: absolute; top: 0; border: 0; right: 0;"><path d="M0,0 L115,115 L130,115 L142,142 L250,250 L250,0 Z"></path><path d="M128.3,109.0 C113.8,99.7 119.0,89.6 119.0,89.6 C122.0,82.7 120.5,78.6 120.5,78.6 C119.2,72.0 123.4,76.3 123.4,76.3 C127.3,80.9 125.5,87.3 125.5,87.3 C122.9,97.6 130.6,101.9 134.4,103.2" fill="currentColor" style="transform-origin: 130px 106px;" class="octo-arm"></path><path d="M115.0,115.0 C114.9,115.1 118.7,116.5 119.8,115.4 L133.7,101.6 C136.9,99.2 139.9,98.4 142.2,98.6 C133.8,88.0 127.5,74.4 143.8,58.0 C148.5,53.4 154.0,51.2 159.7,51.0 C160.3,49.4 163.2,43.6 171.4,40.1 C171.4,40.1 176.1,42.5 178.8,56.2 C183.1,58.6 187.2,61.8 190.9,65.4 C194.5,69.0 197.7,73.2 200.1,77.6 C213.8,80.2 216.3,84.9 216.3,84.9 C212.7,93.1 206.9,96.0 205.4,96.6 C205.1,102.4 203.0,107.8 198.3,112.5 C181.9,128.9 168.3,122.5 157.7,114.1 C157.9,116.9 156.7,120.9 152.7,124.9 L141.0,136.5 C139.8,137.7 141.6,141.9 141.8,141.8 Z" fill="currentColor" class="octo-body"></path></svg></a>
+
+
+    <script src="//code.jquery.com/jquery-1.11.3.min.js"></script>
+    <script>
+      $(document).ready(function () {
+        $('.sliding-panel-button,.sliding-panel-fade-screen,.sliding-panel-close').on('click touchstart', function (e) {
+          $('.sliding-panel-content,.sliding-panel-fade-screen').toggleClass('is-visible');
+          e.preventDefault();
+        });
+      });
+    </script>
+  </main>
+</body>
+
+</html>
