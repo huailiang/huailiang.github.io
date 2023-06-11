@@ -127,25 +127,13 @@ have-remote-offer -> stable
 
 ### singaling 状态：
 
-当我们一开始创建这个RTCPeerConnection的时候，它处于stable状态，就是处于一个稳定状态，
-
-这个时候实际connection就可以用了，但用的时候它是不能进行这个编解码的，为什么呢？
+当我们一开始创建这个RTCPeerConnection的时候，它处于stable状态，就是处于一个稳定状态，这个时候实际connection就可以用了，但用的时候它是不能进行这个编解码的，为什么呢？
 
 因为他没有进行数据协商对吧，虽然我这个connection类是可以用，但是并没有进行数据协商，所以他没法儿进行数据的传输与编解码，怎么才能进行数据传输编解码呢?
 
-那就发生了一个状态的改变，就是比如对于调用者来说，首先创建了connection之后他要创建这个offer，创建offer之后,
+那就发生了一个状态的改变，就是比如对于调用者来说，首先创建了connection之后他要创建这个offer，创建offer之后, 通过调用那个setLocalDescription将这个offer设进去之后; 他就状态变化了，变成什么呢，变成have-local-offer,但是我设完这个之后, 如果对方没有给我回他的answer的时候, 那实际我的状态就一直处于have-local-offer,无论我在接受多少次这个setLocalDescription方法仍在处理这个状态，所以他自己对自己的一个循环对我仍然处于这个状态，那这个状态是不会变的，那什么时候才会变呢?
 
-通过调用那个setLocalDescription将这个offer设进去之后; 他就状态变化了，变成什么呢，变成have-local-offer,
-
-但是我设完这个之后, 如果对方没有给我回他的answer的时候, 那实际我的状态就一直处于have-local-offer,
-
-无论我在接受多少次这个setLocalDescription方法仍在处理这个状态，所以他自己对自己的一个循环对我仍然处于这个状态，
-
-那这个状态是不会变的，那什么时候才会变呢?
-
-只有在你远端的answer回来的时候，像我刚才讲的远端的answer创建好，然后通过消息传给这个调用者的时候，那它才会调用这个setRemoteDescription，
-
-那么将answer设进去之后，他又回到了stable状态，这个时候RTCpeerConnection又可以用了，而且是已经协商过的了。
+只有在你远端的answer回来的时候，像我刚才讲的远端的answer创建好，然后通过消息传给这个调用者的时候，那它才会调用这个setRemoteDescription，那么将answer设进去之后，他又回到了stable状态，这个时候RTCpeerConnection又可以用了，而且是已经协商过的了。
 
 __这时候他可以进行编解码和传输了，这是对于调用者来说。__
 
@@ -157,24 +145,13 @@ __这时候他可以进行编解码和传输了，这是对于调用者来说。
 
 如上图所示，媒体协商状态变化除了stable状态外，还有have-local-offer以及have-remote-offer：
 
-首先在创建offer之后呢，会调用setLocalDescription将这个offer设置进去，那他的状态呢，就变成了have-local-offer，
-
-那当他收到对端的这个answer之后呢，它会调用setRemoteDescription将这个offer设置进去，这样就完成了一个协商，所以他就从这个have-local-offer变为了stable状态，那他就可以继续下面的工作了，
-
-而对于被调用者，他首先呢是从信令服务器收到一个offer，那他首先调用setRemoteDescription这个offer，那它就变成了have-remote-offer状态，
-
-这个时候,他在调用自己的这个create answer, 创建完自己的这个answer之后,
-它调用setLocalDescription answer就从这个have-remote-offer变为了stable状态，这样的被调用者他也就完成了自己的协商工作，可以继续下面的这个操作了，
-
-但是还是两种情况,会有一种中间的这个状态叫做PRanswer,就是提前应答,这个状态是什么时候会产生呢?
+首先在创建offer之后呢，会调用setLocalDescription将这个offer设置进去，那他的状态呢，就变成了have-local-offer，那当他收到对端的这个answer之后呢，它会调用setRemoteDescription将这个offer设置进去，这样就完成了一个协商，所以他就从这个have-local-offer变为了stable状态，那他就可以继续下面的工作了，而对于被调用者，他首先呢是从信令服务器收到一个offer，那他首先调用setRemoteDescription这个offer，那它就变成了have-remote-offer状态，这个时候,他在调用自己的这个create answer, 创建完自己的这个answer之后, 它调用setLocalDescription answer就从这个have-remote-offer变为了stable状态，这样的被调用者他也就完成了自己的协商工作，可以继续下面的这个操作了，但是还是两种情况,会有一种中间的这个状态叫做PRanswer,就是提前应答,这个状态是什么时候会产生呢?
 
 就是在双方通讯的时候其中被调用者还没有准备好数据的时候，那可以先创建一个临时的这个answer，这个临时的answer有一个特点就是: 它没有媒体数据也就是说没有音频流和视频流，并且将这个发送的方向设置成send only
 
 对于B来说，他回的这个answer是一个什么样的answer呢 ?
 
-就是说，我的媒体流还没有准备好，所以就没有媒体流，但是我呢，只能发送，不能接受，当他发给对方A的时候，A收到这样一个send only，他就知道，对方还不能进入数据，
-
-所以这时候他们的通讯虽然是做了的协商，但是他们之间还不能进行通讯。
+就是说，我的媒体流还没有准备好，所以就没有媒体流，但是我呢，只能发送，不能接受，当他发给对方A的时候，A收到这样一个send only，他就知道，对方还不能进入数据，所以这时候他们的通讯虽然是做了的协商，但是他们之间还不能进行通讯。
 
 因为第一个是对方没有媒体流，第二个是对方不接受我的数据。处于这样一个状态有什么好处呢？
 
@@ -198,13 +175,8 @@ ICE connection state: new -> checking -> connected -> disconnected
 如果双方同时在本地生成了offer， 然后同时发给了对方， 肯定会协商失败
 
 
-* A polite peer, 如果将要设置的信令与本身的信令状态有冲突， 就会使用回滚， 使用自身的信令状态变为stable后继续设置对方发来的信令
 
-* A impolite peer, 如果将设置的信令与本身信令状态有冲突， 就会放弃设置对方的信令（以我为准）
-
-双方谁是 polite peer 和 impolite peer 没有限制， 是可以随机的。
-
-
+## Unity 自行编译 Server
 
 
 编译webapp 执行如下：
@@ -267,6 +239,39 @@ npm install ts-node
 运行查看中间过程：
 
 ![](/img/post-render/ts2.jpg)
+
+
+## QA
+
+### 1. 关于 polite peer
+   
+* A polite peer, 如果将要设置的信令与本身的信令状态有冲突， 就会使用回滚， 使用自身的信令状态变为stable后继续设置对方发来的信令
+
+* A impolite peer, 如果将设置的信令与本身信令状态有冲突， 就会放弃设置对方的信令（以我为准）
+
+双方谁是 polite peer 和 impolite peer 没有限制， 是可以随机的。
+
+### 2. 关于 connectionId
+
+connectionId 在 renderstreaming.js 的 createConnection 方法里， 使用 uuid4() 创建。
+
+```js
+function uuid4() {
+  var temp_url = URL.createObjectURL(new Blob());
+  var uuid = temp_url.toString();
+  URL.revokeObjectURL(temp_url);
+  return uuid.split(/[:/]/g).pop().toLowerCase(); // remove prefixes
+}
+```
+
+
+### 3. 关于 candidate 的生成
+
+candidate 信息（candidate、sdpMLineIndex、sdpMid） 是在 peer.js 里 RTCPeerConnection的onicecandidate 触发， 可以参考：https://developer.mozilla.org/zh-CN/docs/Web/API/RTCPeerConnection/icecandidate_event
+
+### 4. unity的 multiPlay 多人场景
+
+实现基于 一个scene里包含多个camera的方案， 每个链接对应一个camera， 各自渲染自己的画面和响应交互。 没有像MCU 那样需要单独的服务器给各个端进行混合。
 
 
 [i1]: https://blog.csdn.net/qq_43303950/article/details/128878032
