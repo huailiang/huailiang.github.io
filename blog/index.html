@@ -68,6 +68,25 @@ MathJax.Hub.Config({
     <article class="post">
   <header class="post-header">
     <h1 class="post-title2">
+      <a class="post-link" href="/blog/2023/sddx/">Shader中的偏阶导数</a>
+    </h1>
+    <div class="post-meta">
+      <time>May 19, 2023</time>
+    </div>
+  </header>
+
+  <p><a href="/blog/2023/sddx/" title="Permalink to: Shader中的偏阶导数"
+      class="read-more">
+  偏导数函数（HLSL中的ddx和ddy，GLSL中的dFdx和dFdy）是片元着色器中的一个用于计算任何变量基于屏幕空间坐标的变化率的指令（函数）。在WebGL中，使用的是dFdx和dFdy，还有另外一个函数fwidth = dFdx + dFdy。
+
+
+偏导数计算
+在三角形栅格化期间，GPU会同时跑片元着色器的多个实例，但并不是一个pixel一个pixel去执行的，而是将其组织在2x...</a></p>
+</article>
+  
+    <article class="post">
+  <header class="post-header">
+    <h1 class="post-title2">
       <a class="post-link" href="/blog/2023/crender/">云渲染</a>
     </h1>
     <div class="post-meta">
@@ -203,26 +222,6 @@ Python有py、pyc、pyw...</a></p>
   <p><a href="/blog/2022/barra/" title="Permalink to: Barracuda AI网络推理"
       class="read-more">
   Unity实验室致力于改进一项最先进的研究，并开发出一个高效的神经系统推理引擎——Barracuda。深度学习长期以来一直局被限于超级计算机和离线计算之中，但由于计算能力的不断提高，它们在消费者级硬件上的实时可用性也在快速提升。有了Barracuda，Unity实验室希望Barracuda能快速的进入到创作者手中。得益于ML-Agents，神经网络已经被用于一些游戏开发中的人工智能应用...</a></p>
-</article>
-  
-    <article class="post">
-  <header class="post-header">
-    <h1 class="post-title2">
-      <a class="post-link" href="/blog/2022/arengine/">URP渲染管线下的 huawei AREngine预览流绘制</a>
-    </h1>
-    <div class="post-meta">
-      <time>Jul 28, 2022</time>
-    </div>
-  </header>
-
-  <p><a href="/blog/2022/arengine/" title="Permalink to: URP渲染管线下的 huawei AREngine预览流绘制"
-      class="read-more">
-  huawei AREngine 默认的 builtin 的渲染管线绘制预览流， 在如今行业普遍使用的自定义渲染管线有点儿过时。  看 ARFoundation 的实现， 已经默认支持builtin和urp的无缝切换，  于是就想着把 AREngine 的预览流绘制使用urp来实现一遍。
-
-
-builtin的预览流实现：
-
-首先预览流信息直接由GPU端直传到 glsl(shader)里了...</a></p>
 </article>
   
 

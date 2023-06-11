@@ -68,6 +68,26 @@ MathJax.Hub.Config({
     <article class="post">
   <header class="post-header">
     <h1 class="post-title2">
+      <a class="post-link" href="/blog/2022/arengine/">URP渲染管线下的 huawei AREngine预览流绘制</a>
+    </h1>
+    <div class="post-meta">
+      <time>Jul 28, 2022</time>
+    </div>
+  </header>
+
+  <p><a href="/blog/2022/arengine/" title="Permalink to: URP渲染管线下的 huawei AREngine预览流绘制"
+      class="read-more">
+  huawei AREngine 默认的 builtin 的渲染管线绘制预览流， 在如今行业普遍使用的自定义渲染管线有点儿过时。  看 ARFoundation 的实现， 已经默认支持builtin和urp的无缝切换，  于是就想着把 AREngine 的预览流绘制使用urp来实现一遍。
+
+
+builtin的预览流实现：
+
+首先预览流信息直接由GPU端直传到 glsl(shader)里了...</a></p>
+</article>
+  
+    <article class="post">
+  <header class="post-header">
+    <h1 class="post-title2">
       <a class="post-link" href="/blog/2022/astc/">ASTC</a>
     </h1>
     <div class="post-meta">
@@ -201,32 +221,6 @@ Android平台中，目标文件对应的是SO文件。Deb...</a></p>
 
 
 一、概述...</a></p>
-</article>
-  
-    <article class="post">
-  <header class="post-header">
-    <h1 class="post-title2">
-      <a class="post-link" href="/blog/2021/maven/">AndroidStudio搭建本地Maven仓库</a>
-    </h1>
-    <div class="post-meta">
-      <time>May 4, 2021</time>
-    </div>
-  </header>
-
-  <p><a href="/blog/2021/maven/" title="Permalink to: AndroidStudio搭建本地Maven仓库"
-      class="read-more">发布本地库流程如下：
-
-一、新建一个Android项目
-
-在项目下创建一个Libary（如果直接在Android项目下发布到本地仓库会生成apk包，而lib下生成的是aar包可以作为依赖使用）。
-
-
-
-二、配置参数
-
-在Library也就是刚才创建的AndroidLib下的中添加配置 maven-release-aar.gradle
-
-maven-release-aar.gradle 就是用...</a></p>
 </article>
   
 
