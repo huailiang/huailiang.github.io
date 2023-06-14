@@ -1,6 +1,6 @@
 ---
 layout:     post
-title:      "pocketgl本地部署"
+title:      "pocketgl"
 date:       2023-06-01 02:00:00
 author:     "huailiang"
 tags:
@@ -16,7 +16,7 @@ tags:
 ## 环境安装
 
 
-Pocket.gl 基于前端库:
+Pocket.gl 基于nodejs的前端库:
 
 * Three.js, 3D 渲染
 * Ace, 代码编辑器
@@ -91,9 +91,7 @@ PocketGL(container, [config], [baseURL]);
 ```
 
 * container – (string) 绑定div的id属性名， 通过css可以定义窗口的大小
-
 * config – (object or string, 可选项) 可以绑定一个js，参数是js的路径。 一般是类似官方例子里 param.js ， 可以定义外部传入shader的uniform值， 同时用来在右上角画gui。
-
 * baseURL – (string, 可选项)  指定第二步config 的基础路径。
 
 使用如下：
@@ -115,11 +113,8 @@ new PocketGL(widgetContainer,
 ### Shaders
 
 * vertexShader – (string) vertex shader 代码.
-
 * fragmentShader – (string) fragment shader 代码.
-
 * vertexShaderFile – (string) 通过一个路径URL绑定一个vert shader的 .glsl文件
-
 * fragmentShaderFile – (string) 通过一个路径URL绑定一个frag shader的 .glsl文件
 
 pocketgl内置的uniform变量， 不需要声明， 可以在shader里直接引用。
@@ -188,7 +183,7 @@ void main()	{
 
 右上角的GUI界面会根据下面格式来绑定uniform变量， 这些变量可以同步到shader。
 
-```json
+```
 uniforms: [
   { 
     type: typename, 
@@ -201,17 +196,20 @@ uniforms: [
 ]
 ```
 
-* type - string类型， 支持 “float”, “integer”, “boolean” 和 “color”，其中boolean强转float的时候会变成0或者1， 颜色color对应shader里的vec3类型。
+
+* type - string类型， 支持 “float”, “integer”, “boolean” 和 “color”，
+        其中boolean强转float的时候会变成0或者1， 颜色color对应shader里的vec3类型
 * value  设置默认值， 其中颜色可以这样填： [#RRGGBB or #RGB]
 * min - float 类型， 最小值
 * max - float 类型， 最大值
 * name - string类型， 绑定shader里的uniform名
-* GUIName - string类型， UI界面上显示的名称
+* GUIName - string类型, UI界面上显示的名称
+
   
   例子：
 
 
-```json
+```
 uniforms: [
   { 
     type: "boolean", 
@@ -257,7 +255,7 @@ uniform float specularIntensity;
 
 Pocketgl还支持分组， 如下配置：
 
-```json
+```
 uniforms: [
   [
     { groupName: "Group 1" },
@@ -287,7 +285,7 @@ uniforms: [
 
 支持 [OBJ][i6] 和 [Collada][i5] 两种格式, 同时你可以下面配置指定mesh相关的属性：
 
-```json
+```
 meshes: [
   { 
     // Procedural mesh
@@ -308,7 +306,8 @@ meshes: [
 ```
 
 
-* type – (string) 本地内置的网格， 目前支持以下: “teapot”, “cube”, “sphere”, “torus”, “cylinder”, “plane”.
+* type – (string) 本地内置的网格， 目前支持以下: 
+      “teapot”, “cube”, “sphere”, “torus”, “cylinder”, “plane”
 * subdivision – (integer, optional) 网格的细分数量。
 * url – (string URL) 本地路径 或者名字
 * name – (string) GUI显示名称.
@@ -321,7 +320,7 @@ meshes: [
 
 使用范例：
 
-```json
+```
 meshes: [
   { url: "light-bulb.obj",  name: "Light Bulb (obj)", rx: 90, scale: 0.17},
   { type: "teapot", name: "Teapot", doubleSided: true},
@@ -339,19 +338,15 @@ mesh支持绑定单独的材质， 使用默认的shader， 即不在param.js里
 
 
 * color – (string, [#RRGGBB or #RGB], optional) 漫反射颜色diffuse.
-
 * specular – (string, [#RRGGBB or #RGB], optional) 高光颜色specular.
-
 * shininess – (number, optional) 高光反射/光泽度
-
 * diffuseMap – (string, optional) 漫反射贴图URL .
-
 * normalMap – (string, optional) 法线贴图URL.
 
 
 如下面例子：
 
-```json
+```
 meshes: [
   { 
     url: "dice.obj", name: "Dice", 
@@ -380,7 +375,7 @@ meshes: [
 定义贴图的采样方式以及wrap 可以通过如下方式:
 
 
-```json
+```
 textures: [
   { 
     url: textureURL, 
@@ -392,27 +387,21 @@ textures: [
 ```
 
 * url – (string, mandatory) 贴图URL， 支持 JPEG 和 PNG.
-
 * wrap – (string, optional) 支持两个格式: “repeat” or “clamp”.
-
 * filter – (string, optional) 支持两种格式: “linear” or “nearest”.
-
 * name – (string, mandatory) shader里的 uniform sampler2D 变量.
 
 
 ### 外观
+
 * width – (integer) 窗口宽.
-
 * height – (integer) 窗口高.
-
 * backgroundColor – (string, hexadecimal color [#RRGGBB or #RGB]) 默认背景颜色.
-
 * tabColor – (string, hexadecimal color [#RRGGBB or #RGB]) tab页签颜色.
-
 * tabTextColor – (string, hexadecimal color [#RRGGBB or #RGB]) tab页签字体颜色.
 
 
-```json
+```
 {
   width: 800, height: 600, backgroundColor: "#300", 
   tabColor: "#f00", tabTextColor: "#555", GUIClosed: true 
