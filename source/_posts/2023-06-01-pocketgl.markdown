@@ -1,0 +1,428 @@
+---
+layout:     post
+title:      "pocketgl本地部署"
+date:       2023-06-01 02:00:00
+author:     "huailiang"
+tags:
+    - 工具
+---
+
+> [pocketgl][i1]支持在自己的web页面集成类似 Shadertoy、 Threejs 等基于webGL 的渲染图形窗口， 并且拥有shader代码高亮编辑器支持实时修改和预览。 其自带的mesh包含两个Sphere 和 Teaport, 同时支持上床自定义的网格 和 背景天空盒。其既支持像Shadertoy 这种只包含frag 的着色器， 可以用来实现一些后处理效果和 SDF配合RayMatch的材质， 也支持vert的顶点着色器。
+
+
+![](http://www.pocketgl.com/wp-content/uploads/2016/04/tutorial-reflections.jpg)
+
+
+## 环境安装
+
+
+Pocket.gl 基于前端库:
+
+* Three.js, 3D 渲染
+* Ace, 代码编辑器
+* dat.GUI， GUI 截面绘制
+* clipboard.js， 复制粘贴版操作
+* RequireJS， Loading条
+
+
+pocketgl 依赖 [nodejs][i2] 和 [npm][i3] 环境， 在确保安装的情况下， 通过npm 安装bower， 如下命令：
+
+```sh
+npm install -g bower
+```
+
+
+获取 pocketgl 可以通过 bower 来安装：
+
+```sh
+bower install pocket.gl --save
+```
+
+也可以直接通过 此链接下载 [zip包][i4]。
+
+
+进入到项目目录下， 执行下面命令， 安装所有依赖的包
+
+```sh
+bower install
+```
+
+如果安装成功， 在当前目录会出现一个 bower_components 的目录， 这里有所有依赖的插件包。
+
+
+## 编译
+
+编译过程依赖于 require.js 优化器去组织各个模块。 编译生成的js存放在dist目录。
+
+These batch scripts can be used to build the library:
+
+* build/build.bat – 生成 dist/pocket.gl.js 
+* build/build-min.bat – 生成 the dist/pocket.gl.min.js 
+* build/build-all.bat – 上面二者同时生成
+
+
+其实 .bat 里面的内容也是调用 node相关的接口， 对于非windows平台， 可以直接把 .bat 后缀修改.sh 在mac 或者linux平台去运行。
+
+## 加载
+
+加载 pocketgl 可以直接在你的代码里加如下：
+
+```js
+// 使用本地编译生成的
+<script src="dist/pocket.gl.min.js"></script>
+
+// 使用上传 RawGit的
+<script src="https://cdn.rawgit.com/gportelli/pocket.gl/v1.2.4/dist/pocket.gl.min.js"/>
+```
+
+
+然后在js里实例化一个 PocketGL
+
+```js
+new PocketGL("myContainer");
+```
+
+## 构造
+
+PocketGL 一共三个参数， 其中最后两个是可选项。 
+
+```
+PocketGL(container, [config], [baseURL]);
+```
+
+* container – (string) 绑定div的id属性名， 通过css可以定义窗口的大小
+
+* config – (object or string, 可选项) 可以绑定一个js，参数是js的路径。 一般是类似官方例子里 param.js ， 可以定义外部传入shader的uniform值， 同时用来在右上角画gui。
+
+* baseURL – (string, 可选项)  指定第二步config 的基础路径。
+
+使用如下：
+
+
+```js
+// examples 是几个官方例子，通过index进行切换
+new PocketGL(widgetContainer,
+    "data/" + examples[index] + "/params.js", 
+    "data/" + examples[index]); 
+```
+
+
+## 配置
+
+由于 PocketGL 可以通过第二个参数绑定js支持自定义的效果， 这里详细讲下js里相关的字段。
+
+
+### Shaders
+
+* vertexShader – (string) vertex shader 代码.
+
+* fragmentShader – (string) fragment shader 代码.
+
+* vertexShaderFile – (string) 通过一个路径URL绑定一个vert shader的 .glsl文件
+
+* fragmentShaderFile – (string) 通过一个路径URL绑定一个frag shader的 .glsl文件
+
+pocketgl内置的uniform变量， 不需要声明， 可以在shader里直接引用。
+
+```glsl
+// vertex shader prefix
+// = object.matrixWorld
+uniform mat4 modelMatrix;
+
+// = camera.matrixWorldInverse * object.matrixWorld
+uniform mat4 modelViewMatrix;
+
+// = camera.projectionMatrix
+uniform mat4 projectionMatrix;
+
+// = camera.matrixWorldInverse
+uniform mat4 viewMatrix;
+
+// = inverse transpose of modelViewMatrix
+uniform mat3 normalMatrix;
+
+// = camera position in world space
+uniform vec3 cameraPosition;
+
+attribute vec3 position;
+attribute vec3 normal;
+attribute vec2 uv;
+attribute vec2 uv2;
+
+// fragment shader prefix
+uniform mat4 viewMatrix;
+uniform vec3 cameraPosition;
+```
+
+如下面vert代码中，直接使用相关的代码进行 位置的坐标系变换：
+
+```glsl
+gl_Position = projectionMatrix * modelViewMatrix * vec4( position, 1.0 );
+// or
+gl_Position = projectionMatrix * viewMatrix * modelMatrix * vec4( position, 1.0 );
+```
+
+
+
+### 关于鼠标跟踪
+
+你可以在shader 里使用mouse这个uniform vec4变量， 其中xy分量代表鼠标在当前屏幕里的像素位置，zw分量代表鼠标的相对运动位移。使用如下面代码：
+
+```glsl
+uniform vec4 mouse;
+uniform float time;
+
+void main()	{
+	vec2 p = -1.0 + 2.0 * gl_FragCoord.xy / resolution.xy;
+	p.y *= resolution.y / resolution.x;
+
+	// Rotation
+	vec2 rot = -vec2(mouse.z, mouse.w) / resolution * vec2(2.0*PI, PI);
+	...
+}
+```
+
+
+### 添加GUI 
+
+
+右上角的GUI界面会根据下面格式来绑定uniform变量， 这些变量可以同步到shader。
+
+```json
+uniforms: [
+  { 
+    type: typename, 
+    value: defaultValue, 
+    min: minValue, 
+    max: maxValue, 
+    name: variableName,
+    GUIName: name
+  }
+]
+```
+
+* type - string类型， 支持 “float”, “integer”, “boolean” 和 “color”，其中boolean强转float的时候会变成0或者1， 颜色color对应shader里的vec3类型。
+* value  设置默认值， 其中颜色可以这样填： [#RRGGBB or #RGB]
+* min - float 类型， 最小值
+* max - float 类型， 最大值
+* name - string类型， 绑定shader里的uniform名
+* GUIName - string类型， UI界面上显示的名称
+  
+  例子：
+
+
+```json
+uniforms: [
+  { 
+    type: "boolean", 
+    value: false, 
+    name: "flatShading",
+    GUIName: "Flat shading" 
+  },
+  { 
+    type: "color", 
+    value: "#26a00c", 
+    name: "diffuseColor",
+    GUIName: "Color"
+  },
+  { 
+    type: "float", 
+    value: 0.5, 
+    min: 0, 
+    max: 1,
+    name: "specularGloss", 
+    GUIName: "Glossiness"
+  },
+  { 
+    type: "integer", 
+    value: 5, 
+    min: 0, 
+    max: 10, 
+    name: "specularIntensity",
+    GUIName: "Specular intensity"
+  }
+]
+```
+
+绑定在shader对应的unifrom变量名：
+
+```glsl
+uniform float flatShading;
+uniform vec3 diffuseColor;
+uniform float specularGloss;
+uniform float specularIntensity;
+```
+
+##### Group名
+
+Pocketgl还支持分组， 如下配置：
+
+```json
+uniforms: [
+  [
+    { groupName: "Group 1" },
+    { type: "float", value: 0.5, min: 0, max: 1, name: "v1", GUIName: "Var 1" },
+    { type: "boolean", value: true, name: "v2", GUIName: "Var 2" }
+  ],
+  [
+    { groupName: "Group 2" },
+    { type: "float", value: 0.5, min: 0, max: 1, name: "v3", GUIName: "Var 3" },
+    { type: "boolean", value: true, name: "v4", name: "Var 4" }
+  ],
+  [
+    { groupName: "Group 2", opened: true },
+    { type: "float", value: 0.5, min: 0, max: 1, name: "v5", GUIName: "Var 5" },
+    { type: "boolean", value: true, name: "v6", GUIName: "Var 6" }
+  ]
+]
+```
+
+对应到GUI显示如下：
+
+![](/img/post-engine/pocket1.jpg)
+
+
+
+### Mesh网格
+
+支持 [OBJ][i6] 和 [Collada][i5] 两种格式, 同时你可以下面配置指定mesh相关的属性：
+
+```json
+meshes: [
+  { 
+    // Procedural mesh
+    type: typename, 
+    subdivision: numberOfSubdvisions, 
+
+    // External mesh
+    url: meshURL,
+
+    name: nameInTheGUI,
+    x: xOffset, y:yOffset, z: zOffset,
+    rx: xRotation, ry: yRotation, z: zRotation
+    scale: meshScale,
+    doubleSided: showBackFaces,
+    transparent: useAlphaChannel
+  }
+]
+```
+
+
+* type – (string) 本地内置的网格， 目前支持以下: “teapot”, “cube”, “sphere”, “torus”, “cylinder”, “plane”.
+* subdivision – (integer, optional) 网格的细分数量。
+* url – (string URL) 本地路径 或者名字
+* name – (string) GUI显示名称.
+* x, y, z – (float, optional) 网格对象的位置
+* rx, ry, rz – (float, optional) 网格对象的旋转.
+* scale – (float) 缩放.
+* doubleSided – (boolean) 是否渲染两面（前和后）
+* transparent – (boolean) 是否开启透明 
+
+
+使用范例：
+
+```json
+meshes: [
+  { url: "light-bulb.obj",  name: "Light Bulb (obj)", rx: 90, scale: 0.17},
+  { type: "teapot", name: "Teapot", doubleSided: true},
+  { type: "sphere", name: "Sphere"},
+  { type: "torus", name: "Torus"},
+  { type: "cylinder", name: "Cylinder"},
+  { type: "cube", name: "Cube"},
+  { type: "plane", name: "Plane", doubleSided: true}
+]
+```
+
+### 材质
+
+mesh支持绑定单独的材质， 使用默认的shader， 即不在param.js里填写 shader相关的字段， 如vertexShader， vertexShaderFile等， 材质支持以下类型：
+
+
+* color – (string, [#RRGGBB or #RGB], optional) 漫反射颜色diffuse.
+
+* specular – (string, [#RRGGBB or #RGB], optional) 高光颜色specular.
+
+* shininess – (number, optional) 高光反射/光泽度
+
+* diffuseMap – (string, optional) 漫反射贴图URL .
+
+* normalMap – (string, optional) 法线贴图URL.
+
+
+如下面例子：
+
+```json
+meshes: [
+  { 
+    url: "dice.obj", name: "Dice", 
+    // one material with diffuse and normal map
+    materials: [
+      { 
+        diffuseMap: "diffuse.jpg", 
+        normalMap: "normal.png" 
+      }
+    ]
+  },
+  {
+    url: "light-bulb.obj", name: "Light Bulb", 
+    // two materials with two colors assigned to each sub-mesh
+    materials: [
+      { color: "#aaa" },
+      { color: "#c0a84a" }
+    ]
+  }
+]
+```
+
+
+### 贴图
+
+定义贴图的采样方式以及wrap 可以通过如下方式:
+
+
+```json
+textures: [
+  { 
+    url: textureURL, 
+    wrap: wrapType,
+    filter: filtertype, 
+    name: variableName
+  }
+]
+```
+
+* url – (string, mandatory) 贴图URL， 支持 JPEG 和 PNG.
+
+* wrap – (string, optional) 支持两个格式: “repeat” or “clamp”.
+
+* filter – (string, optional) 支持两种格式: “linear” or “nearest”.
+
+* name – (string, mandatory) shader里的 uniform sampler2D 变量.
+
+
+### 外观
+* width – (integer) 窗口宽.
+
+* height – (integer) 窗口高.
+
+* backgroundColor – (string, hexadecimal color [#RRGGBB or #RGB]) 默认背景颜色.
+
+* tabColor – (string, hexadecimal color [#RRGGBB or #RGB]) tab页签颜色.
+
+* tabTextColor – (string, hexadecimal color [#RRGGBB or #RGB]) tab页签字体颜色.
+
+
+```json
+{
+  width: 800, height: 600, backgroundColor: "#300", 
+  tabColor: "#f00", tabTextColor: "#555", GUIClosed: true 
+}
+```
+
+
+[i1]: http://www.pocketgl.com/
+[i2]: https://nodejs.org/
+[i3]: https://www.npmjs.com/
+[i4]: https://github.com/gportelli/pocket.gl/archive/v1.2.4.zip
+[i5]: https://en.wikipedia.org/wiki/COLLADA
+[i6]: https://en.wikipedia.org/wiki/Wavefront_.obj_file
