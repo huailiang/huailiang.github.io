@@ -65,11 +65,11 @@ These batch scripts can be used to build the library:
 
 ## 加载
 
-加载 pocketgl 可以直接在你的代码里加如下：
+在你的页面加载 pocketgl， 可以直接在你的代码里加如下：
 
 ```js
 // 使用本地编译生成的
-<script src="dist/pocket.gl.min.js"></script>
+<script src="dist/pocket.gl.min.js/>
 
 // 使用上传 RawGit的
 <script src="https://cdn.rawgit.com/gportelli/pocket.gl/v1.2.4/dist/pocket.gl.min.js"/>
@@ -86,7 +86,7 @@ new PocketGL("myContainer");
 
 PocketGL 一共三个参数， 其中最后两个是可选项。 
 
-```
+```js
 PocketGL(container, [config], [baseURL]);
 ```
 
@@ -183,7 +183,7 @@ void main()	{
 
 右上角的GUI界面会根据下面格式来绑定uniform变量， 这些变量可以同步到shader。
 
-```
+```js
 uniforms: [
   { 
     type: typename, 
@@ -206,10 +206,8 @@ uniforms: [
 * GUIName - string类型, UI界面上显示的名称
 
   
-  例子：
-
-
-```
+例子：
+```js
 uniforms: [
   { 
     type: "boolean", 
@@ -255,7 +253,7 @@ uniform float specularIntensity;
 
 Pocketgl还支持分组， 如下配置：
 
-```
+```js
 uniforms: [
   [
     { groupName: "Group 1" },
@@ -285,7 +283,7 @@ uniforms: [
 
 支持 [OBJ][i6] 和 [Collada][i5] 两种格式, 同时你可以下面配置指定mesh相关的属性：
 
-```
+```js
 meshes: [
   { 
     // Procedural mesh
@@ -318,9 +316,9 @@ meshes: [
 * transparent – (boolean) 是否开启透明 
 
 
-使用范例：
+范例：
 
-```
+```js
 meshes: [
   { url: "light-bulb.obj",  name: "Light Bulb (obj)", rx: 90, scale: 0.17},
   { type: "teapot", name: "Teapot", doubleSided: true},
@@ -346,7 +344,7 @@ mesh支持绑定单独的材质， 使用默认的shader， 即不在param.js里
 
 如下面例子：
 
-```
+```js
 meshes: [
   { 
     url: "dice.obj", name: "Dice", 
@@ -375,7 +373,7 @@ meshes: [
 定义贴图的采样方式以及wrap 可以通过如下方式:
 
 
-```
+```js
 textures: [
   { 
     url: textureURL, 
@@ -396,15 +394,92 @@ textures: [
 
 * width – (integer) 窗口宽.
 * height – (integer) 窗口高.
-* backgroundColor – (string, hexadecimal color [#RRGGBB or #RGB]) 默认背景颜色.
-* tabColor – (string, hexadecimal color [#RRGGBB or #RGB]) tab页签颜色.
-* tabTextColor – (string, hexadecimal color [#RRGGBB or #RGB]) tab页签字体颜色.
+* backgroundColor – (string, [#RRGGBB or #RGB]) 默认背景颜色.
+* tabColor – (string,[#RRGGBB or #RGB]) tab页签颜色.
+* tabTextColor – (string,[#RRGGBB or #RGB]) tab页签字体颜色.
 
 
-```
+```js
 {
-  width: 800, height: 600, backgroundColor: "#300", 
-  tabColor: "#f00", tabTextColor: "#555", GUIClosed: true 
+  width: 800, 
+  height: 600, 
+  backgroundColor: "#300", 
+  tabColor: "#f00", 
+  tabTextColor: "#555", 
+  GUIClosed: true 
+}
+```
+
+### 天空盒
+
+将默认背景色替换为天空盒。
+
+* skybox – 按顺序定义box的六个面的图: right, left, top, bottom, front, back. 或者使用单张全景图.
+            
+shader中提供一个名为tCube的uniform变量，表示立方体贴图纹理。
+
+```glsl
+// cubemap skybox shader uniform
+uniform samplerCube tCube;
+```
+
+对于全景图， shader 定义为tEquirect
+```glsl
+// equirectangular skybox shader uniform
+uniform sampler2D tEquirect;
+```
+Cubemap 例子：
+
+```js
+// cubemap skybox
+skybox: [
+  "cubemap/px.jpg", "cubemap/nx.jpg", 
+  "cubemap/py.jpg", "cubemap/ny.jpg", 
+  "cubemap/pz.jpg", "cubemap/nz.jpg",
+]
+```
+
+全景图例子：
+
+```js
+// equirectangular skybox
+skybox: "textures/panorama.jpg"
+```
+
+### Camera
+
+* orbiting – (boolean) 允许使用拖动鼠标去旋转视角.
+* autoOrbit – (boolean) 允许相机自动旋转（如果设置为true，动画将强制设置为true）.
+* autoOrbitSpeed – (number) 自动旋转速度 (一个单位代表6度每秒).
+* cameraDistance – (number) 设置摄影机与网格轴的距离
+* cameraPitch – (number) 相机 pitch 角.
+* cameraYaw – (number) 相机yaw角
+* cameraFOV – (number) 设置相机的fov.
+* zoom – (boolean) 允许camera随着鼠标齿轮滑动进行缩放.
+
+```js
+{
+  orbiting: true, zoom: true, 
+  autoOrbit: true, autoOrbitSpeed: 0.5,
+  cameraDistance: 100, cameraPitch: 27, cameraYaw: 0
+}
+```
+
+### 动画
+* animated – (boolean) 如果为true，画布将在每帧更新（通常为60fps），并且着色器中将提供时间统一变量。如果为false，则只有在窗口调整大小时才会重新绘制画布，从而减少开销.
+* playButtons – (boolean)如果设置为true并且animated为true，则会显示一些播放控制按钮（播放、停止、暂停）
+
+### 编辑器
+
+* editorTheme – (string) 设置主题. 有 “dark” 和 “bright” 两个选项
+* editorWrap – (boolean) 如果设置为true，则在编辑器中启用文本换行
+* showTabs – (boolean) 如果设置为false，则选项卡将被删除，编辑器将不可用
+
+```js
+{
+  editorTheme: "bright", 
+  editorWrap: false, 
+  showTabs: true
 }
 ```
 
