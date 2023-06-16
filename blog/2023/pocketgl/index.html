@@ -129,13 +129,13 @@ MathJax.Hub.Config({
 
 <h2 id="加载">加载</h2>
 
-<p>加载 pocketgl 可以直接在你的代码里加如下：</p>
+<p>在你的页面加载 pocketgl， 可以直接在你的代码里加如下：</p>
 
 <div class="language-js highlighter-rouge"><pre class="highlight"><code><span class="c1">// 使用本地编译生成的</span>
-<span class="o">&lt;</span><span class="nx">script</span> <span class="nx">src</span><span class="o">=</span><span class="s2">"dist/pocket.gl.min.js"</span><span class="o">&gt;&lt;</span><span class="sr">/script</span><span class="err">&gt;
-</span>
-<span class="c1">// 使用上传 RawGit的</span>
-<span class="o">&lt;</span><span class="nx">script</span> <span class="nx">src</span><span class="o">=</span><span class="s2">"https://cdn.rawgit.com/gportelli/pocket.gl/v1.2.4/dist/pocket.gl.min.js"</span><span class="o">/&gt;</span>
+<span class="o">&lt;</span><span class="nx">script</span> <span class="nx">src</span><span class="o">=</span><span class="s2">"dist/pocket.gl.min.js/&gt;
+
+// 使用上传 RawGit的
+&lt;script src="</span><span class="nx">https</span><span class="err">:</span><span class="c1">//cdn.rawgit.com/gportelli/pocket.gl/v1.2.4/dist/pocket.gl.min.js"/&gt;</span>
 </code></pre>
 </div>
 
@@ -149,7 +149,7 @@ MathJax.Hub.Config({
 
 <p>PocketGL 一共三个参数， 其中最后两个是可选项。</p>
 
-<div class="highlighter-rouge"><pre class="highlight"><code>PocketGL(container, [config], [baseURL]);
+<div class="language-js highlighter-rouge"><pre class="highlight"><code><span class="nx">PocketGL</span><span class="p">(</span><span class="nx">container</span><span class="p">,</span> <span class="p">[</span><span class="nx">config</span><span class="p">],</span> <span class="p">[</span><span class="nx">baseURL</span><span class="p">]);</span>
 </code></pre>
 </div>
 
@@ -243,16 +243,16 @@ MathJax.Hub.Config({
 
 <p>右上角的GUI界面会根据下面格式来绑定uniform变量， 这些变量可以同步到shader。</p>
 
-<div class="highlighter-rouge"><pre class="highlight"><code>uniforms: [
-  { 
-    type: typename, 
-    value: defaultValue, 
-    min: minValue, 
-    max: maxValue, 
-    name: variableName,
-    GUIName: name
-  }
-]
+<div class="language-js highlighter-rouge"><pre class="highlight"><code><span class="nx">uniforms</span><span class="err">:</span> <span class="p">[</span>
+  <span class="p">{</span> 
+    <span class="na">type</span><span class="p">:</span> <span class="nx">typename</span><span class="p">,</span> 
+    <span class="na">value</span><span class="p">:</span> <span class="nx">defaultValue</span><span class="p">,</span> 
+    <span class="na">min</span><span class="p">:</span> <span class="nx">minValue</span><span class="p">,</span> 
+    <span class="na">max</span><span class="p">:</span> <span class="nx">maxValue</span><span class="p">,</span> 
+    <span class="na">name</span><span class="p">:</span> <span class="nx">variableName</span><span class="p">,</span>
+    <span class="na">GUIName</span><span class="p">:</span> <span class="nx">name</span>
+  <span class="p">}</span>
+<span class="p">]</span>
 </code></pre>
 </div>
 
@@ -263,43 +263,40 @@ MathJax.Hub.Config({
   <li>min - float 类型， 最小值</li>
   <li>max - float 类型， 最大值</li>
   <li>name - string类型， 绑定shader里的uniform名</li>
-  <li>
-    <p>GUIName - string类型, UI界面上显示的名称</p>
-
-    <p>例子：</p>
-  </li>
+  <li>GUIName - string类型, UI界面上显示的名称</li>
 </ul>
 
-<div class="highlighter-rouge"><pre class="highlight"><code>uniforms: [
-  { 
-    type: "boolean", 
-    value: false, 
-    name: "flatShading",
-    GUIName: "Flat shading" 
-  },
-  { 
-    type: "color", 
-    value: "#26a00c", 
-    name: "diffuseColor",
-    GUIName: "Color"
-  },
-  { 
-    type: "float", 
-    value: 0.5, 
-    min: 0, 
-    max: 1,
-    name: "specularGloss", 
-    GUIName: "Glossiness"
-  },
-  { 
-    type: "integer", 
-    value: 5, 
-    min: 0, 
-    max: 10, 
-    name: "specularIntensity",
-    GUIName: "Specular intensity"
-  }
-]
+<p>例子：</p>
+<div class="language-js highlighter-rouge"><pre class="highlight"><code><span class="nx">uniforms</span><span class="err">:</span> <span class="p">[</span>
+  <span class="p">{</span> 
+    <span class="na">type</span><span class="p">:</span> <span class="s2">"boolean"</span><span class="p">,</span> 
+    <span class="na">value</span><span class="p">:</span> <span class="kc">false</span><span class="p">,</span> 
+    <span class="na">name</span><span class="p">:</span> <span class="s2">"flatShading"</span><span class="p">,</span>
+    <span class="na">GUIName</span><span class="p">:</span> <span class="s2">"Flat shading"</span> 
+  <span class="p">},</span>
+  <span class="p">{</span> 
+    <span class="na">type</span><span class="p">:</span> <span class="s2">"color"</span><span class="p">,</span> 
+    <span class="na">value</span><span class="p">:</span> <span class="s2">"#26a00c"</span><span class="p">,</span> 
+    <span class="na">name</span><span class="p">:</span> <span class="s2">"diffuseColor"</span><span class="p">,</span>
+    <span class="na">GUIName</span><span class="p">:</span> <span class="s2">"Color"</span>
+  <span class="p">},</span>
+  <span class="p">{</span> 
+    <span class="na">type</span><span class="p">:</span> <span class="s2">"float"</span><span class="p">,</span> 
+    <span class="na">value</span><span class="p">:</span> <span class="mf">0.5</span><span class="p">,</span> 
+    <span class="na">min</span><span class="p">:</span> <span class="mi">0</span><span class="p">,</span> 
+    <span class="na">max</span><span class="p">:</span> <span class="mi">1</span><span class="p">,</span>
+    <span class="na">name</span><span class="p">:</span> <span class="s2">"specularGloss"</span><span class="p">,</span> 
+    <span class="na">GUIName</span><span class="p">:</span> <span class="s2">"Glossiness"</span>
+  <span class="p">},</span>
+  <span class="p">{</span> 
+    <span class="na">type</span><span class="p">:</span> <span class="s2">"integer"</span><span class="p">,</span> 
+    <span class="na">value</span><span class="p">:</span> <span class="mi">5</span><span class="p">,</span> 
+    <span class="na">min</span><span class="p">:</span> <span class="mi">0</span><span class="p">,</span> 
+    <span class="na">max</span><span class="p">:</span> <span class="mi">10</span><span class="p">,</span> 
+    <span class="na">name</span><span class="p">:</span> <span class="s2">"specularIntensity"</span><span class="p">,</span>
+    <span class="na">GUIName</span><span class="p">:</span> <span class="s2">"Specular intensity"</span>
+  <span class="p">}</span>
+<span class="p">]</span>
 </code></pre>
 </div>
 
@@ -316,23 +313,23 @@ MathJax.Hub.Config({
 
 <p>Pocketgl还支持分组， 如下配置：</p>
 
-<div class="highlighter-rouge"><pre class="highlight"><code>uniforms: [
-  [
-    { groupName: "Group 1" },
-    { type: "float", value: 0.5, min: 0, max: 1, name: "v1", GUIName: "Var 1" },
-    { type: "boolean", value: true, name: "v2", GUIName: "Var 2" }
-  ],
-  [
-    { groupName: "Group 2" },
-    { type: "float", value: 0.5, min: 0, max: 1, name: "v3", GUIName: "Var 3" },
-    { type: "boolean", value: true, name: "v4", name: "Var 4" }
-  ],
-  [
-    { groupName: "Group 2", opened: true },
-    { type: "float", value: 0.5, min: 0, max: 1, name: "v5", GUIName: "Var 5" },
-    { type: "boolean", value: true, name: "v6", GUIName: "Var 6" }
-  ]
-]
+<div class="language-js highlighter-rouge"><pre class="highlight"><code><span class="nx">uniforms</span><span class="err">:</span> <span class="p">[</span>
+  <span class="p">[</span>
+    <span class="p">{</span> <span class="na">groupName</span><span class="p">:</span> <span class="s2">"Group 1"</span> <span class="p">},</span>
+    <span class="p">{</span> <span class="na">type</span><span class="p">:</span> <span class="s2">"float"</span><span class="p">,</span> <span class="na">value</span><span class="p">:</span> <span class="mf">0.5</span><span class="p">,</span> <span class="na">min</span><span class="p">:</span> <span class="mi">0</span><span class="p">,</span> <span class="na">max</span><span class="p">:</span> <span class="mi">1</span><span class="p">,</span> <span class="na">name</span><span class="p">:</span> <span class="s2">"v1"</span><span class="p">,</span> <span class="na">GUIName</span><span class="p">:</span> <span class="s2">"Var 1"</span> <span class="p">},</span>
+    <span class="p">{</span> <span class="na">type</span><span class="p">:</span> <span class="s2">"boolean"</span><span class="p">,</span> <span class="na">value</span><span class="p">:</span> <span class="kc">true</span><span class="p">,</span> <span class="na">name</span><span class="p">:</span> <span class="s2">"v2"</span><span class="p">,</span> <span class="na">GUIName</span><span class="p">:</span> <span class="s2">"Var 2"</span> <span class="p">}</span>
+  <span class="p">],</span>
+  <span class="p">[</span>
+    <span class="p">{</span> <span class="na">groupName</span><span class="p">:</span> <span class="s2">"Group 2"</span> <span class="p">},</span>
+    <span class="p">{</span> <span class="na">type</span><span class="p">:</span> <span class="s2">"float"</span><span class="p">,</span> <span class="na">value</span><span class="p">:</span> <span class="mf">0.5</span><span class="p">,</span> <span class="na">min</span><span class="p">:</span> <span class="mi">0</span><span class="p">,</span> <span class="na">max</span><span class="p">:</span> <span class="mi">1</span><span class="p">,</span> <span class="na">name</span><span class="p">:</span> <span class="s2">"v3"</span><span class="p">,</span> <span class="na">GUIName</span><span class="p">:</span> <span class="s2">"Var 3"</span> <span class="p">},</span>
+    <span class="p">{</span> <span class="na">type</span><span class="p">:</span> <span class="s2">"boolean"</span><span class="p">,</span> <span class="na">value</span><span class="p">:</span> <span class="kc">true</span><span class="p">,</span> <span class="na">name</span><span class="p">:</span> <span class="s2">"v4"</span><span class="p">,</span> <span class="na">name</span><span class="p">:</span> <span class="s2">"Var 4"</span> <span class="p">}</span>
+  <span class="p">],</span>
+  <span class="p">[</span>
+    <span class="p">{</span> <span class="na">groupName</span><span class="p">:</span> <span class="s2">"Group 2"</span><span class="p">,</span> <span class="na">opened</span><span class="p">:</span> <span class="kc">true</span> <span class="p">},</span>
+    <span class="p">{</span> <span class="na">type</span><span class="p">:</span> <span class="s2">"float"</span><span class="p">,</span> <span class="na">value</span><span class="p">:</span> <span class="mf">0.5</span><span class="p">,</span> <span class="na">min</span><span class="p">:</span> <span class="mi">0</span><span class="p">,</span> <span class="na">max</span><span class="p">:</span> <span class="mi">1</span><span class="p">,</span> <span class="na">name</span><span class="p">:</span> <span class="s2">"v5"</span><span class="p">,</span> <span class="na">GUIName</span><span class="p">:</span> <span class="s2">"Var 5"</span> <span class="p">},</span>
+    <span class="p">{</span> <span class="na">type</span><span class="p">:</span> <span class="s2">"boolean"</span><span class="p">,</span> <span class="na">value</span><span class="p">:</span> <span class="kc">true</span><span class="p">,</span> <span class="na">name</span><span class="p">:</span> <span class="s2">"v6"</span><span class="p">,</span> <span class="na">GUIName</span><span class="p">:</span> <span class="s2">"Var 6"</span> <span class="p">}</span>
+  <span class="p">]</span>
+<span class="p">]</span>
 </code></pre>
 </div>
 
@@ -344,23 +341,23 @@ MathJax.Hub.Config({
 
 <p>支持 <a href="https://en.wikipedia.org/wiki/Wavefront_.obj_file">OBJ</a> 和 <a href="https://en.wikipedia.org/wiki/COLLADA">Collada</a> 两种格式, 同时你可以下面配置指定mesh相关的属性：</p>
 
-<div class="highlighter-rouge"><pre class="highlight"><code>meshes: [
-  { 
-    // Procedural mesh
-    type: typename, 
-    subdivision: numberOfSubdvisions, 
+<div class="language-js highlighter-rouge"><pre class="highlight"><code><span class="nx">meshes</span><span class="err">:</span> <span class="p">[</span>
+  <span class="p">{</span> 
+    <span class="c1">// Procedural mesh</span>
+    <span class="na">type</span><span class="p">:</span> <span class="nx">typename</span><span class="p">,</span> 
+    <span class="na">subdivision</span><span class="p">:</span> <span class="nx">numberOfSubdvisions</span><span class="p">,</span> 
 
-    // External mesh
-    url: meshURL,
+    <span class="c1">// External mesh</span>
+    <span class="na">url</span><span class="p">:</span> <span class="nx">meshURL</span><span class="p">,</span>
 
-    name: nameInTheGUI,
-    x: xOffset, y:yOffset, z: zOffset,
-    rx: xRotation, ry: yRotation, z: zRotation
-    scale: meshScale,
-    doubleSided: showBackFaces,
-    transparent: useAlphaChannel
-  }
-]
+    <span class="na">name</span><span class="p">:</span> <span class="nx">nameInTheGUI</span><span class="p">,</span>
+    <span class="na">x</span><span class="p">:</span> <span class="nx">xOffset</span><span class="p">,</span> <span class="na">y</span><span class="p">:</span><span class="nx">yOffset</span><span class="p">,</span> <span class="na">z</span><span class="p">:</span> <span class="nx">zOffset</span><span class="p">,</span>
+    <span class="na">rx</span><span class="p">:</span> <span class="nx">xRotation</span><span class="p">,</span> <span class="na">ry</span><span class="p">:</span> <span class="nx">yRotation</span><span class="p">,</span> <span class="na">z</span><span class="p">:</span> <span class="nx">zRotation</span>
+    <span class="na">scale</span><span class="p">:</span> <span class="nx">meshScale</span><span class="p">,</span>
+    <span class="na">doubleSided</span><span class="p">:</span> <span class="nx">showBackFaces</span><span class="p">,</span>
+    <span class="na">transparent</span><span class="p">:</span> <span class="nx">useAlphaChannel</span>
+  <span class="p">}</span>
+<span class="p">]</span>
 </code></pre>
 </div>
 
@@ -377,17 +374,17 @@ MathJax.Hub.Config({
   <li>transparent – (boolean) 是否开启透明</li>
 </ul>
 
-<p>使用范例：</p>
+<p>范例：</p>
 
-<div class="highlighter-rouge"><pre class="highlight"><code>meshes: [
-  { url: "light-bulb.obj",  name: "Light Bulb (obj)", rx: 90, scale: 0.17},
-  { type: "teapot", name: "Teapot", doubleSided: true},
-  { type: "sphere", name: "Sphere"},
-  { type: "torus", name: "Torus"},
-  { type: "cylinder", name: "Cylinder"},
-  { type: "cube", name: "Cube"},
-  { type: "plane", name: "Plane", doubleSided: true}
-]
+<div class="language-js highlighter-rouge"><pre class="highlight"><code><span class="nx">meshes</span><span class="err">:</span> <span class="p">[</span>
+  <span class="p">{</span> <span class="na">url</span><span class="p">:</span> <span class="s2">"light-bulb.obj"</span><span class="p">,</span>  <span class="na">name</span><span class="p">:</span> <span class="s2">"Light Bulb (obj)"</span><span class="p">,</span> <span class="na">rx</span><span class="p">:</span> <span class="mi">90</span><span class="p">,</span> <span class="na">scale</span><span class="p">:</span> <span class="mf">0.17</span><span class="p">},</span>
+  <span class="p">{</span> <span class="na">type</span><span class="p">:</span> <span class="s2">"teapot"</span><span class="p">,</span> <span class="na">name</span><span class="p">:</span> <span class="s2">"Teapot"</span><span class="p">,</span> <span class="na">doubleSided</span><span class="p">:</span> <span class="kc">true</span><span class="p">},</span>
+  <span class="p">{</span> <span class="na">type</span><span class="p">:</span> <span class="s2">"sphere"</span><span class="p">,</span> <span class="na">name</span><span class="p">:</span> <span class="s2">"Sphere"</span><span class="p">},</span>
+  <span class="p">{</span> <span class="na">type</span><span class="p">:</span> <span class="s2">"torus"</span><span class="p">,</span> <span class="na">name</span><span class="p">:</span> <span class="s2">"Torus"</span><span class="p">},</span>
+  <span class="p">{</span> <span class="na">type</span><span class="p">:</span> <span class="s2">"cylinder"</span><span class="p">,</span> <span class="na">name</span><span class="p">:</span> <span class="s2">"Cylinder"</span><span class="p">},</span>
+  <span class="p">{</span> <span class="na">type</span><span class="p">:</span> <span class="s2">"cube"</span><span class="p">,</span> <span class="na">name</span><span class="p">:</span> <span class="s2">"Cube"</span><span class="p">},</span>
+  <span class="p">{</span> <span class="na">type</span><span class="p">:</span> <span class="s2">"plane"</span><span class="p">,</span> <span class="na">name</span><span class="p">:</span> <span class="s2">"Plane"</span><span class="p">,</span> <span class="na">doubleSided</span><span class="p">:</span> <span class="kc">true</span><span class="p">}</span>
+<span class="p">]</span>
 </code></pre>
 </div>
 
@@ -405,26 +402,26 @@ MathJax.Hub.Config({
 
 <p>如下面例子：</p>
 
-<div class="highlighter-rouge"><pre class="highlight"><code>meshes: [
-  { 
-    url: "dice.obj", name: "Dice", 
-    // one material with diffuse and normal map
-    materials: [
-      { 
-        diffuseMap: "diffuse.jpg", 
-        normalMap: "normal.png" 
-      }
-    ]
-  },
-  {
-    url: "light-bulb.obj", name: "Light Bulb", 
-    // two materials with two colors assigned to each sub-mesh
-    materials: [
-      { color: "#aaa" },
-      { color: "#c0a84a" }
-    ]
-  }
-]
+<div class="language-js highlighter-rouge"><pre class="highlight"><code><span class="nx">meshes</span><span class="err">:</span> <span class="p">[</span>
+  <span class="p">{</span> 
+    <span class="na">url</span><span class="p">:</span> <span class="s2">"dice.obj"</span><span class="p">,</span> <span class="na">name</span><span class="p">:</span> <span class="s2">"Dice"</span><span class="p">,</span> 
+    <span class="c1">// one material with diffuse and normal map</span>
+    <span class="na">materials</span><span class="p">:</span> <span class="p">[</span>
+      <span class="p">{</span> 
+        <span class="na">diffuseMap</span><span class="p">:</span> <span class="s2">"diffuse.jpg"</span><span class="p">,</span> 
+        <span class="na">normalMap</span><span class="p">:</span> <span class="s2">"normal.png"</span> 
+      <span class="p">}</span>
+    <span class="p">]</span>
+  <span class="p">},</span>
+  <span class="p">{</span>
+    <span class="na">url</span><span class="p">:</span> <span class="s2">"light-bulb.obj"</span><span class="p">,</span> <span class="na">name</span><span class="p">:</span> <span class="s2">"Light Bulb"</span><span class="p">,</span> 
+    <span class="c1">// two materials with two colors assigned to each sub-mesh</span>
+    <span class="na">materials</span><span class="p">:</span> <span class="p">[</span>
+      <span class="p">{</span> <span class="na">color</span><span class="p">:</span> <span class="s2">"#aaa"</span> <span class="p">},</span>
+      <span class="p">{</span> <span class="na">color</span><span class="p">:</span> <span class="s2">"#c0a84a"</span> <span class="p">}</span>
+    <span class="p">]</span>
+  <span class="p">}</span>
+<span class="p">]</span>
 </code></pre>
 </div>
 
@@ -432,14 +429,14 @@ MathJax.Hub.Config({
 
 <p>定义贴图的采样方式以及wrap 可以通过如下方式:</p>
 
-<div class="highlighter-rouge"><pre class="highlight"><code>textures: [
-  { 
-    url: textureURL, 
-    wrap: wrapType,
-    filter: filtertype, 
-    name: variableName
-  }
-]
+<div class="language-js highlighter-rouge"><pre class="highlight"><code><span class="nx">textures</span><span class="err">:</span> <span class="p">[</span>
+  <span class="p">{</span> 
+    <span class="na">url</span><span class="p">:</span> <span class="nx">textureURL</span><span class="p">,</span> 
+    <span class="na">wrap</span><span class="p">:</span> <span class="nx">wrapType</span><span class="p">,</span>
+    <span class="na">filter</span><span class="p">:</span> <span class="nx">filtertype</span><span class="p">,</span> 
+    <span class="na">name</span><span class="p">:</span> <span class="nx">variableName</span>
+  <span class="p">}</span>
+<span class="p">]</span>
 </code></pre>
 </div>
 
@@ -455,16 +452,101 @@ MathJax.Hub.Config({
 <ul>
   <li>width – (integer) 窗口宽.</li>
   <li>height – (integer) 窗口高.</li>
-  <li>backgroundColor – (string, hexadecimal color [#RRGGBB or #RGB]) 默认背景颜色.</li>
-  <li>tabColor – (string, hexadecimal color [#RRGGBB or #RGB]) tab页签颜色.</li>
-  <li>tabTextColor – (string, hexadecimal color [#RRGGBB or #RGB]) tab页签字体颜色.</li>
+  <li>backgroundColor – (string, [#RRGGBB or #RGB]) 默认背景颜色.</li>
+  <li>tabColor – (string,[#RRGGBB or #RGB]) tab页签颜色.</li>
+  <li>tabTextColor – (string,[#RRGGBB or #RGB]) tab页签字体颜色.</li>
 </ul>
 
-<div class="highlighter-rouge"><pre class="highlight"><code><span class="p">{</span><span class="w">
-  </span><span class="err">width:</span><span class="w"> </span><span class="err">800,</span><span class="w"> </span><span class="err">height:</span><span class="w"> </span><span class="err">600,</span><span class="w"> </span><span class="err">backgroundColor:</span><span class="w"> </span><span class="nt">"#300"</span><span class="err">,</span><span class="w"> 
-  </span><span class="err">tabColor</span><span class="p">:</span><span class="w"> </span><span class="s2">"#f00"</span><span class="p">,</span><span class="w"> </span><span class="err">tabTextColor</span><span class="p">:</span><span class="w"> </span><span class="s2">"#555"</span><span class="p">,</span><span class="w"> </span><span class="err">GUIClosed</span><span class="p">:</span><span class="w"> </span><span class="kc">true</span><span class="w"> 
-</span><span class="p">}</span><span class="w">
-</span></code></pre>
+<div class="language-js highlighter-rouge"><pre class="highlight"><code><span class="p">{</span>
+  <span class="nl">width</span><span class="p">:</span> <span class="mi">800</span><span class="p">,</span> 
+  <span class="nx">height</span><span class="err">:</span> <span class="mi">600</span><span class="p">,</span> 
+  <span class="nx">backgroundColor</span><span class="err">:</span> <span class="s2">"#300"</span><span class="p">,</span> 
+  <span class="nx">tabColor</span><span class="err">:</span> <span class="s2">"#f00"</span><span class="p">,</span> 
+  <span class="nx">tabTextColor</span><span class="err">:</span> <span class="s2">"#555"</span><span class="p">,</span> 
+  <span class="nx">GUIClosed</span><span class="err">:</span> <span class="kc">true</span> 
+<span class="p">}</span>
+</code></pre>
+</div>
+
+<h3 id="天空盒">天空盒</h3>
+
+<p>将默认背景色替换为天空盒。</p>
+
+<ul>
+  <li>skybox – 按顺序定义box的六个面的图: right, left, top, bottom, front, back. 或者使用单张全景图.</li>
+</ul>
+
+<p>shader中提供一个名为tCube的uniform变量，表示立方体贴图纹理。</p>
+
+<div class="language-glsl highlighter-rouge"><pre class="highlight"><code><span class="c1">// cubemap skybox shader uniform
+</span><span class="k">uniform</span> <span class="kt">samplerCube</span> <span class="n">tCube</span><span class="p">;</span>
+</code></pre>
+</div>
+
+<p>对于全景图， shader 定义为tEquirect</p>
+<div class="language-glsl highlighter-rouge"><pre class="highlight"><code><span class="c1">// equirectangular skybox shader uniform
+</span><span class="k">uniform</span> <span class="kt">sampler2D</span> <span class="n">tEquirect</span><span class="p">;</span>
+</code></pre>
+</div>
+<p>Cubemap 例子：</p>
+
+<div class="language-js highlighter-rouge"><pre class="highlight"><code><span class="c1">// cubemap skybox</span>
+<span class="nl">skybox</span><span class="p">:</span> <span class="p">[</span>
+  <span class="s2">"cubemap/px.jpg"</span><span class="p">,</span> <span class="s2">"cubemap/nx.jpg"</span><span class="p">,</span> 
+  <span class="s2">"cubemap/py.jpg"</span><span class="p">,</span> <span class="s2">"cubemap/ny.jpg"</span><span class="p">,</span> 
+  <span class="s2">"cubemap/pz.jpg"</span><span class="p">,</span> <span class="s2">"cubemap/nz.jpg"</span><span class="p">,</span>
+<span class="p">]</span>
+</code></pre>
+</div>
+
+<p>全景图例子：</p>
+
+<div class="language-js highlighter-rouge"><pre class="highlight"><code><span class="c1">// equirectangular skybox</span>
+<span class="nl">skybox</span><span class="p">:</span> <span class="s2">"textures/panorama.jpg"</span>
+</code></pre>
+</div>
+
+<h3 id="camera">Camera</h3>
+
+<ul>
+  <li>orbiting – (boolean) 允许使用拖动鼠标去旋转视角.</li>
+  <li>autoOrbit – (boolean) 允许相机自动旋转（如果设置为true，动画将强制设置为true）.</li>
+  <li>autoOrbitSpeed – (number) 自动旋转速度 (一个单位代表6度每秒).</li>
+  <li>cameraDistance – (number) 设置摄影机与网格轴的距离</li>
+  <li>cameraPitch – (number) 相机 pitch 角.</li>
+  <li>cameraYaw – (number) 相机yaw角</li>
+  <li>cameraFOV – (number) 设置相机的fov.</li>
+  <li>zoom – (boolean) 允许camera随着鼠标齿轮滑动进行缩放.</li>
+</ul>
+
+<div class="language-js highlighter-rouge"><pre class="highlight"><code><span class="p">{</span>
+  <span class="nl">orbiting</span><span class="p">:</span> <span class="kc">true</span><span class="p">,</span> <span class="nx">zoom</span><span class="err">:</span> <span class="kc">true</span><span class="p">,</span> 
+  <span class="nx">autoOrbit</span><span class="err">:</span> <span class="kc">true</span><span class="p">,</span> <span class="nx">autoOrbitSpeed</span><span class="err">:</span> <span class="mf">0.5</span><span class="p">,</span>
+  <span class="nx">cameraDistance</span><span class="err">:</span> <span class="mi">100</span><span class="p">,</span> <span class="nx">cameraPitch</span><span class="err">:</span> <span class="mi">27</span><span class="p">,</span> <span class="nx">cameraYaw</span><span class="err">:</span> <span class="mi">0</span>
+<span class="p">}</span>
+</code></pre>
+</div>
+
+<h3 id="动画">动画</h3>
+<ul>
+  <li>animated – (boolean) 如果为true，画布将在每帧更新（通常为60fps），并且着色器中将提供时间统一变量。如果为false，则只有在窗口调整大小时才会重新绘制画布，从而减少开销.</li>
+  <li>playButtons – (boolean)如果设置为true并且animated为true，则会显示一些播放控制按钮（播放、停止、暂停）</li>
+</ul>
+
+<h3 id="编辑器">编辑器</h3>
+
+<ul>
+  <li>editorTheme – (string) 设置主题. 有 “dark” 和 “bright” 两个选项</li>
+  <li>editorWrap – (boolean) 如果设置为true，则在编辑器中启用文本换行</li>
+  <li>showTabs – (boolean) 如果设置为false，则选项卡将被删除，编辑器将不可用</li>
+</ul>
+
+<div class="language-js highlighter-rouge"><pre class="highlight"><code><span class="p">{</span>
+  <span class="nl">editorTheme</span><span class="p">:</span> <span class="s2">"bright"</span><span class="p">,</span> 
+  <span class="nx">editorWrap</span><span class="err">:</span> <span class="kc">false</span><span class="p">,</span> 
+  <span class="nx">showTabs</span><span class="err">:</span> <span class="kc">true</span>
+<span class="p">}</span>
+</code></pre>
 </div>
 
 
