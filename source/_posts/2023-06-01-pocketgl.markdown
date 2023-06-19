@@ -10,7 +10,23 @@ tags:
 > [pocketgl][i1]支持在自己的web页面集成类似 Shadertoy、 Threejs 等基于webGL 的渲染图形窗口， 并且拥有shader代码高亮编辑器支持实时修改和预览。 其自带的mesh包含两个Sphere 和 Teaport, 同时支持上床自定义的网格 和 背景天空盒。其既支持像Shadertoy 这种只包含frag 的着色器， 可以用来实现一些后处理效果和 SDF配合RayMatch的材质， 也支持vert的顶点着色器。
 
 
-![](http://www.pocketgl.com/wp-content/uploads/2016/04/tutorial-reflections.jpg)
+<script src="/js/pocket.gl.min.js"></script>
+<div id="container3" style="width:720px;">
+</div>
+<style> 
+.post-content ul li:before {
+    content: none;
+}
+.post-content ul li {
+    padding-left: 1px; 
+}
+input,optgroup,select,textarea {
+    color: #000000;
+    font: inherit;
+    margin: 0
+}
+</style>
+<script>new PocketGL("container3", "/js/reflect.js");</script>
 
 
 ## 环境安装
@@ -18,11 +34,11 @@ tags:
 
 Pocket.gl 基于nodejs的前端库:
 
-* Three.js, 3D 渲染
-* Ace, 代码编辑器
-* dat.GUI， GUI 截面绘制
-* clipboard.js， 复制粘贴版操作
-* RequireJS， Loading条
+* __Three.js__, 3D渲染
+* __Ace__,     代码编辑器Editor
+* __dat.GUI__， GUI界面绘制
+* __clipboard.js__， 复制粘贴版操作
+* __RequireJS__， Loading条
 
 
 pocketgl 依赖 [nodejs][i2] 和 [npm][i3] 环境， 在确保安装的情况下， 通过npm 安装bower， 如下命令：
@@ -62,6 +78,8 @@ These batch scripts can be used to build the library:
 
 
 其实 .bat 里面的内容也是调用 node相关的接口， 对于非windows平台， 可以直接把 .bat 后缀修改.sh 在mac 或者linux平台去运行。
+
+>NOTE: 这些适用于默认的pocket.gl.js， 主要是针对不使用param.js定制的效果， shader默认使用的是 src/default_shaders。 
 
 ## 加载
 
