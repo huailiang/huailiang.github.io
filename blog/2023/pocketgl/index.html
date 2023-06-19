@@ -77,18 +77,36 @@ MathJax.Hub.Config({
   <p><a href="http://www.pocketgl.com/">pocketgl</a>支持在自己的web页面集成类似 Shadertoy、 Threejs 等基于webGL 的渲染图形窗口， 并且拥有shader代码高亮编辑器支持实时修改和预览。 其自带的mesh包含两个Sphere 和 Teaport, 同时支持上床自定义的网格 和 背景天空盒。其既支持像Shadertoy 这种只包含frag 的着色器， 可以用来实现一些后处理效果和 SDF配合RayMatch的材质， 也支持vert的顶点着色器。</p>
 </blockquote>
 
-<p><img src="http://www.pocketgl.com/wp-content/uploads/2016/04/tutorial-reflections.jpg" alt="" /></p>
+<script src="/js/pocket.gl.min.js"></script>
+
+<div id="container3" style="width:720px;">
+</div>
+<style> 
+.post-content ul li:before {
+    content: none;
+}
+.post-content ul li {
+    padding-left: 1px; 
+}
+input,optgroup,select,textarea {
+    color: #000000;
+    font: inherit;
+    margin: 0
+}
+</style>
+
+<script>new PocketGL("container3", "/js/reflect.js");</script>
 
 <h2 id="环境安装">环境安装</h2>
 
 <p>Pocket.gl 基于nodejs的前端库:</p>
 
 <ul>
-  <li>Three.js, 3D 渲染</li>
-  <li>Ace, 代码编辑器</li>
-  <li>dat.GUI， GUI 截面绘制</li>
-  <li>clipboard.js， 复制粘贴版操作</li>
-  <li>RequireJS， Loading条</li>
+  <li><strong>Three.js</strong>, 3D渲染</li>
+  <li><strong>Ace</strong>,     代码编辑器Editor</li>
+  <li><strong>dat.GUI</strong>， GUI界面绘制</li>
+  <li><strong>clipboard.js</strong>， 复制粘贴版操作</li>
+  <li><strong>RequireJS</strong>， Loading条</li>
 </ul>
 
 <p>pocketgl 依赖 <a href="https://nodejs.org/">nodejs</a> 和 <a href="https://www.npmjs.com/">npm</a> 环境， 在确保安装的情况下， 通过npm 安装bower， 如下命令：</p>
@@ -126,6 +144,10 @@ MathJax.Hub.Config({
 </ul>
 
 <p>其实 .bat 里面的内容也是调用 node相关的接口， 对于非windows平台， 可以直接把 .bat 后缀修改.sh 在mac 或者linux平台去运行。</p>
+
+<blockquote>
+  <p>NOTE: 这些适用于默认的pocket.gl.js， 主要是针对不使用param.js定制的效果， shader默认使用的是 src/default_shaders。</p>
+</blockquote>
 
 <h2 id="加载">加载</h2>
 

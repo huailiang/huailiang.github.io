@@ -1,6 +1,4 @@
 {
-	copyright: "Skybox from the Cairo map of <a href='http://34bigthings.com/portfolio/redout/'>Redout</a>", copyrightColor: "#fff", copyrightLinkColor: "#c00",
-
 	cameraPitch: 10,
 	cameraYaw: 30,
 	cameraFOV: 70,
@@ -23,7 +21,7 @@
 
 	textures: [
 		{ 
-			url: "textures/squares-normal.jpg", 
+			url: "cubemap/squares-normal.jpg", 
 			wrap: "repeat", // repeat (default), clamp
 			name: "normalMap"
 		}
@@ -65,7 +63,6 @@
 		"uniform float time;",
 		"",
 		"// Per-Pixel Tangent Space Normal Mapping",
-		"// http://hacksoflife.blogspot.ch/2009/11/per-pixel-tangent-space-normal-mapping.html",
 		"vec3 perturbNormal( vec3 eye_pos, vec3 surf_norm, vec2 uv_coords, vec3 normal_perturbation ) {",
 		"	vec3 q0 = dFdx( eye_pos.xyz );",
 		"	vec3 q1 = dFdy( eye_pos.xyz );",
