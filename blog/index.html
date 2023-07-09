@@ -68,6 +68,28 @@ MathJax.Hub.Config({
     <article class="post">
   <header class="post-header">
     <h1 class="post-title2">
+      <a class="post-link" href="/blog/2023/gdb/">GDB调试</a>
+    </h1>
+    <div class="post-meta">
+      <time>Jul 9, 2023</time>
+    </div>
+  </header>
+
+  <p><a href="/blog/2023/gdb/" title="Permalink to: GDB调试"
+      class="read-more">
+  操作系统会记录运行过程中所有行为、资源申请、内存使用情况，当程序出现异常情况时，操作系统就会把它记录的情况写入到core文件，这个行为叫吐核。linux系统为了让用户有良好的体验，默认设置为不吐核. 在命令行执行：ulimit -c unlimited，该命令只是临时有效，如果想长期有效需要把它写入终端配置文件。
+
+
+ulimit
+
+ulimit – 用户资源限制命令
+
+1、说明: u...</a></p>
+</article>
+  
+    <article class="post">
+  <header class="post-header">
+    <h1 class="post-title2">
       <a class="post-link" href="/blog/2023/gtest/">测试框架</a>
     </h1>
     <div class="post-meta">
@@ -76,12 +98,27 @@ MathJax.Hub.Config({
   </header>
 
   <p><a href="/blog/2023/gtest/" title="Permalink to: 测试框架"
-      class="read-more">GTest
+      class="read-more">\
+  showProfit();
+}
 
-gtest是一个跨平台(Liunx、Mac OS X、Windows、Cygwin、Windows CE and Symbian)的C++测试框架，有google公司发布。gtest测试框架是在不同平台上为编写C++测试而生成的。
+#### 2 编写测试函数
 
-git clone https://github.com/google/googletest
-git checkout release-1.8.0...</a></p>
+在CommodityTest的头文件中添加如下槽函数
+
+头文件：
+```c++
+private slots:
+  //成本
+  void case1_gui_costing();
+  //价格
+  void case2_gui_price();
+  //利润
+  void case3_gui_profit();
+
+
+
+源...</a></p>
 </article>
   
     <article class="post">
@@ -202,30 +239,6 @@ if ( WIN32 AND NOT ...</a></p>
   <p><a href="/blog/2022/compiler/" title="Permalink to: Unity Scripting Runtime"
       class="read-more">
   Unity支持的语言，有如 c#, UnityScript, Boo。  其中Boo 是 Python风格的面向对象的语言， 使用的用户很少， UnityScript 是 JavaScript风格的OOP语言， 面向初学者， 这两种语言目前已经被官方停止支持。 c#目前支持最完善， 游戏开发者最易接受 Java风格的开发者语言， 支持 JIT(Mono) 与 AOT(IL2CPP)。 ...</a></p>
-</article>
-  
-    <article class="post">
-  <header class="post-header">
-    <h1 class="post-title2">
-      <a class="post-link" href="/blog/2022/upython/">Unity 与 Python 交互调用</a>
-    </h1>
-    <div class="post-meta">
-      <time>Nov 6, 2022</time>
-    </div>
-  </header>
-
-  <p><a href="/blog/2022/upython/" title="Permalink to: Unity 与 Python 交互调用"
-      class="read-more">
-  篇前需要强调的是 直接使用python来跑一些算法用来做验证是可以的， 但是对外发布的版本建议还是转移成c++版本， 这样效率会更高。
-
-
-py 与 prd
-
-Python的脚本文件是开源的，量化策略的安全性没有保障。因此需要保护源码。那么要对Python代码进行混淆、加密保护。
-
-混淆代码，我准备使用pyminifier。而加密处理，就比较麻烦。
-
-Python有py、pyc、pyw...</a></p>
 </article>
   
 
