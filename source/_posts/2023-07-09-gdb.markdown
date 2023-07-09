@@ -1,0 +1,481 @@
+---
+layout:     post
+title:      "GDB"
+date:       2023-07-09 02:00:00
+author:     "huailiang"
+tags:
+    - C/C++
+---
+
+
+__吐核__
+
+操作系统会记录运行过程中所有行为、资源申请、内存使用情况，当程序出现异常情况时，操作系统就会把它记录的情况写入到core文件，这个行为叫吐核。
+
+ubuntu系统为了让用户有良好的体验，默认设置为不吐核. 在命令行执行：ulimit -c unlimited，该命令只是临时有效，如果想长期有效需要把它写入终端配置文件。
+
+
+
+## ulimit
+
+ulimit -- 用户资源限制命令
+
+1、说明: ulimit用于shell启动进程所占用的资源.
+2、类别: shell内建命令
+3、语法格式: ulimit [-acdfHlmnpsStvw] [size]
+4、参数介绍:
+
+```
+-H 设置硬件资源限制.
+-S 设置软件资源限制.
+-a 显示当前所有的资源限制.
+-c size:设置core文件的最大值.单位:blocks
+-d size:设置数据段的最大值.单位:kbytes
+-f size:设置创建文件的最大值.单位:blocks
+-l size:设置在内存中锁定进程的最大值.单位:kbytes
+-m size:设置可以使用的常驻内存的最大值.单位:kbytes
+-n size:设置内核可以同时打开的文件描述符的最大值.单位:n
+-p size:设置管道缓冲区的最大值.单位:kbytes
+-s size:设置堆栈的最大值.单位:kbytes
+-t size:设置CPU使用时间的最大上限.单位:seconds
+-v size:设置虚拟内存的最大值.单位:kbytes 5,简单实例: 
+```
+
+-c是显示：core file size  如果这个值为0，则无法生成core文件。所以可以使用：ulimit -c 1024  或者 #ulimit -c unlimited 来使能 core文件。
+
+
+### MacOS 
+
+开启coredump如下：
+
+```sh
+sudo sysctl kern.coredump=1
+# kern.coredump: 1 -> 1
+```
+
+设置输出目录：
+
+```sh
+sudo mkdir /cores 
+sudo chown root:admin /cores 
+sudo chmod 1775 /cores
+sudo chmod o+w /cores
+```
+
+>提示: chmod 1775  出现 4 位数权限的第一位为特殊权限位，1相当于 o+s，如果不加或去掉 s 权限则只要用三位数字的权限设定 chmod 755 文件
+
+### Linux
+
+__临时修改__
+
+修改/proc/sys/kernel/core_pattern文件，但/proc目录本身是动态加载的，每次系统重启都会重新加载，因此这种方法只能作为临时修改。
+
+```sh
+echo /tmp/corefile/core-%e-%p-%t > /proc/sys/kernel/core_pattern
+```
+
+__永久修改__
+
+ 可以通过在/etc/sysctl.conf文件中，对sysctl变量kernel.core_pattern的设置。\#vi /etc/sysctl.conf 然后，在sysctl.conf文件中添加下面两行：
+```sh
+kernel.core_pattern = /tmp/corefile/core-%e-%p-%t
+kernel.core_uses_pid = 0
+```
+kernel.core_uses_pid 这个参数控制core文件的文件名是否添加pid作为扩展，如果这个文件的内容被配置成1，即使core_pattern中没有设置%p，最后生成的core dump文件名仍会加上进程ID
+
+使用以下命令，使修改结果马上生效。
+```sh
+sysctl –p /etc/sysctl.conf
+```
+### 开启
+
+利用CMakeLists.txt设置生成支持调试的.gdb文件，进而可以对代码进行调试
+
+
+```cmake
+SET(CMAKE_BUILD_TYPE "Debug")
+SET(CMAKE_CXX_FLAGS_DEBUG "$ENV{CXXFLAGS} -O0 -Wall -g2 -ggdb")
+SET(CMAKE_CXX_FLAGS_RELEASE "$ENV{CXXFLAGS} -O3 -Wall")
+```
+
+也可以在编译的时候指定-g编译选项
+
+```sh
+# gcc -g 源文件.c -o 输出的目标文件
+gcc -g test.c -o test
+```
+
+-g表示以OS本地格式（stabs，COFF，XCOFF或DWARF 2）产生调试信息
+
+####  Coredump
+
+```
+ % ./test
+zsh: segmentation fault (core dumped)  ./test
+% ls -lh /cores 
+total 4262432
+-r--------  1 yeecall  wheel   2.0G  9  8 00:14 core.37676
+```
+
+看到在 /cores 目录下，产生了一个 core.37676 的 coredump 文件
+
+#### 调试 core 文件
+__MacOS__ 
+
+使用 __lldb__ 进行调试 (lldb也是调试工具，类似gdb, xcode4.3版本默认使用的是lldb)。命令如下：
+
+```sh
+% lldb -c /cores/core.37676
+(lldb) target create --core "/cores/core.37676"
+Core file '/cores/core.37676' (x86_64) was loaded.
+(lldb)
+```
+
+输入 bt 进行跟踪。
+
+```sh
+% lldb -c /cores/core.37676
+(lldb) target create --core "/cores/core.37676"
+Core file '/cores/core.37676' (x86_64) was loaded.
+(lldb) bt
+* thread #1, stop reason = signal SIGSTOP
+  * frame #0: 0x0000000108e1efa9 test`main at test.cpp:5:6
+    frame #1: 0x00007fff72df2cc9 libdyld.dylib`start + 1
+```
+
+__Linux__
+
+gdb文件指定可执行文件 和 core文件的名称:
+
+```
+gdb program core（gdb + 可执行文件 +core文件）
+```
+
+也可以指定一个进程id作为第二个参数，如果你想调试一个正在运行的程序：
+
+```
+gdb program 1234（gdb进程名+进程id）
+```
+
+## GDB 命令解析
+
+-g 和 -ggdb 都是令 gcc 生成调试信息，但是它们也是有区别的
+
+|选项| 解析
+| ---| --
+|g|	该选项可以利用操作系统的“原生格式（native format）”生成调试信息。GDB 可以直接利用这个信息，其它调试器也可以使用这个调试信息
+|ggdb|使GCC为GDB 生成专用的更为丰富的调试信息，但是此时就不能用其他的调试器来进行调试了 (如 ddx)
+
+
+-g也是分级别的
+
+|选项|解析
+| --| --
+|g1|	级别1（-g1）不包含局部变量和与行号有关的调试信息，因此只能够用于回溯跟踪和堆栈转储之用。回溯跟踪指的是监视程序在运行过程中的函数调用历史，堆栈转储则是一种以原始的十六进制格式保存程序执行环境的方法，两者都是经常用到的调试手段
+|g2|	这是默认的级别，此时产生的调试信息包括扩展的符号表、行号、局部或外部变量信息
+|g3|	包含级别2中的所有调试信息，以及源代码中定义的宏
+
+
+### gdb调试常用参数解析
+
+|参数 | 解析
+| --- | :--
+|-e	|指定可执行文件名
+|-c	|指定coredump文件
+|-d	|指定目录加入到源文件搜索路径
+|–cd	|指定目录作为路径运行gdb
+|-s	|指定文件读取符号表
+|-p	|指定attach进程||
+
+#### 调试已运行的进程
+
+```c
+(gdb) gdb　-p  进程名 //对指定进程进行调试
+(gdb) gdb　attach　进程名
+```
+
+3.2 调试线程
+
+```c
+(gdb) info　thread　　//调试已运行的进程下再列出线程
+(gdb) thread　线程号   //切换至线程
+```
+
+3.3 查看相关信息
+
+```csharp
+(gdb) info　thread　　  //列出线程
+(gdb) info　register　 //列出寄存器
+(gdb) info　frame　    //列出栈帧
+(gdb) info　files　　  //列出当前文件
+(gdb) info　share　    //列出当前共享库
+```
+
+
+### 常用的调试步骤
+
+#### 1、断点的添加
+使用break 或者b命令
+
+|命令|	解析
+| :---| :--
+|break function|在进入指定函数时停住
+|break n|在指定行号停住，如(gdb) break 46
+|break +offset或break -offset|	在当前行号的前面或后面的offset行停住。offiset为自然数。
+|break filename:linenum	|在源文件filename的linenum行处停住。
+|break filename:function|在源文件filename的function函数的入口处停住。
+|break *address	|在程序运行的内存地址处停住。
+|break	|break命令没有参数时，表示在下一条指令处停住。
+
+跨文件使用如：
+
+```
+(gdb) b Test_UTCU4T.cpp:16
+```
+
+#### 2、断点的删除
+
+| 命令	| 解析
+| :--| :--
+| 删除n号断点	| (gdb) delete n
+| 删除所有断点	| (gdb) delete
+| 清除行n上面的所有断点	| (gdb) clear n
+
+
+#### 3、程序运行进度调试
+
+（1）连续执行程序，直到遇到断点
+
+```
+(gdb) run|r
+```
+（2）继续执行程序，直到下个断点
+
+```sh
+(gdb) continue|c
+```
+（3）执行下一行语句
+```sh
+(gdb) next|n
+```
+（4）单步进入
+
+```sh
+(gdb) step|s
+```
+
+（5）跳出当前函数
+```sh
+(gdb) finish 
+```
+直到当前函数运行完毕返回再停止。例如进入的单步执行如果已经进入了某函数，可以退出该函数返回到它的调用函数中
+
+（6）跳转指令
+```c
+(gdb) jump location   
+//指定下一条语句的运行点。
+//可以是文件的行号，可以是file:line格式，可以是+num这种偏移量格式。
+//表式着下一条运行语句位置
+```
+
+### 4、打印程序相关信息
+
+
+#### 1 print 命令
+输出或者修改指定变量或者表达式的值
+
+```sh
+(gdb) print num
+(gdb) p num
+(gdb) print file::variable
+(gdb) print function::variable
+```
+其中 file用于指定具体的文件名，funciton 用于指定具体所在函数的函数名，variable表示要查看的目标变量或表达式。
+另外，print也可以打印出类或者结构体变量的值。
+
+#### 2 打印数组
+查看一段连续的内存空间的值。比如数组的一段，或是动态分配的数据的大小。你可以使用GDB的“@”操作符，“@”的左边是第一个内存的地址的值，“@”的右边则你你想查看内存的长度。例如，你的程序中有这样的语句：
+
+```sh
+int *array = (int *) malloc (len * sizeof (int)); 
+```
+
+于是，在GDB调试过程中，你可以以如下命令显示出这个动态数组的取值：
+```sh
+(gdb) p *array@len 
+```
+@的左边是数组的首地址的值，也就是变量array所指向的内容，右边则是数据的长度，其
+保存在变量len中，其输出结果，大约是下面这个样子的：
+
+```sh
+(gdb) p *array@len 
+$1 = {2, 4, 6, 8, 10, 12, 14, 16, 18, 20, 22, 24, 26, 28, 30, 32, 34, 36, 38, 40} 
+```
+
+如果是静态数组的话，可以直接用print数组名，就可以显示数组中所有数据的内容了
+
+#### 3 源代码显示
+
+|命令|	解析
+| :---| --
+|list n	|显示程序第n行的周围的源程序。
+|list function	|显示函数名为function的函数的源程序。
+|list +n	|显示当前行n后面的源程序。
+|list -n	|显示当前行n前面的源程序。
+|set listsize	|设置一次显示源代码的行数。
+|show listsize	|查看当前listsize的设置。
+
+#### 4 查看源代码的内存地址
+
+使用info line命令来查看源代码在内存中的地址。info line后面可以跟“行号”，“函
+数名”，“文件名:行号”，“文件名:函数名”，这个命令会打印出所指定的源码在运行时的内
+存地址，如：
+
+```
+(gdb) info line tst.c:func 
+Line 5 of "tst.c" starts at address 0x8048456 and ends at 0x804845d . 
+```
+
+还有一个命令（disassemble）你可以查看源程序的当前执行时的机器码，这个命令会把目前
+内存中的指令dump出来。
+
+```
+disassemble [Address]
+(gdb) disassemble 0x00000000004008fd  //反汇编包含给定地址的整个函数，包括其上方的指令。
+
+disassemble [Start],[End]
+(gdb) disassemble 0x000000000040068a,0x00000000004006ac  // 指定要反汇编的起始地址和结束地址
+
+disassemble [Function],+[Length]
+(gdb) disassemble main, +10       //指定从给定地址或函数开始反汇编的字节数
+```
+```
+disassemble /m [...]
+        指定此选项后，反汇编命令将显示与反汇编指令相对应的源代码行。例如：
+(gdb) disassemble /m main
+disassemble /r [...]
+        当指定此选项时，反汇编命令将显示所有反汇编指令的原始字节值。
+(gdb) disassemble /r main
+```
+#### 5 查看内存地址保存的值
+你可以使用examine命令（简写是x）来查看内存地址中的值。x命令的语法如下所示：
+```
+(gdb) x/nfu addr
+```
+n 是一个正整数，表示显示内存的长度，也就是说从当前地址向后显示几个地址的内容。
+f 表示显示的格式，参见上面。如果地址所指的是字符串，那么格式可以是s，如果地十是
+指令地址，那么格式可以是i。
+u 表示从当前地址往后请求的字节数，如果不指定的话，GDB默认是4个bytes。u参数可
+以用下面的字符来代替，b表示单字节，h表示双字节，w表示四字节，g表示八字节。当
+我们指定了字节长度后，GDB会从指内存定的内存地址开始，读写指定字节，并把其当作
+一个值取出来。
+
+addr表示一个内存地址。
+
+n/f/u三个参数可以一起使用。例如：
+```c
+(gdb) x/3uh 0x54320 
+//从内存地址0x54320读取内容，
+//h表示以双字节为一个单位，
+//3表示三个单位，
+//u表示按十六进制显示。
+```
+#### 6 查看寄存器
+要查看寄存器的值，很简单，可以使用如下命令：
+```
+(gdb) info registers 
+```
+查看寄存器的情况。（除了浮点寄存器）
+```
+(gdb) info all-registers 
+```
+
+查看所有寄存器的情况。（包括浮点寄存器）
+寄存器中放置了程序运行时的数据，比如程序当前运行的指令地址（ip），程序的当前堆栈地址（sp）等等。你同样可以使用print命令来访问寄存器的情况，只需要在寄存器名字前
+加一个$符号就可以了。如：p \$eip。
+
+#### 7 显示当前调用函数堆栈中的函数
+```c
+(gdb) backtrace [-full] [n]
+/*命令产生一张列表，包含着从最近的过程开始的所有有效过程和调用这些过程的参数。
+n：一个整数值，当为正整数时，表示打印最里层的 n 个栈帧的信息；
+n为负整数时，那么表示打印最外层n个栈帧的信息；
+-full：打印栈帧信息的同时，打印出局部变量的值
+注意，当调试多线程程序时，该命令仅用于打印当前线程中所有栈帧的信息。
+如果想要打印所有线程的栈帧信息，应执行thread apply all backtrace命令*/
+```
+#### 8 frame 命令详解
+frame 或 f 会打印出这些信息：栈的层编号，当前的函数名，函数参数值，函数所在文件及行号，函数执行到的语句。 查看当前栈帧中存储的信息
+```
+(gdb) info frame
+Stack level 0, frame at 0x7ffc1da10e80:
+ rip = 0x7f800008b4e3 in __epoll_wait_nocancel; saved rip = 0x5560eac8b902
+ called by frame at 0x7ffc1da11280
+ Arglist at 0x7ffc1da10e70, args: 
+ Locals at 0x7ffc1da10e70, Previous frame's sp is 0x7ffc1da10e80
+ Saved registers:
+  rip at 0x7ffc1da10e78
+```
+该命令会依次打印出当前栈帧的如下信息：
+1、当前栈帧的编号，以及栈帧的地址；
+2、当前栈帧对应函数的存储地址，以及该函数被调用时的代码存储的地址
+3、当前函数的调用者，对应的栈帧的地址；
+4、编写此栈帧所用的编程语言；
+5、函数参数的存储地址以及值；
+6、函数中局部变量的存储地址；
+7、栈帧中存储的寄存器变量，例如指令寄存器（64位环境中用 rip 表示，32为环境中用eip 表示）、堆栈基指针寄存器（64位环境用 rbp表示，32位环境用 ebp表示）等。
+
+### 4、gdb其他命令用法
+
+
+#### 搜索源代码
+
+不仅如此，GDB还提供了源代码搜索的命令：
+```c
+(gdb) forward-search     //向前面搜索。 
+(gdb) reverse-search    //从当前行的开始向后搜索
+```
+#### 设置观察点(WatchPoint)
+
+观察点一般用来观察某个表达式(变量也是一种表达式)的值是否变化了。如果有变化，马上停住程序。有下面的几种方法来设置观察点：
+```c
+watch 为表达式(变量)expr设置一个观察点。一旦表达式值有变化时，马上停住程序
+(gdb) watch i != 10 
+//这里，i != 10这个表达式一旦变化，则停住。
+//watch <expr> 为表达式（变量）expr设置一个观察点。一量表达式值有变化时，马上停住程序(也是一种断点)。 
+```
+#### 设置捕捉点(CatchPoint)q
+
+可设置捕捉点来补捉程序运行时的一些事件。如载入共享库(动态链接库)或是C++的异常。设置捕捉点的格式为：
+
+```c
+//catch 当event发生时，停住程序
+(gdb) info catch 
+//打印出当前的函数中的异常处理信息。
+(gdb) info locals 
+//打印出当前函数中所有局部变量及其值。 
+```
+
+#### 强制调用函数
+
+```c
+(gdb) call <expr> 
+/*这里,<expr>可以是一个函数，这样就会返回函数的返回值，
+如果函数的返回类型是void那么就不会打印函数的返回值,
+但是实践发现，函数运行过程中的打印语句还是没有被打印出来。 
+表达式中可以一是函数，以此达到强制调用函数的目的。并显示函数的返回值，
+如果函数返回值是void，那么就不显示。*/
+```
+
+另一个相似的命令也可以完成这一功能——print，print后面可以跟表达式，所以也可以用他来调用函数，print和call的不同是，如果函数返回void，call则不显示，print则显示函数返回值，并把该值存入历史数据中。
+
+
+#### 终止一个正在调试的程序
+
+```c
+(gdb) kill 
+//输入kill就会终止正在调试的程序了。
+```
+注意：当调试完成后，如果想令当前程序进行执行，消除调试操作对它的影响，需手动将 GDB 调试器与程序分离，分离过程分为 2 步：
+1、执行 detach 指令，使GDB调试器和程序分离；
+2、执行 quit（或q）指令，退出GDB调试
