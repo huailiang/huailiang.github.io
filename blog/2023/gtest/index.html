@@ -7,7 +7,7 @@
 
   <title>测试框架</title>
   <meta name="description"
-    content="\  showProfit();}```">
+    content="GTest">
 
   <link rel="shortcut icon" href="/img/favicon.ico">
   <link rel="stylesheet" href="/css/main.css">
@@ -73,23 +73,458 @@ MathJax.Hub.Config({
     </header>
 
     <div class="post-content">
-      <p>\<br />
-  showProfit();<br />
-}</p>
-<div class="highlighter-rouge"><pre class="highlight"><code>
-#### 2 编写测试函数
+      <h2 id="gtest">GTest</h2>
 
-在CommodityTest的头文件中添加如下槽函数
+<p>gtest是一个跨平台(Liunx、Mac OS X、Windows、Cygwin、Windows CE and Symbian)的C++测试框架，有google公司发布。gtest测试框架是在不同平台上为编写C++测试而生成的。</p>
 
-头文件：
-```c++
-private slots:
-  //成本
-  void case1_gui_costing();
-  //价格
-  void case2_gui_price();
-  //利润
-  void case3_gui_profit();
+<div class="language-sh highlighter-rouge"><pre class="highlight"><code>git clone https://github.com/google/googletest
+git checkout release-1.8.0
+<span class="nb">cd</span> ~/googletest <span class="o">&amp;&amp;</span> cmake .
+make <span class="o">&amp;&amp;</span> sudo make install
+</code></pre>
+</div>
+
+<h3 id="test-和-testf">Test 和 TestF</h3>
+
+<p>TEST宏的作用是创建一个简单测试，它定义了一个测试函数，在这个函数里可以使用任何C++代码并使用提供的断言来进行检查。</p>
+
+<p>TEST语法定义：<br />
+TEST(test_case_name, test_name)</p>
+
+<p>test_case_name第一个参数是测试用例名,通常是取测试函数名或者测试类名<br />
+test_name 第二个参数是测试名这个随便取，但最好取有意义的名称<br />
+当测试完成后显示的测试结果将以”测试用例名.测试名”的形式给出</p>
+
+<div class="language-c++ highlighter-rouge"><pre class="highlight"><code><span class="cp">#include &lt;gtest/gtest.h&gt;
+</span>
+<span class="kt">int</span> <span class="nf">Factorial</span><span class="p">(</span> <span class="kt">int</span> <span class="n">n</span> <span class="p">)</span> <span class="p">{</span>
+  <span class="k">if</span><span class="p">(</span><span class="n">n</span><span class="o">==</span><span class="mi">2</span><span class="p">)</span> <span class="k">return</span> <span class="mi">100</span><span class="p">;</span> <span class="c1">//故意出个错，嘻嘻
+</span>  <span class="k">return</span> <span class="n">n</span><span class="o">&lt;=</span><span class="mi">0</span><span class="o">?</span> <span class="mi">1</span> <span class="o">:</span> <span class="n">n</span><span class="o">*</span><span class="n">Factorial</span><span class="p">(</span><span class="n">n</span> <span class="o">-</span> <span class="mi">1</span><span class="p">);</span>
+<span class="p">}</span>
+
+<span class="c1">//用TEST做简单测试
+</span><span class="n">TEST</span><span class="p">(</span><span class="n">TestFactorial</span><span class="p">,</span> <span class="n">ZeroInput</span><span class="p">)</span> <span class="c1">//第一个参数是测试用例名，第二个参数是测试名：随后的测试结果将以"测试用例名.测试名"的形式给出
+</span><span class="p">{</span>
+  <span class="n">EXPECT_EQ</span><span class="p">(</span><span class="mi">1</span><span class="p">,</span> <span class="n">Factorial</span><span class="p">(</span><span class="mi">0</span><span class="p">));</span>  <span class="c1">//EXPECT_EQ稍候再说，现在只要知道它是测试两个数据是否相等的就行了。
+</span><span class="p">}</span>
+
+<span class="n">TEST</span><span class="p">(</span><span class="n">TestFactorial</span><span class="p">,</span> <span class="n">OtherInput</span><span class="p">)</span> <span class="p">{</span>
+  <span class="n">EXPECT_EQ</span><span class="p">(</span><span class="mi">1</span><span class="p">,</span> <span class="n">Factorial</span><span class="p">(</span><span class="mi">1</span><span class="p">));</span>
+  <span class="n">EXPECT_EQ</span><span class="p">(</span><span class="mi">2</span><span class="p">,</span> <span class="n">Factorial</span><span class="p">(</span><span class="mi">2</span><span class="p">));</span>
+  <span class="n">EXPECT_EQ</span><span class="p">(</span><span class="mi">6</span><span class="p">,</span> <span class="n">Factorial</span><span class="p">(</span><span class="mi">3</span><span class="p">));</span>
+  <span class="n">EXPECT_EQ</span><span class="p">(</span><span class="mi">40320</span><span class="p">,</span> <span class="n">Factorial</span><span class="p">(</span><span class="mi">8</span><span class="p">));</span>
+<span class="p">}</span>
+
+<span class="kt">int</span> <span class="n">main</span><span class="p">(</span><span class="kt">int</span> <span class="n">argc</span><span class="p">,</span> <span class="kt">char</span><span class="o">*</span> <span class="n">argv</span><span class="p">[])</span> <span class="p">{</span>
+  <span class="n">testing</span><span class="o">::</span><span class="n">InitGoogleTest</span><span class="p">(</span><span class="o">&amp;</span><span class="n">argc</span><span class="p">,</span><span class="n">argv</span><span class="p">);</span> <span class="c1">//用来处理Test相关的命令行开关，如果不关注也可不加
+</span>  <span class="n">RUN_ALL_TESTS</span><span class="p">();</span>  <span class="c1">//看函数名就知道干啥了
+</span>  <span class="k">return</span> <span class="mi">0</span><span class="p">;</span>
+<span class="p">}</span>
+</code></pre>
+</div>
+<h4 id="test_f宏">TEST_F宏</h4>
+<p>TEST_F主要是进行多样测试，就是多种不同情况的测试TestCase中都会使用相同一份的测试数据的时候将会才用它。<br />
+即用相同的数据测试不同的行为，如果采用TEST宏进行测试那么将会为不同的测试case创建一份数据。TEST_F宏将会共用一份避免重复拷贝共具灵活性。</p>
+
+<p>语法定义为：<br />
+TEST_F(test_case_name, test_name);</p>
+
+<p>test_case_name第一个参数是测试用例名,必须取类名。这个和TEST宏不同<br />
+test_name 第二个参数是测试名这个随便取，但最好取有意义的名称<br />
+使用TEST_F时必须继承::testing::Test类。并且该类提供了两个接口void SetUp(); void TearDown();<br />
+void SetUp()函数,为测试准备对象.<br />
+void TearDown()函数 为测试后销毁对象资源。<br />
+如下程序测试一个Base类的两个方法，它们都共用相同的数据（Base类对象）：<br />
+程序通过BaseTest类创建一个共用的数据资源，这个在测试时将无需为没有测试用例单独创建Base对象。</p>
+
+<div class="language-c++ highlighter-rouge"><pre class="highlight"><code><span class="cp">#include &lt;iostream&gt;
+#include &lt;memory&gt;
+#include &lt;gtest/gtest.h&gt;
+#include &lt;Memory.h&gt;
+</span><span class="k">using</span> <span class="k">namespace</span> <span class="n">sampleCXX</span><span class="o">::</span><span class="n">common</span><span class="p">;</span>
+ 
+<span class="k">class</span> <span class="nc">Base</span> <span class="p">{</span>
+<span class="k">public</span><span class="o">:</span>
+<span class="n">Base</span><span class="p">(</span><span class="n">std</span><span class="o">::</span><span class="n">string</span> <span class="n">name</span><span class="p">)</span><span class="o">:</span><span class="n">m_name</span><span class="p">{</span><span class="n">name</span><span class="p">}</span> <span class="p">{</span>
+ <span class="n">std</span><span class="o">::</span><span class="n">cout</span> <span class="o">&lt;&lt;</span> <span class="s">"Create constructor name: "</span> <span class="o">&lt;&lt;</span> <span class="n">m_name</span> <span class="o">&lt;&lt;</span> <span class="n">std</span><span class="o">::</span><span class="n">endl</span><span class="p">;</span>
+<span class="p">}</span>
+
+<span class="n">std</span><span class="o">::</span><span class="n">string</span> <span class="n">getName</span><span class="p">()</span> <span class="p">{</span>
+ <span class="k">return</span> <span class="n">m_name</span><span class="p">;</span>
+<span class="p">}</span>
+
+<span class="kt">void</span> <span class="n">setName</span><span class="p">(</span><span class="k">const</span> <span class="n">std</span><span class="o">::</span><span class="n">string</span> <span class="o">&amp;</span><span class="n">name</span><span class="p">)</span> <span class="p">{</span>
+ <span class="n">m_name</span> <span class="o">=</span> <span class="n">std</span><span class="o">::</span><span class="n">string</span><span class="p">(</span><span class="n">name</span><span class="p">);</span>
+<span class="p">}</span>
+ 
+<span class="o">~</span><span class="n">Base</span><span class="p">()</span> <span class="p">{</span>
+ <span class="n">std</span><span class="o">::</span><span class="n">cout</span> <span class="o">&lt;&lt;</span> <span class="s">"Destory base"</span> <span class="o">&lt;&lt;</span> <span class="n">std</span><span class="o">::</span><span class="n">endl</span><span class="p">;</span>
+<span class="p">}</span>
+<span class="k">private</span><span class="o">:</span>
+	<span class="n">std</span><span class="o">::</span><span class="n">string</span> <span class="n">m_name</span><span class="p">;</span>
+<span class="p">};</span>
+ 
+<span class="k">class</span> <span class="nc">BaseTest</span> <span class="o">:</span> <span class="k">public</span> <span class="o">::</span><span class="n">testing</span><span class="o">::</span><span class="n">Test</span> <span class="p">{</span>
+<span class="k">protected</span><span class="o">:</span>
+ <span class="c1">// 为测试准备数据对象
+</span> <span class="kt">void</span> <span class="n">SetUp</span><span class="p">()</span> <span class="n">override</span> <span class="p">{</span>
+	<span class="n">m_base</span> <span class="o">=</span> <span class="n">std</span><span class="o">::</span><span class="n">make_shared</span><span class="o">&lt;</span><span class="n">Base</span><span class="o">&gt;</span><span class="p">(</span><span class="s">"SvenBaseTest"</span><span class="p">);</span>
+ <span class="p">}</span>
+ <span class="c1">// 清除资源
+</span> <span class="kt">void</span> <span class="n">TearDown</span><span class="p">()</span> <span class="n">override</span> <span class="p">{</span>
+	<span class="n">m_base</span><span class="p">.</span><span class="n">reset</span><span class="p">();</span>
+ <span class="p">}</span>
+ 
+ <span class="n">std</span><span class="o">::</span><span class="n">shared_ptr</span><span class="o">&lt;</span><span class="n">Base</span><span class="o">&gt;</span> <span class="n">m_base</span><span class="p">;</span>
+<span class="p">};</span>
+ 
+<span class="n">TEST_F</span><span class="p">(</span><span class="n">BaseTest</span><span class="p">,</span> <span class="n">testCreateInstance</span><span class="p">)</span> <span class="p">{</span>
+ <span class="n">std</span><span class="o">::</span><span class="n">unique_ptr</span><span class="o">&lt;</span><span class="n">Base</span><span class="o">&gt;</span> <span class="n">instance</span> <span class="o">=</span> <span class="n">make_unique</span><span class="o">&lt;</span><span class="n">Base</span><span class="o">&gt;</span><span class="p">(</span><span class="s">"SvenBaseUnique"</span><span class="p">);</span>
+ <span class="n">EXPECT_NE</span><span class="p">(</span><span class="n">instance</span><span class="p">,</span> <span class="nb">nullptr</span><span class="p">);</span>
+ <span class="n">instance</span><span class="p">.</span><span class="n">reset</span><span class="p">();</span>
+ <span class="n">EXPECT_EQ</span><span class="p">(</span><span class="n">instance</span><span class="p">,</span> <span class="nb">nullptr</span><span class="p">);</span>
+<span class="p">}</span>
+ 
+<span class="n">TEST_F</span><span class="p">(</span><span class="n">BaseTest</span><span class="p">,</span> <span class="n">testGetName</span><span class="p">)</span> <span class="p">{</span>
+ <span class="k">auto</span> <span class="n">name</span> <span class="o">=</span> <span class="n">m_base</span><span class="o">-&gt;</span><span class="n">getName</span><span class="p">();</span>
+ <span class="n">EXPECT_STREQ</span><span class="p">(</span><span class="n">name</span><span class="p">.</span><span class="n">c_str</span><span class="p">(),</span> <span class="s">"SvenBaseTest"</span><span class="p">);</span>
+<span class="p">}</span>
+ 
+<span class="n">TEST_F</span><span class="p">(</span><span class="n">BaseTest</span><span class="p">,</span> <span class="n">testSetName</span><span class="p">)</span> <span class="p">{</span>
+ <span class="n">m_base</span><span class="o">-&gt;</span><span class="n">setName</span><span class="p">(</span><span class="s">"NewSvenBase"</span><span class="p">);</span>
+ <span class="k">auto</span> <span class="n">name</span> <span class="o">=</span> <span class="n">m_base</span><span class="o">-&gt;</span><span class="n">getName</span><span class="p">();</span>
+ <span class="n">EXPECT_STREQ</span><span class="p">(</span><span class="n">name</span><span class="p">.</span><span class="n">c_str</span><span class="p">(),</span> <span class="s">"NewSvenBase"</span><span class="p">);</span>
+<span class="p">}</span>
+</code></pre>
+</div>
+
+<h3 id="mock">Mock</h3>
+
+<p>gmock是一款开源的白盒测试工具，测试一个模块的时候，可能涉及到和其他模块交互，可以将模块之间的接口mock起来，模拟交互过程。例如：</p>
+
+<p>下面简单的说说打桩在白盒测试中的重要性：</p>
+
+<p>1、比如银行业务，需要测试业务模块。此时，不可能去操作真实的数据库，并且搭建新的数据库可能比较复杂或者耗时。那么就可以用gmock将数据库接口地方打桩，来模拟数据库操作。</p>
+
+<p>2、比如要测试A模块，必过A模块需要调用B模块的函数。如果B模块还没有实现，此时，就可以用gmock将B模块的某些接口打桩。这样就可以让A模块的测试继续进行下去。</p>
+
+<p>3、比如网关设备，在用gtest测试device模块的时候，必须有真实的设备才能让测试进行下去。如果用gmock模拟一套sdk接口，那么无需真实的设备也能让测试进行下去。</p>
+
+<h4 id="举例">举例</h4>
+
+<p>我们工程有一个类CD是这样的</p>
+
+<div class="language-c++ highlighter-rouge"><pre class="highlight"><code><span class="k">class</span> <span class="nc">CD</span>
+<span class="p">{</span>
+<span class="k">public</span><span class="o">:</span>
+ <span class="n">CD</span><span class="p">()</span> <span class="p">{}</span>
+ <span class="k">virtual</span> <span class="o">~</span><span class="n">CD</span><span class="p">()</span> <span class="p">{}</span>
+ <span class="k">virtual</span> <span class="n">std</span><span class="o">::</span><span class="n">string</span> <span class="n">getAttrString</span><span class="p">()</span> <span class="o">=</span> <span class="mi">0</span><span class="p">;</span>
+ <span class="k">virtual</span> <span class="kt">int</span> <span class="n">getPosition</span><span class="p">(</span><span class="kt">int</span> <span class="n">parm</span><span class="p">)</span> <span class="o">=</span> <span class="mi">0</span><span class="p">;</span>
+<span class="p">};</span>
+</code></pre>
+</div>
+
+<p>而后须要定义个 Mock 类来继承我们要mock的类CD，而且定义须要模拟（mock）的方法：getAttrString, getPosition。这里咱们用到了宏定义MOCK_METHOD0，MOCK_METHOD1后面的数字表明了模拟函数的参数个数，如MOCK_METHOD0，MOCK_METHOD1。它接受两个参数：</p>
+
+<p>头文件中还有其他类似宏定义，如MOCK_METHOD0，MOCK_METHOD2…</p>
+<div class="highlighter-rouge"><pre class="highlight"><code>MOCK_METHOD#1(#2, #3(#4) )
+</code></pre>
+</div>
+<p>#2是你要mock的方法名称！#1表示你要mock的方法共有几个参数，#4是这个方法具体的参数，#3表示这个方法的返回值类型。很简单不是？</p>
+
+<div class="language-c++ highlighter-rouge"><pre class="highlight"><code><span class="k">class</span> <span class="nc">MockCD</span><span class="o">:</span><span class="k">public</span> <span class="n">CD</span>
+<span class="p">{</span>
+<span class="k">public</span><span class="o">:</span>
+ <span class="c1">//0和1代表了参数的个数
+</span> <span class="n">MOCK_METHOD0</span><span class="p">(</span><span class="n">getAttrString</span><span class="p">,</span><span class="n">std</span><span class="o">::</span><span class="n">string</span><span class="p">());</span>
+ <span class="n">MOCK_METHOD1</span><span class="p">(</span><span class="n">getPosition</span><span class="p">,</span><span class="kt">int</span><span class="p">(</span><span class="kt">int</span><span class="p">));</span>
+<span class="p">};</span>
+</code></pre>
+</div>
+<p>经过这个宏定义，已经初步模拟出对应的方法了。接下来在TEST里告诉 Mock Object 被调用时该如何动作（就是给测试模拟什么样的输出）：</p>
+
+<div class="language-c++ highlighter-rouge"><pre class="highlight"><code><span class="n">TEST</span><span class="p">(</span><span class="n">MockTestCase</span><span class="p">,</span> <span class="n">Demo1</span><span class="p">)</span>
+<span class="p">{</span>
+  <span class="kt">int</span> <span class="n">n</span> <span class="o">=</span> <span class="mi">100</span><span class="p">;</span>
+  <span class="n">std</span><span class="o">::</span><span class="n">string</span> <span class="n">value</span> <span class="o">=</span> <span class="s">"Hello World!"</span><span class="p">;</span>
+
+  <span class="n">MockCD</span> <span class="n">mockFoo</span><span class="p">;</span>
+  <span class="c1">//期待运行1次,且返回值为value的字符串&lt;--就是告诉测试，调到getAttrString方法就模拟返回value
+</span>  <span class="n">EXPECT_CALL</span><span class="p">(</span><span class="n">mockFoo</span><span class="p">,</span> <span class="n">getAttrString</span><span class="p">())</span>
+  <span class="p">.</span><span class="n">Times</span><span class="p">(</span><span class="mi">1</span><span class="p">)</span>
+  <span class="p">.</span><span class="n">WillOnce</span><span class="p">(</span><span class="n">testing</span><span class="o">::</span><span class="n">Return</span><span class="p">(</span><span class="n">value</span><span class="p">));</span>
+
+  <span class="n">std</span><span class="o">::</span><span class="n">string</span> <span class="n">returnValue</span> <span class="o">=</span> <span class="n">mockFoo</span><span class="p">.</span><span class="n">getAttrString</span><span class="p">();</span>
+  <span class="n">std</span><span class="o">::</span><span class="n">cout</span> <span class="o">&lt;&lt;</span> <span class="s">"Returned Value: "</span> <span class="o">&lt;&lt;</span> <span class="n">returnValue</span> <span class="o">&lt;&lt;</span> <span class="n">std</span><span class="o">::</span><span class="n">endl</span><span class="p">;</span>
+
+  <span class="c1">//期待运行两次,返回值分别为335 和 455&lt;--就是告诉测试，调到getPosition方法就模拟第一次返回334，第二次返回455
+</span>  <span class="n">EXPECT_CALL</span><span class="p">(</span><span class="n">mockFoo</span><span class="p">,</span> <span class="n">getPosition</span><span class="p">(</span><span class="n">testing</span><span class="o">::</span><span class="n">_</span><span class="p">))</span>
+  <span class="p">.</span><span class="n">Times</span><span class="p">(</span><span class="mi">2</span><span class="p">)</span>
+  <span class="p">.</span><span class="n">WillOnce</span><span class="p">(</span><span class="n">testing</span><span class="o">::</span><span class="n">Return</span><span class="p">(</span><span class="mi">335</span><span class="p">))</span>
+  <span class="p">.</span><span class="n">WillOnce</span><span class="p">(</span><span class="n">testing</span><span class="o">::</span><span class="n">Return</span><span class="p">(</span><span class="mi">455</span><span class="p">));</span>
+
+  <span class="kt">int</span> <span class="n">val</span> <span class="o">=</span> <span class="n">mockFoo</span><span class="p">.</span><span class="n">getPosition</span><span class="p">(</span><span class="mi">0</span><span class="p">);</span>  <span class="c1">//355
+</span>  <span class="kt">int</span> <span class="n">val2</span> <span class="o">=</span> <span class="n">mockFoo</span><span class="p">.</span><span class="n">getPosition</span><span class="p">(</span><span class="mi">1</span><span class="p">);</span>  <span class="c1">//455
+</span>  <span class="n">std</span><span class="o">::</span><span class="n">cout</span> <span class="o">&lt;&lt;</span> <span class="s">"Returned Value: "</span> <span class="o">&lt;&lt;</span> <span class="n">val</span> <span class="o">&lt;&lt;</span> <span class="s">" "</span> <span class="o">&lt;&lt;</span> <span class="n">val2</span> <span class="o">&lt;&lt;</span> <span class="n">std</span><span class="o">::</span><span class="n">endl</span><span class="p">;</span>
+<span class="p">}</span>
+</code></pre>
+</div>
+
+<p>最后我们运行编译，得到的结果如下：</p>
+
+<div class="highlighter-rouge"><pre class="highlight"><code>[==========] Running 1 test from 1 test case.
+[----------] Global test environment set-up.
+[----------] 1 test from MockTestCase
+[ RUN      ] MockTestCase.Demo1
+Returned Value: Hello World!
+Returned Value: 335 455
+[       OK ] MockTestCase.Demo1 (17 ms)
+[----------] 1 test from MockTestCase (19 ms total)
+ 
+[----------] Global test environment tear-down
+[==========] 1 test from 1 test case ran. (28 ms total)
+[  PASSED  ] 1 test.
+</code></pre>
+</div>
+
+<p>.Makefile里面需要加入 -lgmock才能正常连接</p>
+
+<div class="language-c highlighter-rouge"><pre class="highlight"><code> <span class="n">AM_LDFLAGS</span><span class="o">=-</span><span class="n">lpthread</span> <span class="o">-</span><span class="n">lc</span> <span class="o">-</span><span class="n">lm</span> <span class="o">-</span><span class="n">lrt</span> <span class="o">-</span><span class="n">lgtest</span> <span class="o">-</span><span class="n">lgmock</span> 
+</code></pre>
+</div>
+
+<h4 id="自定义方法成员函数的期望行为">自定义方法/成员函数的期望行为</h4>
+<p>从上述的例子中可以看出，当我们针对懒同学的接口定义好了Mock类后，在单元测试/主程序中使用这个Mock类中的方法时最关键的就是对期望行为的定义。<br />
+对方法期望行为的定义的语法格式如下：</p>
+
+<div class="language-c highlighter-rouge"><pre class="highlight"><code><span class="n">EXPECT_CALL</span><span class="p">(</span><span class="n">mock_object</span><span class="p">,</span> <span class="n">method</span><span class="p">(</span><span class="n">matcher1</span><span class="p">,</span> <span class="n">matcher2</span><span class="p">,</span> <span class="p">...))</span>
+    <span class="p">.</span><span class="n">With</span><span class="p">(</span><span class="n">multi_argument_matcher</span><span class="p">)</span>
+    <span class="p">.</span><span class="n">Times</span><span class="p">(</span><span class="n">cardinality</span><span class="p">)</span>
+    <span class="p">.</span><span class="n">InSequence</span><span class="p">(</span><span class="n">sequences</span><span class="p">)</span>
+    <span class="p">.</span><span class="n">After</span><span class="p">(</span><span class="n">expectations</span><span class="p">)</span>
+    <span class="p">.</span><span class="n">WillOnce</span><span class="p">(</span><span class="n">action</span><span class="p">)</span>
+    <span class="p">.</span><span class="n">WillRepeatedly</span><span class="p">(</span><span class="n">action</span><span class="p">)</span>
+    <span class="p">.</span><span class="n">RetiresOnSaturation</span><span class="p">();</span>
+</code></pre>
+</div>
+
+<p>解释一下这些参数：</p>
+<ul>
+  <li>mock_object就是你的Mock类的对象</li>
+  <li>method(matcher1, matcher2, …)中的method是你Mock类中的某个方法名，比如上述的 getAttrString<br />
+而matcher（匹配器）的意思是定义方法参数的类型。</li>
+  <li>Times(cardinality) 之前定义的method运行几次。。</li>
+  <li>InSequence(sequences) 定义这个方法被执行顺序（优先级）。</li>
+  <li>WillOnce(action) 定义一次调用时所产生的行为，比如定义该方法返回怎么样的值等等。</li>
+  <li>WillRepeatedly(action) 缺省/重复行为。</li>
+</ul>
+
+<h3 id="filters">Filters</h3>
+
+<h4 id="gtest_list_tests">–gtest_list_tests</h4>
+
+<p>使用这个参数时，将不会执行里面的测试案例，而是输出一个案例的列表。</p>
+
+<h4 id="gtest_filter">–gtest_filter</h4>
+
+<p>对执行的测试案例进行过滤，支持通配符? 单个字符* 任意字符- 排除，如，-a 表示除了a: 取或，如，a:b 表示a或b比如下面的例子：</p>
+
+<p>./foo_test 没有指定过滤条件，运行所有案例</p>
+
+<p>./foo_test –gtest_filter=* 使用通配符*，表示运行所有案例</p>
+
+<p>./foo_test –gtest_filter=FooTest.* 运行所有“测试案例名称(testcase_name)”为FooTest的案例</p>
+
+<p>./foo_test –gtest_filter=<em>Null</em>:<em>Constructor</em> 运行所有“测试案例名称(testcase_name)”或“测试名称(test_name)”包含Null或Constructor的案例</p>
+
+<p>./foo_test –gtest_filter=-<em>DeathTest.</em> 运行所有非死亡测试案例。</p>
+
+<p>./foo_test –gtest_filter=FooTest.*-FooTest.Bar 运行所有“测试案例名称(testcase_name)”为FooTest的案例，但是除了FooTest.Bar这个案例</p>
+
+<h4 id="gtest_also_run_disabled_tests">–gtest_also_run_disabled_tests</h4>
+
+<p>执行案例时，同时也执行被置为无效的测试案例。关于设置测试案例无效的方法为：在测试案例名称或测试名称中添加DISABLED前缀，比如：</p>
+
+<div class="language-c++ highlighter-rouge"><pre class="highlight"><code><span class="c1">// Tests that Foo does Abc.
+</span><span class="n">TEST</span><span class="p">(</span><span class="n">FooTest</span><span class="p">,</span> <span class="n">DISABLED_DoesAbc</span><span class="p">)</span> <span class="p">{</span> <span class="p">}</span>
+
+<span class="k">class</span> <span class="nc">DISABLED_BarTest</span> <span class="o">:</span> <span class="k">public</span> <span class="n">testing</span><span class="o">::</span><span class="n">Test</span> <span class="p">{</span> <span class="p">};</span>
+
+<span class="c1">// Tests that Bar does Xyz.
+</span><span class="n">TEST_F</span><span class="p">(</span><span class="n">DISABLED_BarTest</span><span class="p">,</span> <span class="n">DoesXyz</span><span class="p">)</span> <span class="p">{</span> <span class="p">}</span>
+</code></pre>
+</div>
+
+<h4 id="gtest_repeat">–gtest_repeat</h4>
+<p>设置案例重复运行次数，非常棒的功能！比如：<br />
+–gtest_repeat=1000 重复执行1000次，即使中途出现错误。<br />
+–gtest_repeat=-1 无限次数执行。。。。<br />
+–gtest_repeat=1000 –gtest_break_on_failure 重复执行1000次，并且在第一个错误发生时立即停止。这个功能对调试非常有用。<br />
+–gtest_repeat=1000 –gtest_filter=FooBar 重复执行1000次测试案例名称为FooBar的案例。</p>
+
+<h4 id="gtest_color">–gtest_color</h4>
+
+<p>–gtest_color=(yes|no|auto)	输出命令行时是否使用一些五颜六色的颜色。默认是auto。</p>
+
+<h4 id="gtest_print_time">–gtest_print_time</h4>
+
+<p>输出命令行时是否打印每个测试案例的执行时间。默认是不打印的。</p>
+
+<h4 id="gtest_output">–gtest_output</h4>
+
+<p>–gtest_output=xml[:DIRECTORY_PATH|:FILE_PATH]  将测试结果输出到一个xml中。</p>
+
+<p>1.–gtest_output=xml: 不指定输出路径时，默认为案例当前路径。<br />
+2.–gtest_output=xml:d:\ 指定输出到某个目录 <br />
+3.–gtest_output=xml:d:\foo.xml 指定输出到d:\foo.xml如果不是指定了特定的文件路径，gtest每次输出的报告不会覆盖，而会以数字后缀的方式创建。xml的输出内容后面介绍吧。</p>
+
+<h4 id="gtest_break_on_failure">–gtest_break_on_failure</h4>
+
+<p>调试模式下，当案例失败时停止，方便调试</p>
+
+<h4 id="gtest_throw_on_failure">–gtest_throw_on_failure</h4>
+
+<p>当案例失败时以C++异常的方式抛出</p>
+
+<h4 id="gtest_catch_exceptions">–gtest_catch_exceptions</h4>
+
+<p>是否捕捉异常。gtest默认是不捕捉异常的，因此假如你的测试案例抛了一个异常，很可能会弹出一个对话框，这非常的不友好，同时也阻碍了测试案例的运行。如果想不弹这个框，可以通过设置这个参数来实现。如将–gtest_catch_exceptions设置为一个非零的数。注意：这个参数只在Windows下有效。</p>
+
+<h2 id="xml报告">xml报告</h2>
+
+<div class="language-xml highlighter-rouge"><pre class="highlight"><code><span class="cp">&lt;?xml version="1.0" encoding="UTF-8"?&gt;</span>
+<span class="nt">&lt;testsuites</span> <span class="na">tests=</span><span class="s">"3"</span> <span class="na">failures=</span><span class="s">"1"</span> <span class="na">errors=</span><span class="s">"0"</span> <span class="na">time=</span><span class="s">"35"</span> <span class="na">name=</span><span class="s">"AllTests"</span><span class="nt">&gt;</span>
+  <span class="nt">&lt;testsuite</span> <span class="na">name=</span><span class="s">"MathTest"</span> <span class="na">tests=</span><span class="s">"2"</span> <span class="na">failures=</span><span class="s">"1"</span><span class="err">*</span> <span class="na">errors=</span><span class="s">"0"</span> <span class="na">time=</span><span class="s">"15"</span><span class="nt">&gt;</span>
+    <span class="nt">&lt;testcase</span> <span class="na">name=</span><span class="s">"Addition"</span> <span class="na">status=</span><span class="s">"run"</span> <span class="na">time=</span><span class="s">"7"</span> <span class="na">classname=</span><span class="s">""</span><span class="nt">&gt;</span>
+      <span class="nt">&lt;failure</span> <span class="na">message=</span><span class="s">"Value of: add(1, 1)  Actual: 3 Expected: 2"</span> <span class="na">type=</span><span class="s">""</span><span class="nt">/&gt;</span>
+      <span class="nt">&lt;failure</span> <span class="na">message=</span><span class="s">"Value of: add(1, -1)  Actual: 1 Expected: 0"</span> <span class="na">type=</span><span class="s">""</span><span class="nt">/&gt;</span>
+    <span class="nt">&lt;/testcase&gt;</span>
+    <span class="nt">&lt;testcase</span> <span class="na">name=</span><span class="s">"Subtraction"</span> <span class="na">status=</span><span class="s">"run"</span> <span class="na">time=</span><span class="s">"5"</span> <span class="na">classname=</span><span class="s">""</span><span class="nt">&gt;</span>
+    <span class="nt">&lt;/testcase&gt;</span>
+  <span class="nt">&lt;/testsuite&gt;</span>
+  <span class="nt">&lt;testsuite</span> <span class="na">name=</span><span class="s">"LogicTest"</span> <span class="na">tests=</span><span class="s">"1"</span> <span class="na">failures=</span><span class="s">"0"</span> <span class="na">errors=</span><span class="s">"0"</span> <span class="na">time=</span><span class="s">"5"</span><span class="nt">&gt;</span>
+    <span class="nt">&lt;testcase</span> <span class="na">name=</span><span class="s">"NonContradiction"</span> <span class="na">status=</span><span class="s">"run"</span> <span class="na">time=</span><span class="s">"5"</span> <span class="na">classname=</span><span class="s">""</span><span class="nt">&gt;</span>
+    <span class="nt">&lt;/testcase&gt;</span>
+  <span class="nt">&lt;/testsuite&gt;</span>
+<span class="nt">&lt;/testsuites&gt;</span>
+</code></pre>
+</div>
+
+<p>从报告里可以看出，我们之前在TEST等宏中定义的测试案例名称(testcase_name)在xml测试报告中其实是一个testsuite name，而宏中的测试名称(test_name)在xml测试报告中是一个testcase name，概念上似乎有点混淆，就看你怎么看吧。</p>
+
+<p>当检查点通过时，不会输出任何检查点的信息。当检查点失败时，会有详细的失败信息输出来failure节点。</p>
+
+<p>在我使用过程中发现一个问题，当我同时设置了–gtest_filter参数时，输出的xml报告中还是会包含所有测试案例的信息，只不过那些不被执行的测试案例的status值为“notrun”。而我之前认为的输出的xml报告应该只包含我需要运行的测试案例的信息。不知是否可提供一个只输出需要执行的测试案例的xml报告。因为当我需要在1000个案例中执行其中1个案例时，在报告中很难找到我运行的那个案例，虽然可以查找，但还是很麻烦。</p>
+
+<h2 id="qtest">QTest</h2>
+
+<p>QTest是Qt开发使用的测试框架。Qt使用界面，当然就需要和用户交互，比如，鼠标点击，在文本框中输入文本，既然要自动化测试，那必须将鼠标的点击事件，键盘的输入事件等进行模拟。</p>
+
+<p>为此，QTest::keyClicks()模拟在该控件上输入按键序列，基本等同于输入字符串。此外，还也可以指定键盘组合按键，例如与ctrl，shift等按键的组合，并在每次单击按键后设置延迟(以毫秒为单位)。类似的方式，还可以使用QTest::keyClick()、QTest::keyPress()、QTest::keyRelease()、QTest::mouseClick()、QTest::mouseDClick()、QTest::mouseMove()、QTest::mousePress()和QTest::mouseRelease()函数来模拟GUI事件。</p>
+
+<p>下面的一个例子，我们主要介绍keyClicks的用法，其它类同。如下图所示，在输入价格和成本后，自动显示利润。我们为该窗口类取名为CommodityWidget</p>
+
+<!-- ![](./img/qt.jpg) -->
+
+<p><img src="/img/post-cpp/qt.jpg" alt="" /></p>
+
+<h4 id="1-创建commoditywidget窗口">1 创建CommodityWidget窗口</h4>
+
+<p>ui界面如上图所示。</p>
+
+<p>commoditywidget.h</p>
+
+<div class="language-c++ highlighter-rouge"><pre class="highlight"><code><span class="cp">#ifndef COMMODITYWIDGET_H
+#define COMMODITYWIDGET_H
+#include &lt;QWidget&gt;
+</span><span class="k">namespace</span> <span class="n">Ui</span> <span class="p">{</span>
+<span class="k">class</span> <span class="nc">CommodityWidget</span><span class="p">;</span>
+<span class="p">}</span>
+<span class="k">class</span> <span class="nc">CommodityWidget</span> <span class="o">:</span> <span class="k">public</span> <span class="n">QWidget</span>
+<span class="p">{</span>
+  <span class="n">Q_OBJECT</span>
+<span class="k">public</span><span class="o">:</span>
+  <span class="k">friend</span> <span class="k">class</span> <span class="nc">CommodityTest</span><span class="p">;</span>
+  <span class="k">explicit</span> <span class="n">CommodityWidget</span><span class="p">(</span><span class="n">QWidget</span> <span class="o">*</span><span class="n">parent</span> <span class="o">=</span> <span class="mi">0</span><span class="p">);</span>
+  <span class="o">~</span><span class="n">CommodityWidget</span><span class="p">();</span>
+  <span class="kt">double</span>  <span class="n">costing</span><span class="p">()</span> <span class="k">const</span><span class="p">;</span>
+  <span class="kt">double</span>  <span class="n">price</span><span class="p">()</span> <span class="k">const</span><span class="p">;</span>
+  <span class="kt">double</span>  <span class="n">profit</span><span class="p">()</span> <span class="k">const</span><span class="p">;</span>
+<span class="k">private</span> <span class="n">slots</span><span class="o">:</span>
+  <span class="kt">void</span> <span class="n">showProfit</span><span class="p">();</span>
+  <span class="kt">void</span> <span class="n">on_line_price_textChanged</span><span class="p">(</span><span class="k">const</span> <span class="n">QString</span> <span class="o">&amp;</span><span class="n">arg1</span><span class="p">);</span>
+  <span class="kt">void</span> <span class="n">on_line_costing_textChanged</span><span class="p">(</span><span class="k">const</span> <span class="n">QString</span> <span class="o">&amp;</span><span class="n">arg1</span><span class="p">);</span>
+<span class="k">private</span><span class="o">:</span>
+  <span class="n">Ui</span><span class="o">::</span><span class="n">CommodityWidget</span> <span class="o">*</span><span class="n">ui</span><span class="p">;</span>
+<span class="p">};</span>
+<span class="cp">#endif // COMMODITYWIDGET_H
+</span></code></pre>
+</div>
+
+<p>在头文件中的</p>
+<div class="language-c++ highlighter-rouge"><pre class="highlight"><code><span class="k">friend</span> <span class="k">class</span> <span class="nc">CommodityTest</span><span class="p">;</span>
+</code></pre>
+</div>
+<p>因为CommdityTest模拟键盘事件，需要直接访问ui界面中的控件，所以将它声明为CommodityWidget的友元类。</p>
+
+<p>commoditywidget.cpp</p>
+
+<div class="language-c++ highlighter-rouge"><pre class="highlight"><code><span class="cp">#include "commoditywidget.h"
+#include "ui_commoditywidget.h"
+#include "commodity.h"
+</span><span class="n">CommodityWidget</span><span class="o">::</span><span class="n">CommodityWidget</span><span class="p">(</span><span class="n">QWidget</span> <span class="o">*</span><span class="n">parent</span><span class="p">)</span> <span class="o">:</span>
+  <span class="n">QWidget</span><span class="p">(</span><span class="n">parent</span><span class="p">),</span>
+  <span class="n">ui</span><span class="p">(</span><span class="k">new</span> <span class="n">Ui</span><span class="o">::</span><span class="n">CommodityWidget</span><span class="p">)</span>
+<span class="p">{</span>
+  <span class="n">ui</span><span class="o">-&gt;</span><span class="n">setupUi</span><span class="p">(</span><span class="k">this</span><span class="p">);</span>
+<span class="p">}</span>
+<span class="n">CommodityWidget</span><span class="o">::~</span><span class="n">CommodityWidget</span><span class="p">()</span>
+<span class="p">{</span>
+  <span class="k">delete</span> <span class="n">ui</span><span class="p">;</span>
+<span class="p">}</span>
+<span class="kt">double</span> <span class="n">CommodityWidget</span><span class="o">::</span><span class="n">costing</span><span class="p">()</span> <span class="k">const</span>
+<span class="p">{</span>
+  <span class="k">return</span> <span class="n">ui</span><span class="o">-&gt;</span><span class="n">line_costing</span><span class="o">-&gt;</span><span class="n">text</span><span class="p">().</span><span class="n">toDouble</span><span class="p">();</span>
+<span class="p">}</span>
+<span class="kt">double</span> <span class="n">CommodityWidget</span><span class="o">::</span><span class="n">price</span><span class="p">()</span> <span class="k">const</span>
+<span class="p">{</span>
+  <span class="k">return</span> <span class="n">ui</span><span class="o">-&gt;</span><span class="n">line_price</span><span class="o">-&gt;</span><span class="n">text</span><span class="p">().</span><span class="n">toDouble</span><span class="p">();</span>
+<span class="p">}</span>
+<span class="kt">double</span> <span class="n">CommodityWidget</span><span class="o">::</span><span class="n">profit</span><span class="p">()</span> <span class="k">const</span>
+<span class="p">{</span>
+  <span class="k">return</span> <span class="n">ui</span><span class="o">-&gt;</span><span class="n">line_profit</span><span class="o">-&gt;</span><span class="n">text</span><span class="p">().</span><span class="n">toDouble</span><span class="p">();</span>
+<span class="p">}</span>
+<span class="kt">void</span> <span class="n">CommodityWidget</span><span class="o">::</span><span class="n">showProfit</span><span class="p">()</span>
+<span class="p">{</span>
+  <span class="kt">double</span> <span class="n">c</span> <span class="o">=</span> <span class="n">costing</span><span class="p">();</span>
+  <span class="kt">double</span> <span class="n">p</span> <span class="o">=</span> <span class="n">price</span><span class="p">();</span>
+  <span class="n">Commodity</span> <span class="n">commodity</span><span class="p">(</span><span class="s">"beer_1"</span><span class="p">,</span> <span class="s">"啤酒"</span><span class="p">,</span> <span class="n">c</span><span class="p">,</span> <span class="n">p</span><span class="p">);</span>
+  <span class="n">ui</span><span class="o">-&gt;</span><span class="n">line_profit</span><span class="o">-&gt;</span><span class="n">setText</span><span class="p">(</span><span class="n">QString</span><span class="o">::</span><span class="n">number</span><span class="p">(</span><span class="n">commodity</span><span class="p">.</span><span class="n">profit</span><span class="p">()));</span>
+<span class="p">}</span>
+<span class="kt">void</span> <span class="n">CommodityWidget</span><span class="o">::</span><span class="n">on_line_price_textChanged</span><span class="p">(</span><span class="k">const</span> <span class="n">QString</span> <span class="o">&amp;</span><span class="n">arg1</span><span class="p">)</span>
+<span class="p">{</span>
+  <span class="n">showProfit</span><span class="p">();</span>
+<span class="p">}</span>
+<span class="kt">void</span> <span class="n">CommodityWidget</span><span class="o">::</span><span class="n">on_line_costing_textChanged</span><span class="p">(</span><span class="k">const</span> <span class="n">QString</span> <span class="o">&amp;</span><span class="n">arg1</span><span class="p">)</span>
+<span class="p">{</span>
+  <span class="n">showProfit</span><span class="p">();</span>
+<span class="p">}</span>
+</code></pre>
+</div>
+
+<h4 id="2-编写测试函数">2 编写测试函数</h4>
+
+<p>在CommodityTest的头文件中添加如下槽函数</p>
+
+<p>头文件：</p>
+<div class="language-c++ highlighter-rouge"><pre class="highlight"><code><span class="k">private</span> <span class="n">slots</span><span class="o">:</span>
+  <span class="c1">//成本
+</span>  <span class="kt">void</span> <span class="n">case1_gui_costing</span><span class="p">();</span>
+  <span class="c1">//价格
+</span>  <span class="kt">void</span> <span class="n">case2_gui_price</span><span class="p">();</span>
+  <span class="c1">//利润
+</span>  <span class="kt">void</span> <span class="n">case3_gui_profit</span><span class="p">();</span>
 </code></pre>
 </div>
 
