@@ -287,6 +287,20 @@ gdb program 1234（gdb进程名+进程id）
 (gdb) b Test_UTCU4T.cpp:16
 ```
 
+保存断点：
+
+```sh
+# fig8.3.bp是文件名， 可以是任何后缀
+(gdb) save breakpoint fig8.3.bp
+(gdb) save b fig8.3.bp
+```
+
+读取断点：
+
+```
+(gdb) source fig8.3.bp
+```
+
 #### 2、断点的删除
 
 | 命令	| 解析
