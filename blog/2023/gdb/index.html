@@ -378,6 +378,20 @@ Core file <span class="s1">'/cores/core.37676'</span> <span class="o">(</span>x8
 </code></pre>
 </div>
 
+<p>保存断点：</p>
+
+<div class="language-sh highlighter-rouge"><pre class="highlight"><code><span class="c"># fig8.3.bp是文件名， 可以是任何后缀</span>
+<span class="o">(</span>gdb<span class="o">)</span> save breakpoint fig8.3.bp
+<span class="o">(</span>gdb<span class="o">)</span> save b fig8.3.bp
+</code></pre>
+</div>
+
+<p>读取断点：</p>
+
+<div class="highlighter-rouge"><pre class="highlight"><code>(gdb) source fig8.3.bp
+</code></pre>
+</div>
+
 <h4 id="2断点的删除">2、断点的删除</h4>
 
 <table>
