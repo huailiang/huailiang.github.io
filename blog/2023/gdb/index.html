@@ -306,19 +306,53 @@ Core file <span class="s1">'/cores/core.37676'</span> <span class="o">(</span>x8
 
 <h4 id="调试已运行的进程">调试已运行的进程</h4>
 
-<div class="language-sh highlighter-rouge"><pre class="highlight"><code><span class="o">(</span>gdb<span class="o">)</span> gdb　-p  进程名   <span class="c">#对指定进程进行调试</span>
-<span class="o">(</span>gdb<span class="o">)</span> gdb　attach　进程名
+<div class="language-c highlighter-rouge"><pre class="highlight"><code><span class="p">(</span><span class="n">gdb</span><span class="p">)</span> <span class="n">gdb</span><span class="err">　</span><span class="o">-</span><span class="n">p</span>  <span class="err">进程名</span> <span class="c1">//对指定进程进行调试
+</span><span class="p">(</span><span class="n">gdb</span><span class="p">)</span> <span class="n">gdb</span><span class="err">　</span><span class="n">attach</span><span class="err">　进程名</span>
 </code></pre>
 </div>
 
-<p>3.2 调试线程</p>
+<blockquote>
+  <p>gdb attach pid：程序已经运行后，可使用attach跟踪进程，attach目标进程后，调试器会暂停下来，需要continue才继续。停止调试后使用detach命令分离调试器，quit结束</p>
+</blockquote>
 
-<div class="language-sh highlighter-rouge"><pre class="highlight"><code><span class="o">(</span>gdb<span class="o">)</span> info　thread　　 <span class="c">#调试已运行的进程下再列出线程</span>
-<span class="o">(</span>gdb<span class="o">)</span> thread　线程号   <span class="c">#切换至线程</span>
+<h4 id="带参数执行">带参数执行</h4>
+
+<p>如需要执行下面命令：</p>
+
+<div class="highlighter-rouge"><pre class="highlight"><code>TestUT --gtest_filter=Test_DataCollect* 
 </code></pre>
 </div>
 
-<p>3.3 查看相关信息</p>
+<p>直接使用gdb执行 会报错：</p>
+
+<div class="language-sh highlighter-rouge"><pre class="highlight"><code><span class="c"># gdb TestUT --gtest_filter=Test_DataCollect*</span>
+gdb: unrecognized option <span class="s1">'--gtest_filter=Test_DataCollect*'</span>
+Use <span class="sb">`</span>gdb --help<span class="s1">' for a complete list of options.
+</span></code></pre>
+</div>
+
+<p>正确使用是进入gdb之后， 使用 set args 来设参数</p>
+
+<div class="language-sh highlighter-rouge"><pre class="highlight"><code>gdb TestUT
+<span class="nb">set </span>args --gtest_filter<span class="o">=</span>Test_DataCollect<span class="k">*</span>
+</code></pre>
+</div>
+
+<h4 id="调试线程">调试线程</h4>
+
+<p>默认调试多线程时，一旦程序中断，所有线程都将暂停。如果此时再继续执行当前线程，其他线程也会同时执行</p>
+
+<div class="language-c highlighter-rouge"><pre class="highlight"><code><span class="p">(</span><span class="n">gdb</span><span class="p">)</span> <span class="n">info</span><span class="err">　</span><span class="kr">thread</span> <span class="err">　</span>            <span class="c1">// 调试已运行的进程下再列出线程
+</span><span class="p">(</span><span class="n">gdb</span><span class="p">)</span> <span class="n">info</span><span class="err">　</span><span class="n">threads</span><span class="err">　</span>            <span class="c1">// 调试已运行的进程下再列出线程
+</span><span class="p">(</span><span class="n">gdb</span><span class="p">)</span> <span class="kr">thread</span><span class="err">　线程号</span>              <span class="c1">// 切换至线程
+</span><span class="p">(</span><span class="n">gdb</span><span class="p">)</span> <span class="n">print</span> <span class="err">$</span><span class="kr">_thread</span>	         <span class="c1">// 显示当前正在调试的线程编号
+</span><span class="p">(</span><span class="n">gdb</span><span class="p">)</span> <span class="n">set</span> <span class="n">scheduler</span><span class="o">-</span><span class="n">locking</span> <span class="n">on</span>	 <span class="c1">// 调试一个线程时，其他线程暂停执行
+</span><span class="p">(</span><span class="n">gdb</span><span class="p">)</span> <span class="n">set</span> <span class="n">scheduler</span><span class="o">-</span><span class="n">locking</span> <span class="n">off</span>	 <span class="c1">// 调试一个线程时，其他线程同步执行
+</span><span class="p">(</span><span class="n">gdb</span><span class="p">)</span> <span class="n">set</span> <span class="n">scheduler</span><span class="o">-</span><span class="n">locking</span> <span class="n">step</span> <span class="c1">// 仅用step调试线程时其他线程不执行，用其他命令如next调试时仍执行
+</span></code></pre>
+</div>
+
+<h4 id="查看相关信息">查看相关信息</h4>
 
 <div class="language-sh highlighter-rouge"><pre class="highlight"><code><span class="o">(</span>gdb<span class="o">)</span> info　thread　　   <span class="c"># 列出线程</span>
 <span class="o">(</span>gdb<span class="o">)</span> info　register　   <span class="c"># 列出寄存器</span>
@@ -374,7 +408,7 @@ Core file <span class="s1">'/cores/core.37676'</span> <span class="o">(</span>x8
 
 <p>跨文件使用如：</p>
 
-<div class="highlighter-rouge"><pre class="highlight"><code>(gdb) b Test_UTCU4T.cpp:16
+<div class="highlighter-rouge"><pre class="highlight"><code>(gdb) b Test_CU4T.cpp:16
 </code></pre>
 </div>
 
@@ -411,8 +445,24 @@ Core file <span class="s1">'/cores/core.37676'</span> <span class="o">(</span>x8
       <td style="text-align: left">(gdb) delete</td>
     </tr>
     <tr>
-      <td style="text-align: left">清除行n上面的所有断点</td>
-      <td style="text-align: left">(gdb) clear n</td>
+      <td style="text-align: left">清除所有断点</td>
+      <td style="text-align: left">(gdb) clear</td>
+    </tr>
+    <tr>
+      <td style="text-align: left">删除第line行的断点</td>
+      <td style="text-align: left">(gdb) clear [file:]line</td>
+    </tr>
+    <tr>
+      <td style="text-align: left">删除所有位于function内的断点</td>
+      <td style="text-align: left">(gdb) clear function</td>
+    </tr>
+    <tr>
+      <td style="text-align: left">启用指定编号的断点</td>
+      <td style="text-align: left">(gdb) enable n</td>
+    </tr>
+    <tr>
+      <td style="text-align: left">禁用指定编号的断点</td>
+      <td style="text-align: left">(gdb) disable n</td>
     </tr>
   </tbody>
 </table>
@@ -441,11 +491,14 @@ Core file <span class="s1">'/cores/core.37676'</span> <span class="o">(</span>x8
 </code></pre>
 </div>
 
-<p>（5）跳出当前函数</p>
-
-<div class="language-sh highlighter-rouge"><pre class="highlight"><code><span class="o">(</span>gdb<span class="o">)</span> finish 
+<p>（5）跳转函数</p>
+<div class="language-sh highlighter-rouge"><pre class="highlight"><code><span class="c"># 直到当前函数运行完毕返回再停止。例如进入的单步执行如果已经进入了某函数，可以退出该函数返回到它的调用函数中</span>
+<span class="o">(</span>gdb<span class="o">)</span> finish 
+<span class="c"># 不再执行后面的指令，直接返回，可以指定返回值</span>
+<span class="o">(</span>gdb<span class="o">)</span> <span class="k">return </span>0	
 </code></pre>
 </div>
+
 <p>直到当前函数运行完毕返回再停止。例如进入的单步执行如果已经进入了某函数，可以退出该函数返回到它的调用函数中</p>
 
 <p>（6）跳转指令</p>
@@ -470,28 +523,40 @@ Core file <span class="s1">'/cores/core.37676'</span> <span class="o">(</span>x8
 <p>其中 file用于指定具体的文件名，funciton 用于指定具体所在函数的函数名，variable表示要查看的目标变量或表达式。<br />
 另外，print也可以打印出类或者结构体变量的值。</p>
 
+<p><strong>打印指针</strong></p>
+
+<div class="language-sh highlighter-rouge"><pre class="highlight"><code><span class="o">(</span>gdb<span class="o">)</span> print ptr	         <span class="c"># 查看该指针指向的类型及指针地址</span>
+<span class="o">(</span>gdb<span class="o">)</span> print <span class="k">*</span><span class="o">(</span>struct xxx <span class="k">*</span><span class="o">)</span>ptr <span class="c"># 查看指向的结构体的内容</span>
+</code></pre>
+</div>
+
 <h4 id="2-打印数组">2 打印数组</h4>
-<p>查看一段连续的内存空间的值。比如数组的一段，或是动态分配的数据的大小。你可以使用GDB的“@”操作符，“@”的左边是第一个内存的地址的值，“@”的右边则你你想查看内存的长度。例如，你的程序中有这样的语句：</p>
 
-<div class="language-sh highlighter-rouge"><pre class="highlight"><code>int <span class="k">*</span>array <span class="o">=</span> <span class="o">(</span>int <span class="k">*</span><span class="o">)</span> malloc <span class="o">(</span>len <span class="k">*</span> sizeof <span class="o">(</span>int<span class="o">))</span>; 
+<div class="language-sh highlighter-rouge"><pre class="highlight"><code><span class="o">(</span>gdb<span class="o">)</span> print <span class="k">*</span>array@10	         <span class="c"># 打印从数组开头连续10个元素的值</span>
+<span class="o">(</span>gdb<span class="o">)</span> print array[60]@10         <span class="c"># 打印array数组下标从60开始的10个元素，即第60~69个元素</span>
+<span class="o">(</span>gdb<span class="o">)</span> <span class="nb">set </span>print array-indexes on <span class="c"># 打印数组元素时，同时打印数组的下标</span>
 </code></pre>
 </div>
 
-<p>于是，在GDB调试过程中，你可以以如下命令显示出这个动态数组的取值：</p>
-<div class="language-sh highlighter-rouge"><pre class="highlight"><code><span class="o">(</span>gdb<span class="o">)</span> p <span class="k">*</span>array@len 
-</code></pre>
-</div>
-<p>@的左边是数组的首地址的值，也就是变量array所指向的内容，右边则是数据的长度，其<br />
-保存在变量len中，其输出结果，大约是下面这个样子的：</p>
+<h4 id="3-修改内存值">3 修改内存值</h4>
 
-<div class="language-sh highlighter-rouge"><pre class="highlight"><code><span class="o">(</span>gdb<span class="o">)</span> p <span class="k">*</span>array@len 
-<span class="nv">$1</span> <span class="o">=</span> <span class="o">{</span>2, 4, 6, 8, 10, 12, 14, 16, 18, 20, 22, 24, 26, 28, 30, 32, 34, 36, 38, 40<span class="o">}</span> 
+<p>程序的变量和gdb的变量是可以交互的，修改gdb中的变量i</p>
+
+<div class="language-sh highlighter-rouge"><pre class="highlight"><code><span class="o">(</span>gdb<span class="o">)</span> <span class="nb">set</span> <span class="nv">$i</span><span class="o">=</span>0
+<span class="o">(</span>gdb<span class="o">)</span> <span class="nb">set </span>var <span class="nv">i</span><span class="o">=</span>2
 </code></pre>
 </div>
 
-<p>如果是静态数组的话，可以直接用print数组名，就可以显示数组中所有数据的内容了</p>
+<h4 id="4-条件断点">4 条件断点</h4>
 
-<h4 id="3-源代码显示">3 源代码显示</h4>
+<p>如下面例子，当index=1234时进入断点，注意是单等号</p>
+
+<div class="language-sh highlighter-rouge"><pre class="highlight"><code><span class="c"># break ... if expr</span>
+b arp_rcv <span class="k">if </span>index <span class="o">=</span> 1234
+</code></pre>
+</div>
+
+<h4 id="5-源代码显示">5 源代码显示</h4>
 
 <table>
   <thead>
@@ -528,7 +593,7 @@ Core file <span class="s1">'/cores/core.37676'</span> <span class="o">(</span>x8
   </tbody>
 </table>
 
-<h4 id="4-查看源代码的内存地址">4 查看源代码的内存地址</h4>
+<h4 id="6-查看源代码的内存地址">6 查看源代码的内存地址</h4>
 
 <p>使用info line命令来查看源代码在内存中的地址。info line后面可以跟“行号”，“函<br />
 数名”，“文件名:行号”，“文件名:函数名”，这个命令会打印出所指定的源码在运行时的内<br />
@@ -539,28 +604,27 @@ Line 5 of "tst.c" starts at address 0x8048456 and ends at 0x804845d .
 </code></pre>
 </div>
 
-<p>还有一个命令（disassemble）你可以查看源程序的当前执行时的机器码，这个命令会把目前<br />
-内存中的指令dump出来。</p>
+<p><strong>disassemble</strong> 查看源程序的当前执行时的机器码，这个命令会把目前内存中的指令dump出来。</p>
 
-<div class="highlighter-rouge"><pre class="highlight"><code>disassemble [Address]
-(gdb) disassemble 0x00000000004008fd  //反汇编包含给定地址的整个函数，包括其上方的指令。
-
-disassemble [Start],[End]
-(gdb) disassemble 0x000000000040068a,0x00000000004006ac  // 指定要反汇编的起始地址和结束地址
-
-disassemble [Function],+[Length]
-(gdb) disassemble main, +10       //指定从给定地址或函数开始反汇编的字节数
+<div class="language-sh highlighter-rouge"><pre class="highlight"><code><span class="c"># disassemble [Function],+[Length]</span>
+<span class="o">(</span>gdb<span class="o">)</span> disassemble <span class="k">function</span>         <span class="c"># 查看函数的汇编代码</span>
+<span class="o">(</span>gdb<span class="o">)</span> disassemble <span class="k">function</span>, +10    <span class="c"># 指定从给定地址或函数开始反汇编的字节数</span>
 </code></pre>
 </div>
-<div class="highlighter-rouge"><pre class="highlight"><code>disassemble /m [...]
-        指定此选项后，反汇编命令将显示与反汇编指令相对应的源代码行。例如：
-(gdb) disassemble /m main
-disassemble /r [...]
-        当指定此选项时，反汇编命令将显示所有反汇编指令的原始字节值。
-(gdb) disassemble /r main
+
+<p>/m 指定此选项后，反汇编命令将显示与反汇编指令相对应的源代码行。例如：</p>
+
+<div class="language-sh highlighter-rouge"><pre class="highlight"><code><span class="o">(</span>gdb<span class="o">)</span> disassemble /m <span class="k">function</span>
 </code></pre>
 </div>
-<h4 id="5-查看内存地址保存的值">5 查看内存地址保存的值</h4>
+
+<p>/r 当指定此选项时，反汇编命令将显示所有反汇编指令的原始字节值。</p>
+
+<div class="language-sh highlighter-rouge"><pre class="highlight"><code><span class="o">(</span>gdb<span class="o">)</span> disassemble /r <span class="k">function</span>
+</code></pre>
+</div>
+
+<h4 id="7-查看内存地址保存的值">7 查看内存地址保存的值</h4>
 <p>你可以使用examine命令（简写是x）来查看内存地址中的值。x命令的语法如下所示：</p>
 
 <div class="highlighter-rouge"><pre class="highlight"><code>(gdb) x/nfu addr
@@ -588,7 +652,7 @@ g表示八字节
 <span class="o">(</span>gdb<span class="o">)</span> x/3uh 0x54320 
 </code></pre>
 </div>
-<h4 id="6-查看寄存器">6 查看寄存器</h4>
+<h4 id="8-查看寄存器">8 查看寄存器</h4>
 <p>要查看寄存器的值，很简单，可以使用如下命令, 查看寄存器的情况。（除了浮点寄存器）</p>
 <div class="highlighter-rouge"><pre class="highlight"><code>(gdb) info registers 
 </code></pre>
@@ -609,7 +673,7 @@ g表示八字节
 </code></pre>
 </div>
 
-<h4 id="7-显示当前调用函数堆栈中的函数">7 显示当前调用函数堆栈中的函数</h4>
+<h4 id="9-显示当前调用函数堆栈中的函数">9 显示当前调用函数堆栈中的函数</h4>
 <div class="language-c highlighter-rouge"><pre class="highlight"><code><span class="p">(</span><span class="n">gdb</span><span class="p">)</span> <span class="n">backtrace</span> <span class="p">[</span><span class="o">-</span><span class="n">full</span><span class="p">]</span> <span class="p">[</span><span class="n">n</span><span class="p">]</span>
 </code></pre>
 </div>
@@ -625,7 +689,7 @@ n：一个整数值。<br />
   <p>注意，当调试多线程程序时，该命令仅用于打印当前线程中所有栈帧的信息。如果想要打印所有线程的栈帧信息，应执行thread apply all backtrace命令</p>
 </blockquote>
 
-<h4 id="8-frame-命令详解">8 frame 命令详解</h4>
+<h4 id="10-frame-命令详解">10 frame 命令详解</h4>
 <p>frame 或 f 会打印出这些信息：栈的层编号，当前的函数名，函数参数值，函数所在文件及行号，函数执行到的语句。 查看当前栈帧中存储的信息</p>
 <div class="highlighter-rouge"><pre class="highlight"><code>(gdb) info frame
 Stack level 0, frame at 0x7ffc1da10e80:
@@ -645,6 +709,21 @@ Stack level 0, frame at 0x7ffc1da10e80:
 5、函数参数的存储地址以及值；<br />
 6、函数中局部变量的存储地址；<br />
 7、栈帧中存储的寄存器变量，例如指令寄存器（64位环境中用 rip 表示，32为环境中用eip 表示）、堆栈基指针寄存器（64位环境用 rbp表示，32位环境用 ebp表示）等。</p>
+
+<h4 id="11-图形化">11 图形化</h4>
+
+<p>tui为terminal user interface的缩写，在启动时候指定-tui参数，或者调试时使用ctrl+x+a组合键，可进入或退出图形化界面。</p>
+
+<div class="language-sh highlighter-rouge"><pre class="highlight"><code>layout src	        <span class="c"># 显示源码窗口</span>
+layout asm	        <span class="c"># 显示汇编窗口</span>
+layout split	        <span class="c"># 显示源码 + 汇编窗口</span>
+layout regs	        <span class="c"># 显示寄存器 + 源码或汇编窗口</span>
+winheight src +5	<span class="c"># 源码窗口高度增加5行</span>
+winheight asm -5	<span class="c"># 汇编窗口高度减小5行</span>
+winheight cmd +5	<span class="c"># 控制台窗口高度增加5行</span>
+winheight regs -5	<span class="c"># 寄存器窗口高度减小5行</span>
+</code></pre>
+</div>
 
 <h3 id="4gdb其他命令用法">4、gdb其他命令用法</h3>
 
