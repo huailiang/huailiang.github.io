@@ -243,19 +243,51 @@ gdb program 1234（gdb进程名+进程id）
 
 #### 调试已运行的进程
 
-```sh
-(gdb) gdb　-p  进程名   #对指定进程进行调试
+```c
+(gdb) gdb　-p  进程名 //对指定进程进行调试
 (gdb) gdb　attach　进程名
 ```
 
-3.2 调试线程
+>gdb attach pid：程序已经运行后，可使用attach跟踪进程，attach目标进程后，调试器会暂停下来，需要continue才继续。停止调试后使用detach命令分离调试器，quit结束
 
-```sh
-(gdb) info　thread　　 #调试已运行的进程下再列出线程
-(gdb) thread　线程号   #切换至线程
+#### 带参数执行
+
+如需要执行下面命令：
+
+```
+TestUT --gtest_filter=Test_DataCollect* 
 ```
 
-3.3 查看相关信息
+直接使用gdb执行 会报错：
+
+```sh
+# gdb TestUT --gtest_filter=Test_DataCollect*
+gdb: unrecognized option '--gtest_filter=Test_DataCollect*'
+Use `gdb --help' for a complete list of options.
+```
+
+正确使用是进入gdb之后， 使用 set args 来设参数
+
+```sh
+gdb TestUT
+set args --gtest_filter=Test_DataCollect*
+```
+
+#### 调试线程
+
+默认调试多线程时，一旦程序中断，所有线程都将暂停。如果此时再继续执行当前线程，其他线程也会同时执行
+
+```c
+(gdb) info　thread 　            // 调试已运行的进程下再列出线程
+(gdb) info　threads　            // 调试已运行的进程下再列出线程
+(gdb) thread　线程号              // 切换至线程
+(gdb) print $_thread	         // 显示当前正在调试的线程编号
+(gdb) set scheduler-locking on	 // 调试一个线程时，其他线程暂停执行
+(gdb) set scheduler-locking off	 // 调试一个线程时，其他线程同步执行
+(gdb) set scheduler-locking step // 仅用step调试线程时其他线程不执行，用其他命令如next调试时仍执行
+```
+
+#### 查看相关信息
 
 ```sh
 (gdb) info　thread　　   # 列出线程
@@ -284,7 +316,7 @@ gdb program 1234（gdb进程名+进程id）
 跨文件使用如：
 
 ```
-(gdb) b Test_UTCU4T.cpp:16
+(gdb) b Test_CU4T.cpp:16
 ```
 
 保存断点：
@@ -307,7 +339,11 @@ gdb program 1234（gdb进程名+进程id）
 | :--| :--
 | 删除n号断点	| (gdb) delete n
 | 删除所有断点	| (gdb) delete
-| 清除行n上面的所有断点	| (gdb) clear n
+| 清除所有断点	| (gdb) clear 
+| 删除第line行的断点 | (gdb) clear [file:]line
+| 删除所有位于function内的断点  | (gdb) clear function
+| 启用指定编号的断点	| (gdb) enable n
+| 禁用指定编号的断点| (gdb) disable n
 
 
 #### 3、程序运行进度调试
@@ -334,11 +370,14 @@ gdb program 1234（gdb进程名+进程id）
 (gdb) step|s
 ```
 
-（5）跳出当前函数
-
+（5）跳转函数
 ```sh
+# 直到当前函数运行完毕返回再停止。例如进入的单步执行如果已经进入了某函数，可以退出该函数返回到它的调用函数中
 (gdb) finish 
+# 不再执行后面的指令，直接返回，可以指定返回值
+(gdb) return 0	
 ```
+
 直到当前函数运行完毕返回再停止。例如进入的单步执行如果已经进入了某函数，可以退出该函数返回到它的调用函数中
 
 （6）跳转指令
@@ -364,28 +403,43 @@ gdb program 1234（gdb进程名+进程id）
 其中 file用于指定具体的文件名，funciton 用于指定具体所在函数的函数名，variable表示要查看的目标变量或表达式。
 另外，print也可以打印出类或者结构体变量的值。
 
+__打印指针__
+
+```sh
+(gdb) print ptr	         # 查看该指针指向的类型及指针地址
+(gdb) print *(struct xxx *)ptr # 查看指向的结构体的内容
+```
+
 #### 2 打印数组
-查看一段连续的内存空间的值。比如数组的一段，或是动态分配的数据的大小。你可以使用GDB的“@”操作符，“@”的左边是第一个内存的地址的值，“@”的右边则你你想查看内存的长度。例如，你的程序中有这样的语句：
 
-```sh
-int *array = (int *) malloc (len * sizeof (int)); 
+```sh 
+(gdb) print *array@10	         # 打印从数组开头连续10个元素的值
+(gdb) print array[60]@10         # 打印array数组下标从60开始的10个元素，即第60~69个元素
+(gdb) set print array-indexes on # 打印数组元素时，同时打印数组的下标
 ```
 
-于是，在GDB调试过程中，你可以以如下命令显示出这个动态数组的取值：
-```sh
-(gdb) p *array@len 
-```
-@的左边是数组的首地址的值，也就是变量array所指向的内容，右边则是数据的长度，其
-保存在变量len中，其输出结果，大约是下面这个样子的：
+
+#### 3 修改内存值
+
+程序的变量和gdb的变量是可以交互的，修改gdb中的变量i
 
 ```sh
-(gdb) p *array@len 
-$1 = {2, 4, 6, 8, 10, 12, 14, 16, 18, 20, 22, 24, 26, 28, 30, 32, 34, 36, 38, 40} 
+(gdb) set $i=0
+(gdb) set var i=2
 ```
 
-如果是静态数组的话，可以直接用print数组名，就可以显示数组中所有数据的内容了
 
-#### 3 源代码显示
+#### 4 条件断点
+
+
+如下面例子，当index=1234时进入断点，注意是单等号
+
+```sh
+# break ... if expr
+b arp_rcv if index = 1234
+```
+
+#### 5 源代码显示
 
 |命令|	解析
 | :---| --
@@ -396,7 +450,7 @@ $1 = {2, 4, 6, 8, 10, 12, 14, 16, 18, 20, 22, 24, 26, 28, 30, 32, 34, 36, 38, 40
 |set listsize	|设置一次显示源代码的行数。
 |show listsize	|查看当前listsize的设置。
 
-#### 4 查看源代码的内存地址
+#### 6 查看源代码的内存地址
 
 使用info line命令来查看源代码在内存中的地址。info line后面可以跟“行号”，“函
 数名”，“文件名:行号”，“文件名:函数名”，这个命令会打印出所指定的源码在运行时的内
@@ -407,28 +461,28 @@ $1 = {2, 4, 6, 8, 10, 12, 14, 16, 18, 20, 22, 24, 26, 28, 30, 32, 34, 36, 38, 40
 Line 5 of "tst.c" starts at address 0x8048456 and ends at 0x804845d . 
 ```
 
-还有一个命令（disassemble）你可以查看源程序的当前执行时的机器码，这个命令会把目前
-内存中的指令dump出来。
+ __disassemble__ 查看源程序的当前执行时的机器码，这个命令会把目前内存中的指令dump出来。
 
+```sh
+# disassemble [Function],+[Length]
+(gdb) disassemble function         # 查看函数的汇编代码
+(gdb) disassemble function, +10    # 指定从给定地址或函数开始反汇编的字节数
 ```
-disassemble [Address]
-(gdb) disassemble 0x00000000004008fd  //反汇编包含给定地址的整个函数，包括其上方的指令。
 
-disassemble [Start],[End]
-(gdb) disassemble 0x000000000040068a,0x00000000004006ac  // 指定要反汇编的起始地址和结束地址
 
-disassemble [Function],+[Length]
-(gdb) disassemble main, +10       //指定从给定地址或函数开始反汇编的字节数
+ /m 指定此选项后，反汇编命令将显示与反汇编指令相对应的源代码行。例如：
+
+```sh
+(gdb) disassemble /m function
 ```
+
+/r 当指定此选项时，反汇编命令将显示所有反汇编指令的原始字节值。
+
+```sh
+(gdb) disassemble /r function
 ```
-disassemble /m [...]
-        指定此选项后，反汇编命令将显示与反汇编指令相对应的源代码行。例如：
-(gdb) disassemble /m main
-disassemble /r [...]
-        当指定此选项时，反汇编命令将显示所有反汇编指令的原始字节值。
-(gdb) disassemble /r main
-```
-#### 5 查看内存地址保存的值
+
+#### 7 查看内存地址保存的值
 你可以使用examine命令（简写是x）来查看内存地址中的值。x命令的语法如下所示：
 
 ```
@@ -453,7 +507,7 @@ n/f/u三个参数可以一起使用。
 #从内存地址0x54320读取内容，h表示以双字节为一个单位，3表示三个单位，u表示按十六进制显示
 (gdb) x/3uh 0x54320 
 ```
-#### 6 查看寄存器
+#### 8 查看寄存器
 要查看寄存器的值，很简单，可以使用如下命令, 查看寄存器的情况。（除了浮点寄存器）
 ```
 (gdb) info registers 
@@ -474,7 +528,7 @@ n/f/u三个参数可以一起使用。
 p $eip
 ```
 
-#### 7 显示当前调用函数堆栈中的函数
+#### 9 显示当前调用函数堆栈中的函数
 ```c
 (gdb) backtrace [-full] [n]
 ```
@@ -488,7 +542,7 @@ n：一个整数值。
 
 >注意，当调试多线程程序时，该命令仅用于打印当前线程中所有栈帧的信息。如果想要打印所有线程的栈帧信息，应执行thread apply all backtrace命令
 
-#### 8 frame 命令详解
+#### 10 frame 命令详解
 frame 或 f 会打印出这些信息：栈的层编号，当前的函数名，函数参数值，函数所在文件及行号，函数执行到的语句。 查看当前栈帧中存储的信息
 ```
 (gdb) info frame
@@ -508,6 +562,22 @@ Stack level 0, frame at 0x7ffc1da10e80:
 5、函数参数的存储地址以及值；
 6、函数中局部变量的存储地址；
 7、栈帧中存储的寄存器变量，例如指令寄存器（64位环境中用 rip 表示，32为环境中用eip 表示）、堆栈基指针寄存器（64位环境用 rbp表示，32位环境用 ebp表示）等。
+
+
+#### 11 图形化
+
+tui为terminal user interface的缩写，在启动时候指定-tui参数，或者调试时使用ctrl+x+a组合键，可进入或退出图形化界面。
+
+```sh 
+layout src	        # 显示源码窗口
+layout asm	        # 显示汇编窗口
+layout split	        # 显示源码 + 汇编窗口
+layout regs	        # 显示寄存器 + 源码或汇编窗口
+winheight src +5	# 源码窗口高度增加5行
+winheight asm -5	# 汇编窗口高度减小5行
+winheight cmd +5	# 控制台窗口高度增加5行
+winheight regs -5	# 寄存器窗口高度减小5行
+```
 
 ### 4、gdb其他命令用法
 
