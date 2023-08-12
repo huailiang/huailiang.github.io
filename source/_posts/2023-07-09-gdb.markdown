@@ -284,8 +284,10 @@ warning: Source file is more recent than executable.
 
 #### 调试已运行的进程
 
-```c
-(gdb) gdb　-p  进程名 //对指定进程进行调试
+对指定进程名或者进程id进行调试
+
+```
+(gdb) gdb　-p  进程名 
 (gdb) gdb　attach　进程名
 ```
 
@@ -321,7 +323,7 @@ set args --gtest_filter=Test_DataCollect*
 ```c
 (gdb) info　thread 　            // 调试已运行的进程下再列出线程
 (gdb) info　threads　            // 调试已运行的进程下再列出线程
-(gdb) thread　线程号              // 切换至线程
+(gdb) thread　threadID           // 切换至线程
 (gdb) print $_thread	         // 显示当前正在调试的线程编号
 (gdb) set scheduler-locking on	 // 调试一个线程时，其他线程暂停执行
 (gdb) set scheduler-locking off	 // 调试一个线程时，其他线程同步执行
