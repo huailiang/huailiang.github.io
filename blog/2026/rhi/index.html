@@ -1,0 +1,155 @@
+<h1 id="英文面试口语包--车载图形--渲染引擎方向">英文面试口语包 · 车载图形 / 渲染引擎方向</h1>
+
+<blockquote>
+  <p>使用方式：不要”练英语”，只背这 12 段。技术面试是窄域英语，词汇量集中在 300 个词以内。<br />
+每天 30 分钟，两到三周可以把 12 段讲到不假思索。</p>
+</blockquote>
+
+<hr />
+
+<h2 id="一开场60-秒自我介绍背到滚瓜烂熟">一、开场：60 秒自我介绍（背到滚瓜烂熟）</h2>
+
+<blockquote>
+  <p>I’m Huailiang Peng, a graphics engineer with 13 years of experience.</p>
+
+  <p>I started in games — eight years on rendering pipelines and engine architecture, at DeNA, then Shanda Games, then Perfect World. In 2021 I joined Huawei’s Hetu project, where I led the architecture of a city-scale AR rendering engine: real-time occlusion, dynamic shadows, and a multi-camera streaming pipeline optimized with ARM NEON.</p>
+
+  <p>Since early 2025 I’ve been on a national semiconductor equipment program, building the HMI layer of a lithography machine — Linux, Qt, C++. On the graphics side, I customized the Godot engine at source level, using signed distance fields to represent the internal structure of chips. That gives us arbitrary cross-sections and high-precision zoom without exploding the mesh.</p>
+
+  <p>What I want now is a place where rendering is still getting harder, not easier. Automotive HMI is exactly that — it runs on Linux, it’s tightly coupled to hardware, and it has to stay stable for years. Eight years on graphics, two years on systems that must not crash. This role is where those two meet.</p>
+
+  <p>My spoken English is a bit rusty — I read and write technical English every day, but I’ve had fewer chances to speak. If anything is unclear, I’m happy to draw the architecture.</p>
+</blockquote>
+
+<p><strong>最后一句话不要省。</strong> 它同时做三件事：降低对方预期、展示诚实、把”口语差”从减分变成”这人很坦率”。</p>
+
+<hr />
+
+<h2 id="二12-个必背模块">二、12 个必背模块</h2>
+
+<p>每段目标 100–150 词，讲 60–90 秒。写自己的话，然后背。</p>
+
+<table>
+  <thead>
+    <tr>
+      <th>#</th>
+      <th>模块</th>
+      <th>必须说清的关键词</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td>1</td>
+      <td>自我介绍</td>
+      <td>（上面那段）</td>
+    </tr>
+    <tr>
+      <td>2</td>
+      <td>QtPBRDemo 是什么</td>
+      <td>offline reference comparison, verify correctness, not just “looks right”</td>
+    </tr>
+    <tr>
+      <td>3</td>
+      <td>IBL 原理</td>
+      <td>irradiance map, prefiltered environment map, importance sampling, BRDF LUT, split-sum approximation</td>
+    </tr>
+    <tr>
+      <td>4</td>
+      <td>逐像素对比方法</td>
+      <td>grab the same frame, pixel diff, isolate the deviation — convolution sampling / mip level / tone mapping</td>
+    </tr>
+    <tr>
+      <td>5</td>
+      <td>帧率优化案例</td>
+      <td>frame budget, CPU-bound vs GPU-bound, GPU timer query, where the time actually goes</td>
+    </tr>
+    <tr>
+      <td>6</td>
+      <td>跨引擎管线迁移</td>
+      <td>material math, unified shading model, Unity / Unreal / Laya, abstract the difference away</td>
+    </tr>
+    <tr>
+      <td>7</td>
+      <td>Godot 源码改造</td>
+      <td>source-level customization, render server, resource system, scene tree</td>
+    </tr>
+    <tr>
+      <td>8</td>
+      <td>SDF 为什么适合芯片结构</td>
+      <td>boolean operations, nested hierarchy, arbitrary cross-section, no mesh explosion</td>
+    </tr>
+    <tr>
+      <td>9</td>
+      <td>NEON 与多路视频流</td>
+      <td>SIMD, per-instruction parallelism, end-to-end latency, frame drop</td>
+    </tr>
+    <tr>
+      <td>10</td>
+      <td>光刻机系统</td>
+      <td>Linux, Qt, Modbus / OPC UA, deterministic timing, 24×7 uptime, fail-safe</td>
+    </tr>
+    <tr>
+      <td>11</td>
+      <td>为什么从游戏到车机 / 为什么离开华为</td>
+      <td>selected for a national program / where graphics is still getting harder</td>
+    </tr>
+    <tr>
+      <td>12</td>
+      <td>你的短板</td>
+      <td>Vulkan, tile-based GPU, automotive domain — 见第四节</td>
+    </tr>
+  </tbody>
+</table>
+
+<hr />
+
+<h2 id="三卡壳时的逃生话术比背稿更重要">三、卡壳时的逃生话术（比背稿更重要）</h2>
+
+<p>卡住的时候<strong>不要沉默</strong>，用下面任一句争取 3 秒：</p>
+
+<ul>
+  <li>“Let me put it another way.”</li>
+  <li>“What I mean is — “</li>
+  <li>“The key point here is — “</li>
+  <li>“Sorry, let me rephrase that.”</li>
+  <li>“Can I sketch it? It’s easier to show than to say.”</li>
+</ul>
+
+<p>最后一句是<strong>图形工程师的正当权利</strong>。面试共享屏幕画一张管线图，比磕磕巴巴说三分钟有效得多。提前准备好一页 PPT 或空白画板。</p>
+
+<p><strong>还有一招：主动把不确定的词换成简单词。</strong> 想不起 “occlusion culling” 就说 “we skip things that are hidden behind other things”。技术面试考的是理解，不是词汇。</p>
+
+<hr />
+
+<h2 id="四短板怎么答不要说-im-not-good-at-it">四、短板怎么答（不要说 “I’m not good at it”）</h2>
+
+<p><strong>Vulkan / tile-based GPU：</strong></p>
+
+<blockquote>
+  <p>“I’ve written OpenGL pipelines myself and I understand the modern API model — explicit pipeline state, command buffers, descriptor sets. What I haven’t done is ship a Vulkan backend in production. On mobile GPUs, what I’d need to get used to is the tile-based model: bandwidth as the real bottleneck, tile memory, and when to resolve. I’ve been reading Godot’s mobile renderer for exactly this reason — it’s designed for Mali and Adreno.”</p>
+</blockquote>
+
+<p>这段的价值在于：<strong>承认没做过 + 证明你知道差在哪 + 给出你正在做的动作</strong>。三者缺一不可。</p>
+
+<p><strong>车机领域：</strong></p>
+
+<blockquote>
+  <p>“I haven’t worked on automotive HMI. What I have done is the same class of problem — a real-time system on Linux, a Qt interface, and 3D rendering, in a product that has to run continuously without failing. The domain knowledge I can pick up in weeks. The engineering habits take years.”</p>
+</blockquote>
+
+<hr />
+
+<h2 id="五两个附加动作">五、两个附加动作</h2>
+
+<ol>
+  <li><strong>录音自听。</strong> 第一遍会很难受，但这是唯一能发现”我以为说清楚了”的地方。每段录一次，听一遍，改一遍。</li>
+  <li><strong>准备一页架构图。</strong> QtPBRDemo 的管线、光刻机的系统架构、Godot 的改造点，各一张。英语不够的时候，图能顶一半。</li>
+</ol>
+
+<hr />
+
+<h2 id="六一句实话">六、一句实话</h2>
+
+<p>你的英语不是”差”，是”停用”。读写每天都在用（代码、文档、GitHub），词汇和语法基础在，缺的只是口腔肌肉记忆。<strong>这种人恢复口语的速度比零基础快一个数量级</strong>，两三周就能到”技术问题能讲清、寒暄会卡”的水平——而技术面需要的正好只是前者。</p>
+
+<p>真正会拖后腿的不是口语，是<strong>临场紧张导致的思路中断</strong>。所以重点不是发音，是把 12 段讲到肌肉记忆，让大脑在紧张时仍有东西可说。</p>
